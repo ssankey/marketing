@@ -291,6 +291,7 @@ const NavbarVertical = () => {
         <CustomToggle eventKey="1" icon="chevron-down">
           Orders
         </CustomToggle>
+        
         <Accordion.Collapse eventKey="1" as="li" bsPrefix="nav-item">
           <ListGroup as="ul" bsPrefix="nav flex-column">
             <ListGroup.Item as="li" className="nav-item">
@@ -310,6 +311,7 @@ const NavbarVertical = () => {
         <CustomToggle eventKey="2" icon="chevron-down">
           Quotation
         </CustomToggle>
+
         <Accordion.Collapse eventKey="2" as="li" bsPrefix="nav-item">
           <ListGroup as="ul" bsPrefix="nav flex-column">
             <ListGroup.Item as="li" className="nav-item">
