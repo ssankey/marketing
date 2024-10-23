@@ -12,16 +12,6 @@ import { ActiveProjects, Teams, TasksPerformance } from "sub-components";
 // import required data files
 import ProjectsStatsData from "data/dashboard/ProjectsStatsData";
 
-export async function getServerSideProps() {
-    const res = await fetch('http://localhost:3000/api/data');
-    const data = await res.json();
-  
-    return {
-      props: {
-        data,
-      },
-    };
-  }
 
 const Home = ({ data }) => {
     return (
