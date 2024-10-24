@@ -14,7 +14,7 @@ export default function QuotationDetails({ quotations }) {
       </Container>
     );
   }
-  const quotation = quotations[0];
+ 
 
   if (!quotations || quotations.length === 0) {
     return (
@@ -23,6 +23,8 @@ export default function QuotationDetails({ quotations }) {
       </Container>
     );
   }
+
+   const quotation = quotations[0];
 
   // Group products by DocEntry
   const groupedProducts = quotations.reduce((acc, product) => {
@@ -153,7 +155,8 @@ export async function getServerSideProps(context) {
 
     return {
       props: {
-        orders: Array.isArray(data) ? data : [data],
+        // orders: Array.isArray(data) ? data : [data],
+        quotations: Array.isArray(data) ? data : [data],
       },
     };
   } catch (error) {

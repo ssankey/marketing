@@ -326,7 +326,7 @@ const NavbarVertical = () => {
             </ListGroup.Item>
           </ListGroup>
         </Accordion.Collapse>
-
+    
         {/* Invoice Button */}
         <li className="nav-item">
           <Link href="/invoice" className="nav-link">
