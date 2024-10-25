@@ -1,6 +1,23 @@
 import { useRouter } from 'next/router';
 import { Container, Row, Col, Card, Table, Spinner } from 'react-bootstrap';
 
+// Utility function to format dates as 'dd-MMM-yyyy' (e.g., 23-Oct-2024)
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options); // Ensures 'dd-MMM-yyyy' format
+}
+
+// Utility function to format prices with two decimal places (e.g., 100.00)
+// Utility function to format prices with commas and two decimal places (e.g., 1,234.56)
+function formatPrice(amount) {
+    return new Intl.NumberFormat('en-US', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+    }).format(amount);
+}
+
+
 export default function OrderDetails({ orders }) {
     const router = useRouter();
     const { id } = router.query;
@@ -14,7 +31,8 @@ export default function OrderDetails({ orders }) {
             </Container>
         );
     }
-   const order = orders[0]
+
+    const order = orders[0];
 
     if (!orders || orders.length === 0) {
         return (
@@ -40,8 +58,12 @@ export default function OrderDetails({ orders }) {
                     <h2 className="mb-0">Order Details #{id}</h2>
                 </Card.Header>
                 <Card.Body>
-                <Row className="mb-4">
+                    <Row className="mb-4">
                         <Col md={6}>
+                            <Row className="mb-2">
+                                <Col sm={4} className="fw-bold">Client Code:</Col>
+                                <Col sm={8}>{order.CardCode}</Col>
+                            </Row>
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Ship To:</Col>
                                 <Col sm={8}>
@@ -51,11 +73,11 @@ export default function OrderDetails({ orders }) {
                             </Row>
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Ship Date:</Col>
-                                <Col sm={8}>{new Date(order.ShipDate).toLocaleDateString()}</Col>
+                                <Col sm={8}>{formatDate(order.ShipDate)}</Col>
                             </Row>
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Doc Date:</Col>
-                                <Col sm={8}>{new Date(order.DocDate).toLocaleDateString()}</Col>
+                                <Col sm={8}>{formatDate(order.DocDate)}</Col>
                             </Row>
                         </Col>
                         <Col md={6}>
@@ -64,8 +86,10 @@ export default function OrderDetails({ orders }) {
                                 <Col sm={8}>{order.Currency}</Col>
                             </Row>
                             <Row className="mb-2">
-                                <Col sm={4} className="fw-bold">Description:</Col>
-                                <Col sm={8}>{order.Dscription}</Col>
+                                <Col sm={4} className="fw-bold">Total Amount:</Col>
+                                <Col sm={8}>
+                                    {formatPrice(order.DocTotal)} {order.Currency}
+                                </Col>
                             </Row>
                         </Col>
                     </Row>
@@ -82,39 +106,31 @@ export default function OrderDetails({ orders }) {
                                             <th>Cat No</th>
                                             <th>Qty</th>
                                             <th>Price</th>
-                                            <th>Currency</th>
+                                            <th>Subtotal</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {products.map((product, index) => (
-                                            <tr key={index}>
-                                                <td>{product.Dscription}</td>
-                                                <td>{product.ItemCode}</td>
-                                                <td>{product.Quantity}</td>
-                                                <td>{product.Price}</td>
-                                                <td>{product.Currency || 'N/A'}</td>
-                                            </tr>
-                                        ))}
+                                        {products.map((product, index) => {
+                                            const subtotal = product.Quantity * product.Price;
+                                            return (
+                                                <tr key={index}>
+                                                    <td>{product.Dscription}</td>
+                                                    <td>{product.ItemCode}</td>
+                                                    <td>{product.Quantity}</td>
+                                                    <td>
+                                                        {formatPrice(product.Price)} {product.Currency || 'N/A'}
+                                                    </td>
+                                                    <td>
+                                                        {formatPrice(subtotal)} {product.Currency || 'N/A'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </Table>
                             </Card.Body>
                         </Card>
                     ))}
-
-                    {/* Summary */}
-                    {/* <Card className="mt-4">
-                        <Card.Header>
-                            <h5 className="mb-0">Order Summary</h5>
-                        </Card.Header>
-                        <Card.Body>
-                            <Row>
-                                <Col md={6}>
-                                    <p><strong>Total Documents:</strong> {Object.keys(groupedProducts).length}</p>
-                                    <p><strong>Total Line Items:</strong> {orders.length}</p>
-                                </Col>
-                            </Row>
-                        </Card.Body>
-                    </Card> */}
 
                     {/* Back Button */}
                     <div className="mt-3">
@@ -134,14 +150,18 @@ export default function OrderDetails({ orders }) {
 export async function getServerSideProps(context) {
     const { id } = context.params;
 
+    // Get the protocol and host from the context
+    const protocol = context.req.headers['x-forwarded-proto'] || 'http';
+    const host = context.req.headers.host;
+
     try {
-        const res = await fetch(`http://localhost:3000/api/orders/${id}`);
+        const res = await fetch(`${protocol}://${host}/api/orders/${id}`);
         if (!res.ok) {
             throw new Error(`Failed to fetch data, received status ${res.status}`);
         }
 
         const data = await res.json();
-        
+
         return {
             props: {
                 orders: Array.isArray(data) ? data : [data],
