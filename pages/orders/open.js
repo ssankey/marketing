@@ -1,194 +1,175 @@
-import Link from 'next/link';
-import React, { useState, useMemo } from 'react';
-import { Table, Form, Pagination, Container, Row, Col } from 'react-bootstrap';
+import { useState, useEffect } from 'react';
+import LoadingSpinner from 'components/LoadingSpinner';
+import OrdersTable from 'components/OrdersTable';
+import { getOrders } from 'lib/models/orders';
+import { useRouter } from 'next/router';
 
-// Pagination configuration
-const ITEMS_PER_PAGE = 10;
+export default function OrdersPage({ orders: initialOrders, totalItems: initialTotalItems }) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [orders, setOrders] = useState(initialOrders);
+  const [totalItems, setTotalItems] = useState(initialTotalItems);
 
-const Open = ({ orders }) => {
-  // State management
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState('DocNum');
-  const [sortDirection, setSortDirection] = useState('asc');
+  // Handle loading state for client-side transitions
+  useEffect(() => {
+    // Show loading state when route changes start
+    const handleStart = () => setIsLoading(true);
+    // Hide loading state when route changes complete
+    const handleComplete = () => setIsLoading(false);
 
-  // Filter orders based on search term
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order =>
-      order.DocNum.toString().includes(searchTerm) ||
-      order.CardName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.ItemCode && order.ItemCode.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.Dscription && order.Dscription.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [orders, searchTerm]);
+    router.events.on('routeChangeStart', handleStart);
+    router.events.on('routeChangeComplete', handleComplete);
+    router.events.on('routeChangeError', handleComplete);
 
-  // Sort orders
-  const sortedOrders = useMemo(() => {
-    return [...filteredOrders].sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+    return () => {
+      router.events.off('routeChangeStart', handleStart);
+      router.events.off('routeChangeComplete', handleComplete);
+      router.events.off('routeChangeError', handleComplete);
+    };
+  }, [router]);
 
-      if (typeof aValue === 'string') {
-        aValue = aValue.toLowerCase();
-        bValue = bValue.toLowerCase();
-      }
+  // Update local state when props change
+  useEffect(() => {
+    setOrders(initialOrders);
+    setTotalItems(initialTotalItems);
+  }, [initialOrders, initialTotalItems]);
 
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      }
-      return aValue < bValue ? 1 : -1;
-    });
-  }, [filteredOrders, sortField, sortDirection]);
-
-  // Calculate pagination
-  const totalPages = Math.ceil(sortedOrders.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedOrders = sortedOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-  // Handle sort
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
-
-  // Render sort indicator
-  const renderSortIndicator = (field) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? ' ↑' : ' ↓';
-  };
+  // Show loading spinner for initial server-side load
+  if (router.isFallback) {
+    return <LoadingSpinner />;
+  }
 
   return (
-    <Container fluid>
-      {/* Search and Filter Section */}
-      <Row className="mb-3 mt-3">
-        <Col md={6}>
-          <Form.Control
-            type="text"
-            placeholder="Search orders..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page on search
-            }}
-          />
-        </Col>
-        <Col md={6} className="text-end">
-          <span>Total Orders: {filteredOrders.length}</span>
-        </Col>
-      </Row>
-
-      {/* Page Information */}
-      <Row className="mb-2">
-        <Col className="text-center">
-          <h5>
-            Page {currentPage} of {totalPages}
-          </h5>
-        </Col>
-      </Row>
-
-      {/* Table Section */}
-      <Table striped hover responsive className="text-nowrap">
-        <thead>
-          <tr>
-            <th onClick={() => handleSort('DocNum')} style={{ cursor: 'pointer' }}>
-              Order#{renderSortIndicator('DocNum')}
-            </th>
-            <th onClick={() => handleSort('DocDate')} style={{ cursor: 'pointer' }}>
-              Date{renderSortIndicator('DocDate')}
-            </th>
-            <th onClick={() => handleSort('CardName')} style={{ cursor: 'pointer' }}>
-              Customer{renderSortIndicator('CardName')}
-            </th>
-            <th onClick={() => handleSort('ItemCode')} style={{ cursor: 'pointer' }}>
-              Cat No.{renderSortIndicator('ItemCode')}
-            </th>
-            <th onClick={() => handleSort('Dscription')} style={{ cursor: 'pointer' }}>
-              Compound{renderSortIndicator('Dscription')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedOrders.map((order) => (
-            <tr key={order.DocNum}>
-              <th>
-                <Link href={`/orders/${order.DocNum}`}>{order.DocNum}</Link>
-              </th>
-              <td>{new Date(order.DocDate[0]).toLocaleDateString()}</td>
-              <td>{order.CardName}</td>
-              <td>{order.ItemCode || 'N/A'}</td>
-              <td>{order.Dscription || 'N/A'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-
-      {/* Show message if no orders */}
-      {filteredOrders.length === 0 && (
-        <div className="text-center py-4">
-          No orders available.
-        </div>
-      )}
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="d-flex justify-content-center mt-3">
-          <Pagination>
-            <Pagination.First
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-            />
-            <Pagination.Prev
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-            />
-
-            {[...Array(totalPages)].map((_, idx) => (
-              <Pagination.Item
-                key={idx + 1}
-                active={currentPage === idx + 1}
-                onClick={() => setCurrentPage(idx + 1)}
-              >
-                {idx + 1}
-              </Pagination.Item>
-            ))}
-
-            <Pagination.Next
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-            />
-            <Pagination.Last
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage === totalPages}
-            />
-          </Pagination>
-        </div>
-      )}
-    </Container>
+    <OrdersTable 
+      orders={orders} 
+      totalItems={totalItems}
+      isLoading={isLoading}
+    />
   );
-};
+}
 
-export default Open;
 
-// Keep your existing getServerSideProps
 export async function getServerSideProps(context) {
   try {
-    const protocol = context.req.headers['x-forwarded-proto'] || 'http';
-    const host = context.req.headers.host;
-    const res = await fetch(`${protocol}://${host}/api/orders`);
+      const { 
+        page = 1, 
+        search = '', 
+        status = 'all',
+        sortField = 'DocEntry',
+        sortDir = 'asc',
+        fromDate,
+        toDate
+      } = context.query;
+      
+      const ITEMS_PER_PAGE = 20;
+      const offset = (parseInt(page) - 1) * ITEMS_PER_PAGE;
+  
+      // Build the WHERE clause based on filters
+      let whereClause = '1=1'; // Base condition that's always true
+      
+      if (search) {
+        whereClause += ` AND (
+          T0.DocNum LIKE '%${search}%' OR 
+          T0.CardName LIKE '%${search}%' OR 
+          T1.ItemCode LIKE '%${search}%' OR 
+          T1.Dscription LIKE '%${search}%'
+        )`;
+      }
+  
+      if (status !== 'all') {
+        whereClause += ` AND (
+          CASE 
+            WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'closed'
+            WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'cancel'
+            WHEN T0.DocStatus='O' THEN 'open'
+            ELSE 'NA'
+          END = '${status}'
+        )`;
+      }
 
-    if (!res.ok) {
-      throw new Error(`Failed to fetch data, received status ${res.status}`);
-    }
+       // Add date filters
+      if (fromDate) {
+        whereClause += ` AND T0.DocDate >= '${fromDate}'`;
+      }
+      if (toDate) {
+        whereClause += ` AND T0.DocDate <= '${toDate}'`;
+      }
 
-    const orders = await res.json();
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM ORDR T0  
+      INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry 
+      INNER JOIN OLCT T2 ON T1.LocCode = T2.Code 
+      LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode 
+      LEFT JOIN OITB T4 ON T4.ItmsGrpCod = T3.ItmsGrpCod 
+      INNER JOIN OSLP T5 ON T0.slpcode = T5.slpcode
+      WHERE ${whereClause};
+    `;
 
+
+    // Get paginated data
+    const dataQuery = `
+  SELECT * FROM (
+    SELECT 
+      Case When (T0.DocStatus='C' and T0.CANCELED='N') Then 'Closed'
+           When (T0.DocStatus='C' and T0.CANCELED='Y') Then 'Cancel'
+           When T0.DocStatus='O' Then 'Open' Else 'NA' End "DocStatus",
+      T0.DocEntry,
+      T0.DocNum,
+      T0.DocDate,
+      T0.NumAtCard as "CustomerPONo",
+      T0.TaxDate as "PODate",
+      T0.CardName,
+      T4.ItmsGrpNam AS ItemGroup,
+      T1.ItemCode,
+      T1.Dscription as ItemName,
+      Case When (T1.LineStatus='C') Then 'Closed'
+           When T1.LineStatus='O' Then 'Open' Else 'NA' End "LineStatus",
+      round(T1.Quantity, 2) as Quantity,
+      T1.UnitMsr as UOMName,
+      round(T1.OpenQty, 2) as OpenQty,
+      T3.onhand as StockStatus,
+      T1.U_timeline,
+      T3.suppcatnum,
+      T1.DelivrdQty,
+      T1.ShipDate as DeliveryDate,
+      T2.Location as PlantLocation,
+      round(T1.Price, 3) as Price,
+      T1.Currency,
+      (T1.OpenQty * T1.Price) AS OpenAmount,
+      T5.slpname as SalesEmployee
+    FROM ORDR T0  
+    INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry 
+    INNER JOIN OLCT T2 ON T1.LocCode = T2.Code 
+    LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode 
+    LEFT JOIN OITB T4 ON T4.ItmsGrpCod = T3.ItmsGrpCod 
+    INNER JOIN OSLP T5 ON T0.slpcode = T5.slpcode
+    WHERE ${whereClause}
+  ) AS OrdersData
+  ORDER BY ${sortField} ${sortDir}
+  OFFSET ${offset} ROWS
+  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
+`;
+
+
+    const [totalResult, rawOrders] = await Promise.all([
+      getOrders(countQuery),
+      getOrders(dataQuery)
+    ]);
+
+    const totalItems = totalResult[0]?.total || 0;
+    let orders = rawOrders.map(order => ({
+      ...order,
+      DocDate: order.DocDate ? order.DocDate.toISOString() : null,
+      PODate: order.PODate ? order.PODate.toISOString() : null,
+      DeliveryDate: order.DeliveryDate ? order.DeliveryDate.toISOString() : null,
+    }));
     return {
       props: {
-        orders: Array.isArray(orders) ? orders : [orders],
+        orders: Array.isArray(orders) ? orders : [],
+        totalItems,
+        currentPage: parseInt(page, 10),
       },
     };
   } catch (error) {
@@ -196,6 +177,7 @@ export async function getServerSideProps(context) {
     return {
       props: {
         orders: [],
+        totalItems: 0,
       },
     };
   }
