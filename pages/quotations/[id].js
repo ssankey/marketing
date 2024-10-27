@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 
 import { useRouter } from "next/router";
@@ -10,6 +11,11 @@ function formatDate(dateString) {
   return date.toLocaleDateString("en-GB", options); // Ensures 'dd-MMM-yyyy' format
 }
 
+=======
+import { useRouter } from "next/router";
+import { Container, Row, Col, Card, Table, Spinner } from "react-bootstrap";
+
+>>>>>>> main
 export default function QuotationDetails({ quotations }) {
   const router = useRouter();
   const { id } = router.query;
@@ -23,6 +29,10 @@ export default function QuotationDetails({ quotations }) {
       </Container>
     );
   }
+<<<<<<< HEAD
+=======
+ 
+>>>>>>> main
 
   if (!quotations || quotations.length === 0) {
     return (
@@ -32,7 +42,11 @@ export default function QuotationDetails({ quotations }) {
     );
   }
 
+<<<<<<< HEAD
   const quotation = quotations[0];
+=======
+   const quotation = quotations[0];
+>>>>>>> main
 
   // Group products by DocEntry
   const groupedProducts = quotations.reduce((acc, product) => {
@@ -65,13 +79,23 @@ export default function QuotationDetails({ quotations }) {
                 <Col sm={4} className="fw-bold">
                   Ship Date:
                 </Col>
+<<<<<<< HEAD
                 <Col sm={8}>{formatDate(quotation.ShipDate)}</Col>
+=======
+                <Col sm={8}>
+                  {new Date(quotation.ShipDate).toLocaleDateString()}
+                </Col>
+>>>>>>> main
               </Row>
               <Row className="mb-2">
                 <Col sm={4} className="fw-bold">
                   Doc Date:
                 </Col>
+<<<<<<< HEAD
                 <Col sm={8}>{formatDate(quotation.DocDate)}</Col>
+=======
+                <Col sm={8}>{new Date(quotation.DocDate).toLocaleDateString()}</Col>
+>>>>>>> main
               </Row>
             </Col>
             <Col md={6}>
@@ -121,10 +145,32 @@ export default function QuotationDetails({ quotations }) {
             </Card>
           ))}
 
+<<<<<<< HEAD
           {/* Back Button */}
           <div className="mt-3">
             <button className="btn btn-secondary" onClick={() => router.back()}>
               Back to Quotations
+=======
+          {/* Summary */}
+          {/* <Card className="mt-4">
+                        <Card.Header>
+                            <h5 className="mb-0">Order Summary</h5>
+                        </Card.Header>
+                        <Card.Body>
+                            <Row>
+                                <Col md={6}>
+                                    <p><strong>Total Documents:</strong> {Object.keys(groupedProducts).length}</p>
+                                    <p><strong>Total Line Items:</strong> {orders.length}</p>
+                                </Col>
+                            </Row>
+                        </Card.Body>
+                    </Card> */}
+
+          {/* Back Button */}
+          <div className="mt-3">
+            <button className="btn btn-secondary" onClick={() => router.back()}>
+              Back to Quotation
+>>>>>>> main
             </button>
           </div>
         </Card.Body>
@@ -135,6 +181,7 @@ export default function QuotationDetails({ quotations }) {
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
+<<<<<<< HEAD
   const protocol = context.req.headers["x-forwarded-proto"] || "http";
   const host = context.req.headers.host || "localhost:3000";
 
@@ -146,6 +193,12 @@ export async function getServerSideProps(context) {
 
     if (!res.ok) {
       console.error(`Failed to fetch data, received status ${res.status}`);
+=======
+
+  try {
+    const res = await fetch(`http://localhost:3000/api/quotations/${id}`);
+    if (!res.ok) {
+>>>>>>> main
       throw new Error(`Failed to fetch data, received status ${res.status}`);
     }
 
@@ -153,6 +206,10 @@ export async function getServerSideProps(context) {
 
     return {
       props: {
+<<<<<<< HEAD
+=======
+        // orders: Array.isArray(data) ? data : [data],
+>>>>>>> main
         quotations: Array.isArray(data) ? data : [data],
       },
     };
@@ -160,7 +217,11 @@ export async function getServerSideProps(context) {
     console.error("Error fetching Quotation:", error);
     return {
       props: {
+<<<<<<< HEAD
         quotations: [], // Pass empty array on error
+=======
+        orders: [], // Pass empty array on error
+>>>>>>> main
       },
     };
   }

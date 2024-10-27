@@ -282,30 +282,21 @@ const NavbarVertical = () => {
         </li>
         {/* Dashboard */}
         <li className="nav-item">
-          <Link href="/dashboard" className="nav-link">
+          <a href="/dashboard" className="nav-link">
             Dashboard
-          </Link>
+          </a>
         </li>
 
         {/* Orders Dropdown */}
-        <CustomToggle eventKey="1" icon="chevron-down">
+        {/* <CustomToggle eventKey="1" icon="chevron-down">
           Orders
-        </CustomToggle>
+        </CustomToggle> */}
         
-        <Accordion.Collapse eventKey="1" as="li" bsPrefix="nav-item">
-          <ListGroup as="ul" bsPrefix="nav flex-column">
-            <ListGroup.Item as="li" className="nav-item">
-              <Link href="/orders/open" className="nav-link">
-                Open Orders
-              </Link>
-            </ListGroup.Item>
-            <ListGroup.Item as="li" className="nav-item">
-              <Link href="/orders/closed" className="nav-link">
-                Closed Orders
-              </Link>
-            </ListGroup.Item>
-          </ListGroup>
-        </Accordion.Collapse>
+        <li className="nav-item">
+          <a href="/orders" className="nav-link">
+            Orders
+          </a>
+        </li>
 
         {/* Quotation Dropdown */}
         <CustomToggle eventKey="2" icon="chevron-down">
@@ -326,12 +317,12 @@ const NavbarVertical = () => {
             </ListGroup.Item>
           </ListGroup>
         </Accordion.Collapse>
-
+    
         {/* Invoice Button */}
         <li className="nav-item">
-          <Link href="/invoice" className="nav-link">
+          <a href="/invoices" className="nav-link">
             Invoice
-          </Link>
+          </a>
         </li>
       </Accordion>
     </Fragment>

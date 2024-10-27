@@ -1,11 +1,12 @@
+// pages/invoices/[id].js
+
 import { useRouter } from 'next/router';
 import { Container, Row, Col, Card, Table, Spinner } from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
-
-
-
-export default function OrderDetails({ orders }) {
+import { queryDatabase } from 'lib/db'; // Adjust the path based on your project structure
+import sql from 'mssql';
+export default function InvoiceDetails({ invoices }) {
     const router = useRouter();
     const { id } = router.query;
 
@@ -19,18 +20,18 @@ export default function OrderDetails({ orders }) {
         );
     }
 
-    const order = orders[0];
-
-    if (!orders || orders.length === 0) {
+    if (!invoices || invoices.length === 0) {
         return (
             <Container className="mt-5">
-                <div className="alert alert-warning">Order not found</div>
+                <div className="alert alert-warning">Invoice not found</div>
             </Container>
         );
     }
 
+    const invoice = invoices[0];
+
     // Group products by DocEntry
-    const groupedProducts = orders.reduce((acc, product) => {
+    const groupedProducts = invoices.reduce((acc, product) => {
         if (!acc[product.DocEntry]) {
             acc[product.DocEntry] = [];
         }
@@ -42,40 +43,40 @@ export default function OrderDetails({ orders }) {
         <Container className="mt-4">
             <Card>
                 <Card.Header>
-                    <h2 className="mb-0">Order Details #{id}</h2>
+                    <h2 className="mb-0">Invoice Details #{id}</h2>
                 </Card.Header>
                 <Card.Body>
                     <Row className="mb-4">
                         <Col md={6}>
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Client Code:</Col>
-                                <Col sm={8}>{order.CardCode}</Col>
+                                <Col sm={8}>{invoice.CardCode}</Col>
                             </Row>
                             <Row className="mb-2">
-                                <Col sm={4} className="fw-bold">Ship To:</Col>
+                                <Col sm={4} className="fw-bold">Bill To:</Col>
                                 <Col sm={8}>
-                                    <div>{order.ShipToCode}</div>
-                                    <div>{order.ShipToDesc}</div>
+                                    <div>{invoice.BillToCode}</div>
+                                    <div>{invoice.BillToDesc}</div>
                                 </Col>
                             </Row>
                             <Row className="mb-2">
-                                <Col sm={4} className="fw-bold">Ship Date:</Col>
-                                <Col sm={8}>{formatDate(order.ShipDate)}</Col>
+                                <Col sm={4} className="fw-bold">Doc Date:</Col>
+                                <Col sm={8}>{formatDate(invoice.DocDate)}</Col>
                             </Row>
                             <Row className="mb-2">
-                                <Col sm={4} className="fw-bold">Doc Date:</Col>
-                                <Col sm={8}>{formatDate(order.DocDate)}</Col>
+                                <Col sm={4} className="fw-bold">Due Date:</Col>
+                                <Col sm={8}>{formatDate(invoice.DocDueDate)}</Col>
                             </Row>
                         </Col>
                         <Col md={6}>
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Currency:</Col>
-                                <Col sm={8}>{order.Currency}</Col>
+                                <Col sm={8}>{invoice.DocCur}</Col>
                             </Row>
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Total Amount:</Col>
                                 <Col sm={8}>
-                                    {formatPrice(order.DocTotal)} {order.Currency}
+                                    {formatCurrency(invoice.DocTotal)} {invoice.DocCur}
                                 </Col>
                             </Row>
                         </Col>
@@ -89,16 +90,16 @@ export default function OrderDetails({ orders }) {
                                 <Table responsive striped hover>
                                     <thead>
                                         <tr>
-                                            <th>Compound</th>
-                                            <th>Cat No</th>
-                                            <th>Qty</th>
+                                            <th>Item Description</th>
+                                            <th>Item Code</th>
+                                            <th>Quantity</th>
                                             <th>Price</th>
-                                            <th>Subtotal</th>
+                                            <th>Line Total</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {products.map((product, index) => {
-                                            const subtotal = product.Quantity * product.Price;
+                                            const lineTotal = product.LineTotal;
                                             return (
                                                 <tr key={index}>
                                                     <td>{product.Dscription}</td>
@@ -108,7 +109,7 @@ export default function OrderDetails({ orders }) {
                                                         {formatCurrency(product.Price)} {product.Currency || 'N/A'}
                                                     </td>
                                                     <td>
-                                                        {formatCurrency(subtotal)} {product.Currency || 'N/A'}
+                                                        {formatCurrency(lineTotal)} {product.Currency || 'N/A'}
                                                     </td>
                                                 </tr>
                                             );
@@ -121,11 +122,11 @@ export default function OrderDetails({ orders }) {
 
                     {/* Back Button */}
                     <div className="mt-3">
-                        <button 
-                            className="btn btn-secondary" 
+                        <button
+                            className="btn btn-secondary"
                             onClick={() => router.back()}
                         >
-                            Back to Orders
+                            Back to Invoices
                         </button>
                     </div>
                 </Card.Body>
@@ -137,29 +138,73 @@ export default function OrderDetails({ orders }) {
 export async function getServerSideProps(context) {
     const { id } = context.params;
 
-    // Get the protocol and host from the context
-    const protocol = context.req.headers['x-forwarded-proto'] || 'http';
-    const host = context.req.headers.host;
+    // Ensure the id is a valid integer to prevent SQL injection
+    const invoiceId = parseInt(id, 10);
+
+    if (isNaN(invoiceId)) {
+        return {
+            notFound: true,
+        };
+    }
 
     try {
-        const res = await fetch(`${protocol}://${host}/api/orders/${id}`);
-        if (!res.ok) {
-            throw new Error(`Failed to fetch data, received status ${res.status}`);
+        const query = `
+            SELECT t0.*, t1.*
+            FROM INV1 t0 
+            INNER JOIN OINV t1 ON t0.DocEntry = t1.DocEntry
+            WHERE t1.DocNum = @DocNum;
+        `;
+
+        const params = [
+            {
+                name: 'DocNum',
+                type: sql.Int,
+                value: invoiceId,
+            },
+        ];
+
+        const data = await queryDatabase(query, params);
+
+        if (!data || data.length === 0) {
+            return {
+                notFound: true,
+            };
         }
 
-        const data = await res.json();
+        // Map over the data and convert date strings to ISO strings
+        const safeDate = (dateString) => {
+            const date = new Date(dateString);
+            return isNaN(date.getTime()) ? null : date.toISOString(); // Check for valid date
+        };
+
+        const invoices = data.map((invoice) => {
+            return {
+                ...invoice,
+                CreateDate: safeDate(invoice.CreateDate), // Convert CreateDate to ISO string
+                TaxDate: safeDate(invoice.TaxDate), // Convert CreateDate to ISO string
+                AssetDate: safeDate(invoice.AssetDate), // Convert CreateDate to ISO string
+                ShipDate: safeDate(invoice.ShipDate), // Convert ShipDate to ISO string
+                DocDate: safeDate(invoice.DocDate), // Convert DocDate to ISO string
+                DocDueDate: safeDate(invoice.DocDueDate), // Convert DocDueDate to ISO string
+                ActDelDate: safeDate(invoice.ActDelDate), // Convert ActDelDate to ISO string
+                UpdateDate: safeDate(invoice.UpdateDate), // Convert UpdateDate to ISO string
+            };
+        });
 
         return {
             props: {
-                orders: Array.isArray(data) ? data : [data],
+                invoices: Array.isArray(invoices) ? invoices : [invoices],
             },
         };
     } catch (error) {
-        console.error('Error fetching order:', error);
+        console.error('Error fetching invoice:', error);
         return {
             props: {
-                orders: [], // Pass empty array on error
+                invoices: [],
             },
         };
     }
 }
+
+  
+  
