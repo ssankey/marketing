@@ -315,12 +315,12 @@ const NavbarVertical = () => {
         <Accordion.Collapse eventKey="2" as="li" bsPrefix="nav-item">
           <ListGroup as="ul" bsPrefix="nav flex-column">
             <ListGroup.Item as="li" className="nav-item">
-              <Link href="/quotation/open" className="nav-link">
+              <Link href="/quotations/open" className="nav-link">
                 Open Quotation
               </Link>
             </ListGroup.Item>
             <ListGroup.Item as="li" className="nav-item">
-              <Link href="/quotation/closed" className="nav-link">
+              <Link href="/quotations/closed" className="nav-link">
                 Closed Quotation
               </Link>
             </ListGroup.Item>
