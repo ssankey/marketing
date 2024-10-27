@@ -43,7 +43,6 @@ const Dashboard = ({ salesData = [], topCustomers, topCategories, openOrders }) 
     const totalCOGS = salesData.reduce((sum, month) => sum + month.COGS, 0);
     const totalProfit = totalSales - totalCOGS;
     const overallProfitMargin = totalSales ? ((totalProfit / totalSales) * 100).toFixed(1) : '0.0';
-    const totalCategorySales = topCategories.reduce((sum, category) => sum + category.TotalSales, 0);
 
     React.useEffect(() => {
         // Check if all required data is available
@@ -76,28 +75,29 @@ const Dashboard = ({ salesData = [], topCustomers, topCategories, openOrders }) 
         ]
     };
 
-    const months = topCustomers.length > 0
+    const months = topCustomers?.[0]
         ? Object.keys(topCustomers[0])
             .filter(key => key !== 'Customer' && key !== 'GrandTotal')
-            .sort((a, b) => new Date(a) - new Date(b)) // Sort months in descending order
-        : []; // Default to an empty array if topCustomers is empty
+            .sort((a, b) => new Date(a) - new Date(b))
+        : []; // Default to empty array if no customers are available
+
     const monthlyCustomerTotals = months.map(month =>
-        topCustomers.reduce((sum, customer) => sum + (customer[month] || 0), 0)
+        topCustomers?.reduce((sum, customer) => sum + (customer[month] || 0), 0) || 0
     );
-    const grandTotal = topCustomers.reduce((sum, customer) => sum + customer.GrandTotal, 0);
 
+    const grandTotal = topCustomers?.reduce((sum, customer) => sum + (customer.GrandTotal || 0), 0) || 0;
 
-    
-    const categoryMonths = topCategories.length > 0
-    ? Object.keys(topCategories[0])
-        .filter(key => key !== 'Category' && key !== 'GrandTotal')
-    : [];
+    const categoryMonths = topCategories?.[0]
+        ? Object.keys(topCategories[0])
+            .filter(key => key !== 'Category' && key !== 'GrandTotal')
+        : [];
 
     const monthlyCategoryTotals = categoryMonths.map(month =>
-        topCategories.reduce((sum, category) => sum + (category[month] || 0), 0)
+        topCategories?.reduce((sum, category) => sum + (category[month] || 0), 0) || 0
     );
 
-    const categoryGrandTotal = topCategories.reduce((sum, category) => sum + category.GrandTotal, 0);
+    const categoryGrandTotal = topCategories?.reduce((sum, category) => sum + (category.GrandTotal || 0), 0) || 0;
+
 
     const profitChartData = {
         labels: salesData.map(data => data.Month),
@@ -108,19 +108,6 @@ const Dashboard = ({ salesData = [], topCustomers, topCategories, openOrders }) 
         }]
     };
 
-    const customerChartData = {
-        labels: topCustomers.map(customer => customer.Customer),
-        datasets: [{
-            data: topCustomers.map(customer => customer.TotalSales),
-            backgroundColor: [
-                'rgba(66, 133, 244, 0.8)',
-                'rgba(234, 67, 53, 0.8)',
-                'rgba(251, 188, 5, 0.8)',
-                'rgba(52, 168, 83, 0.8)',
-                'rgba(153, 0, 255, 0.8)',
-            ],
-        }]
-    };
 
     const chartOptions = {
         responsive: true,
@@ -140,21 +127,13 @@ const Dashboard = ({ salesData = [], topCustomers, topCategories, openOrders }) 
         }
     };
 
-    const doughnutOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'right',
-            }
-        }
-    };
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
     return (
         <Container fluid className="p-4 bg-light min-vh-100">
-            <h1 className="mb-4">Sales Dashboard</h1>
+            <h1 className="mb-4"></h1>
 
             {/* Summary Cards */}
             <Row className="g-4 mb-4">

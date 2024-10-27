@@ -277,7 +277,7 @@ const NavbarVertical = () => {
       >
         {/* Dash UI */}
         <li className="nav-item">
-          <a href="/dashboard" className="nav-link d-flex align-items-center">
+          <a href="/" className="nav-link d-flex align-items-center">
             <img
               src="/assets/density_logo_new_trans.png"
               alt="Logo"
@@ -288,12 +288,12 @@ const NavbarVertical = () => {
         </li>
 
         {/* Dashboard */}
-        <li className="nav-item">
+        {/* <li className="nav-item">
           <a href="/dashboard" className="nav-link d-flex align-items-center">
-            <House className="me-2" /> {/* Dashboard icon */}
+            <House className="me-2" />
             Dashboard
           </a>
-        </li>
+        </li> */}
 
         {/* Orders */}
         <li className="nav-item">
