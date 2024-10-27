@@ -75,7 +75,7 @@ export default function OrderDetails({ orders }) {
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Total Amount:</Col>
                                 <Col sm={8}>
-                                    {formatPrice(order.DocTotal)} {order.Currency}
+                                    {formatCurrency(order.DocTotal)} {order.Currency}
                                 </Col>
                             </Row>
                         </Col>
