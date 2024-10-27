@@ -76,7 +76,7 @@ export async function getServerSideProps(context) {
         )`;
       }
   
-      if (status !== 'all') {
+      if (status && status !== "all") {
         whereClause += ` AND (
           CASE 
             WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'closed'

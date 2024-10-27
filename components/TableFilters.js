@@ -26,11 +26,18 @@ const TableFilters = ({
   }) => {
   
     // Handler for reset button
+    // const handleReset = () => {
+    //   onSearch(""); // Clear search
+    //   onStatusChange("all"); // Reset status
+    //   onDateFilterChange({ fromDate: "", toDate: "" }); // Reset dates
+    // };
+
     const handleReset = () => {
       onSearch(""); // Clear search
-      onStatusChange("all"); // Reset status
-      onDateFilterChange({ fromDate: "", toDate: "" }); // Reset dates
+      if (onStatusChange) onStatusChange("all"); // Reset status if function exists
+      if (onDateFilterChange) onDateFilterChange({ fromDate: "", toDate: "" }); // Reset dates if function exists
     };
+
 
     return (
       <Row className="mb-3 mt-3 align-items-center">

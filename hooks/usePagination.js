@@ -3,8 +3,7 @@ import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 
 const usePagination = (totalItems, itemsPerPage) => {
-  console.log(totalItems);
-  console.log(itemsPerPage);
+
   
   const router = useRouter();
   const { query } = router;
