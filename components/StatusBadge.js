@@ -28,7 +28,6 @@ import { Badge } from "react-bootstrap";
 
 // StatusBadge.js
 const StatusBadge = ({ status }) => {
-<<<<<<< HEAD
   const getStatusBadgeColor = (status) => {
     if (typeof status !== "string") {
       return "secondary"; // Default badge color if status is not a string
@@ -44,28 +43,6 @@ const StatusBadge = ({ status }) => {
       default:
         return "secondary";
     }
-=======
-  console.log(status.toLowerCase());
-  
-    const getStatusBadgeColor = (status) => {
-      switch (status.toLowerCase()) {
-        case 'open':
-          return 'primary';
-        case 'closed':
-          return 'success';
-        case 'cancel':
-          return 'danger';
-        default:
-          return 'secondary';
-      }
-    };
-  
-    return (
-      <Badge className={getStatusBadgeColor(status)}>
-        {status}
-      </Badge>
-    );
->>>>>>> main
   };
 
   return (
