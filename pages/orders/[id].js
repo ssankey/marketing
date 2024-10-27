@@ -1,21 +1,8 @@
 import { useRouter } from 'next/router';
 import { Container, Row, Col, Card, Table, Spinner } from 'react-bootstrap';
+import { formatCurrency } from 'utils/formatCurrency';
+import { formatDate } from 'utils/formatDate';
 
-// Utility function to format dates as 'dd-MMM-yyyy' (e.g., 23-Oct-2024)
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    const options = { day: '2-digit', month: 'short', year: 'numeric' };
-    return date.toLocaleDateString('en-GB', options); // Ensures 'dd-MMM-yyyy' format
-}
-
-// Utility function to format prices with two decimal places (e.g., 100.00)
-// Utility function to format prices with commas and two decimal places (e.g., 1,234.56)
-function formatPrice(amount) {
-    return new Intl.NumberFormat('en-US', { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-    }).format(amount);
-}
 
 
 export default function OrderDetails({ orders }) {
@@ -118,10 +105,10 @@ export default function OrderDetails({ orders }) {
                                                     <td>{product.ItemCode}</td>
                                                     <td>{product.Quantity}</td>
                                                     <td>
-                                                        {formatPrice(product.Price)} {product.Currency || 'N/A'}
+                                                        {formatCurrency(product.Price)} {product.Currency || 'N/A'}
                                                     </td>
                                                     <td>
-                                                        {formatPrice(subtotal)} {product.Currency || 'N/A'}
+                                                        {formatCurrency(subtotal)} {product.Currency || 'N/A'}
                                                     </td>
                                                 </tr>
                                             );
