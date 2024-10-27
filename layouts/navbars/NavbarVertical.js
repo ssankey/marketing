@@ -249,8 +249,9 @@ import { Fragment } from "react";
 import Link from "next/link";
 import Accordion from "react-bootstrap/Accordion";
 import { useAccordionButton } from "react-bootstrap/AccordionButton";
-import ListGroup from "react-bootstrap/ListGroup";
+import { House, Clipboard, FileText, CurrencyDollar } from 'react-bootstrap-icons'; // Import the relevant icons
 
+// import logo from "@public/assets/density_logo_new_trans.png"
 const NavbarVertical = () => {
   // Custom Toggle for dropdown items
   const CustomToggle = ({ children, eventKey, icon }) => {
@@ -276,51 +277,44 @@ const NavbarVertical = () => {
       >
         {/* Dash UI */}
         <li className="nav-item">
-          <Link href="/dashui" className="nav-link">
-            Dash UI
-          </Link>
+          <a href="/dashboard" className="nav-link d-flex align-items-center">
+            <img
+              src="/assets/density_logo_new_trans.png"
+              alt="Logo"
+              className="img-fluid" // Makes the image responsive
+              style={{ height: '80px', width: 'auto' }} // Set height and keep aspect ratio
+            />
+          </a>
         </li>
+
         {/* Dashboard */}
         <li className="nav-item">
-          <a href="/dashboard" className="nav-link">
+          <a href="/dashboard" className="nav-link d-flex align-items-center">
+            <House className="me-2" /> {/* Dashboard icon */}
             Dashboard
           </a>
         </li>
 
-        {/* Orders Dropdown */}
-        {/* <CustomToggle eventKey="1" icon="chevron-down">
-          Orders
-        </CustomToggle> */}
-        
+        {/* Orders */}
         <li className="nav-item">
-          <a href="/orders" className="nav-link">
+          <a href="/orders" className="nav-link d-flex align-items-center">
+            <Clipboard className="me-2" /> {/* Orders icon */}
             Orders
           </a>
         </li>
 
-        {/* Quotation Dropdown */}
-        <CustomToggle eventKey="2" icon="chevron-down">
-          Quotation
-        </CustomToggle>
-
-        <Accordion.Collapse eventKey="2" as="li" bsPrefix="nav-item">
-          <ListGroup as="ul" bsPrefix="nav flex-column">
-            <ListGroup.Item as="li" className="nav-item">
-              <Link href="/quotations/open" className="nav-link">
-                Open Quotation
-              </Link>
-            </ListGroup.Item>
-            <ListGroup.Item as="li" className="nav-item">
-              <Link href="/quotations/closed" className="nav-link">
-                Closed Quotation
-              </Link>
-            </ListGroup.Item>
-          </ListGroup>
-        </Accordion.Collapse>
-    
-        {/* Invoice Button */}
+        {/* Quotation */}
         <li className="nav-item">
-          <a href="/invoices" className="nav-link">
+          <a href="/quotations" className="nav-link d-flex align-items-center">
+            <CurrencyDollar className="me-2" /> {/* Quotation icon */}
+            Quotation
+          </a>
+        </li>
+
+        {/* Invoice */}
+        <li className="nav-item">
+          <a href="/invoices" className="nav-link d-flex align-items-center">
+            <FileText className="me-2" /> {/* Invoice icon */}
             Invoice
           </a>
         </li>
