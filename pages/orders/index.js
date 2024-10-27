@@ -46,8 +46,16 @@ export default function OrdersPage({ orders: initialOrders, totalItems: initialT
       isLoading={isLoading}
     />
   );
-}
+  
 
+
+}
+  // Static SEO properties for InvoicesPage
+  OrdersPage.seo = {
+    title: "Orders | Density",
+    description: "View and manage all your Orders.",
+    keywords: "Orders, sales",
+  };
 
 export async function getServerSideProps(context) {
   try {

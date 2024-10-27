@@ -12,9 +12,7 @@ export default function InvoicesPage({ invoices: initialInvoices, totalItems: in
 
   // Handle loading state for client-side transitions
   useEffect(() => {
-    // Show loading state when route changes start
     const handleStart = () => setIsLoading(true);
-    // Hide loading state when route changes complete
     const handleComplete = () => setIsLoading(false);
 
     router.events.on('routeChangeStart', handleStart);
@@ -34,7 +32,6 @@ export default function InvoicesPage({ invoices: initialInvoices, totalItems: in
     setTotalItems(initialTotalItems);
   }, [initialInvoices, initialTotalItems]);
 
-  // Show loading spinner for initial server-side load
   if (router.isFallback) {
     return <LoadingSpinner />;
   }
@@ -47,6 +44,13 @@ export default function InvoicesPage({ invoices: initialInvoices, totalItems: in
     />
   );
 }
+
+// Static SEO properties for InvoicesPage
+InvoicesPage.seo = {
+  title: "Invoices | Density",
+  description: "View and manage all your invoices.",
+  keywords: "invoices, billing, management, density",
+};
 
 export async function getServerSideProps(context) {
   try {
@@ -63,7 +67,6 @@ export async function getServerSideProps(context) {
     const ITEMS_PER_PAGE = 20;
     const offset = (parseInt(page) - 1) * ITEMS_PER_PAGE;
 
-    // Build the WHERE clause based on filters
     let whereClause = '1=1'; // Base condition that's always true
     
     if (search) {
@@ -86,7 +89,6 @@ export async function getServerSideProps(context) {
       )`;
     }
 
-    // Add date filters
     if (fromDate) {
       whereClause += ` AND T0.DocDate >= '${fromDate}'`;
     }
@@ -94,7 +96,6 @@ export async function getServerSideProps(context) {
       whereClause += ` AND T0.DocDate <= '${toDate}'`;
     }
 
-    // Get total count
     const countQuery = `
       SELECT COUNT(*) as total
       FROM OINV T0  
@@ -106,7 +107,6 @@ export async function getServerSideProps(context) {
       WHERE ${whereClause};
     `;
 
-    // Get paginated data
     const dataQuery = `
       SELECT * FROM (
         SELECT 

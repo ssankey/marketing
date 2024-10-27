@@ -197,6 +197,13 @@ export default function QuotationsPage({
   );
 }
 
+  // Static SEO properties for InvoicesPage
+  QuotationsPage.seo = {
+    title: "Quotations | Density",
+    description: "View and manage all your quotations.",
+    keywords: "quotations, density",
+  };
+
 export async function getServerSideProps(context) {
   try {
     const {
