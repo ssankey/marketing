@@ -2,6 +2,8 @@ import { Badge } from "react-bootstrap";
 
 // StatusBadge.js
 const StatusBadge = ({ status }) => {
+  console.log(status.toLowerCase());
+  
     const getStatusBadgeColor = (status) => {
       switch (status.toLowerCase()) {
         case 'open':
