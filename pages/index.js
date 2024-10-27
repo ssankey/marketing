@@ -11,7 +11,11 @@ const Home = ({ salesData, topCustomers, topCategories, openOrders }) => {
         />
     );
 };
-
+Dashboard.seo = {
+    title: "Dashboard | Density",
+    description: "View your sales and analytics on the dashboard.",
+    keywords: "dashboard, analytics, sales, density"
+};
 export default Home;
 
 export async function getServerSideProps() {
