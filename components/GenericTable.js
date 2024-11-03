@@ -4,6 +4,8 @@ import SortableTableHeader from './SortableTableHeader';
 import { Table } from 'react-bootstrap';
 
 const GenericTable = ({ columns, data, onSort, sortField, sortDirection }) => (
+  
+  <>
   <Table striped hover responsive className="text-nowrap">
     <thead>
       <tr>
@@ -29,6 +31,7 @@ const GenericTable = ({ columns, data, onSort, sortField, sortDirection }) => (
       ))}
     </tbody>
   </Table>
+  </>
 );
 
 export default GenericTable;

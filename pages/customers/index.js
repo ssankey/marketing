@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
-import QuotationsTable from "components/QuotationsTable";
-import { getQuotations } from "lib/models/quotations";
+import CustomersTable from "components/CustomersTable";
+import { getCustomers } from "lib/models/customers";
 import { useRouter } from "next/router";
 
-export default function QuotationsPage({
-  quotations: initialQuotations,
+export default function CustomersPage({
+  customers: initialCustomers,
   totalItems: initialTotalItems,
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [quotations, setQuotations] = useState(initialQuotations);
+  const [customers, setCustomers] = useState(initialCustomers);
   const [totalItems, setTotalItems] = useState(initialTotalItems);
 
   // Handle loading state for client-side transitions
@@ -31,28 +31,28 @@ export default function QuotationsPage({
 
   // Update local state when props change
   useEffect(() => {
-    setQuotations(initialQuotations);
+    setCustomers(initialCustomers);
     setTotalItems(initialTotalItems);
-  }, [initialQuotations, initialTotalItems]);
+  }, [initialCustomers, initialTotalItems]);
 
   if (router.isFallback) {
     return <LoadingSpinner />;
   }
 
   return (
-    <QuotationsTable
-      quotations={quotations}
+    <CustomersTable
+      customers={customers}
       totalItems={totalItems}
       isLoading={isLoading}
     />
   );
 }
 
-// Static SEO properties for InvoicesPage
-QuotationsPage.seo = {
-  title: "Quotations | Density",
-  description: "View and manage all your quotations.",
-  keywords: "quotations, density",
+// Static SEO properties for CustomersPage
+CustomersPage.seo = {
+  title: "Customers | Density",
+  description: "View and manage all your customers.",
+  keywords: "customers, density",
 };
 
 export async function getServerSideProps(context) {
@@ -60,112 +60,81 @@ export async function getServerSideProps(context) {
     const {
       page = 1,
       search = "",
-      status = "all",
-      sortField = "DocNum",
+      sortField = "CardName",
       sortDir = "asc",
-      fromDate,
-      toDate,
+      status = "all",
     } = context.query;
 
     const ITEMS_PER_PAGE = 20;
     const offset = (parseInt(page, 10) - 1) * ITEMS_PER_PAGE;
 
-    let whereClause = "1=1";
+    let whereClause = "T0.CardType = 'C'"; // Only customers
 
     if (search) {
+      // Sanitize input to prevent SQL injection
+      const sanitizedSearch = search.replace(/'/g, "''");
       whereClause += ` AND (
-          T0.DocNum LIKE '%${search}%' OR 
-          T0.CardName LIKE '%${search}%' OR 
-          T1.ItemCode LIKE '%${search}%' OR 
-          T1.Dscription LIKE '%${search}%'
-        )`;
-    }
-
-    // Check if status is defined and not 'all'
-    if (status && status !== "all") {
-      whereClause += ` AND (
-        CASE 
-          WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'N') THEN 'closed'
-          WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'Y') THEN 'cancel'
-          WHEN T0.DocStatus = 'O' THEN 'open'
-          ELSE 'NA'
-        END = '${status}'
+        T0.CardCode LIKE '%${sanitizedSearch}%' OR 
+        T0.CardName LIKE '%${sanitizedSearch}%' OR 
+        T0.Phone1 LIKE '%${sanitizedSearch}%' OR 
+        T0.E_Mail LIKE '%${sanitizedSearch}%'
       )`;
     }
 
-    if (fromDate) {
-      whereClause += ` AND T0.DocDate >= '${fromDate}'`;
-    }
-    if (toDate) {
-      whereClause += ` AND T0.DocDate <= '${toDate}'`;
+    if (status && status !== "all") {
+      // Assuming 'status' could be 'active' or 'inactive'
+      whereClause += ` AND T0.validFor = '${status === 'active' ? 'Y' : 'N'}'`;
     }
 
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM OQUT T0  
-      INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
+      FROM OCRD T0  
       WHERE ${whereClause};
     `;
 
-    // const dataQuery = `
-    //   SELECT
-    //     T0.DocNum,
-    //     T0.DocDate,
-    //     T0.CardName,
-    //     T1.ItemCode,
-    //     T1.Dscription
-    //   FROM OQUT T0
-    //   INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry
-    //   WHERE ${whereClause}
-    //   ORDER BY ${sortField} ${sortDir}
-    //   OFFSET ${offset} ROWS
-    //   FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-    // `;
-
     const dataQuery = `
-  SELECT 
-    CASE 
-      WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'N') THEN 'Closed'
-      WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'Y') THEN 'Cancel'
-      WHEN T0.DocStatus = 'O' THEN 'Open'
-      ELSE 'NA' 
-    END AS "DocStatus", -- Added the CASE statement for DocStatus
-    T0.DocNum,
-    T0.DocDate,
-    T0.CardName,
-    T1.ItemCode,
-    T1.Dscription
-  FROM OQUT T0  
-  INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
-  WHERE ${whereClause}
-  ORDER BY ${sortField} ${sortDir}
-  OFFSET ${offset} ROWS
-  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-`;
+      SELECT
+        T0.CardCode AS CustomerCode,
+        T0.CardName AS CustomerName,
+        T0.Phone1 AS Phone,
+        T0.E_Mail AS Email,
+        T0.Address AS BillingAddress,
+        T0.Balance,
+        T0.Currency,
+        T0.ValidFor AS IsActive,
+        T0.CreditLine,
+        T5.SlpName AS SalesEmployeeName
+      FROM OCRD T0
+      LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
+      WHERE ${whereClause}
+      ORDER BY ${sortField} ${sortDir}
+      OFFSET ${offset} ROWS
+      FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
+    `;
 
-    const [totalResult, rawQuotations] = await Promise.all([
-      getQuotations(countQuery),
-      getQuotations(dataQuery),
+    const [totalResult, rawCustomers] = await Promise.all([
+      getCustomers(countQuery),
+      getCustomers(dataQuery),
     ]);
 
     const totalItems = totalResult[0]?.total || 0;
-    const quotations = rawQuotations.map((quotation) => ({
-      ...quotation,
-      DocDate: quotation.DocDate ? quotation.DocDate.toISOString() : null,
+    const customers = rawCustomers.map((customer) => ({
+      ...customer,
+      IsActive: customer.IsActive === 'Y',
     }));
 
     return {
       props: {
-        quotations: Array.isArray(quotations) ? quotations : [],
+        customers: Array.isArray(customers) ? customers : [],
         totalItems,
         currentPage: parseInt(page, 10),
       },
     };
   } catch (error) {
-    console.error("Error fetching quotations:", error);
+    console.error("Error fetching customers:", error);
     return {
       props: {
-        quotations: [],
+        customers: [],
         totalItems: 0,
       },
     };

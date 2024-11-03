@@ -1,14 +1,16 @@
 import { useRouter } from "next/router";
-import { Container, Row, Col, Card, Table, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Spinner } from "react-bootstrap";
+import { getProductDetail } from "lib/models/products";
 
 // Utility function to format dates as 'dd-MMM-yyyy' (e.g., 23-Oct-2024)
 function formatDate(dateString) {
+  if (!dateString) return "N/A";
   const date = new Date(dateString);
   const options = { day: "2-digit", month: "short", year: "numeric" };
   return date.toLocaleDateString("en-GB", options); // Ensures 'dd-MMM-yyyy' format
 }
 
-export default function QuotationDetails({ quotations }) {
+export default function ProductDetails({ product }) {
   const router = useRouter();
   const { id } = router.query;
 
@@ -22,107 +24,91 @@ export default function QuotationDetails({ quotations }) {
     );
   }
 
-  if (!quotations || quotations.length === 0) {
+  if (!product) {
     return (
       <Container className="mt-5">
-        <div className="alert alert-warning">Quotation not found</div>
+        <div className="alert alert-warning">Product not found</div>
       </Container>
     );
   }
 
-  const quotation = quotations[0];
-
-  // Group products by DocEntry
-  const groupedProducts = quotations.reduce((acc, product) => {
-    if (!acc[product.DocEntry]) {
-      acc[product.DocEntry] = [];
-    }
-    acc[product.DocEntry].push(product);
-    return acc;
-  }, {});
-
+  // Display product details
   return (
     <Container className="mt-4">
       <Card>
         <Card.Header>
-          <h2 className="mb-0">Quotation Details #{id}</h2>
+          <h2 className="mb-0">Product Details - {product.ItemName}</h2>
         </Card.Header>
         <Card.Body>
           <Row className="mb-4">
             <Col md={6}>
               <Row className="mb-2">
                 <Col sm={4} className="fw-bold">
-                  Ship To:
+                  Item Code:
                 </Col>
-                <Col sm={8}>
-                  <div>{quotation.ShipToCode}</div>
-                  <div>{quotation.ShipToDesc}</div>
-                </Col>
+                <Col sm={8}>{product.ItemCode}</Col>
               </Row>
               <Row className="mb-2">
                 <Col sm={4} className="fw-bold">
-                  Ship Date:
+                  Item Name:
                 </Col>
-                <Col sm={8}>{formatDate(quotation.ShipDate)}</Col>
+                <Col sm={8}>{product.ItemName}</Col>
               </Row>
               <Row className="mb-2">
                 <Col sm={4} className="fw-bold">
-                  Doc Date:
+                  Item Type:
                 </Col>
-                <Col sm={8}>{formatDate(quotation.DocDate)}</Col>
+                <Col sm={8}>{product.ItemType}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">
+                  CAS No:
+                </Col>
+                <Col sm={8}>{product.U_CasNo || "N/A"}</Col>
               </Row>
             </Col>
             <Col md={6}>
               <Row className="mb-2">
                 <Col sm={4} className="fw-bold">
-                  Currency:
+                  Valid For:
                 </Col>
-                <Col sm={8}>{quotation.Currency}</Col>
+                <Col sm={8}>{product.validFor}</Col>
               </Row>
               <Row className="mb-2">
                 <Col sm={4} className="fw-bold">
-                  Description:
+                  Created Date:
                 </Col>
-                <Col sm={8}>{quotation.Dscription}</Col>
+                <Col sm={8}>{formatDate(product.CreateDate)}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">
+                  Updated Date:
+                </Col>
+                <Col sm={8}>{formatDate(product.UpdateDate)}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">
+                  Molecular Weight:
+                </Col>
+                <Col sm={8}>{product.U_MolucularWeight || "N/A"}</Col>
               </Row>
             </Col>
           </Row>
 
-          {/* Document Groups */}
-          <h4 className="mt-4 mb-3">Products</h4>
-          {Object.entries(groupedProducts).map(([docEntry, products]) => (
-            <Card key={docEntry} className="mb-3">
-              <Card.Body>
-                <Table responsive striped hover>
-                  <thead>
-                    <tr>
-                      <th>Compound</th>
-                      <th>Cat No</th>
-                      <th>Qty</th>
-                      <th>Price</th>
-                      <th>Currency</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product, index) => (
-                      <tr key={index}>
-                        <td>{product.Dscription}</td>
-                        <td>{product.ItemCode}</td>
-                        <td>{product.Quantity}</td>
-                        <td>{product.Price}</td>
-                        <td>{product.Currency || "N/A"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </Card.Body>
-            </Card>
-          ))}
+          <Row className="mb-4">
+            <Col>
+              <h4>Additional Information</h4>
+              <p><strong>IUPAC Name:</strong> {product.U_IUPACName || "N/A"}</p>
+              <p><strong>Synonyms:</strong> {product.U_Synonyms || "N/A"}</p>
+              <p><strong>Molecular Formula:</strong> {product.U_MolucularFormula || "N/A"}</p>
+              <p><strong>Applications:</strong> {product.U_Applications || "N/A"}</p>
+            </Col>
+          </Row>
 
           {/* Back Button */}
           <div className="mt-3">
             <button className="btn btn-secondary" onClick={() => router.back()}>
-              Back to Quotations
+              Back to Products
             </button>
           </div>
         </Card.Body>
@@ -131,35 +117,35 @@ export default function QuotationDetails({ quotations }) {
   );
 }
 
+
 export async function getServerSideProps(context) {
   const { id } = context.params;
-  const protocol = context.req.headers["x-forwarded-proto"] || "http";
-  const host = context.req.headers.host || "localhost:3000";
-
-  const url = `${protocol}://${host}/api/quotations/${id}`;
-  console.log(`Fetching data from URL: ${url}`); // Debugging log
 
   try {
-    const res = await fetch(url);
+    const product = await getProductDetail(id);
 
-    if (!res.ok) {
-      console.error(`Failed to fetch data, received status ${res.status}`);
-      throw new Error(`Failed to fetch data, received status ${res.status}`);
+    if (!product) {
+      // If product is undefined, return product: null
+      return {
+        props: {
+          product: null,
+        },
+      };
     }
-
-    const data = await res.json();
 
     return {
       props: {
-        quotations: Array.isArray(data) ? data : [data],
+        product, // Pass the product object directly
       },
     };
   } catch (error) {
-    console.error("Error fetching Quotation:", error);
+    console.error("Error fetching Product:", error);
     return {
       props: {
-        quotations: [], // Pass empty array on error
+        product: null, // Pass null on error
       },
     };
   }
 }
+
+

@@ -117,6 +117,8 @@ export async function getServerSideProps(context) {
             ELSE 'NA' 
           END AS DocStatus,
           T0.DocEntry,
+          T0.DocCur,
+          T0.DocRate,
           T0.DocNum,
           T0.DocDate,
           T0.NumAtCard AS CustomerPONo,

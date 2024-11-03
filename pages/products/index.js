@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
-import QuotationsTable from "components/QuotationsTable";
-import { getQuotations } from "lib/models/quotations";
+import ProductsTable from "components/ProductsTable";
+import { getProducts } from "lib/models/products";
 import { useRouter } from "next/router";
 
-export default function QuotationsPage({
-  quotations: initialQuotations,
+export default function ProductsPage({
+  products: initialProducts,
   totalItems: initialTotalItems,
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [quotations, setQuotations] = useState(initialQuotations);
+  const [products, setProducts] = useState(initialProducts);
   const [totalItems, setTotalItems] = useState(initialTotalItems);
 
   // Handle loading state for client-side transitions
@@ -31,28 +31,28 @@ export default function QuotationsPage({
 
   // Update local state when props change
   useEffect(() => {
-    setQuotations(initialQuotations);
+    setProducts(initialProducts);
     setTotalItems(initialTotalItems);
-  }, [initialQuotations, initialTotalItems]);
+  }, [initialProducts, initialTotalItems]);
 
   if (router.isFallback) {
     return <LoadingSpinner />;
   }
 
   return (
-    <QuotationsTable
-      quotations={quotations}
+    <ProductsTable
+      products={products}
       totalItems={totalItems}
       isLoading={isLoading}
     />
   );
 }
 
-// Static SEO properties for InvoicesPage
-QuotationsPage.seo = {
-  title: "Quotations | Density",
-  description: "View and manage all your quotations.",
-  keywords: "quotations, density",
+// Static SEO properties for ProductsPage
+ProductsPage.seo = {
+  title: "Products | Density",
+  description: "View and manage all your products.",
+  keywords: "products, density",
 };
 
 export async function getServerSideProps(context) {
@@ -60,11 +60,8 @@ export async function getServerSideProps(context) {
     const {
       page = 1,
       search = "",
-      status = "all",
-      sortField = "DocNum",
+      sortField = "ItemCode",
       sortDir = "asc",
-      fromDate,
-      toDate,
     } = context.query;
 
     const ITEMS_PER_PAGE = 20;
@@ -74,98 +71,65 @@ export async function getServerSideProps(context) {
 
     if (search) {
       whereClause += ` AND (
-          T0.DocNum LIKE '%${search}%' OR 
-          T0.CardName LIKE '%${search}%' OR 
-          T1.ItemCode LIKE '%${search}%' OR 
-          T1.Dscription LIKE '%${search}%'
+          ItemCode LIKE '%${search}%' OR 
+          ItemName LIKE '%${search}%'
         )`;
-    }
-
-    // Check if status is defined and not 'all'
-    if (status && status !== "all") {
-      whereClause += ` AND (
-        CASE 
-          WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'N') THEN 'closed'
-          WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'Y') THEN 'cancel'
-          WHEN T0.DocStatus = 'O' THEN 'open'
-          ELSE 'NA'
-        END = '${status}'
-      )`;
-    }
-
-    if (fromDate) {
-      whereClause += ` AND T0.DocDate >= '${fromDate}'`;
-    }
-    if (toDate) {
-      whereClause += ` AND T0.DocDate <= '${toDate}'`;
     }
 
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM OQUT T0  
-      INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
+      FROM OITM
       WHERE ${whereClause};
     `;
 
-    // const dataQuery = `
-    //   SELECT
-    //     T0.DocNum,
-    //     T0.DocDate,
-    //     T0.CardName,
-    //     T1.ItemCode,
-    //     T1.Dscription
-    //   FROM OQUT T0
-    //   INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry
-    //   WHERE ${whereClause}
-    //   ORDER BY ${sortField} ${sortDir}
-    //   OFFSET ${offset} ROWS
-    //   FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-    // `;
-
     const dataQuery = `
-  SELECT 
-    CASE 
-      WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'N') THEN 'Closed'
-      WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'Y') THEN 'Cancel'
-      WHEN T0.DocStatus = 'O' THEN 'Open'
-      ELSE 'NA' 
-    END AS "DocStatus", -- Added the CASE statement for DocStatus
-    T0.DocNum,
-    T0.DocDate,
-    T0.CardName,
-    T1.ItemCode,
-    T1.Dscription
-  FROM OQUT T0  
-  INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
-  WHERE ${whereClause}
-  ORDER BY ${sortField} ${sortDir}
-  OFFSET ${offset} ROWS
-  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-`;
+      SELECT
+        ItemCode,
+        ItemName,
+        ItemType,
+        validFor,
+        validFrom,
+        validTo,
+        CreateDate,
+        UpdateDate,
+        U_CasNo,
+        U_IUPACName,
+        U_Synonyms,
+        U_MolucularFormula,
+        U_MolucularWeight,
+        U_Applications,
+        U_Structure
+      FROM OITM
+      WHERE ${whereClause}
+      ORDER BY ${sortField} ${sortDir}
+      OFFSET ${offset} ROWS
+      FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
+    `;
 
-    const [totalResult, rawQuotations] = await Promise.all([
-      getQuotations(countQuery),
-      getQuotations(dataQuery),
+    const [totalResult, rawProducts] = await Promise.all([
+      getProducts(countQuery),
+      getProducts(dataQuery),
     ]);
 
     const totalItems = totalResult[0]?.total || 0;
-    const quotations = rawQuotations.map((quotation) => ({
-      ...quotation,
-      DocDate: quotation.DocDate ? quotation.DocDate.toISOString() : null,
+    const products = rawProducts.map((product) => ({
+      ...product,
+      CreateDate: product.CreateDate ? product.CreateDate.toISOString() : null,
+      UpdateDate: product.UpdateDate ? product.UpdateDate.toISOString() : null,
     }));
 
     return {
       props: {
-        quotations: Array.isArray(quotations) ? quotations : [],
+        products: Array.isArray(products) ? products : [],
         totalItems,
         currentPage: parseInt(page, 10),
       },
     };
   } catch (error) {
-    console.error("Error fetching quotations:", error);
+    console.error("Error fetching products:", error);
     return {
       props: {
-        quotations: [],
+        products: [],
         totalItems: 0,
       },
     };
