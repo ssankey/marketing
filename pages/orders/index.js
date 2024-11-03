@@ -124,8 +124,11 @@ export async function getServerSideProps(context) {
            When (T0.DocStatus='C' and T0.CANCELED='Y') Then 'Cancel'
            When T0.DocStatus='O' Then 'Open' Else 'NA' End "DocStatus",
       T0.DocEntry,
+      T0.DocCur,
+      T0.DocRate,
       T0.DocNum,
       T0.DocDate,
+      T0.DocTotal,
       T0.NumAtCard as "CustomerPONo",
       T0.TaxDate as "PODate",
       T0.CardName,

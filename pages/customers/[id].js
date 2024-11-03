@@ -1,16 +1,16 @@
 import { useRouter } from "next/router";
-import { Container, Row, Col, Card, Table, Spinner } from "react-bootstrap";
+import { Container, Row, Col, Card, Spinner, Table } from "react-bootstrap";
+import { formatCurrency } from "utils/formatCurrency";
 
-// Utility function to format dates as 'dd-MMM-yyyy' (e.g., 23-Oct-2024)
+// Utility function to format date
 function formatDate(dateString) {
+  if (!dateString) return 'N/A';
   const date = new Date(dateString);
-  const options = { day: "2-digit", month: "short", year: "numeric" };
-  return date.toLocaleDateString("en-GB", options); // Ensures 'dd-MMM-yyyy' format
+  return date.toLocaleDateString();
 }
 
-export default function QuotationDetails({ quotations }) {
+export default function CustomerDetails({ customer }) {
   const router = useRouter();
-  const { id } = router.query;
 
   if (router.isFallback) {
     return (
@@ -22,107 +22,195 @@ export default function QuotationDetails({ quotations }) {
     );
   }
 
-  if (!quotations || quotations.length === 0) {
+  if (!customer) {
     return (
       <Container className="mt-5">
-        <div className="alert alert-warning">Quotation not found</div>
+        <div className="alert alert-warning">Customer not found</div>
       </Container>
     );
   }
-
-  const quotation = quotations[0];
-
-  // Group products by DocEntry
-  const groupedProducts = quotations.reduce((acc, product) => {
-    if (!acc[product.DocEntry]) {
-      acc[product.DocEntry] = [];
-    }
-    acc[product.DocEntry].push(product);
-    return acc;
-  }, {});
 
   return (
     <Container className="mt-4">
       <Card>
         <Card.Header>
-          <h2 className="mb-0">Quotation Details #{id}</h2>
+          <h2 className="mb-0">Customer Details - {customer.CustomerName}</h2>
         </Card.Header>
         <Card.Body>
+          {/* Customer Information */}
           <Row className="mb-4">
             <Col md={6}>
+              {/* Basic Details */}
               <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Ship To:
-                </Col>
-                <Col sm={8}>
-                  <div>{quotation.ShipToCode}</div>
-                  <div>{quotation.ShipToDesc}</div>
-                </Col>
+                <Col sm={4} className="fw-bold">Customer Code:</Col>
+                <Col sm={8}>{customer.CustomerCode}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Ship Date:
-                </Col>
-                <Col sm={8}>{formatDate(quotation.ShipDate)}</Col>
+                <Col sm={4} className="fw-bold">Alias Name:</Col>
+                <Col sm={8}>{customer.AliasName || 'N/A'}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Doc Date:
-                </Col>
-                <Col sm={8}>{formatDate(quotation.DocDate)}</Col>
+                <Col sm={4} className="fw-bold">Contact Person:</Col>
+                <Col sm={8}>{customer.ContactPerson || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Phone:</Col>
+                <Col sm={8}>{customer.Phone || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Secondary Phone:</Col>
+                <Col sm={8}>{customer.SecondaryPhone || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Fax:</Col>
+                <Col sm={8}>{customer.Fax || 'N/A'}</Col>
               </Row>
             </Col>
             <Col md={6}>
+              {/* Address Details */}
               <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Currency:
-                </Col>
-                <Col sm={8}>{quotation.Currency}</Col>
+                <Col sm={4} className="fw-bold">Billing Address:</Col>
+                <Col sm={8}>{customer.BillingAddress || 'N/A'}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Description:
-                </Col>
-                <Col sm={8}>{quotation.Dscription}</Col>
+                <Col sm={4} className="fw-bold">Mailing Address:</Col>
+                <Col sm={8}>{customer.MailingAddress || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">City:</Col>
+                <Col sm={8}>{customer.City || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Country:</Col>
+                <Col sm={8}>{customer.Country || 'N/A'}</Col>
               </Row>
             </Col>
           </Row>
 
-          {/* Document Groups */}
-          <h4 className="mt-4 mb-3">Products</h4>
-          {Object.entries(groupedProducts).map(([docEntry, products]) => (
-            <Card key={docEntry} className="mb-3">
-              <Card.Body>
-                <Table responsive striped hover>
-                  <thead>
-                    <tr>
-                      <th>Compound</th>
-                      <th>Cat No</th>
-                      <th>Qty</th>
-                      <th>Price</th>
-                      <th>Currency</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {products.map((product, index) => (
-                      <tr key={index}>
-                        <td>{product.Dscription}</td>
-                        <td>{product.ItemCode}</td>
-                        <td>{product.Quantity}</td>
-                        <td>{product.Price}</td>
-                        <td>{product.Currency || "N/A"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </Card.Body>
-            </Card>
-          ))}
+          {/* Contact Information */}
+          <h4>Contact Information</h4>
+          <Row className="mb-4">
+            <Col md={6}>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Email:</Col>
+                <Col sm={8}>{customer.Email || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Website:</Col>
+                <Col sm={8}>
+                  {customer.Website ? (
+                    <a href={customer.Website} target="_blank" rel="noopener noreferrer">
+                      {customer.Website}
+                    </a>
+                  ) : 'N/A'}
+                </Col>
+              </Row>
+            </Col>
+            <Col md={6}>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Language:</Col>
+                <Col sm={8}>{customer.LanguageCode || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Industry:</Col>
+                <Col sm={8}>{customer.Industry || 'N/A'}</Col>
+              </Row>
+            </Col>
+          </Row>
+
+          {/* Financial Information */}
+          <h4>Financial Information</h4>
+          <Row className="mb-4">
+            <Col md={6}>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Balance:</Col>
+                <Col sm={8}>{formatCurrency(customer.Balance, customer.Currency)}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Credit Line:</Col>
+                <Col sm={8}>{formatCurrency(customer.CreditLine, customer.Currency)}</Col>
+              </Row>
+            </Col>
+            <Col md={6}>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Currency:</Col>
+                <Col sm={8}>{customer.Currency}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Valid Until:</Col>
+                <Col sm={8}>{formatDate(customer.ValidUntil)}</Col>
+              </Row>
+            </Col>
+          </Row>
+
+          {/* Additional Information */}
+          <h4>Additional Information</h4>
+          <Row className="mb-4">
+            <Col md={6}>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Sales Employee:</Col>
+                <Col sm={8}>{customer.SalesEmployeeName || 'N/A'}</Col>
+              </Row>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Territory:</Col>
+                <Col sm={8}>{customer.Territory || 'N/A'}</Col>
+              </Row>
+            </Col>
+            <Col md={6}>
+              <Row className="mb-2">
+                <Col sm={4} className="fw-bold">Active:</Col>
+                <Col sm={8}>{customer.IsActive === 'Y' ? 'Yes' : 'No'}</Col>
+              </Row>
+            </Col>
+          </Row>
+
+          {/* Notes */}
+          {customer.Notes && (
+            <>
+              <h4>Notes</h4>
+              <p>{customer.Notes}</p>
+            </>
+          )}
+
+          {/* Addresses Section */}
+          <h4>Addresses</h4>
+          {customer.Addresses && customer.Addresses.length > 0 ? (
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Address Name</th>
+                  <th>Street</th>
+                  <th>Block</th>
+                  <th>City</th>
+                  <th>State</th>
+                  <th>Zip Code</th>
+                  <th>Country</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customer.Addresses.map((address, index) => (
+                  <tr key={index}>
+                    <td>{address.AddressType === 'B' ? 'Billing' : 'Shipping'}</td>
+                    <td>{address.AddressName}</td>
+                    <td>{address.Street}</td>
+                    <td>{address.Block}</td>
+                    <td>{address.City}</td>
+                    <td>{address.State}</td>
+                    <td>{address.ZipCode}</td>
+                    <td>{address.Country}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          ) : (
+            <p>No addresses available.</p>
+          )}
 
           {/* Back Button */}
           <div className="mt-3">
             <button className="btn btn-secondary" onClick={() => router.back()}>
-              Back to Quotations
+              Back to Customers
             </button>
           </div>
         </Card.Body>
@@ -133,17 +221,16 @@ export default function QuotationDetails({ quotations }) {
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
+
+  // Build the API URL dynamically
   const protocol = context.req.headers["x-forwarded-proto"] || "http";
   const host = context.req.headers.host || "localhost:3000";
-
-  const url = `${protocol}://${host}/api/quotations/${id}`;
-  console.log(`Fetching data from URL: ${url}`); // Debugging log
+  const url = `${protocol}://${host}/api/customers/${id}`;
 
   try {
     const res = await fetch(url);
 
     if (!res.ok) {
-      console.error(`Failed to fetch data, received status ${res.status}`);
       throw new Error(`Failed to fetch data, received status ${res.status}`);
     }
 
@@ -151,14 +238,14 @@ export async function getServerSideProps(context) {
 
     return {
       props: {
-        quotations: Array.isArray(data) ? data : [data],
+        customer: Array.isArray(data) ? data[0] : data,
       },
     };
   } catch (error) {
-    console.error("Error fetching Quotation:", error);
+    console.error("Error fetching customer:", error);
     return {
       props: {
-        quotations: [], // Pass empty array on error
+        customer: null,
       },
     };
   }

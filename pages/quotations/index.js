@@ -281,6 +281,8 @@ export async function getServerSideProps(context) {
     END AS "DocStatus", -- Added the CASE statement for DocStatus
     T0.DocNum,
     T0.DocDate,
+    T0.DocCur,
+      T0.DocRate,
     T0.CardName,
     T1.ItemCode,
     T1.Dscription
