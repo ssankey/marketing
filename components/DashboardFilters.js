@@ -2,18 +2,16 @@ import React from 'react';
 import { Form, Button, Row, Col, Badge } from 'react-bootstrap';
 
 const DashboardFilters = ({
-    month,
-    year,
-    region,
-    setMonth,
-    customer,
-    setCustomer,
-    setYear,
+    dateFilter,
+    setDateFilter,
+    startDate,
+    setStartDate,
+    endDate,
     setRegion,
-    availableMonths,
-    availableYears,
-    availableRegions,
-    availableCustomers,
+    setCustomer,
+    setEndDate,
+    customer,
+    region,
     handleFilterChange
 }) => {
     const getMonthName = (monthValue) => {
@@ -22,45 +20,54 @@ const DashboardFilters = ({
 
     const getActiveFiltersText = () => {
         const filters = [];
-
-        if (month) filters.push(`Month: ${getMonthName(month)}`);
-        if (year) filters.push(`Year: ${year}`);
+      
+        if (dateFilter === 'custom') {
+          if (startDate && endDate) {
+            filters.push(`Date Range: ${startDate} to ${endDate}`);
+          }
+        } else {
+          filters.push(`Date Range: ${dateFilter}`);
+        }
+      
         if (region) filters.push(`Region: ${region}`);
         if (customer) {
-            const customerObj = availableCustomers.find((c) => c.code === customer);
-            const customerName = customerObj ? customerObj.name : customer;
-            filters.push(`Customer: ${customerName}`);
-          }
-        if (filters.length === 0) {
-            return 'Showing data for all time periods,customer and regions';
+          const customerObj = availableCustomers.find((c) => c.code === customer);
+          const customerName = customerObj ? customerObj.name : customer;
+          filters.push(`Customer: ${customerName}`);
         }
-
+      
+        if (filters.length === 0) {
+          return 'Showing data for today';
+        }
+      
         return (
-            <span className="d-flex align-items-center gap-2">
-                Showing data for:
-                {filters.map((filter, index) => (
-                    <Badge key={index} bg="info" className="text-dark bg-light border">
-                        {filter}
-                    </Badge>
-                ))}
-            </span>
+          <span className="d-flex align-items-center gap-2">
+            Showing data for:
+            {filters.map((filter, index) => (
+              <Badge key={index} bg="info" className="text-dark bg-light border">
+                {filter}
+              </Badge>
+            ))}
+          </span>
         );
-    };
+      };
+      
 
-    const handleReset = () => {
-        // First reset all the state values
-        setMonth('');
-        setYear('');
+      const handleReset = () => {
+        setDateFilter('today');
+        setStartDate('');
+        setEndDate('');
         setRegion('');
-        setCustomer('')
-        // Then trigger the filter change with empty values
+        setCustomer('');
         handleFilterChange({
-            month: '',
-            year: '',
-            region: '',
-            customer: ''
+          dateFilter: 'today',
+          startDate: '',
+          endDate: '',
+          region: '',
+          customer: '',
         });
-    };
+      };
+      
 
     return (
         <div className="mb-4">
@@ -68,91 +75,61 @@ const DashboardFilters = ({
                 <Col xs="auto">
                     <Form.Control
                         as="select"
-                        value={month}
-                        onChange={(e) => setMonth(e.target.value)}
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
                         size="sm"
                     >
-                        <option value="">All Months</option>
-                        {availableMonths.map((monthValue) => (
-                            <option key={monthValue} value={monthValue}>
-                                {getMonthName(monthValue)}
-                            </option>
-                        ))}
+                        <option value="today">Today</option>
+                        <option value="thisWeek">This Week</option>
+                        <option value="thisMonth">This Month</option>
+                        <option value="custom">Custom</option>
                     </Form.Control>
                 </Col>
 
-                <Col xs="auto">
-                    <Form.Control
-                        as="select"
-                        value={year}
-                        onChange={(e) => setYear(e.target.value)}
-                        size="sm"
-                    >
-                        <option value="">All Years</option>
-                        {availableYears.map((yearValue) => (
-                            <option key={yearValue} value={yearValue}>
-                                {yearValue}
-                            </option>
-                        ))}
-                    </Form.Control>
-                </Col>
-                <Col xs="auto">
-                    <Form.Control
-                        as="select"
-                        value={customer}
-                        onChange={(e) => setCustomer(e.target.value)}
-                        size="sm"
-                    >
-                        <option value="">All Customers</option>
-                        {availableCustomers.map((customer) => (
-                            <option key={customer.code} value={customer.code}>
-                                {customer.name}
-                            </option>
-                        ))}
-                    </Form.Control>
-                </Col>
+                {dateFilter === 'custom' && (
+                    <>
+                        <Col xs="auto">
+                            <Form.Control
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                size="sm"
+                            />
+                        </Col>
+                        <Col xs="auto">
+                            <Form.Control
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                size="sm"
+                            />
+                        </Col>
+                    </>
+                )}
 
-                <Col xs="auto">
-                    <Form.Control
-                        as="select"
-                        value={region}
-                        onChange={(e) => setRegion(e.target.value)}
-                        size="sm"
-                    >
-                        <option value="">All Regions</option>
-                        {availableRegions.map((regionValue) => (
-                            <option key={regionValue} value={regionValue}>
-                                {regionValue}
-                            </option>
-                        ))}
-                    </Form.Control>
-                </Col>
+                {/* Region and Customer Filters */}
 
                 <Col xs="auto">
                     <Button
                         variant="primary"
                         size="sm"
-                        onClick={() => handleFilterChange({ month, year, region,customer })}
-                        className="me-2"
+                        onClick={() =>
+                            handleFilterChange({ dateFilter, startDate, endDate, region, customer })
+                        }
                     >
                         Apply Filters
                     </Button>
-                    <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={handleReset}
-                    >
+                    <Button variant="outline-secondary" size="sm" onClick={handleReset}>
                         Reset
                     </Button>
                 </Col>
 
                 <Col xs="auto" className="ms-auto">
-                    <small className="text-muted">
-                        {getActiveFiltersText()}
-                    </small>
+                    <small className="text-muted">{getActiveFiltersText()}</small>
                 </Col>
             </Row>
         </div>
+
     );
 };
 

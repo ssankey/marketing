@@ -21,13 +21,7 @@ import {
     PiggyBank,
 } from 'react-bootstrap-icons';
 import { formatCurrency } from 'utils/formatCurrency';
-import {
-    getAvailableFilters,
-    getMonthlySalesAndCOGS,
-    getTopCategoriesMonthly,
-    getTopCustomers,
-    getTotalOpenOrders,
-} from 'lib/models/dashboard';
+
 import LoadingSpinner from 'components/LoadingSpinner';
 import DashboardFilters from 'components/DashboardFilters';
 
@@ -50,25 +44,31 @@ const Dashboard = ({
     availableMonths = [],
     availableYears = [],
     availableRegions = [],
-    availableCustomers=[],
+    availableCustomers = [],
     openOrders = 0
 }) => {
-    
+    console.log('openOrders', openOrders);
+
     // Existing calculations...
     const router = useRouter();
-    const { month: initialMonth, year: initialYear, region: initialRegion,customer: initialCustomer, } = router.query;
-    const [month, setMonth] = useState(initialMonth || '');
-    const [year, setYear] = useState(initialYear || '');
-    const [region, setRegion] = useState(initialRegion || '');
-    const [customer, setCustomer] = useState(initialCustomer || '');
+    const {
+        dateFilter: initialDateFilter = 'today',
+        startDate: initialStartDate,
+        endDate: initialEndDate,
+        region: initialRegion,
+        customer: initialCustomer,
+      } = router.query;
+      
+      const [dateFilter, setDateFilter] = useState(initialDateFilter);
+      const [startDate, setStartDate] = useState(initialStartDate || '');
+      const [endDate, setEndDate] = useState(initialEndDate || '');
+      const [region, setRegion] = useState(initialRegion || '');
+      const [customer, setCustomer] = useState(initialCustomer || '');
+      
 
     // Calculate total Sales and total COGS
-    const totalSales = salesData.reduce((sum, data) => sum + data.Sales, 0);
-    const totalCOGS = salesData.reduce((sum, data) => sum + data.COGS, 0);
-
-
-    // const totalSales = salesData.reduce((sum, month) => sum + month.Sales, 0);
-    // const totalCOGS = salesData.reduce((sum, month) => sum + month.COGS, 0);
+    const totalSales = salesData.Sales || 0;
+    const totalCOGS = salesData.COGS || 0;
     const totalProfit = totalSales - totalCOGS;
     const overallProfitMargin = totalSales
         ? ((totalProfit / totalSales) * 100).toFixed(1)
@@ -77,12 +77,13 @@ const Dashboard = ({
     const [isLoading, setIsLoading] = React.useState(true);
     const [isFilterLoading, setIsFilterLoading] = useState(false);
 
-    React.useEffect(() => {
-        if (salesData.length > 0 && topCustomers.length > 0 && topCategories.length > 0) {
-            setIsLoading(false);
-            setIsFilterLoading(false);  // Stop loading when data is ready
-        }
-    }, [salesData, topCustomers, topCategories]);
+    // useEffect(() => {
+    //     if (salesData && topCustomers.length > 0 && topCategories.length > 0) {
+    //       setIsLoading(false);
+    //       setIsFilterLoading(false);
+    //     }
+    //   }, [salesData, topCustomers, topCategories]);
+      
 
     // Color palette
     const colorPalette = {
@@ -221,16 +222,15 @@ const Dashboard = ({
     const topCustomersChartData = {
         labels: topCustomers.map((customer) => customer.Customer),
         datasets: [
-            {
-                label: 'Sales',
-                data: topCustomers.map((customer) => customer.GrandTotal || 0),
-                backgroundColor: topCustomers.map((_, index) => getColor(index)),
-                maxBarThickness: 100,
-
-            },
+          {
+            label: 'Sales',
+            data: topCustomers.map((customer) => customer.Sales || 0),
+            backgroundColor: topCustomers.map((_, index) => getColor(index)),
+            maxBarThickness: 100,
+          },
         ],
-
-    };
+      };
+      
 
     const topCustomersChartOptions = {
         ...chartOptions,
@@ -270,15 +270,15 @@ const Dashboard = ({
     const topCategoriesChartData = {
         labels: topCategories.map((category) => category.Category),
         datasets: [
-            {
-                label: 'Sales',
-                data: topCategories.map((category) => category.GrandTotal || 0),
-                backgroundColor: topCategories.map((_, index) => getColor(index + topCustomers.length)),
-                maxBarThickness: 100,
-
-            },
+          {
+            label: 'Sales',
+            data: topCategories.map((category) => category.Sales || 0),
+            backgroundColor: topCategories.map((_, index) => getColor(index + topCustomers.length)),
+            maxBarThickness: 100,
+          },
         ],
-    };
+      };
+      
 
     const topCategoriesChartOptions = {
         ...chartOptions,
@@ -302,13 +302,12 @@ const Dashboard = ({
     const handleFilterChange = async (filterValues) => {
         setIsFilterLoading(true);
         const query = {
-          ...(filterValues.month && { month: filterValues.month }),
-          ...(filterValues.year && { year: filterValues.year }),
+          ...(filterValues.dateFilter && { dateFilter: filterValues.dateFilter }),
+          ...(filterValues.startDate && { startDate: filterValues.startDate }),
+          ...(filterValues.endDate && { endDate: filterValues.endDate }),
           ...(filterValues.region && { region: filterValues.region }),
           ...(filterValues.customer && { customer: filterValues.customer }),
         };
-        console.log(query);
-        
         await router.push({
           pathname: router.pathname,
           query,
@@ -318,9 +317,10 @@ const Dashboard = ({
 
 
 
-    if (isLoading || isFilterLoading) {
-        return <LoadingSpinner />;
-    }
+
+    // if (isLoading) {
+    //     return <LoadingSpinner />;
+    // }
 
     return (
         <Container fluid className="p-4" style={{
@@ -328,18 +328,16 @@ const Dashboard = ({
             fontFamily: "'Inter', sans-serif"
         }}>
             <DashboardFilters
-                month={month}
-                year={year}
+                dateFilter={dateFilter}
+                setDateFilter={setDateFilter}
+                startDate={startDate}
+                setStartDate={setStartDate}
+                endDate={endDate}
+                setEndDate={setEndDate}
                 region={region}
-                customer={customer}
-                setMonth={setMonth}
-                setYear={setYear}
                 setRegion={setRegion}
+                customer={customer}
                 setCustomer={setCustomer}
-                availableMonths={availableMonths}
-                availableYears={availableYears}
-                availableRegions={availableRegions}
-                availableCustomers={availableCustomers}
                 handleFilterChange={handleFilterChange}
             />
 
@@ -471,53 +469,90 @@ Dashboard.seo = {
 
 export default Dashboard;
 
-// pages/dashboard.js
 export async function getServerSideProps(context) {
-    const { month, year, region, customer } = context.query;
-  
-    try {
-      const [
-        salesData,
-        topCustomers,
-        topCategories,
-        openOrders,
-        availableFilters,
-      ] = await Promise.all([
-        getMonthlySalesAndCOGS({ month, year, region, customer }),
-        getTopCustomers({ month, year, region, customer }),
-        getTopCategoriesMonthly({ month, year, region, customer }),
-        getTotalOpenOrders({ region, customer }),
-        getAvailableFilters({ month, year }),
-      ]);
-  
-      const { months, years, customers } = availableFilters;
-  
-      return {
-        props: {
-          salesData: salesData || [],
-          topCustomers: topCustomers || [],
-          topCategories: topCategories || [],
-          openOrders: openOrders[0]?.TotalOpenOrders || 0,
-          availableMonths: months || [],
-          availableYears: years || [],
-          availableCustomers: customers || [],
-        },
-      };
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      return {
-        props: {
-          salesData: [],
-          topCustomers: [],
-          topCategories: [],
-          openOrders: 0,
-          availableMonths: [],
-          availableYears: [],
-          availableCustomers: [],
-        },
-      };
+    const {
+        dateFilter = 'today',
+        startDate,
+        endDate,
+        region,
+        customer,
+    } = context.query;
+
+    let computedStartDate = startDate;
+    let computedEndDate = endDate;
+
+    if (!startDate || !endDate || dateFilter !== 'custom') {
+        const today = new Date();
+        if (dateFilter === 'today') {
+            computedStartDate = computedEndDate = today.toISOString().split('T')[0];
+        } else if (dateFilter === 'thisWeek') {
+            const firstDayOfWeek = new Date(
+                today.setDate(today.getDate() - today.getDay() + 1)
+            );
+            const lastDayOfWeek = new Date(
+                today.setDate(today.getDate() - today.getDay() + 7)
+            );
+            computedStartDate = firstDayOfWeek.toISOString().split('T')[0];
+            computedEndDate = lastDayOfWeek.toISOString().split('T')[0];
+        } else if (dateFilter === 'thisMonth') {
+            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            computedStartDate = firstDayOfMonth.toISOString().split('T')[0];
+            computedEndDate = lastDayOfMonth.toISOString().split('T')[0];
+        }
     }
-  }
-  
+
+    // Import server-side functions here
+    const {
+        getSalesAndCOGS,
+        getTopCustomers,
+        getTopCategories,
+        getTotalOpenOrders,
+    } = require('lib/models/dashboard');
+
+    try {
+        const [salesData, topCustomers, topCategories, openOrders] = await Promise.all([
+            getSalesAndCOGS({
+                startDate: computedStartDate,
+                endDate: computedEndDate,
+                region,
+                customer,
+            }),
+            getTopCustomers({
+                startDate: computedStartDate,
+                endDate: computedEndDate,
+                region,
+                customer,
+            }),
+            getTopCategories({
+                startDate: computedStartDate,
+                endDate: computedEndDate,
+                region,
+                customer,
+            }),
+            getTotalOpenOrders({ region, customer }),
+        ]);
+
+        return {
+            props: {
+                salesData,
+                topCustomers: topCustomers || [],
+                topCategories: topCategories || [],
+                openOrders: openOrders[0]?.TotalOpenOrders || 0,
+                // Remove unused props
+            },
+        };
+    } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        return {
+            props: {
+                salesData: {},
+                topCustomers: [],
+                topCategories: [],
+                openOrders: 0,
+            },
+        };
+    }
+}
 
 
