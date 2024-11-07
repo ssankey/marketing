@@ -19,6 +19,7 @@ import {
     CurrencyDollar,
     Cart4,
     PiggyBank,
+    ExclamationCircle,
 } from 'react-bootstrap-icons';
 import { formatCurrency } from 'utils/formatCurrency';
 
@@ -38,6 +39,10 @@ ChartJS.register(
 );
 
 const Dashboard = ({
+    quotationConversionRate,
+    NumberOfSalesOrders,
+    totalSalesRevenue,
+    outstandingInvoices,
     salesData = [],
     topCustomers = [],
     topCategories = [],
@@ -344,6 +349,30 @@ const Dashboard = ({
             <Row className="g-4 mb-4">
                 {[
                     {
+                        title: 'Total Sales Revenue Today',
+                        value: formatCurrency(totalSalesRevenue),
+                        icon: <CurrencyDollar className="text-primary" />,
+                        color: colorPalette.primary,
+                      },
+                      {
+                        title: 'Number of Sales Orders Today',
+                        value: NumberOfSalesOrders,
+                        icon: <Cart4 className="text-success" />,
+                        color: colorPalette.success,
+                      },
+                      {
+                        title: 'Quotation Conversion Rate Today',
+                        value: `${quotationConversionRate}%`,
+                        icon: <GraphUpArrow className="text-warning" />,
+                        color: colorPalette.warning,
+                      },
+                      {
+                        title: 'Outstanding Invoices Today',
+                        value: formatCurrency(outstandingInvoices.amount),
+                        icon: <ExclamationCircle className="text-danger" />,
+                        color: colorPalette.danger,
+                      },
+                    {
                         title: 'Total Sales',
                         value: formatCurrency(totalSales),
                         icon: <CurrencyDollar className="text-primary" />,
@@ -404,7 +433,7 @@ const Dashboard = ({
                                         fontSize: '1.5rem'
                                     }}
                                 >
-                                    {card.value}
+                                    {card.value || 0}
                                 </h3>
                             </Card.Body>
                         </Card>
@@ -504,6 +533,10 @@ export async function getServerSideProps(context) {
 
     // Import server-side functions here
     const {
+        getNumberOfSalesOrders,
+        getTotalSalesRevenue,
+        getOutstandingInvoices,
+        getQuotationConversionRate,
         getSalesAndCOGS,
         getTopCustomers,
         getTopCategories,
@@ -511,7 +544,31 @@ export async function getServerSideProps(context) {
     } = require('lib/models/dashboard');
 
     try {
-        const [salesData, topCustomers, topCategories, openOrders] = await Promise.all([
+        const [ quotationConversionRate,NumberOfSalesOrders, totalSalesRevenue,outstandingInvoices,salesData, topCustomers, topCategories, openOrders] = await Promise.all([
+            getQuotationConversionRate({
+                startDate: computedStartDate,
+                endDate: computedEndDate,
+                region,
+                customer,
+            }),
+            getNumberOfSalesOrders({
+                startDate: computedStartDate,
+                endDate: computedEndDate,
+                region,
+                customer,
+            }),
+            getTotalSalesRevenue({
+                startDate: computedStartDate,
+                endDate: computedEndDate,
+                region,
+                customer,
+            }),
+            getOutstandingInvoices({
+                startDate: computedStartDate,
+                endDate: computedEndDate,
+                region,
+                customer,
+            }),
             getSalesAndCOGS({
                 startDate: computedStartDate,
                 endDate: computedEndDate,
@@ -535,6 +592,10 @@ export async function getServerSideProps(context) {
 
         return {
             props: {
+                quotationConversionRate,
+                NumberOfSalesOrders,
+                totalSalesRevenue,
+                outstandingInvoices,
                 salesData,
                 topCustomers: topCustomers || [],
                 topCategories: topCategories || [],
