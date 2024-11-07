@@ -118,50 +118,31 @@ export async function getServerSideProps(context) {
 
     // Get paginated data
     const dataQuery = `
-  SELECT * FROM (
-    SELECT 
-      Case When (T0.DocStatus='C' and T0.CANCELED='N') Then 'Closed'
-           When (T0.DocStatus='C' and T0.CANCELED='Y') Then 'Cancel'
-           When T0.DocStatus='O' Then 'Open' Else 'NA' End "DocStatus",
-      T0.DocEntry,
-      T0.DocCur,
-      T0.DocRate,
-      T0.DocNum,
-      T0.DocDate,
-      T0.DocTotal,
-      T0.NumAtCard as "CustomerPONo",
-      T0.TaxDate as "PODate",
-      T0.CardName,
-      T4.ItmsGrpNam AS ItemGroup,
-      T1.ItemCode,
-      T1.Dscription as ItemName,
-      Case When (T1.LineStatus='C') Then 'Closed'
-           When T1.LineStatus='O' Then 'Open' Else 'NA' End "LineStatus",
-      round(T1.Quantity, 2) as Quantity,
-      T1.UnitMsr as UOMName,
-      round(T1.OpenQty, 2) as OpenQty,
-      T3.onhand as StockStatus,
-      T1.U_timeline,
-      T3.suppcatnum,
-      T1.DelivrdQty,
-      T1.ShipDate as DeliveryDate,
-      T2.Location as PlantLocation,
-      round(T1.Price, 3) as Price,
-      T1.Currency,
-      (T1.OpenQty * T1.Price) AS OpenAmount,
-      T5.slpname as SalesEmployee
-    FROM ORDR T0  
-    INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry 
-    INNER JOIN OLCT T2 ON T1.LocCode = T2.Code 
-    LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode 
-    LEFT JOIN OITB T4 ON T4.ItmsGrpCod = T3.ItmsGrpCod 
-    INNER JOIN OSLP T5 ON T0.slpcode = T5.slpcode
-    WHERE ${whereClause}
-  ) AS OrdersData
+  SELECT 
+    CASE 
+      WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
+      WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Cancelled'
+      WHEN T0.DocStatus='O' THEN 'Open' 
+      ELSE 'NA' 
+    END AS DocStatus,
+    T0.DocEntry,
+    T0.DocCur,
+    T0.DocRate,
+    T0.DocNum,
+    T0.DocDate,
+    T0.DocTotal,
+    T0.NumAtCard AS CustomerPONo,
+    T0.TaxDate AS PODate,
+    T0.CardName,
+    T5.SlpName AS SalesEmployee
+  FROM ORDR T0
+  INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
+  WHERE ${whereClause}
   ORDER BY ${sortField} ${sortDir}
   OFFSET ${offset} ROWS
   FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
 `;
+
 
 
     const [totalResult, rawOrders] = await Promise.all([
