@@ -3,11 +3,17 @@ import LoadingSpinner from "components/LoadingSpinner";
 import CustomersTable from "components/CustomersTable";
 import { getCustomers } from "lib/models/customers";
 import { useRouter } from "next/router";
+import { useAuth } from "../../utils/useAuth";
 
 export default function CustomersPage({
   customers: initialCustomers,
   totalItems: initialTotalItems,
 }) {
+
+//   useAuth(); // Protect the  customers page
+  const isAuthenticated = useAuth();
+
+
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [customers, setCustomers] = useState(initialCustomers);
@@ -40,11 +46,17 @@ export default function CustomersPage({
   }
 
   return (
-    <CustomersTable
-      customers={customers}
-      totalItems={totalItems}
-      isLoading={isLoading}
-    />
+    <div>
+      {isAuthenticated ? (
+        <CustomersTable
+          customers={customers}
+          totalItems={totalItems}
+          isLoading={isLoading}
+        />
+      ) : (
+        <h1>Redirecting to Login...</h1>
+      )}
+    </div>
   );
 }
 
