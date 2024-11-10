@@ -94,13 +94,16 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
         {
             field: 'LineTotal',
             label: 'Line Total',
-            render: (value, row) => formatCurrency(value, row.Currency),
+            render: (value, row) => {
+                const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
+                return formatCurrency(amountInINR);
+              },
         },
-        {
-            field: 'Currency',
-            label: 'Currency',
-            render: (value) => value || 'N/A',
-        },
+        // {
+        //     field: 'Currency',
+        //     label: 'Currency',
+        //     render: (value) => value || 'N/A',
+        // },
         {
             field: 'StockStatus',
             label: 'Stock',

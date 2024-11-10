@@ -9,8 +9,11 @@ import StatusBadge from './StatusBadge';
 import { formatDate } from 'utils/formatDate';
 import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
+import shortenName from 'utils/formatProductName';
 
 const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
+  console.log(orders);
+  
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(totalItems, ITEMS_PER_PAGE);
   const {
@@ -74,7 +77,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
     {
       field: 'ItemName',
       label: 'Compound',
-      render: (value) => value || 'N/A',
+      render: (value) => shortenName(value) || 'N/A',
     },
     {
       field: 'Quantity',
@@ -122,19 +125,22 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       render: (value) => value || 'N/A',
     },
     {
-      field: 'Price',
+      field: 'DocTotal',
       label: 'Price',
-      render: (value) => (value != null ? value.toFixed(3) : '0.000'),
+      render: (value, row) => {
+        const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
+        return formatCurrency(amountInINR);
+      },
     },
-    {
-      field: 'Currency',
-      label: 'Currency',
-      render: (value) => value || 'N/A',
-    },
+    // {
+    //   field: 'Currency',
+    //   label: 'Currency',
+    //   render: (value, row) => row.DocCur,
+    // },
     {
       field: 'OpenAmount',
       label: 'Open Amount',
-      render: (value, row) => formatCurrency(value, row.Currency),
+      render: (value, row) => formatCurrency(value, row.DocRate),
     },
     {
       field: 'SalesEmployee',
