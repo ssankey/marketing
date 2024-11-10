@@ -1,13 +1,12 @@
+// pages/orders.js
 import { useRouter } from 'next/router';
 import { Container, Row, Col, Card, Table, Spinner } from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 
-
-
 export default function OrderDetails({ orders }) {
     const router = useRouter();
-    const { id } = router.query;
+    const { d, e } = router.query; // Extract 'd' and 'e' instead of 'id'
 
     if (router.isFallback) {
         return (
@@ -29,7 +28,7 @@ export default function OrderDetails({ orders }) {
         );
     }
 
-    // Group products by DocEntry
+    // Group products by DocEntry (though with both d and e, grouping may not be necessary)
     const groupedProducts = orders.reduce((acc, product) => {
         if (!acc[product.DocEntry]) {
             acc[product.DocEntry] = [];
@@ -42,7 +41,7 @@ export default function OrderDetails({ orders }) {
         <Container className="mt-4">
             <Card>
                 <Card.Header>
-                    <h2 className="mb-0">Order Details #{id}</h2>
+                    <h2 className="mb-0">Order Details #{d}</h2>
                 </Card.Header>
                 <Card.Body>
                     <Row className="mb-4">
@@ -52,11 +51,8 @@ export default function OrderDetails({ orders }) {
                                 <Col sm={8}>{order.CardCode}</Col>
                             </Row>
                             <Row className="mb-2">
-                                <Col sm={4} className="fw-bold">Ship To:</Col>
-                                <Col sm={8}>
-                                    <div>{order.ShipToCode}</div>
-                                    <div>{order.ShipToDesc}</div>
-                                </Col>
+                                <Col sm={4} className="fw-bold">Customer PO No:</Col>
+                                <Col sm={8}>{order.CustomerPONo || 'N/A'}</Col>
                             </Row>
                             <Row className="mb-2">
                                 <Col sm={4} className="fw-bold">Ship Date:</Col>
@@ -78,6 +74,14 @@ export default function OrderDetails({ orders }) {
                                     {formatCurrency(order.DocTotal)} {order.Currency}
                                 </Col>
                             </Row>
+                            <Row className="mb-2">
+                                <Col sm={4} className="fw-bold">Status:</Col>
+                                <Col sm={8}>{order.DocStatus}</Col>
+                            </Row>
+                            <Row className="mb-2">
+                                <Col sm={4} className="fw-bold">Sales Employee:</Col>
+                                <Col sm={8}>{order.SalesEmployee}</Col>
+                            </Row>
                         </Col>
                     </Row>
 
@@ -89,11 +93,14 @@ export default function OrderDetails({ orders }) {
                                 <Table responsive striped hover>
                                     <thead>
                                         <tr>
-                                            <th>Compound</th>
-                                            <th>Cat No</th>
-                                            <th>Qty</th>
+                                            <th>Item Group</th>
+                                            <th>Item Code</th>
+                                            <th>Item Name</th>
+                                            <th>Quantity</th>
                                             <th>Price</th>
                                             <th>Subtotal</th>
+                                            <th>Delivery Date</th>
+                                            <th>Plant Location</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -101,8 +108,9 @@ export default function OrderDetails({ orders }) {
                                             const subtotal = product.Quantity * product.Price;
                                             return (
                                                 <tr key={index}>
-                                                    <td>{product.Dscription}</td>
+                                                    <td>{product.ItemGroup}</td>
                                                     <td>{product.ItemCode}</td>
+                                                    <td>{product.ItemName}</td>
                                                     <td>{product.Quantity}</td>
                                                     <td>
                                                         {formatCurrency(product.Price)} {product.Currency || 'N/A'}
@@ -110,6 +118,8 @@ export default function OrderDetails({ orders }) {
                                                     <td>
                                                         {formatCurrency(subtotal)} {product.Currency || 'N/A'}
                                                     </td>
+                                                    <td>{formatDate(product.ShipDate)}</td>
+                                                    <td>{product.PlantLocation || 'N/A'}</td>
                                                 </tr>
                                             );
                                         })}
@@ -135,14 +145,20 @@ export default function OrderDetails({ orders }) {
 }
 
 export async function getServerSideProps(context) {
-    const { id } = context.params;
+    const { d, e } = context.query; // Extract 'd' and 'e' from query parameters
+
+    if (!d || !e) {
+        return {
+            notFound: true, // Return 404 page if parameters are missing
+        };
+    }
 
     // Get the protocol and host from the context
     const protocol = context.req.headers['x-forwarded-proto'] || 'http';
     const host = context.req.headers.host;
 
     try {
-        const res = await fetch(`${protocol}://${host}/api/orders/${id}`);
+        const res = await fetch(`${protocol}://${host}/api/orders/detail?d=${d}&e=${e}`);
         if (!res.ok) {
             throw new Error(`Failed to fetch data, received status ${res.status}`);
         }

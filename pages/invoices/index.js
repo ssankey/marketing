@@ -145,7 +145,7 @@ export async function getServerSideProps(context) {
         INNER JOIN OSLP T5 ON T0.slpcode = T5.slpcode
         WHERE ${whereClause}
       ) AS InvoicesData
-      ORDER BY ${sortField} ${sortDir}
+      ORDER BY DocDate Desc
       OFFSET ${offset} ROWS
       FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
     `;
