@@ -59,17 +59,27 @@ function MyApp({ Component, pageProps }) {
     },
   }), [pageSEO, pageURL]);
 
+  const isAuthPage =
+    router.pathname === "/login" ||
+    router.pathname === "/signup" ||
+    router.pathname === "/forgot-password";
+
 
   // Determine the layout based on the component or route
   const Layout = useMemo(() => {
+    // If on an authentication page, use no layout (or a simple layout)
+    if (isAuthPage) {
+      return ({ children }) => <>{children}</>; // No layout for auth pages
+    }
     if (Component.Layout) {
       return Component.Layout; // Use the layout specified by the component
     }
-    if (router.pathname.includes('dashboard')) {
+    if (router.pathname.includes("dashboard")) {
       return DefaultDashboardLayout; // Use default dashboard layout for dashboard routes
     }
+
     return DefaultDashboardLayout; // Fallback to dashboard layout
-  }, [Component.Layout, router.pathname]);
+  }, [Component.Layout, router.pathname, isAuthPage]);
 
   return (
     <SWRConfig value={SWR_CONFIG}>
@@ -98,3 +108,4 @@ function MyApp({ Component, pageProps }) {
 }
 
 export default MyApp;
+
