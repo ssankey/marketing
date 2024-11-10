@@ -215,22 +215,21 @@ export async function getServerSideProps(context) {
       fromDate,
       toDate,
     } = context.query;
-
+  
     const ITEMS_PER_PAGE = 20;
     const offset = (parseInt(page, 10) - 1) * ITEMS_PER_PAGE;
-
+  
     let whereClause = "1=1";
-
+  
     if (search) {
       whereClause += ` AND (
-          T0.DocNum LIKE '%${search}%' OR 
-          T0.CardName LIKE '%${search}%' OR 
-          T1.ItemCode LIKE '%${search}%' OR 
-          T1.Dscription LIKE '%${search}%'
-        )`;
+        T0.DocNum LIKE '%${search}%' OR 
+        T0.CardName LIKE '%${search}%' OR 
+        T1.ItemCode LIKE '%${search}%' OR 
+        T1.Dscription LIKE '%${search}%'
+      )`;
     }
-
-    // Check if status is defined and not 'all'
+  
     if (status && status !== "all") {
       whereClause += ` AND (
         CASE 
@@ -241,71 +240,70 @@ export async function getServerSideProps(context) {
         END = '${status}'
       )`;
     }
-
+  
     if (fromDate) {
       whereClause += ` AND T0.DocDate >= '${fromDate}'`;
     }
     if (toDate) {
       whereClause += ` AND T0.DocDate <= '${toDate}'`;
     }
-
+  
     const countQuery = `
       SELECT COUNT(*) as total
       FROM OQUT T0  
       INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
-      WHERE ${whereClause};
+      WHERE ${whereClause}
     `;
-
-    // const dataQuery = `
-    //   SELECT 
-    //     T0.DocNum,
-    //     T0.DocDate,
-    //     T0.CardName,
-    //     T1.ItemCode,
-    //     T1.Dscription
-    //   FROM OQUT T0  
-    //   INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
-    //   WHERE ${whereClause}
-    //   ORDER BY ${sortField} ${sortDir}
-    //   OFFSET ${offset} ROWS
-    //   FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-    // `;
-
+  
     const dataQuery = `
-  SELECT 
-    CASE 
-      WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'N') THEN 'Closed'
-      WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'Y') THEN 'Cancel'
-      WHEN T0.DocStatus = 'O' THEN 'Open'
-      ELSE 'NA' 
-    END AS "DocStatus", -- Added the CASE statement for DocStatus
-    T0.DocNum,
-    T0.DocDate,
-    T0.DocCur,
-      T0.DocRate,
-    T0.CardName,
-    T1.ItemCode,
-    T1.Dscription
-  FROM OQUT T0  
-  INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
-  WHERE ${whereClause}
-  ORDER BY ${sortField} ${sortDir}
-  OFFSET ${offset} ROWS
-  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-`;
-
-
+      SELECT 
+        CASE 
+          WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'N') THEN 'Closed'
+          WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'Y') THEN 'Cancel'
+          WHEN T0.DocStatus = 'O' THEN 'Open'
+          ELSE 'NA' 
+        END AS "DocStatus",
+        T0.DocEntry,
+        T0.DocNum,
+        T0.DocDate,
+        T0.NumAtCard as "Customer PO No",
+        T0.CardName,
+        T1.ItemCode,
+        T1.Dscription as "Item Name",
+        CASE 
+          WHEN T1.LineStatus = 'C' THEN 'Closed'
+          WHEN T1.LineStatus = 'O' THEN 'Open'
+          ELSE 'NA'
+        END as "Line Status",
+        ROUND(T1.Quantity, 2) as "Quantity",
+        T1.UnitMsr as "UOM Name",
+        ROUND(T1.OpenQty, 2) as "Open Qty",
+        T1.ShipDate as "Delivery Date",
+        ROUND(T1.Price, 3) as "Price",
+        T1.Currency,
+        (T1.OpenQty * T1.Price) AS "OPEN AMOUNT",
+        T5.SlpName as "Sales Employee"
+      FROM OQUT T0  
+      INNER JOIN QUT1 T1 ON T0.DocEntry = T1.DocEntry 
+      INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
+      WHERE ${whereClause}
+      ORDER BY ${sortField} ${sortDir}
+      OFFSET ${offset} ROWS
+      FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY
+    `;
+  
     const [totalResult, rawQuotations] = await Promise.all([
       getQuotations(countQuery),
       getQuotations(dataQuery),
     ]);
-
+  
     const totalItems = totalResult[0]?.total || 0;
     const quotations = rawQuotations.map((quotation) => ({
       ...quotation,
       DocDate: quotation.DocDate ? quotation.DocDate.toISOString() : null,
+      "Delivery Date": quotation["Delivery Date"] ? quotation["Delivery Date"].toISOString() : null
     }));
-
+  
     return {
       props: {
         quotations: Array.isArray(quotations) ? quotations : [],
@@ -319,7 +317,9 @@ export async function getServerSideProps(context) {
       props: {
         quotations: [],
         totalItems: 0,
-      },
+        currentPage: 1,
+        error: "Failed to fetch quotations"
+      }
     };
   }
 }

@@ -211,11 +211,6 @@ const Dashboard = ({
             .sort((a, b) => new Date(a) - new Date(b))
         : [];
 
-    const customerDatasets = topCustomers.map((customer, index) => ({
-        label: customer.Customer,
-        data: months.map((month) => customer[month] || 0),
-        backgroundColor: getColor(index),
-    }));
 
     // **2. Top Customers Sales Chart**
 
@@ -250,20 +245,6 @@ const Dashboard = ({
         },
     };
 
-
-    // **3. Top Categories Monthly Sales Chart**
-
-    const categoryMonths = topCategories?.[0]
-        ? Object.keys(topCategories[0])
-            .filter((key) => key !== 'Category' && key !== 'GrandTotal')
-            .sort((a, b) => new Date(a) - new Date(b))
-        : [];
-
-    const categoryDatasets = topCategories.map((category, index) => ({
-        label: category.Category,
-        data: categoryMonths.map((month) => category[month] || 0),
-        backgroundColor: getColor(index + topCustomers.length),
-    }));
 
     // **3. Top Categories Sales Chart**
 
@@ -470,6 +451,8 @@ Dashboard.seo = {
 export default Dashboard;
 
 export async function getServerSideProps(context) {
+    console.log('context',context);
+    
     const {
         dateFilter = 'today',
         startDate,

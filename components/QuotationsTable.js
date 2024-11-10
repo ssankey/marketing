@@ -34,10 +34,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       field: "DocNum",
       label: "Quotation#",
       render: (value) => (
-        <Link
-          href={`/quotations/${value}`}
-          className="text-blue-600 hover:text-blue-800"
-        >
+        <Link href={`/quotations/${value}`} className="text-blue-600 hover:text-blue-800">
           {value}
         </Link>
       ),
@@ -53,6 +50,11 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       render: (value) => formatDate(value),
     },
     {
+      field: "Customer PO No",
+      label: "PO Number",
+      render: (value) => value || "N/A",
+    },
+    {
       field: "CardName",
       label: "Customer",
       render: (value) => value || "N/A",
@@ -63,10 +65,40 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
     {
-      field: "Dscription",
+      field: "Item Name",
       label: "Description",
       render: (value) => value || "N/A",
     },
+    {
+      field: "Line Status",
+      label: "Line Status",
+      render: (value) => <StatusBadge status={value} />,
+    },
+    {
+      field: "Quantity",
+      label: "Qty",
+      render: (value) => value || "0",
+    },
+    {
+      field: "Open Qty",
+      label: "Open Qty",
+      render: (value) => value || "0",
+    },
+    {
+      field: "Price",
+      label: "Price",
+      render: (value) => value || "0",
+    },
+    {
+      field: "OPEN AMOUNT",
+      label: "Open Amount",
+      render: (value) => value || "0",
+    },
+    {
+      field: "Sales Employee",
+      label: "Sales Person",
+      render: (value) => value || "N/A",
+    }
   ];
 
   return (
