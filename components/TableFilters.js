@@ -1,6 +1,5 @@
-import { Col, Form, Row, Button } from "react-bootstrap";
-
-
+import React from 'react';
+import { Col, Form, Row, Button, ButtonGroup } from 'react-bootstrap';
 
 const TableFilters = ({ 
     searchConfig = {
@@ -24,54 +23,53 @@ const TableFilters = ({
     totalItemsLabel = "Total Items",
     customElement,
   }) => {
-  
-    // Handler for reset button
-    // const handleReset = () => {
-    //   onSearch(""); // Clear search
-    //   onStatusChange("all"); // Reset status
-    //   onDateFilterChange({ fromDate: "", toDate: "" }); // Reset dates
-    // };
-
+    
     const handleReset = () => {
-      onSearch(""); // Clear search
-      if (onStatusChange) onStatusChange("all"); // Reset status if function exists
-      if (onDateFilterChange) onDateFilterChange({ fromDate: "", toDate: "" }); // Reset dates if function exists
+      onSearch(""); 
+      if (onStatusChange) onStatusChange("all");
+      if (onDateFilterChange) onDateFilterChange({ fromDate: "", toDate: "" });
     };
 
-
     return (
-      <Row className="mb-3 mt-3 align-items-center">
+      <Row className="mb-3 mt-3 align-items-center g-2">
         {/* Search Input */}
         {searchConfig.enabled && (
-          <Col md={2}>
+          <Col xs="auto">
             <Form.Control
               type="text"
               placeholder={searchConfig.placeholder}
               value={searchTerm}
               onChange={(e) => onSearch(e.target.value)}
+              size="sm"
             />
           </Col>
         )}
 
-        {/* Status Filter */}
+        {/* Status Filter Buttons */}
         {statusFilter.enabled && (
-          <Col md={2}>
-            <Form.Select
-              value={statusFilter.value}
-              onChange={(e) => onStatusChange(e.target.value)}
-            >
-              <option value="all">All {statusFilter.label}</option>
+          <Col xs="auto">
+            <ButtonGroup size="sm">
+              <Button
+                variant={statusFilter.value === "all" ? "primary" : "outline-primary"}
+                onClick={() => onStatusChange("all")}
+              >
+                All {statusFilter.label}
+              </Button>
               {statusFilter.options.map((option) => (
-                <option key={option.value} value={option.value}>
+                <Button
+                  key={option.value}
+                  variant={statusFilter.value === option.value ? "primary" : "outline-primary"}
+                  onClick={() => onStatusChange(option.value)}
+                >
                   {option.label}
-                </option>
+                </Button>
               ))}
-            </Form.Select>
+            </ButtonGroup>
           </Col>
         )}
 
         {/* From Date Filter */}
-        <Col md={2}>
+        <Col xs="auto">
           <Form.Control
             type="date"
             value={fromDate}
@@ -79,11 +77,12 @@ const TableFilters = ({
               onDateFilterChange({ fromDate: e.target.value, toDate })
             }
             placeholder="From Date"
+            size="sm"
           />
         </Col>
 
         {/* To Date Filter */}
-        <Col md={2}>
+        <Col xs="auto">
           <Form.Control
             type="date"
             value={toDate}
@@ -91,28 +90,27 @@ const TableFilters = ({
               onDateFilterChange({ fromDate, toDate: e.target.value })
             }
             placeholder="To Date"
+            size="sm"
           />
         </Col>
 
         {/* Custom Element */}
         {customElement && (
-          <Col md={2}>
+          <Col xs="auto">
             {customElement.component}
           </Col>
         )}
 
-        
-
         {/* Reset Button */}
-        <Col md={2} className="text-end">
-          <Button variant="outline-secondary" onClick={handleReset}>
+        <Col xs="auto">
+          <Button variant="outline-secondary" size="sm" onClick={handleReset}>
             Reset
           </Button>
         </Col>
 
         {/* Total Items Display */}
         {totalItems !== undefined && (
-          <Col md={2} className="text-end">
+          <Col xs="auto" className="ms-auto">
             <span>{totalItemsLabel}: {totalItems}</span>
           </Col>
         )}

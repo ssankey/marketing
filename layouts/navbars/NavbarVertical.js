@@ -1,246 +1,118 @@
-// 'use client'
-// // import node module libraries
-// import { Fragment, useContext } from 'react';
-// import Link from 'next/link';
-// import { usePathname   } from 'next/navigation'
-// import { useMediaQuery } from 'react-responsive';
-// import {
-// 	ListGroup,
-// 	Card,
-// 	Image,
-// 	Badge,
-// } from 'react-bootstrap';
-// import Accordion from 'react-bootstrap/Accordion';
-// import AccordionContext from 'react-bootstrap/AccordionContext';
-// import { useAccordionButton } from 'react-bootstrap/AccordionButton';
+// "use client";
 
-// // import simple bar scrolling used for notification item scrolling
-// import SimpleBar from 'simplebar-react';
-// import 'simplebar/dist/simplebar.min.css';
+// // Import necessary components from React and Bootstrap
+// import { Fragment } from "react";
+// import Link from "next/link";
+// import Accordion from "react-bootstrap/Accordion";
+// import { useAccordionButton } from "react-bootstrap/AccordionButton";
+// import { House, Clipboard, FileText, CurrencyDollar } from 'react-bootstrap-icons'; // Import the relevant icons
+// // import PersonIcon  from "@mui/icons-material/Person";
+// // import InventoryIcon from "@mui/icons-material/Person";
+// import { FaUser } from "react-icons/fa"; 
+// import { FaBox } from "react-icons/fa"; 
 
-// // import routes file
-// import { DashboardMenu } from 'routes/DashboardRoutes';
 
-// const NavbarVertical = (props) => {
-// 	const location = usePathname ()
-// 	const CustomToggle = ({ children, eventKey, icon }) => {
-// 		const { activeEventKey } = useContext(AccordionContext);
-// 		const decoratedOnClick = useAccordionButton(eventKey, () =>
-// 			console.log('totally custom!')
-// 		);
-// 		const isCurrentEventKey = activeEventKey === eventKey;
-// 		return (
-// 			<li className="nav-item">
-// 				<Link
-// 					href="#"
-// 					className="nav-link "
-// 					onClick={decoratedOnClick}
-// 					data-bs-toggle="collapse"
-// 					data-bs-target="#navDashboard"
-// 					aria-expanded={isCurrentEventKey ? true : false}
-// 					aria-controls="navDashboard">
-// 					{icon ? <i className={`nav-icon fe fe-${icon} me-2`}></i> : ''}{' '}
-// 					{children}
-// 				</Link>
-// 			</li>
-// 		);
-// 	};
-// 	const CustomToggleLevel2 = ({ children, eventKey, icon }) => {
-// 		const { activeEventKey } = useContext(AccordionContext);
-// 		const decoratedOnClick = useAccordionButton(eventKey, () =>
-// 			console.log('totally custom!')
-// 		);
-// 		const isCurrentEventKey = activeEventKey === eventKey;
-// 		return (
-// 			(<Link
-// 				href="#"
-// 				className="nav-link "
-// 				onClick={decoratedOnClick}
-// 				data-bs-toggle="collapse"
-// 				data-bs-target="#navDashboard"
-// 				aria-expanded={isCurrentEventKey ? true : false}
-// 				aria-controls="navDashboard">
-// 				{children}
-// 			</Link>)
-// 		);
-// 	};
 
-// 	const generateLink = (item) => {
-// 		return (
-// 			(<Link
-// 				href={item.link}
-// 				className={`nav-link ${location === item.link ? 'active' : ''
-// 					}`}
-// 				onClick={(e) =>
-// 					isMobile ? props.onClick(!props.showMenu) : props.showMenu
-// 				}>
+// // import logo from "@public/assets/density_logo_new_trans.png"
+// const NavbarVertical = () => {
+//   // Custom Toggle for dropdown items
+//   const CustomToggle = ({ children, eventKey, icon }) => {
+//     const decoratedOnClick = useAccordionButton(eventKey);
+//     return (
+//       <li className="nav-item">
+//         <Link href="#" className="nav-link" onClick={decoratedOnClick}>
+//           <i className={`nav-icon fe fe-${icon} me-2`}></i>
+//           {children}
+//         </Link>
+//       </li>
+//     );
+//   };
 
-// 				{item.name}
-// 				{''}
-// 				{item.badge ? (
-// 					<Badge
-// 						className="ms-1"
-// 						bg={item.badgecolor ? item.badgecolor : 'primary'}
-// 					>
-// 						{item.badge}
-// 					</Badge>
-// 				) : (
-// 					''
-// 				)}
+//   return (
+//     <Fragment>
+//       {/* Dash UI and Dashboard section */}
+//       <Accordion
+//         defaultActiveKey="0"
+//         as="ul"
+//         className="navbar-nav flex-column"
+//         alwaysOpen
+//       >
+//         {/* Dash UI */}
+//         <li className="nav-item">
+//           <a href="/" className="nav-link d-flex align-items-center">
+//             <img
+//               src="/assets/density_logo_new_trans.png"
+//               alt="Logo"
+//               className="img-fluid" // Makes the image responsive
+//               style={{ height: "80px", width: "auto" }} // Set height and keep aspect ratio
+//             />
+//           </a>
+//         </li>
 
-// 			</Link>)
-// 		);
-// 	};
+//         {/* Dashboard */}
+//         <li className="nav-item">
+//           <a href="/dashboard" className="nav-link d-flex align-items-center">
+//             <House className="me-2" />
+//             Dashboard
+//           </a>
+//         </li>
 
-// 	const isMobile = useMediaQuery({ maxWidth: 767 });
+//         {/* Orders */}
+//         {/* <li className="nav-item"> */}
+//         {/* <a href="/orders" className="nav-link d-flex align-items-center"> */}
+//         {/* <Clipboard className="me-2" /> Orders icon */}
+//         {/* Orders */}
+//         {/* </a> */}
+//         {/* </li> */}
 
-// 	return (
-// 		<Fragment>
-// 			<SimpleBar style={{ maxHeight: '100vh' }}>
-// 				<div className="nav-scroller">
-// 					<Link href="/" className="navbar-brand">
-// 						<Image src="/images/brand/logo/logo.svg" alt="" />
-// 					</Link>
-// 				</div>
-// 				{/* Dashboard Menu */}
-// 				<Accordion defaultActiveKey="0" as="ul" className="navbar-nav flex-column">
-// 					{DashboardMenu.map(function (menu, index) {
-// 						if (menu.grouptitle) {
-// 							return (
-// 								<Card bsPrefix="nav-item" key={index}>
-// 									{/* group title item */}
-// 									<div className="navbar-heading">{menu.title}</div>
-// 									{/* end of group title item */}
-// 								</Card>
-// 							);
-// 						} else {
-// 							if (menu.children) {
-// 								return (
-// 									<Fragment key={index}>
-// 										{/* main menu / root menu level / root items */}
-// 										<CustomToggle eventKey={index} icon={menu.icon}>
-// 											{menu.title}
-// 											{menu.badge ? (
-// 												<Badge className="ms-1" bg={menu.badgecolor ? menu.badgecolor : 'primary'}>
-// 													{menu.badge}
-// 												</Badge>
-// 											) : ('')}
-// 										</CustomToggle>
-// 										<Accordion.Collapse eventKey={index} as="li" bsPrefix="nav-item">
-// 											<ListGroup as="ul" bsPrefix="" className="nav flex-column">
-// 												{menu.children.map(function (menuLevel1Item, menuLevel1Index) {
-// 													if (menuLevel1Item.children) {
-// 														return (
-// 															<ListGroup.Item as="li" bsPrefix="nav-item" key={menuLevel1Index}>
-// 																{/* first level menu started  */}
-// 																<Accordion defaultActiveKey="0" className="navbar-nav flex-column">
-// 																	<CustomToggleLevel2 eventKey={0}>
-// 																		{menuLevel1Item.title}
-// 																		{menuLevel1Item.badge ? (
-// 																			<Badge className="ms-1" bg={
-// 																					menuLevel1Item.badgecolor ? menuLevel1Item.badgecolor : 'primary'
-// 																				}>
-// 																				{menuLevel1Item.badge}
-// 																			</Badge>
-// 																		) : ('')}
-// 																	</CustomToggleLevel2>
-// 																	<Accordion.Collapse eventKey={0} bsPrefix="nav-item">
-// 																		<ListGroup as="ul" bsPrefix="" className="nav flex-column">
-// 																			{/* second level menu started  */}
-// 																			{menuLevel1Item.children.map(function (menuLevel2Item,menuLevel2Index) {
-// 																				if (menuLevel2Item.children) {
-// 																					return (
-// 																						<ListGroup.Item as="li" bsPrefix="nav-item" key={menuLevel2Index}>
-// 																							{/* second level accordion menu started  */}
-// 																							<Accordion defaultActiveKey="0" className="navbar-nav flex-column">
-// 																								<CustomToggleLevel2 eventKey={0}>
-// 																									{menuLevel2Item.title}
-// 																									{menuLevel2Item.badge ? (
-// 																										<Badge className="ms-1" bg={
-// 																												menuLevel2Item.badgecolor ? menuLevel2Item.badgecolor : 'primary'
-// 																											}>
-// 																											{menuLevel2Item.badge}
-// 																										</Badge>
-// 																									) : ('')}
-// 																								</CustomToggleLevel2>
-// 																								<Accordion.Collapse eventKey={0} bsPrefix="nav-item">
-// 																									<ListGroup as="ul" bsPrefix="" className="nav flex-column">
-// 																										{/* third level menu started  */}
-// 																										{menuLevel2Item.children.map(function (menuLevel3Item,menuLevel3Index) {
-// 																											return (
-// 																												<ListGroup.Item key={menuLevel3Index} as="li" bsPrefix="nav-item">
-// 																													{generateLink(menuLevel3Item)}
-// 																												</ListGroup.Item>
-// 																											);
-// 																										})}
-// 																										{/* end of third level menu  */}
-// 																									</ListGroup>
-// 																								</Accordion.Collapse>
-// 																							</Accordion>
-// 																							{/* end of second level accordion */}
-// 																						</ListGroup.Item>
-// 																					);
-// 																				} else {
-// 																					return (
-// 																						<ListGroup.Item key={menuLevel2Index} as="li" bsPrefix="nav-item">
-// 																							{generateLink(menuLevel2Item)}
-// 																						</ListGroup.Item>
-// 																					);
-// 																				}
+        
+//         {/* Quotation */}
+//         <li className="nav-item">
+//           <a href="/quotations" className="nav-link d-flex align-items-center">
+//             <CurrencyDollar className="me-2" /> {/* Quotation icon */}
+//             Quotation
+//           </a>
+//         </li>
 
-// 																			})}
-// 																			{/* end of second level menu  */}
-// 																		</ListGroup>
-// 																	</Accordion.Collapse>
-// 																</Accordion>
-// 																{/* end of first level menu */}
-// 															</ListGroup.Item>
-// 														);
-// 													} else {
-// 														return (
-// 															<ListGroup.Item as="li" bsPrefix="nav-item" key={menuLevel1Index}>
-// 																{/* first level menu items */}
-// 																{generateLink(menuLevel1Item)}
-// 																{/* end of first level menu items */}
-// 															</ListGroup.Item>
-// 														);
-// 													}
-// 												})}
-// 											</ListGroup>
-// 										</Accordion.Collapse>
-// 										{/* end of main menu / menu level 1 / root items */}
-// 									</Fragment>
-// 								);
-// 							} else {
-// 								return (
-// 									<Card bsPrefix="nav-item" key={index}>
-// 										{/* menu item without any childern items like Documentation and Changelog items*/}
-// 										<Link href={menu.link} className={`nav-link ${location === menu.link ? 'active' : ''} ${menu.title === 'Download' ? 'bg-primary text-white' : ''}`}>
-// 											{typeof menu.icon === 'string' ? (
-// 												<i className={`nav-icon fe fe-${menu.icon} me-2`}></i>
-// 											) : (menu.icon)}
-// 											{menu.title}
-// 											{menu.badge ? (
-// 												<Badge className="ms-1" bg={menu.badgecolor ? menu.badgecolor : 'primary'}>
-// 													{menu.badge}
-// 												</Badge>
-// 											) : ('')}
-// 										</Link>
-// 										{/* end of menu item without any childern items */}
-// 									</Card>
-// 								);
-// 							}
-// 						}
-// 					})}
-// 				</Accordion>
-// 				{/* end of Dashboard Menu */}
+//         {/* Orders */}
+//         <li className="nav-item">
+//           <a href="/orders" className="nav-link d-flex align-items-center">
+//             <Clipboard className="me-2" /> {/* Orders icon */}
+//             Orders
+//           </a>
+//         </li>
 
-// 			</SimpleBar>
-// 		</Fragment>
-// 	);
+//         {/* Invoice */}
+//         <li className="nav-item">
+//           <a href="/invoices" className="nav-link d-flex align-items-center">
+//             <FileText className="me-2" /> {/* Invoice icon */}
+//             Invoice
+//           </a>
+//         </li>
+
+//         {/* Customers */}
+//         <li className="nav-item">
+//           <a href="/customers" className="nav-link d-flex align-items-center">
+//             <FaUser className="me-2" /> {/* Customer icon */}
+//             Customers
+//           </a>
+//         </li>
+
+//         {/* Products */}
+//         <li className="nav-item">
+//           <a href="/products" className="nav-link d-flex align-items-center">
+//             <FaBox className="me-2" /> {/* Product icon */} 
+//             Products
+//           </a>
+//         </li>
+
+//       </Accordion>
+//     </Fragment>
+//   );
 // };
 
 // export default NavbarVertical;
+// "use client";
 
 "use client";
 
@@ -249,9 +121,20 @@ import { Fragment } from "react";
 import Link from "next/link";
 import Accordion from "react-bootstrap/Accordion";
 import { useAccordionButton } from "react-bootstrap/AccordionButton";
-import ListGroup from "react-bootstrap/ListGroup";
+import {
+  House,
+  Clipboard,
+  FileText,
+  CurrencyDollar,
+} from "react-bootstrap-icons"; // Import the relevant icons
+import { FaUser } from "react-icons/fa";
+import { FaBox } from "react-icons/fa";
+import { Button } from "react-bootstrap"; // Import Button component from React-Bootstrap
+import { useRouter } from "next/router"; // Import useRouter for redirection
 
 const NavbarVertical = () => {
+  const router = useRouter(); // For redirection
+
   // Custom Toggle for dropdown items
   const CustomToggle = ({ children, eventKey, icon }) => {
     const decoratedOnClick = useAccordionButton(eventKey);
@@ -265,64 +148,106 @@ const NavbarVertical = () => {
     );
   };
 
+  // Handle logout functionality
+  const handleLogout = () => {
+    // Clear session storage or local storage
+    sessionStorage.clear(); // or localStorage.clear() or clear cookies as needed
+    // Redirect to the login page
+    router.push("/login");
+  };
+
   return (
     <Fragment>
       {/* Dash UI and Dashboard section */}
       <Accordion
         defaultActiveKey="0"
         as="ul"
-        className="navbar-nav flex-column"
+        className="navbar-nav flex-column d-flex" // Add `d-flex` to make the navbar a flex container
         alwaysOpen
+        style={{ height: "100vh" }} // Set the navbar height to full screen
       >
         {/* Dash UI */}
         <li className="nav-item">
-          <Link href="/dashui" className="nav-link">
-            Dash UI
-          </Link>
+          <a href="/" className="nav-link d-flex align-items-center">
+            <img
+              src="/assets/density_logo_new_trans.png"
+              alt="Logo"
+              className="img-fluid" // Makes the image responsive
+              style={{ height: "80px", width: "auto" }} // Set height and keep aspect ratio
+            />
+          </a>
         </li>
+
         {/* Dashboard */}
         <li className="nav-item">
-          <a href="/dashboard" className="nav-link">
+          <a href="/dashboard" className="nav-link d-flex align-items-center">
+            <House className="me-2" />
             Dashboard
           </a>
         </li>
 
-        {/* Orders Dropdown */}
-        {/* <CustomToggle eventKey="1" icon="chevron-down">
-          Orders
-        </CustomToggle> */}
-        
+        {/* Quotation */}
         <li className="nav-item">
-          <a href="/orders" className="nav-link">
+          <a href="/quotations" className="nav-link d-flex align-items-center">
+            <CurrencyDollar className="me-2" /> {/* Quotation icon */}
+            Quotation
+          </a>
+        </li>
+
+        {/* Orders */}
+        <li className="nav-item">
+          <a href="/orders" className="nav-link d-flex align-items-center">
+            <Clipboard className="me-2" /> {/* Orders icon */}
             Orders
           </a>
         </li>
 
-        {/* Quotation Dropdown */}
-        <CustomToggle eventKey="2" icon="chevron-down">
-          Quotation
-        </CustomToggle>
-
-        <Accordion.Collapse eventKey="2" as="li" bsPrefix="nav-item">
-          <ListGroup as="ul" bsPrefix="nav flex-column">
-            <ListGroup.Item as="li" className="nav-item">
-              <Link href="/quotations/open" className="nav-link">
-                Open Quotation
-              </Link>
-            </ListGroup.Item>
-            <ListGroup.Item as="li" className="nav-item">
-              <Link href="/quotations/closed" className="nav-link">
-                Closed Quotation
-              </Link>
-            </ListGroup.Item>
-          </ListGroup>
-        </Accordion.Collapse>
-    
-        {/* Invoice Button */}
+        {/* Invoice */}
         <li className="nav-item">
-          <a href="/invoices" className="nav-link">
+          <a href="/invoices" className="nav-link d-flex align-items-center">
+            <FileText className="me-2" /> {/* Invoice icon */}
             Invoice
           </a>
+        </li>
+
+        {/* Customers */}
+        <li className="nav-item">
+          <a href="/customers" className="nav-link d-flex align-items-center">
+            <FaUser className="me-2" /> {/* Customer icon */}
+            Customers
+          </a>
+        </li>
+
+        {/* Products */}
+        <li className="nav-item">
+          <a href="/products" className="nav-link d-flex align-items-center">
+            <FaBox className="me-2" /> {/* Product icon */}
+            Products
+          </a>
+        </li>
+
+        {/* Logout Button at the bottom */}
+        <li
+          className="nav-item mt-auto"
+          style={{ padding: "10px 15px", marginLeft: "0", marginRight: "0" }}
+        >
+          {/* mt-auto ensures the button stays at the bottom */}
+          <Button
+            variant="primary" // Dark blue color
+            onClick={handleLogout}
+            className="w-100"
+            style={{
+              backgroundColor: "#003366",
+              borderColor: "#003366",
+              padding: "10px", // Add padding to the button for spacing
+              marginTop: "auto", // Keeps the button at the bottom
+              marginLeft: "0", // Ensure no left margin
+              marginRight: "0", // Ensure no right margin
+              borderRadius: "5px", // Optional: add border-radius for a rounded button
+            }}
+          >
+            Logout
+          </Button>
         </li>
       </Accordion>
     </Fragment>
