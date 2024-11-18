@@ -9,11 +9,11 @@ import StatusBadge from './StatusBadge';
 import { formatDate } from 'utils/formatDate';
 import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
-import shortenName from 'utils/formatProductName';
+import { truncateText } from 'utils/truncateText';
 
 const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
   console.log(orders);
-  
+
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(totalItems, ITEMS_PER_PAGE);
   const {
@@ -30,188 +30,65 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
   } = useTableFilters();
 
   const columns = [
-    
-      {
-        field: 'DocNum',
-        label: 'Order#',
-        render: (value,row) => (
-          <Link href={`/orders?d=${value}&e=${row.DocEntry}`} className="text-blue-600 hover:text-blue-800">
-            {value}
-          </Link>
-        ),
+    {
+      field: 'DocNum',
+      label: 'Order#',
+      render: (value, row) => (
+        <Link href={`/orderdetails?d=${value}&e=${row.DocEntry}`} className="text-blue-600 hover:text-blue-800">
+          {value}
+        </Link>
+      ),
+    },
+    {
+      field: 'DocStatus',
+      label: 'Status',
+      render: (value) => <StatusBadge status={value} />,
+    },
+    {
+      field: 'DocDate',
+      label: 'Order Date',
+      render: (value) => formatDate(value),
+    },
+    {
+      field: 'CardName',
+      label: 'Customer',
+      render: (value) => truncateText(value, 20),
+    },
+    {
+      field: 'CustomerPONo',
+      label: 'Customer PO No',
+      render: (value) => value || 'N/A',
+    },
+    {
+      field: 'PODate',
+      label: 'PO Date',
+      render: (value) => formatDate(value),
+    },
+    {
+      field: 'DeliveryDate',
+      label: 'Delivery Date',
+      render: (value) => formatDate(value),
+    },
+    {
+      field: 'DocTotal',
+      label: 'Total Amount',
+      render: (value, row) => {
+        const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
+        return formatCurrency(amountInINR);
       },
-      {
-        field: 'DocStatus',
-        label: 'Status',
-        render: (value) => <StatusBadge status={value} />,
-      },
-      {
-        field: 'DocDate',
-        label: 'Date',
-        render: (value) => formatDate(value),
-      },
-      {
-        field: 'CustomerPONo',
-        label: 'Customer PO No',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'PODate',
-        label: 'PO Date',
-        render: (value) => formatDate(value),
-      },
-      {
-        field: 'CardName',
-        label: 'Customer',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'ProductCount',
-        label: 'No Of Compounds',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'ItemGroup',
-        label: 'Item Group',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'ItemCode',
-        label: 'Item Code',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'ItemName',
-        label: 'Item Name',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'LineStatus',
-        label: 'Line Status',
-        render: (value) => <StatusBadge status={value} />,
-      },
-      {
-        field: 'Quantity',
-        label: 'Quantity',
-        render: (value) => value ? value.toFixed(2) : '0.00',
-      },
-      {
-        field: 'UOMName',
-        label: 'UOM Name',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'OpenQty',
-        label: 'Open Quantity',
-        render: (value) => value ? value.toFixed(2) : '0.00',
-      },
-      {
-        field: 'DelivrdQty',
-        label: 'Delivered Quantity',
-        render: (value) => value ? value.toFixed(2) : '0.00',
-      },
-      {
-        field: 'DeliveryDate',
-        label: 'Delivery Date',
-        render: (value) => formatDate(value),
-      },
-      {
-        field: 'PlantLocation',
-        label: 'Plant Location',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'Price',
-        label: 'Price',
-        render: (value) => value ? value.toFixed(3) : '0.000',
-      },
-      {
-        field: 'Currency',
-        label: 'Currency',
-        render: (value) => value || 'N/A',
-      },
-      {
-        field: 'OpenAmount',
-        label: 'Open Amount',
-        render: (value) => value ? value.toFixed(2) : '0.00',
-      },
-      {
-        field: 'SalesEmployee',
-        label: 'Sales Employee',
-        render: (value) => value || 'N/A',
-      },
-    
-    
-      
-    // {
-    //   field: 'Quantity',
-    //   label: 'Qty',
-    //   render: (value) => (value != null ? value.toFixed(2) : '0.00'),
-    // },
-    // {
-    //   field: 'UOMName',
-    //   label: 'UOM',
-    //   render: (value) => value || 'N/A',
-    // },
-    // {
-    //   field: 'OpenQty',
-    //   label: 'Open Qty',
-    //   render: (value) => (value != null ? value.toFixed(2) : '0.00'),
-    // },
-    // {
-    //   field: 'StockStatus',
-    //   label: 'Stock',
-    //   render: (value) => (value != null ? value.toFixed(2) : '0.00'),
-    // },
-    // {
-    //   field: 'U_timeline',
-    //   label: 'Timeline',
-    //   render: (value) => value || 'N/A',
-    // },
-    // {
-    //   field: 'suppcatnum',
-    //   label: 'Supplier Cat#',
-    //   render: (value) => value || 'N/A',
-    // },
-    // {
-    //   field: 'DelivrdQty',
-    //   label: 'Delivered Qty',
-    //   render: (value) => (value != null ? value.toFixed(2) : '0.00'),
-    // },
-    // {
-    //   field: 'DeliveryDate',
-    //   label: 'Delivery Date',
-    //   render: (value) => formatDate(value),
-    // },
-    // {
-    //   field: 'PlantLocation',
-    //   label: 'Plant Location',
-    //   render: (value) => value || 'N/A',
-    // },
-    // {
-    //   field: 'DocTotal',
-    //   label: 'Price',
-    //   render: (value, row) => {
-    //     const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
-    //     return formatCurrency(amountInINR);
-    //   },
-    // },
-    // {
-    //   field: 'Currency',
-    //   label: 'Currency',
-    //   render: (value, row) => row.DocCur,
-    // },
-    // {
-    //   field: 'OpenAmount',
-    //   label: 'Open Amount',
-    //   render: (value, row) => formatCurrency(value, row.DocRate),
-    // },
-    // {
-    //   field: 'SalesEmployee',
-    //   label: 'Sales Employee',
-    //   render: (value) => value || 'N/A',
-    // },
+    },
+    {
+      field: 'DocCur',
+      label: 'Currency',
+      render: (value) => value || 'N/A',
+    },
+    {
+      field: 'SalesEmployee',
+      label: 'Sales Employee',
+      render: (value) => value || 'N/A',
+    },
   ];
+
   return (
     <Container fluid>
       <TableFilters

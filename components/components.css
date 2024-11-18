@@ -1,0 +1,110 @@
+/* styles/invoice.css */
+
+.invoice-container {
+    background-color: #fff;
+    padding: 20px;
+    font-family: 'Arial', sans-serif;
+    color: #000;
+  }
+  
+  .invoice-logo {
+    max-width: 200px;
+  }
+  
+  .invoice-title {
+    font-size: 2.5rem;
+    font-weight: bold;
+  }
+  
+  .invoice-number {
+    margin-top: 10px;
+  }
+  
+  .invoice-header,
+  .invoice-addresses,
+  .invoice-details,
+  .invoice-table,
+  .invoice-totals,
+  .invoice-comments,
+  .invoice-footer {
+    margin-bottom: 20px;
+  }
+  
+  .invoice-table th,
+  .invoice-table td {
+    vertical-align: middle;
+  }
+  
+  .invoice-totals .table {
+    margin-bottom: 0;
+  }
+  
+  .invoice-totals .total-row td {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  
+  @media print {
+    .invoice-container {
+      font-size: 12px;
+      width: 100%; /* Ensure the invoice takes up the full width */
+    }
+  
+    .invoice-logo {
+      max-width: 150px;
+    }
+  
+    .invoice-table {
+      font-size: 10px;
+    }
+  
+    .invoice-totals table {
+      font-size: 10px;
+    }
+  
+    .invoice-footer {
+      font-size: 8px;
+    }
+  
+    /* Hide elements that are not necessary for printing */
+    .invoice-header .btn,
+    .invoice-footer .btn,
+    .sidebar {
+      display: none;
+    }
+  
+    /* Adjust the layout to exclude the sidebar */
+    .main-content {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  /* styles.css or NavbarTop.module.css */
+
+.suggestion-box {
+    max-height: 300px;
+    overflow-y: auto;
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+  
+  .suggestion-box a {
+    color: inherit;
+    text-decoration: none;
+  }
+  
+  .suggestion-box a:hover {
+    text-decoration: none;
+  }
+  
+  .suggestion-box .list-group-item {
+    cursor: pointer;
+  }
+  
+  .suggestion-box .list-group-item:hover {
+    background-color: #f8f9fa;
+  }
+  

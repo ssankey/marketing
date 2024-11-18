@@ -1,27 +1,25 @@
-import { useRouter } from "next/router";
-import { Container, Row, Col, Card, Spinner } from "react-bootstrap";
-import { getProductDetail } from "lib/models/products";
+// pages/products/[id].js
 
-// Utility function to format dates as 'dd-MMM-yyyy' (e.g., 23-Oct-2024)
+import { useRouter } from "next/router";
+import { Container, Row, Col, Card, Spinner, Table } from "react-bootstrap";
+import { getProductDetail, getProductKPIs } from "../../lib/models/products";
+import { useAuth } from '../../hooks/useAuth';
+import { Line } from 'react-chartjs-2';
+import 'chart.js/auto'; // Required for Chart.js 3.x and above
+
 function formatDate(dateString) {
   if (!dateString) return "N/A";
   const date = new Date(dateString);
   const options = { day: "2-digit", month: "short", year: "numeric" };
-  return date.toLocaleDateString("en-GB", options); // Ensures 'dd-MMM-yyyy' format
+  return date.toLocaleDateString("en-GB", options);
 }
 
-export default function ProductDetails({ product }) {
+export default function ProductDetails({ product, kpiData, salesTrendData, topCustomersData }) {
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const { id } = router.query;
 
-  if (router.isFallback) {
-    return (
-      <Container className="d-flex justify-content-center mt-5">
-        <Spinner animation="border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </Spinner>
-      </Container>
-    );
+  if (!isAuthenticated) {
+    return null; // Prevents rendering if not authenticated
   }
 
   if (!product) {
@@ -32,7 +30,29 @@ export default function ProductDetails({ product }) {
     );
   }
 
-  // Display product details
+  // Prepare data for sales trend chart
+  const salesTrendLabels = salesTrendData.map(item => item.Month);
+  const salesTrendRevenue = salesTrendData.map(item => item.MonthlyRevenue);
+  const salesTrendUnits = salesTrendData.map(item => item.MonthlyUnitsSold);
+
+  const salesTrendChartData = {
+    labels: salesTrendLabels,
+    datasets: [
+      {
+        label: 'Revenue',
+        data: salesTrendRevenue,
+        borderColor: '#007bff',
+        fill: false,
+      },
+      {
+        label: 'Units Sold',
+        data: salesTrendUnits,
+        borderColor: '#28a745',
+        fill: false,
+      },
+    ],
+  };
+
   return (
     <Container className="mt-4">
       <Card>
@@ -42,66 +62,111 @@ export default function ProductDetails({ product }) {
         <Card.Body>
           <Row className="mb-4">
             <Col md={6}>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Item Code:
-                </Col>
-                <Col sm={8}>{product.ItemCode}</Col>
-              </Row>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Item Name:
-                </Col>
-                <Col sm={8}>{product.ItemName}</Col>
-              </Row>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Item Type:
-                </Col>
-                <Col sm={8}>{product.ItemType}</Col>
-              </Row>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  CAS No:
-                </Col>
-                <Col sm={8}>{product.U_CasNo || "N/A"}</Col>
-              </Row>
+              <h4>Basic Information</h4>
+              <Table bordered>
+                <tbody>
+                  <tr>
+                    <th>Item Code</th>
+                    <td>{product.ItemCode}</td>
+                  </tr>
+                  <tr>
+                    <th>Item Name</th>
+                    <td>{product.ItemName}</td>
+                  </tr>
+                  <tr>
+                    <th>Item Type</th>
+                    <td>{product.ItemType}</td>
+                  </tr>
+                  <tr>
+                    <th>CAS No</th>
+                    <td>{product.U_CasNo || "N/A"}</td>
+                  </tr>
+                  <tr>
+                    <th>Molecular Weight</th>
+                    <td>{product.U_MolucularWeight || "N/A"}</td>
+                  </tr>
+                  <tr>
+                    <th>Created Date</th>
+                    <td>{formatDate(product.CreateDate)}</td>
+                  </tr>
+                  <tr>
+                    <th>Updated Date</th>
+                    <td>{formatDate(product.UpdateDate)}</td>
+                  </tr>
+                </tbody>
+              </Table>
             </Col>
             <Col md={6}>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Valid For:
-                </Col>
-                <Col sm={8}>{product.validFor}</Col>
-              </Row>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Created Date:
-                </Col>
-                <Col sm={8}>{formatDate(product.CreateDate)}</Col>
-              </Row>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Updated Date:
-                </Col>
-                <Col sm={8}>{formatDate(product.UpdateDate)}</Col>
-              </Row>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Molecular Weight:
-                </Col>
-                <Col sm={8}>{product.U_MolucularWeight || "N/A"}</Col>
-              </Row>
+              <h4>KPI Summary</h4>
+              <Table bordered>
+                <tbody>
+                  <tr>
+                    <th>Total Revenue Generated</th>
+                    <td>${kpiData.TotalRevenue}</td>
+                  </tr>
+                  <tr>
+                    <th>Units Sold</th>
+                    <td>{kpiData.UnitsSold}</td>
+                  </tr>
+                  <tr>
+                    <th>Number of Customers</th>
+                    <td>{kpiData.NumberOfCustomers}</td>
+                  </tr>
+                </tbody>
+              </Table>
+            </Col>
+          </Row>
+
+          <Row className="mb-4">
+            <Col>
+              <h4>Sales Trend</h4>
+              <Card className="p-3">
+                <Line data={salesTrendChartData} />
+              </Card>
+            </Col>
+          </Row>
+
+          <Row className="mb-4">
+            <Col>
+              <h4>Top Customers</h4>
+              <Table striped bordered hover>
+                <thead>
+                  <tr>
+                    <th>Customer Code</th>
+                    <th>Customer Name</th>
+                    <th>Total Spent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {topCustomersData.map((customer) => (
+                    <tr key={customer.CustomerCode}>
+                      <td>{customer.CustomerCode}</td>
+                      <td>{customer.CustomerName}</td>
+                      <td>${customer.TotalSpent.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
             </Col>
           </Row>
 
           <Row className="mb-4">
             <Col>
               <h4>Additional Information</h4>
-              <p><strong>IUPAC Name:</strong> {product.U_IUPACName || "N/A"}</p>
-              <p><strong>Synonyms:</strong> {product.U_Synonyms || "N/A"}</p>
-              <p><strong>Molecular Formula:</strong> {product.U_MolucularFormula || "N/A"}</p>
-              <p><strong>Applications:</strong> {product.U_Applications || "N/A"}</p>
+              <Card body>
+                <p>
+                  <strong>IUPAC Name:</strong> {product.U_IUPACName || "N/A"}
+                </p>
+                <p>
+                  <strong>Synonyms:</strong> {product.U_Synonyms || "N/A"}
+                </p>
+                <p>
+                  <strong>Molecular Formula:</strong> {product.U_MolucularFormula || "N/A"}
+                </p>
+                <p>
+                  <strong>Applications:</strong> {product.U_Applications || "N/A"}
+                </p>
+              </Card>
             </Col>
           </Row>
 
@@ -117,15 +182,23 @@ export default function ProductDetails({ product }) {
   );
 }
 
-
 export async function getServerSideProps(context) {
   const { id } = context.params;
+
+  function serializeDates(obj) {
+    const serializedObj = { ...obj };
+    for (const key in serializedObj) {
+      if (serializedObj[key] instanceof Date) {
+        serializedObj[key] = serializedObj[key].toISOString();
+      }
+    }
+    return serializedObj;
+  }
 
   try {
     const product = await getProductDetail(id);
 
     if (!product) {
-      // If product is undefined, return product: null
       return {
         props: {
           product: null,
@@ -133,19 +206,34 @@ export async function getServerSideProps(context) {
       };
     }
 
+    // Serialize date fields in the product object
+    const serializedProduct = serializeDates(product);
+
+    const { kpiData, salesTrendData, topCustomersData } = await getProductKPIs(id);
+
+    // Serialize date fields in kpiData, salesTrendData, and topCustomersData if necessary
+    const serializedKPIData = serializeDates(kpiData);
+
+    // If salesTrendData and topCustomersData contain Date objects, serialize them too
+    const serializedSalesTrendData = salesTrendData.map(item => serializeDates(item));
+    const serializedTopCustomersData = topCustomersData.map(item => serializeDates(item));
+    console.log("Sales Trend Data:", salesTrendData);
+    console.log("Top Customers Data:", topCustomersData);
+
     return {
       props: {
-        product, // Pass the product object directly
+        product: serializedProduct,
+        kpiData: serializedKPIData,
+        salesTrendData: serializedSalesTrendData,
+        topCustomersData: serializedTopCustomersData,
       },
     };
   } catch (error) {
-    console.error("Error fetching Product:", error);
+    console.error("Error fetching product data:", error);
     return {
       props: {
-        product: null, // Pass null on error
+        product: null,
       },
     };
   }
 }
-
-
