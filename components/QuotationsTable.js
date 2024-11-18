@@ -33,8 +33,8 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     {
       field: "DocNum",
       label: "Quotation#",
-      render: (value) => (
-        <Link href={`/quotations/${value}`} className="text-blue-600 hover:text-blue-800">
+      render: (value, row) => (
+        <Link href={`/quotationdetails?d=${value}&e=${row.DocEntry}`} className="text-blue-600 hover:text-blue-800">
           {value}
         </Link>
       ),
@@ -46,12 +46,12 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     },
     {
       field: "DocDate",
-      label: "Date",
+      label: "Quotation Date",
       render: (value) => formatDate(value),
     },
     {
-      field: "Customer PO No",
-      label: "PO Number",
+      field: "CustomerPONo",
+      label: "Customer PO No",
       render: (value) => value || "N/A",
     },
     {
@@ -60,46 +60,30 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
     {
-      field: "ItemCode",
-      label: "Item Code",
+      field: "DeliveryDate",
+      label: "Delivery Date",
+      render: (value) => formatDate(value),
+    },
+    {
+      field: 'DocTotal',
+      label: 'Total Amount',
+      render: (value, row) => {
+        const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
+        return formatCurrency(amountInINR);
+      },
+    },
+    {
+      field: "DocCur",
+      label: "Currency",
       render: (value) => value || "N/A",
     },
     {
-      field: "Item Name",
-      label: "Description",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Line Status",
-      label: "Line Status",
-      render: (value) => <StatusBadge status={value} />,
-    },
-    {
-      field: "Quantity",
-      label: "Qty",
-      render: (value) => value || "0",
-    },
-    {
-      field: "Open Qty",
-      label: "Open Qty",
-      render: (value) => value || "0",
-    },
-    {
-      field: "Price",
-      label: "Price",
-      render: (value) => value || "0",
-    },
-    {
-      field: "OPEN AMOUNT",
-      label: "Open Amount",
-      render: (value) => value || "0",
-    },
-    {
-      field: "Sales Employee",
+      field: "SalesEmployee",
       label: "Sales Person",
       render: (value) => value || "N/A",
-    }
+    },
   ];
+  
 
   return (
     <Container fluid>

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
-import { Container } from 'react-bootstrap';
+import { Container, Spinner } from 'react-bootstrap';
 import DashboardFilters from 'components/DashboardFilters';
 import KPISection from 'components/KPISection';
 import DashboardCharts from 'components/DashboardCharts';
 import { formatCurrency } from 'utils/formatCurrency';
+import { useAuth } from 'hooks/useAuth';
 
 const Dashboard = ({
     quotationConversionRate,
@@ -12,8 +13,11 @@ const Dashboard = ({
     totalSalesRevenue,
     outstandingInvoices,
     salesData = [],
+    previousData = {}
 }) => {
     const router = useRouter();
+    const { isAuthenticated, isLoading, redirecting } = useAuth();
+
     const {
         dateFilter: initialDateFilter = 'today',
         startDate: initialStartDate,
@@ -42,58 +46,84 @@ const Dashboard = ({
         });
     };
 
+    const calculateTrend = (current, previous) =>
+        previous ? (((current - previous) / previous) * 100).toFixed(2) : 0;
+
     const kpiData = [
         {
             title: `Total Sales Revenue ${dateFilter === 'custom' ? '' : dateFilter}`,
             value: formatCurrency(totalSalesRevenue),
             icon: 'CurrencyDollar',
             color: 'primary',
+            trend: dateFilter === 'custom' ? null : (totalSalesRevenue > previousData.totalSalesRevenue ? 'up' : 'down'),
+            trendValue: dateFilter === 'custom' ? null : calculateTrend(totalSalesRevenue, previousData.totalSalesRevenue),
+            prevValue: dateFilter === 'custom' ? null : formatCurrency(previousData.totalSalesRevenue),
+            trendContext: 'Compared to Last Period'
         },
         {
             title: `Number of Sales Orders ${dateFilter === 'custom' ? '' : dateFilter}`,
             value: NumberOfSalesOrders,
             icon: 'Cart4',
             color: 'success',
+            trend: dateFilter === 'custom' ? null : (NumberOfSalesOrders > previousData.NumberOfSalesOrders ? 'up' : 'down'),
+            trendValue: dateFilter === 'custom' ? null : calculateTrend(NumberOfSalesOrders, previousData.NumberOfSalesOrders),
+            prevValue: dateFilter === 'custom' ? null : previousData.NumberOfSalesOrders,
+            trendContext: 'Compared to Last Period'
         },
         {
             title: `Quotation Conversion Rate ${dateFilter === 'custom' ? '' : dateFilter}`,
             value: `${quotationConversionRate}%`,
             icon: 'GraphUpArrow',
             color: 'warning',
+            trend: dateFilter === 'custom' ? null : (quotationConversionRate > previousData.quotationConversionRate ? 'up' : 'down'),
+            trendValue: dateFilter === 'custom' ? null : calculateTrend(quotationConversionRate, previousData.quotationConversionRate),
+            prevValue: dateFilter === 'custom' ? null : `${previousData.quotationConversionRate}%`,
+            trendContext: 'Compared to Last Period'
         },
         {
             title: `Outstanding Invoices ${dateFilter === 'custom' ? '' : dateFilter}`,
             value: formatCurrency(outstandingInvoices?.amount),
             icon: 'ExclamationCircle',
             color: 'danger',
+            trend: dateFilter === 'custom' ? null : (outstandingInvoices?.amount > previousData.outstandingInvoices?.amount ? 'up' : 'down'),
+            trendValue: dateFilter === 'custom' ? null : calculateTrend(outstandingInvoices?.amount, previousData.outstandingInvoices?.amount),
+            prevValue: dateFilter === 'custom' ? null : formatCurrency(previousData.outstandingInvoices?.amount),
+            trendContext: 'Compared to Last Period'
         }
     ];
 
+    if (isLoading || redirecting) {
+        // Don't render anything if loading or redirecting
+        return null;
+    }
+
     return (
-        <Container fluid className="p-4" style={{ backgroundColor: '#f8f9fa', fontFamily: "'Inter', sans-serif" }}>
-            <DashboardFilters
-                dateFilter={dateFilter}
-                setDateFilter={setDateFilter}
-                startDate={startDate}
-                setStartDate={setStartDate}
-                endDate={endDate}
-                setEndDate={setEndDate}
-                region={region}
-                setRegion={setRegion}
-                customer={customer}
-                setCustomer={setCustomer}
-                handleFilterChange={handleFilterChange}
-            />
+        isAuthenticated ? (
+            <Container fluid className="p-4" style={{ backgroundColor: '#f8f9fa', fontFamily: "'Inter', sans-serif" }}>
+                <DashboardFilters
+                    dateFilter={dateFilter}
+                    setDateFilter={setDateFilter}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    region={region}
+                    setRegion={setRegion}
+                    customer={customer}
+                    setCustomer={setCustomer}
+                    handleFilterChange={handleFilterChange}
+                />
 
-            <KPISection kpiData={kpiData} />
+                <KPISection kpiData={kpiData} />
 
-            {/* DashboardCharts is now unaffected by main filters */}
-            <DashboardCharts />
-        </Container>
+                <DashboardCharts salesData={salesData} />
+            </Container>
+        ) : null // Don't render if not authenticated
     );
 };
 
 export default Dashboard;
+
 
 
 // Fetch data on the server side based on query parameters
@@ -102,22 +132,41 @@ export async function getServerSideProps(context) {
 
     let computedStartDate = startDate;
     let computedEndDate = endDate;
+    let previousStartDate, previousEndDate;
 
-    // Determine date range based on dateFilter
+    // Determine date ranges for current and previous periods
+    const today = new Date();
+
     if (!startDate || !endDate || dateFilter !== 'custom') {
-        const today = new Date();
         if (dateFilter === 'today') {
             computedStartDate = computedEndDate = today.toISOString().split('T')[0];
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            previousStartDate = previousEndDate = yesterday.toISOString().split('T')[0];
         } else if (dateFilter === 'thisWeek') {
             const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
             const lastDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 7));
             computedStartDate = firstDayOfWeek.toISOString().split('T')[0];
             computedEndDate = lastDayOfWeek.toISOString().split('T')[0];
+
+            const previousWeekStart = new Date(firstDayOfWeek);
+            previousWeekStart.setDate(firstDayOfWeek.getDate() - 7);
+            const previousWeekEnd = new Date(lastDayOfWeek);
+            previousWeekEnd.setDate(lastDayOfWeek.getDate() - 7);
+            previousStartDate = previousWeekStart.toISOString().split('T')[0];
+            previousEndDate = previousWeekEnd.toISOString().split('T')[0];
         } else if (dateFilter === 'thisMonth') {
             const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
             const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
             computedStartDate = firstDayOfMonth.toISOString().split('T')[0];
             computedEndDate = lastDayOfMonth.toISOString().split('T')[0];
+
+            const previousMonthStart = new Date(firstDayOfMonth);
+            previousMonthStart.setMonth(firstDayOfMonth.getMonth() - 1);
+            const previousMonthEnd = new Date(lastDayOfMonth);
+            previousMonthEnd.setMonth(lastDayOfMonth.getMonth() - 1);
+            previousStartDate = previousMonthStart.toISOString().split('T')[0];
+            previousEndDate = previousMonthEnd.toISOString().split('T')[0];
         }
     }
 
@@ -131,20 +180,27 @@ export async function getServerSideProps(context) {
     } = require('lib/models/dashboard');
 
     try {
+        // Fetch current and previous period data
         const [
             quotationConversionRate,
             NumberOfSalesOrders,
             totalSalesRevenue,
             outstandingInvoices,
             salesData,
-            topCustomers,
+            previousQuotationConversionRate,
+            previousNumberOfSalesOrders,
+            previousTotalSalesRevenue,
+            previousOutstandingInvoices
         ] = await Promise.all([
             getQuotationConversionRate({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
             getNumberOfSalesOrders({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
             getTotalSalesRevenue({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
             getOutstandingInvoices({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
             getSalesAndCOGS({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
-            getTopCustomers({ startDate: computedStartDate, endDate: computedEndDate, region, customer })
+            getQuotationConversionRate({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
+            getNumberOfSalesOrders({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
+            getTotalSalesRevenue({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
+            getOutstandingInvoices({ startDate: previousStartDate, endDate: previousEndDate, region, customer })
         ]);
 
         return {
@@ -154,17 +210,22 @@ export async function getServerSideProps(context) {
                 totalSalesRevenue,
                 outstandingInvoices,
                 salesData,
-                topCustomers: topCustomers || [],
-                topCategories: [],
+                topCustomers: [],
+                previousData: {
+                    quotationConversionRate: previousQuotationConversionRate,
+                    NumberOfSalesOrders: previousNumberOfSalesOrders,
+                    totalSalesRevenue: previousTotalSalesRevenue,
+                    outstandingInvoices: previousOutstandingInvoices
+                }
             },
         };
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
         return {
             props: {
-                salesData: {},
+                salesData: [],
                 topCustomers: [],
-                topCategories: [],
+                previousData: {}
             },
         };
     }

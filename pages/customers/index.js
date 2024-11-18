@@ -3,11 +3,18 @@ import LoadingSpinner from "components/LoadingSpinner";
 import CustomersTable from "components/CustomersTable";
 import { getCustomers } from "lib/models/customers";
 import { useRouter } from "next/router";
+import { useAuth } from "hooks/useAuth";
+import { Spinner } from "react-bootstrap";
 
 export default function CustomersPage({
   customers: initialCustomers,
   totalItems: initialTotalItems,
 }) {
+
+  const { isAuthenticated, isLoading: authLoading } = useAuth(); // Renamed for clarity
+
+
+
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [customers, setCustomers] = useState(initialCustomers);
@@ -39,12 +46,26 @@ export default function CustomersPage({
     return <LoadingSpinner />;
   }
 
+  // Show a loader if still loading or redirecting
+  if (authLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
+        <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
+          <span className="sr-only">Loading...</span>
+        </Spinner>
+        <div className="ms-3">Checking authentication...</div>
+      </div>
+    );
+  }
+
   return (
-    <CustomersTable
-      customers={customers}
-      totalItems={totalItems}
-      isLoading={isLoading}
-    />
+    isAuthenticated ? (
+      <CustomersTable
+        customers={customers}
+        totalItems={totalItems}
+        isLoading={isLoading}
+      />
+    ) : null
   );
 }
 

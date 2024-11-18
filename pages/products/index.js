@@ -39,6 +39,7 @@ export default function ProductsPage({
     return <LoadingSpinner />;
   }
 
+
   return (
     <ProductsTable
       products={products}
@@ -56,6 +57,7 @@ ProductsPage.seo = {
 };
 
 export async function getServerSideProps(context) {
+
   try {
     const {
       page = 1,

@@ -1,5 +1,6 @@
 // pages/orders.js
 import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Table, Spinner } from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
@@ -8,25 +9,30 @@ export default function OrderDetails({ orders }) {
     const router = useRouter();
     const { d, e } = router.query; // Extract 'd' and 'e' instead of 'id'
 
-    if (router.isFallback) {
-        return (
-            <Container className="d-flex justify-content-center mt-5">
-                <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                </Spinner>
-            </Container>
-        );
-    }
+  // Handle loading state for fallback during ISR/SSG
+  if (router.isFallback) {
+    return (
+      <Container className="d-flex justify-content-center mt-5">
+        <Spinner animation="border" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </Container>
+    );
+  }
 
-    const order = orders[0];
+  if (!isAuthenticated) {
+    return <LoadingSpinner />; // Display loading spinner if not authenticated
+  }
 
-    if (!orders || orders.length === 0) {
-        return (
-            <Container className="mt-5">
-                <div className="alert alert-warning">Order not found</div>
-            </Container>
-        );
-    }
+  if (!orders || orders.length === 0) {
+    return (
+      <Container className="mt-5">
+        <div className="alert alert-warning">Order not found</div>
+      </Container>
+    );
+  }
+
+  const order = orders[0];
 
     // Group products by DocEntry (though with both d and e, grouping may not be necessary)
     const groupedProducts = orders.reduce((acc, product) => {
@@ -129,21 +135,19 @@ export default function OrderDetails({ orders }) {
                         </Card>
                     ))}
 
-                    {/* Back Button */}
-                    <div className="mt-3">
-                        <button 
-                            className="btn btn-secondary" 
-                            onClick={() => router.back()}
-                        >
-                            Back to Orders
-                        </button>
-                    </div>
-                </Card.Body>
-            </Card>
-        </Container>
-    );
+          {/* Back Button */}
+          <div className="mt-3">
+            <button className="btn btn-secondary" onClick={() => router.back()}>
+              Back to Orders
+            </button>
+          </div>
+        </Card.Body>
+      </Card>
+    </Container>
+  );
 }
 
+// Server-side authentication and data fetching
 export async function getServerSideProps(context) {
     const { d, e } = context.query; // Extract 'd' and 'e' from query parameters
 
@@ -153,7 +157,8 @@ export async function getServerSideProps(context) {
         };
     }
 
-    // Get the protocol and host from the context
+  // Fetch the data from your API
+  try {
     const protocol = context.req.headers['x-forwarded-proto'] || 'http';
     const host = context.req.headers.host;
 
@@ -163,19 +168,19 @@ export async function getServerSideProps(context) {
             throw new Error(`Failed to fetch data, received status ${res.status}`);
         }
 
-        const data = await res.json();
+    const data = await res.json();
 
-        return {
-            props: {
-                orders: Array.isArray(data) ? data : [data],
-            },
-        };
-    } catch (error) {
-        console.error('Error fetching order:', error);
-        return {
-            props: {
-                orders: [], // Pass empty array on error
-            },
-        };
-    }
+    return {
+      props: {
+        orders: Array.isArray(data) ? data : [data],
+      },
+    };
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    return {
+      props: {
+        orders: [],
+      },
+    };
+  }
 }

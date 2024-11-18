@@ -28,108 +28,64 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
 
     const columns = [
         {
-            field: 'DocNum',
-            label: 'Invoice#',
-            render: (value) => (
-                <Link href={`/invoices/${value}`} className="text-blue-600 hover:text-blue-800">
-                    {value}
-                </Link>
-            ),
+          field: 'DocNum',
+          label: 'Invoice#',
+          render: (value, row) => (
+            <Link href={`/invoicedetails?d=${value}&e=${row.DocEntry}`} className="text-blue-600 hover:text-blue-800">
+              {value}
+            </Link>
+          ),
         },
         {
-            field: 'DocStatus',
-            label: 'Status',
-            render: (value) => <StatusBadge status={value} />,
+          field: 'DocStatus',
+          label: 'Status',
+          render: (value) => <StatusBadge status={value} />,
         },
         {
-            field: 'DocDate',
-            label: 'Invoice Date',
-            render: (value) => formatDate(value),
+          field: 'DocDate',
+          label: 'Invoice Date',
+          render: (value) => formatDate(value),
         },
         {
-            field: 'CustomerPONo',
-            label: 'Customer PO No',
-            render: (value) => value || 'N/A',
+          field: 'CustomerPONo',
+          label: 'Customer PO No',
+          render: (value) => value || 'N/A',
         },
         {
-            field: 'PODate',
-            label: 'PO Date',
-            render: (value) => formatDate(value),
+          field: 'PODate',
+          label: 'PO Date',
+          render: (value) => formatDate(value),
         },
         {
-            field: 'CardName',
-            label: 'Customer',
-            render: (value) => value || 'N/A',
+          field: 'CardName',
+          label: 'Customer',
+          render: (value) => value || 'N/A',
         },
         {
-            field: 'ItemGroup',
-            label: 'Item Group',
-            render: (value) => value || 'N/A',
+          field: 'DocDueDate',
+          label: 'Due Date',
+          render: (value) => formatDate(value),
         },
         {
-            field: 'ItemCode',
-            label: 'Item Code',
-            render: (value) => value || 'N/A',
-        },
-        {
-            field: 'ItemName',
-            label: 'Item Description',
-            render: (value) => value || 'N/A',
-        },
-        {
-            field: 'Quantity',
-            label: 'Quantity',
-            render: (value) => (value != null ? value.toFixed(2) : '0.00'),
-        },
-        {
-            field: 'UOMName',
-            label: 'UOM',
-            render: (value) => value || 'N/A',
-        },
-        {
-            field: 'Price',
-            label: 'Price',
-            render: (value) => (value != null ? value.toFixed(3) : '0.000'),
-        },
-        {
-            field: 'LineTotal',
-            label: 'Line Total',
+            field: 'DocTotal',
+            label: 'Total Amount',
             render: (value, row) => {
-                const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
-                return formatCurrency(amountInINR);
-              },
-        },
-        // {
-        //     field: 'Currency',
-        //     label: 'Currency',
-        //     render: (value) => value || 'N/A',
-        // },
+              const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
+              return formatCurrency(amountInINR);
+            },
+          },
         {
-            field: 'StockStatus',
-            label: 'Stock',
-            render: (value) => (value != null ? value.toFixed(2) : '0.00'),
+          field: 'DocCur',
+          label: 'Currency',
+          render: (value) => value || 'N/A',
         },
         {
-            field: 'U_timeline',
-            label: 'Timeline',
-            render: (value) => value || 'N/A',
+          field: 'SalesEmployee',
+          label: 'Sales Employee',
+          render: (value) => value || 'N/A',
         },
-        {
-            field: 'SuppCatNum',
-            label: 'Supplier Cat#',
-            render: (value) => value || 'N/A',
-        },
-        {
-            field: 'PlantLocation',
-            label: 'Plant Location',
-            render: (value) => value || 'N/A',
-        },
-        {
-            field: 'SalesEmployee',
-            label: 'Sales Employee',
-            render: (value) => value || 'N/A',
-        },
-    ];
+      ];
+      
 
     return (
         <Container fluid>
