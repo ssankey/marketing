@@ -1,4 +1,3 @@
-// pages/_app.js
 import { useMemo } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -6,10 +5,9 @@ import { NextSeo } from 'next-seo';
 import SSRProvider from 'react-bootstrap/SSRProvider';
 import { Analytics } from '@vercel/analytics/react';
 import { SWRConfig } from 'swr';
-import '../components/components.css'
+import '../components/components.css';
 // Import layouts
 import DefaultDashboardLayout from 'layouts/DefaultDashboardLayout';
-
 // Import styles
 import 'styles/theme.scss';
 
@@ -34,7 +32,7 @@ const SWR_CONFIG = {
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-
+  
   // Memoize the base URL
   const baseURL = useMemo(
     () => process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000',
@@ -42,10 +40,18 @@ function MyApp({ Component, pageProps }) {
   );
 
   // Construct the full page URL
-  const pageURL = useMemo(() => `${baseURL}${router.pathname}`, [baseURL, router.pathname]);
+  const pageURL = useMemo(
+    () => `${baseURL}${router.pathname}`, 
+    [baseURL, router.pathname]
+  );
 
-  // Get the SEO data from the component or fall back to the defaults
-  const pageSEO = Component.seo || {};
+  // Memoize the pageSEO to fix the dependency warning
+  const pageSEO = useMemo(
+    () => Component.seo || {},
+    [Component.seo]
+  );
+
+  // Memoize SEO data with pageSEO inside the callback
   const seoData = useMemo(() => ({
     title: pageSEO.title || DEFAULT_SEO.title,
     description: pageSEO.description || DEFAULT_SEO.description,
@@ -59,27 +65,32 @@ function MyApp({ Component, pageProps }) {
     },
   }), [pageSEO, pageURL]);
 
-  const isAuthPage =
-    router.pathname === "/login" ||
-    router.pathname === "/signup" ||
-    router.pathname === "/forgot-password";
-
+  const isAuthPage = useMemo(
+    () => 
+      router.pathname === "/login" ||
+      router.pathname === "/signup" ||
+      router.pathname === "/forgot-password",
+    [router.pathname]
+  );
 
   // Determine the layout based on the component or route
   const Layout = useMemo(() => {
-    // If on an authentication page, use no layout (or a simple layout)
     if (isAuthPage) {
-      return ({ children }) => <>{children}</>; // No layout for auth pages
+      const AuthLayout = ({ children }) => <>{children}</>;
+      AuthLayout.displayName = 'AuthLayout'; // Add display name to fix the error
+      return AuthLayout;
     }
     if (Component.Layout) {
-      return Component.Layout; // Use the layout specified by the component
+      return Component.Layout;
     }
     if (router.pathname.includes("dashboard")) {
-      return DefaultDashboardLayout; // Use default dashboard layout for dashboard routes
+      return DefaultDashboardLayout;
     }
-
-    return DefaultDashboardLayout; // Fallback to dashboard layout
+    return DefaultDashboardLayout;
   }, [Component.Layout, router.pathname, isAuthPage]);
+
+  // Add display name to MyApp component
+  MyApp.displayName = 'MyApp';
 
   return (
     <SWRConfig value={SWR_CONFIG}>
@@ -92,9 +103,7 @@ function MyApp({ Component, pageProps }) {
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         </Head>
-
         <NextSeo {...seoData} />
-
         <Layout>
           <Component {...pageProps} />
           <Analytics
@@ -108,4 +117,3 @@ function MyApp({ Component, pageProps }) {
 }
 
 export default MyApp;
-
