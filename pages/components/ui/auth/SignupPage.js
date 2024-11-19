@@ -199,6 +199,7 @@ import {
   Col,
   Alert,
 } from "react-bootstrap";
+import Link from 'next/link';
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -343,13 +344,13 @@ export default function SignupPage() {
                 <div className="text-center">
                   <p className="mb-0">
                     Already have an account?{" "}
-                    <a
+                    <Link
                       href="/login"
                       className="text-decoration-none fw-bold"
                       style={{ color: "#667eea" }}
                     >
                       Sign In
-                    </a>
+                    </Link>
                   </p>
                 </div>
               </Form>
