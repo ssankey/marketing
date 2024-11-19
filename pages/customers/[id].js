@@ -1,9 +1,6 @@
-
-
-
 import { useAuth } from "hooks/useAuth";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Container, Row, Col, Card, Spinner, Table } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 
@@ -15,43 +12,31 @@ function formatDate(dateString) {
 }
 
 export default function CustomerDetails({ customer }) {
-  const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Ensure the hook only runs client-side
+  // Handle client-side auth redirect
   useEffect(() => {
-    setIsClient(true);
-  }, []);
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login'); // Or wherever you want to redirect unauthorized users
+    }
+  }, [isAuthenticated, authLoading, router]);
 
-  // Protect the page using the `useAuth` hook, client-side only
-  const { isAuthenticated, isLoading: authLoading } = useAuth(); // Renamed for clarity
-
-
-  // Conditionally initialize `useRouter` for client side only
-  const router = isClient ? useRouter() : null;
-
-  // Handle fallback during page generation
-  if (router?.isFallback) {
+  // Handle loading states
+  if (router.isFallback || authLoading) {
     return (
-      <Container className="d-flex justify-content-center mt-5">
-        <Spinner animation="border" role="status">
+      <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
+        <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
           <span className="visually-hidden">Loading...</span>
         </Spinner>
+        <div className="ms-3">
+          {router.isFallback ? "Loading..." : "Checking authentication..."}
+        </div>
       </Container>
     );
   }
 
-  // Show a loader if still loading or redirecting
-  if (authLoading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
-        <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
-          <span className="sr-only">Loading...</span>
-        </Spinner>
-        <div className="ms-3">Checking authentication...</div>
-      </div>
-    );
-  }
-
+  // Handle missing customer data
   if (!customer) {
     return (
       <Container className="mt-5">
@@ -60,8 +45,9 @@ export default function CustomerDetails({ customer }) {
     );
   }
 
+  // Handle unauthorized access
   if (!isAuthenticated) {
-    return null; // Return null to prevent rendering if not authenticated
+    return null;
   }
 
   return (
@@ -136,7 +122,7 @@ export default function CustomerDetails({ customer }) {
           <div className="mt-3">
             <button
               className="btn btn-secondary"
-              onClick={() => router?.back()}
+              onClick={() => router.back()}
             >
               Back to Customers
             </button>
@@ -147,13 +133,10 @@ export default function CustomerDetails({ customer }) {
   );
 }
 
-// Add server-side check for authentication
+// Server-side props remain unchanged
 export async function getServerSideProps(context) {
   const { id } = context.params;
 
- 
-
-  // Build the API URL dynamically
   const protocol = context.req.headers["x-forwarded-proto"] || "http";
   const host = context.req.headers.host || "localhost:3000";
   const url = `${protocol}://${host}/api/customers/${id}`;
