@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { Card, Button, Form, Container, Row, Col, Alert } from 'react-bootstrap';
 import { loginUser } from 'utils/auth';
 export default function LoginPage() {
@@ -148,25 +149,23 @@ export default function LoginPage() {
                 <div className="text-center">
                   <Row className="justify-content-center align-items-center">
                     <Col>
-                      <a
-                        href="/signup"
-                        className="text-decoration-none fw-bold"
-                        style={{ color: "#667eea" }}
-                      >
-                        Create Account
-                      </a>
+                      <Link 
+                  href="/signup" 
+                  className="text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  Create Account
+                </Link>
                     </Col>
                     <Col>
                       <div className="vr mx-3" style={{ height: "20px" }}></div>
                     </Col>
                     <Col>
-                      <a
-                        href="/forgot-password"
-                        className="text-decoration-none fw-bold"
-                        style={{ color: "#667eea" }}
-                      >
-                        Forgot Password?
-                      </a>
+                      <Link 
+                  href="/forgot-password" 
+                  className="text-blue-600 hover:text-blue-700 font-semibold"
+                >
+                  Forgot Password?
+                </Link>
                     </Col>
                   </Row>
                 </div>
