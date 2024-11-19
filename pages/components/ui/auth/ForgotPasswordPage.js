@@ -202,4 +202,4 @@ export default function ForgotPasswordPage() {
     </Container>
   );
 }
-
+ForgotPasswordPage.displayName = "ForgotPasswordPage";
