@@ -1,5 +1,5 @@
 // pages/api/orders/detail.js
-import { getOrderDetail } from '../../../lib/models/order';
+import { getOrderDetail } from '../../../lib/models/orders';
 
 export default async function handler(req, res) {
   const { d, e } = req.query; // Extract 'd' and 'e' from query parameters
