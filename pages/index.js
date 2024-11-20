@@ -53,7 +53,7 @@ const Dashboard = ({
         {
             title: `Total Sales Revenue ${dateFilter === 'custom' ? '' : dateFilter}`,
             value: formatCurrency(totalSalesRevenue),
-            icon: 'CurrencyDollar',
+            icon: 'RupeeIcon',
             color: 'primary',
             trend: dateFilter === 'custom' ? null : (totalSalesRevenue > previousData.totalSalesRevenue ? 'up' : 'down'),
             trendValue: dateFilter === 'custom' ? null : calculateTrend(totalSalesRevenue, previousData.totalSalesRevenue),

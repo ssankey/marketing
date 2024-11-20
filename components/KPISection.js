@@ -1,14 +1,13 @@
 import React from 'react';
 import { Row, Col, Card, Badge } from 'react-bootstrap';
 import { 
-    CurrencyDollar, 
     Cart4, 
     GraphUpArrow, 
     ExclamationCircle,
     ArrowUpShort,
     ArrowDownShort
 } from 'react-bootstrap-icons';
-
+import { MdOutlineCurrencyRupee } from "react-icons/md";
 // Enhanced color palette
 const colors = {
     primary: '#0d6efd',
@@ -18,31 +17,35 @@ const colors = {
     muted: '#6c757d'
 };
 
-// Icons with background styling
-const icons = {
-    CurrencyDollar: (color) => (
-        <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
-            <CurrencyDollar size={24} color={colors[color]} />
-        </div>
-    ),
-    Cart4: (color) => (
-        <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
-            <Cart4 size={24} color={colors[color]} />
-        </div>
-    ),
-    GraphUpArrow: (color) => (
-        <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
-            <GraphUpArrow size={24} color={colors[color]} />
-        </div>
-    ),
-    ExclamationCircle: (color) => (
-        <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
-            <ExclamationCircle size={24} color={colors[color]} />
-        </div>
-    )
+// Icon Rendering Functions
+const renderIcon = (icon, color) => {
+    const iconComponents = {
+        RupeeIcon: () => (
+            <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
+                <MdOutlineCurrencyRupee size={24} color={colors[color]} />
+            </div>
+        ),
+        Cart4: () => (
+            <div className="rounded-circle p-2  " style={{ backgroundColor: `${colors[color]}15` }}>
+                <Cart4 size={24} color={colors[color]} />
+            </div>
+        ),
+        GraphUpArrow: () => (
+            <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
+                <GraphUpArrow size={24} color={colors[color]} />
+            </div>
+        ),
+        ExclamationCircle: () => (
+            <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
+                <ExclamationCircle size={24} color={colors[color]} />
+            </div>
+        )
+    };
+
+    return iconComponents[icon] ? iconComponents[icon]() : null;
 };
 
-// Single KPI Card Component
+// Rest of the code remains the same as in the previous implementation
 const KPICard = ({ title, value, icon, color, trend, trendValue }) => (
     <Card 
         className="h-100 shadow-sm border-0"
@@ -62,7 +65,7 @@ const KPICard = ({ title, value, icon, color, trend, trendValue }) => (
         <Card.Body className="p-4">
             {/* Icon and Trend Badge Row */}
             <div className="d-flex justify-content-between align-items-center mb-3">
-                {icons[icon](color)}
+                {renderIcon(icon, color)}
                 {trend && (
                     <Badge 
                         bg={trend === 'up' ? 'success' : 'danger'} 
@@ -112,4 +115,3 @@ const KPISection = ({ kpiData }) => (
 );
 
 export default KPISection;
-
