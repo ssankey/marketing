@@ -21,6 +21,7 @@
         LineElement
     } from 'chart.js';
 import EnhancedSalesCOGSChart from './EnhancedSalesCOGSChart';
+import OrdersChart from "./OpenClosedOrdersChart";
 
     ChartJS.register(
         CategoryScale,
@@ -52,6 +53,7 @@ import EnhancedSalesCOGSChart from './EnhancedSalesCOGSChart';
         const [categoriesDateFilter, setCategoriesDateFilter] = useState('today');
         const [totalSales, setTotalSales] = useState(0);
         const [salesGrowth, setSalesGrowth] = useState(0);
+        const [OrdersData , setOrdersData] = useState([]);
 
         const fetchChartData = async (type, filter) => {
             try {
@@ -59,6 +61,14 @@ import EnhancedSalesCOGSChart from './EnhancedSalesCOGSChart';
                 const response = await fetch(`/api/dashboard/${type}?${params}`);
                 if (!response.ok) throw new Error(`Failed to fetch ${type} data`);
                 const data = await response.json();
+
+                // const ordersresponse = await fetch(
+                //   `/api/dashboard/orders`
+                // );
+                // if (!ordersresponse.ok)
+                //   throw new Error(`Failed to fetch orders data`);
+                // const ordersdata = await ordersresponse.json();
+                // setOrdersData(ordersdata)
 
                 if (type === 'customers') {
                     setTopCustomers(data);
@@ -195,83 +205,103 @@ import EnhancedSalesCOGSChart from './EnhancedSalesCOGSChart';
 
 
         return (
-            <div className="p-4 bg-light">
-                {/* Charts Row */}
-                <Row className="g-4">
-                    <Col lg={7}>
-                        <Card className="shadow-sm border-0 h-100">
-                            <Card.Header className="bg-white border-0 py-3">
-                                <div className="d-flex justify-content-between align-items-center">
-                                    <h5 className="mb-0 fw-bold">Top Customers</h5>
-                                    {renderFilterDropdown(customersDateFilter, setCustomersDateFilter)}
-                                </div>
-                            </Card.Header>
-                            <Card.Body>
-                                <div style={{ height: '400px' }}>
-                                    <Bar
-                                        data={{
-                                            labels: topCustomers.map((customer) => customer.Customer),
-                                            datasets: [{
-                                                data: topCustomers.map((customer) => customer.Sales || 0),
-                                                backgroundColor: colorPalette.primary,
-                                                borderRadius: 6,
-                                            }],
-                                        }}
-                                        options={chartOptions}
-                                    />
-                                </div>
-                            </Card.Body>
-                        </Card>
-                    </Col>
+          <div className="p-4 bg-light">
+            {/* Charts Row */}
 
-                    <Col lg={5}>
-                        <Card className="shadow-sm border-0 h-100">
-                            <Card.Header className="bg-white border-0 py-3">
-                                <div className="d-flex justify-content-between align-items-center">
-                                    <h5 className="mb-0 fw-bold">Sales by Category</h5>
-                                    {renderFilterDropdown(categoriesDateFilter, setCategoriesDateFilter)}
-                                </div>
-                            </Card.Header>
-                            <Card.Body>
-                                <Row>
-                                    <Col md={7}>
-                                        <div style={{ height: '300px' }}>
-                                            <Doughnut data={doughnutData} options={doughnutOptions} />
-                                        </div>
-                                    </Col>
-                                    <Col md={5}>
-                                        <ListGroup variant="flush">
-                                            {topCategories.map((category, index) => (
-                                                <ListGroup.Item
-                                                    key={index}
-                                                    className="d-flex justify-content-between align-items-center px-0"
-                                                >
-                                                    <div className="d-flex align-items-center">
-                                                        <div
-                                                            className="me-2"
-                                                            style={{
-                                                                width: 12,
-                                                                height: 12,
-                                                                borderRadius: '50%',
-                                                                backgroundColor: colorPalette.gradient[index]
-                                                            }}
-                                                        />
-                                                        <span className="small">{category.Category}</span>
-                                                    </div>
-                                                    <span className="fw-bold small">
-                                                        {formatCurrency(category.Sales || 0)}
-                                                    </span>
-                                                </ListGroup.Item>
-                                            ))}
-                                        </ListGroup>
-                                    </Col>
-                                </Row>
-                            </Card.Body>
-                        </Card>
-                    </Col>
-                </Row>
+            <EnhancedSalesCOGSChart salesData={salesData} />
+            <OrdersChart OrdersData={OrdersData} />
+            <Row className="g-4">
+              <Col lg={7}>
+                <Card className="shadow-sm border-0 h-100">
+                  <Card.Header className="bg-white border-0 py-3">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <h5 className="mb-0 fw-bold">Top Customers</h5>
+                      {renderFilterDropdown(
+                        customersDateFilter,
+                        setCustomersDateFilter
+                      )}
+                    </div>
+                  </Card.Header>
+                  <Card.Body>
+                    <div style={{ height: "400px" }}>
+                      <Bar
+                        data={{
+                          labels: topCustomers.map(
+                            (customer) => customer.Customer
+                          ),
+                          datasets: [
+                            {
+                              data: topCustomers.map(
+                                (customer) => customer.Sales || 0
+                              ),
+                              backgroundColor: colorPalette.primary,
+                              borderRadius: 6,
+                            },
+                          ],
+                        }}
+                        options={chartOptions}
+                      />
+                    </div>
+                  </Card.Body>
+                </Card>
+              </Col>
 
-                {/* <Row className="g-4 mt-3">
+              <Col lg={5}>
+                <Card className="shadow-sm border-0 h-100">
+                  <Card.Header className="bg-white border-0 py-3">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <h5 className="mb-0 fw-bold">Sales by Category</h5>
+                      {renderFilterDropdown(
+                        categoriesDateFilter,
+                        setCategoriesDateFilter
+                      )}
+                    </div>
+                  </Card.Header>
+                  <Card.Body>
+                    <Row>
+                      <Col md={7}>
+                        <div style={{ height: "300px" }}>
+                          <Doughnut
+                            data={doughnutData}
+                            options={doughnutOptions}
+                          />
+                        </div>
+                      </Col>
+                      <Col md={5}>
+                        <ListGroup variant="flush">
+                          {topCategories.map((category, index) => (
+                            <ListGroup.Item
+                              key={index}
+                              className="d-flex justify-content-between align-items-center px-0"
+                            >
+                              <div className="d-flex align-items-center">
+                                <div
+                                  className="me-2"
+                                  style={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: "50%",
+                                    backgroundColor:
+                                      colorPalette.gradient[index],
+                                  }}
+                                />
+                                <span className="small">
+                                  {category.Category}
+                                </span>
+                              </div>
+                              <span className="fw-bold small">
+                                {formatCurrency(category.Sales || 0)}
+                              </span>
+                            </ListGroup.Item>
+                          ))}
+                        </ListGroup>
+                      </Col>
+                    </Row>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+            {/* <Row className="g-4 mt-3">
                     <Card className="shadow-sm border-0">
                         <Card.Header
                             className="bg-white py-3"
@@ -307,12 +337,10 @@ import EnhancedSalesCOGSChart from './EnhancedSalesCOGSChart';
                         </Card.Body>
                     </Card>
                 </Row> */}
-                <Row className='mt-4'>
-                <EnhancedSalesCOGSChart salesData={salesData}/>
-                </Row>
-
-
-            </div>
+            <Row className="mt-4">
+              {/* <EnhancedSalesCOGSChart salesData={salesData}/> */}
+            </Row>
+          </div>
         );
     };
 

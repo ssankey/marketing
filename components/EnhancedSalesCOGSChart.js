@@ -26,8 +26,8 @@ const EnhancedSalesCOGSChart = ({ salesData }) => {
                 backgroundColor: colorPalette.primary,
                 borderColor: colorPalette.primary,
                 borderWidth: 1,
-                barPercentage: 0.6,
-                categoryPercentage: 1.0,
+                barPercentage: 1,
+                categoryPercentage: 0.3 ,
                 order: 1,
             },
             {
@@ -36,8 +36,8 @@ const EnhancedSalesCOGSChart = ({ salesData }) => {
                 backgroundColor: colorPalette.warning,
                 borderColor: colorPalette.warning,
                 borderWidth: 1,
-                barPercentage: 0.6,
-                categoryPercentage: 1.0,
+                barPercentage: 1,
+                categoryPercentage: 0.3,
                 order: 1,
             },
             {
