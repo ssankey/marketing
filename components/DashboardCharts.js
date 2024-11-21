@@ -46,14 +46,14 @@ import OrdersChart from "./OpenClosedOrdersChart";
         gradient: ['#0d6efd', '#6610f2', '#6f42c1', '#d63384', '#dc3545']
     };
 
-    const DashboardCharts = ({ salesData }) => {
+    const DashboardCharts = ({ salesData , OrdersData }) => {
         const [topCustomers, setTopCustomers] = useState([]);
         const [topCategories, setTopCategories] = useState([]);
         const [customersDateFilter, setCustomersDateFilter] = useState('today');
         const [categoriesDateFilter, setCategoriesDateFilter] = useState('today');
         const [totalSales, setTotalSales] = useState(0);
         const [salesGrowth, setSalesGrowth] = useState(0);
-        const [OrdersData , setOrdersData] = useState([]);
+        // const [OrdersData , setOrdersData] = useState([]);
 
         const fetchChartData = async (type, filter) => {
             try {

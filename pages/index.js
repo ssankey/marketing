@@ -8,118 +8,182 @@ import { formatCurrency } from 'utils/formatCurrency';
 import { useAuth } from 'hooks/useAuth';
 
 const Dashboard = ({
-    quotationConversionRate,
-    NumberOfSalesOrders,
-    totalSalesRevenue,
-    outstandingInvoices,
-    salesData = [],
-    previousData = {}
+  quotationConversionRate,
+  NumberOfSalesOrders,
+  totalSalesRevenue,
+  outstandingInvoices,
+  salesData = [],
+  OrdersData = [],
+  previousData = {},
 }) => {
-    const router = useRouter();
-    const { isAuthenticated, isLoading, redirecting } = useAuth();
+  const router = useRouter();
+  const { isAuthenticated, isLoading, redirecting } = useAuth();
 
-    const {
-        dateFilter: initialDateFilter = 'today',
-        startDate: initialStartDate,
-        endDate: initialEndDate,
-        region: initialRegion,
-        customer: initialCustomer,
-    } = router.query;
+  const {
+    dateFilter: initialDateFilter = "today",
+    startDate: initialStartDate,
+    endDate: initialEndDate,
+    region: initialRegion,
+    customer: initialCustomer,
+  } = router.query;
 
-    const [dateFilter, setDateFilter] = useState(initialDateFilter);
-    const [startDate, setStartDate] = useState(initialStartDate || '');
-    const [endDate, setEndDate] = useState(initialEndDate || '');
-    const [region, setRegion] = useState(initialRegion || '');
-    const [customer, setCustomer] = useState(initialCustomer || '');
+  const [dateFilter, setDateFilter] = useState(initialDateFilter);
+  const [startDate, setStartDate] = useState(initialStartDate || "");
+  const [endDate, setEndDate] = useState(initialEndDate || "");
+  const [region, setRegion] = useState(initialRegion || "");
+  const [customer, setCustomer] = useState(initialCustomer || "");
 
-    const handleFilterChange = async (filterValues) => {
-        const query = {
-            ...(filterValues.dateFilter && { dateFilter: filterValues.dateFilter }),
-            ...(filterValues.startDate && { startDate: filterValues.startDate }),
-            ...(filterValues.endDate && { endDate: filterValues.endDate }),
-            ...(filterValues.region && { region: filterValues.region }),
-            ...(filterValues.customer && { customer: filterValues.customer }),
-        };
-        await router.push({
-            pathname: router.pathname,
-            query,
-        });
+  const handleFilterChange = async (filterValues) => {
+    const query = {
+      ...(filterValues.dateFilter && { dateFilter: filterValues.dateFilter }),
+      ...(filterValues.startDate && { startDate: filterValues.startDate }),
+      ...(filterValues.endDate && { endDate: filterValues.endDate }),
+      ...(filterValues.region && { region: filterValues.region }),
+      ...(filterValues.customer && { customer: filterValues.customer }),
     };
+    await router.push({
+      pathname: router.pathname,
+      query,
+    });
+  };
 
-    const calculateTrend = (current, previous) =>
-        previous ? (((current - previous) / previous) * 100).toFixed(2) : 0;
+  const calculateTrend = (current, previous) =>
+    previous ? (((current - previous) / previous) * 100).toFixed(2) : 0;
 
-    const kpiData = [
-        {
-            title: `Total Sales Revenue ${dateFilter === 'custom' ? '' : dateFilter}`,
-            value: formatCurrency(totalSalesRevenue),
-            icon: 'RupeeIcon',
-            color: 'primary',
-            trend: dateFilter === 'custom' ? null : (totalSalesRevenue > previousData.totalSalesRevenue ? 'up' : 'down'),
-            trendValue: dateFilter === 'custom' ? null : calculateTrend(totalSalesRevenue, previousData.totalSalesRevenue),
-            prevValue: dateFilter === 'custom' ? null : formatCurrency(previousData.totalSalesRevenue),
-            trendContext: 'Compared to Last Period'
-        },
-        {
-            title: `Number of Sales Orders ${dateFilter === 'custom' ? '' : dateFilter}`,
-            value: NumberOfSalesOrders,
-            icon: 'Cart4',
-            color: 'success',
-            trend: dateFilter === 'custom' ? null : (NumberOfSalesOrders > previousData.NumberOfSalesOrders ? 'up' : 'down'),
-            trendValue: dateFilter === 'custom' ? null : calculateTrend(NumberOfSalesOrders, previousData.NumberOfSalesOrders),
-            prevValue: dateFilter === 'custom' ? null : previousData.NumberOfSalesOrders,
-            trendContext: 'Compared to Last Period'
-        },
-        {
-            title: `Quotation Conversion Rate ${dateFilter === 'custom' ? '' : dateFilter}`,
-            value: `${quotationConversionRate}%`,
-            icon: 'GraphUpArrow',
-            color: 'warning',
-            trend: dateFilter === 'custom' ? null : (quotationConversionRate > previousData.quotationConversionRate ? 'up' : 'down'),
-            trendValue: dateFilter === 'custom' ? null : calculateTrend(quotationConversionRate, previousData.quotationConversionRate),
-            prevValue: dateFilter === 'custom' ? null : `${previousData.quotationConversionRate}%`,
-            trendContext: 'Compared to Last Period'
-        },
-        {
-            title: `Outstanding Invoices ${dateFilter === 'custom' ? '' : dateFilter}`,
-            value: formatCurrency(outstandingInvoices?.amount),
-            icon: 'ExclamationCircle',
-            color: 'danger',
-            trend: dateFilter === 'custom' ? null : (outstandingInvoices?.amount > previousData.outstandingInvoices?.amount ? 'up' : 'down'),
-            trendValue: dateFilter === 'custom' ? null : calculateTrend(outstandingInvoices?.amount, previousData.outstandingInvoices?.amount),
-            prevValue: dateFilter === 'custom' ? null : formatCurrency(previousData.outstandingInvoices?.amount),
-            trendContext: 'Compared to Last Period'
-        }
-    ];
+  const kpiData = [
+    {
+      title: `Total Sales Revenue ${dateFilter === "custom" ? "" : dateFilter}`,
+      value: formatCurrency(totalSalesRevenue),
+      icon: "RupeeIcon",
+      color: "primary",
+      trend:
+        dateFilter === "custom"
+          ? null
+          : totalSalesRevenue > previousData.totalSalesRevenue
+          ? "up"
+          : "down",
+      trendValue:
+        dateFilter === "custom"
+          ? null
+          : calculateTrend(totalSalesRevenue, previousData.totalSalesRevenue),
+      prevValue:
+        dateFilter === "custom"
+          ? null
+          : formatCurrency(previousData.totalSalesRevenue),
+      trendContext: "Compared to Last Period",
+    },
+    {
+      title: `Number of Sales Orders ${
+        dateFilter === "custom" ? "" : dateFilter
+      }`,
+      value: NumberOfSalesOrders,
+      icon: "Cart4",
+      color: "success",
+      trend:
+        dateFilter === "custom"
+          ? null
+          : NumberOfSalesOrders > previousData.NumberOfSalesOrders
+          ? "up"
+          : "down",
+      trendValue:
+        dateFilter === "custom"
+          ? null
+          : calculateTrend(
+              NumberOfSalesOrders,
+              previousData.NumberOfSalesOrders
+            ),
+      prevValue:
+        dateFilter === "custom" ? null : previousData.NumberOfSalesOrders,
+      trendContext: "Compared to Last Period",
+    },
+    {
+      title: `Quotation Conversion Rate ${
+        dateFilter === "custom" ? "" : dateFilter
+      }`,
+      value: `${quotationConversionRate}%`,
+      icon: "GraphUpArrow",
+      color: "warning",
+      trend:
+        dateFilter === "custom"
+          ? null
+          : quotationConversionRate > previousData.quotationConversionRate
+          ? "up"
+          : "down",
+      trendValue:
+        dateFilter === "custom"
+          ? null
+          : calculateTrend(
+              quotationConversionRate,
+              previousData.quotationConversionRate
+            ),
+      prevValue:
+        dateFilter === "custom"
+          ? null
+          : `${previousData.quotationConversionRate}%`,
+      trendContext: "Compared to Last Period",
+    },
+    {
+      title: `Outstanding Invoices ${
+        dateFilter === "custom" ? "" : dateFilter
+      }`,
+      value: formatCurrency(outstandingInvoices?.amount),
+      icon: "ExclamationCircle",
+      color: "danger",
+      trend:
+        dateFilter === "custom"
+          ? null
+          : outstandingInvoices?.amount >
+            previousData.outstandingInvoices?.amount
+          ? "up"
+          : "down",
+      trendValue:
+        dateFilter === "custom"
+          ? null
+          : calculateTrend(
+              outstandingInvoices?.amount,
+              previousData.outstandingInvoices?.amount
+            ),
+      prevValue:
+        dateFilter === "custom"
+          ? null
+          : formatCurrency(previousData.outstandingInvoices?.amount),
+      trendContext: "Compared to Last Period",
+    },
+  ];
 
-    if (isLoading || redirecting) {
-        // Don't render anything if loading or redirecting
-        return null;
-    }
+  if (isLoading || redirecting) {
+    // Don't render anything if loading or redirecting
+    return null;
+  }
 
-    return (
-        isAuthenticated ? (
-            <Container fluid className="p-4" style={{ backgroundColor: '#f8f9fa', fontFamily: "'Inter', sans-serif" }}>
-                <DashboardFilters
-                    dateFilter={dateFilter}
-                    setDateFilter={setDateFilter}
-                    startDate={startDate}
-                    setStartDate={setStartDate}
-                    endDate={endDate}
-                    setEndDate={setEndDate}
-                    region={region}
-                    setRegion={setRegion}
-                    customer={customer}
-                    setCustomer={setCustomer}
-                    handleFilterChange={handleFilterChange}
-                />
+  return isAuthenticated ? (
+    <Container
+      fluid
+      className="p-4"
+      style={{
+        backgroundColor: "#f8f9fa",
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      <DashboardFilters
+        dateFilter={dateFilter}
+        setDateFilter={setDateFilter}
+        startDate={startDate}
+        setStartDate={setStartDate}
+        endDate={endDate}
+        setEndDate={setEndDate}
+        region={region}
+        setRegion={setRegion}
+        customer={customer}
+        setCustomer={setCustomer}
+        handleFilterChange={handleFilterChange}
+      />
 
-                <KPISection kpiData={kpiData} />
+      <KPISection kpiData={kpiData} />
 
-                <DashboardCharts salesData={salesData} />
-            </Container>
-        ) : null // Don't render if not authenticated
-    );
+      <DashboardCharts salesData={salesData} OrdersData={OrdersData} />
+    </Container>
+  ) : null; // Don't render if not authenticated
 };
 
 export default Dashboard;
@@ -178,46 +242,101 @@ export async function getServerSideProps(context) {
         getSalesAndCOGS,
         getTopCustomers,
     } = require('lib/models/dashboard');
-
+    
+    const {getMonthlyOrdersByStatus} = require('lib/models/orders')
     try {
         // Fetch current and previous period data
         const [
+          quotationConversionRate,
+          NumberOfSalesOrders,
+          totalSalesRevenue,
+          outstandingInvoices,
+          salesData,
+          previousQuotationConversionRate,
+          previousNumberOfSalesOrders,
+          previousTotalSalesRevenue,
+          previousOutstandingInvoices,
+          OrdersData      ] 
+          = await Promise.all([
+          getQuotationConversionRate({
+            startDate: computedStartDate,
+            endDate: computedEndDate,
+            region,
+            customer,
+          }),
+          getNumberOfSalesOrders({
+            startDate: computedStartDate,
+            endDate: computedEndDate,
+            region,
+            customer,
+          }),
+          getTotalSalesRevenue({
+            startDate: computedStartDate,
+            endDate: computedEndDate,
+            region,
+            customer,
+          }),
+          getOutstandingInvoices({
+            startDate: computedStartDate,
+            endDate: computedEndDate,
+            region,
+            customer,
+          }),
+          getSalesAndCOGS({
+            startDate: computedStartDate,
+            endDate: computedEndDate,
+            region,
+            customer,
+          }),
+          getQuotationConversionRate({
+            startDate: previousStartDate,
+            endDate: previousEndDate,
+            region,
+            customer,
+          }),
+          getNumberOfSalesOrders({
+            startDate: previousStartDate,
+            endDate: previousEndDate,
+            region,
+            customer,
+          }),
+          getTotalSalesRevenue({
+            startDate: previousStartDate,
+            endDate: previousEndDate,
+            region,
+            customer,
+          }),
+          getOutstandingInvoices({
+            startDate: previousStartDate,
+            endDate: previousEndDate,
+            region,
+            customer,
+          }),
+          getMonthlyOrdersByStatus({
+            startDate: previousStartDate,
+            endDate: previousEndDate,
+            region,
+            customer,
+          })
+        ]);
+
+        console.log("OrdersData:", OrdersData);
+        return {
+          props: {
             quotationConversionRate,
             NumberOfSalesOrders,
             totalSalesRevenue,
             outstandingInvoices,
             salesData,
-            previousQuotationConversionRate,
-            previousNumberOfSalesOrders,
-            previousTotalSalesRevenue,
-            previousOutstandingInvoices
-        ] = await Promise.all([
-            getQuotationConversionRate({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
-            getNumberOfSalesOrders({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
-            getTotalSalesRevenue({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
-            getOutstandingInvoices({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
-            getSalesAndCOGS({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
-            getQuotationConversionRate({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
-            getNumberOfSalesOrders({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
-            getTotalSalesRevenue({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
-            getOutstandingInvoices({ startDate: previousStartDate, endDate: previousEndDate, region, customer })
-        ]);
-
-        return {
-            props: {
-                quotationConversionRate,
-                NumberOfSalesOrders,
-                totalSalesRevenue,
-                outstandingInvoices,
-                salesData,
-                topCustomers: [],
-                previousData: {
-                    quotationConversionRate: previousQuotationConversionRate,
-                    NumberOfSalesOrders: previousNumberOfSalesOrders,
-                    totalSalesRevenue: previousTotalSalesRevenue,
-                    outstandingInvoices: previousOutstandingInvoices
-                }
+            topCustomers: [],
+            OrdersData: OrdersData || [],
+            previousData: {
+              quotationConversionRate: previousQuotationConversionRate,
+              NumberOfSalesOrders: previousNumberOfSalesOrders,
+              totalSalesRevenue: previousTotalSalesRevenue,
+              outstandingInvoices: previousOutstandingInvoices,
             },
+          },
         };
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -225,6 +344,7 @@ export async function getServerSideProps(context) {
             props: {
                 salesData: [],
                 topCustomers: [],
+                OrdersData:[],
                 previousData: {}
             },
         };

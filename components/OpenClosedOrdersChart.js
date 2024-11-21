@@ -10,22 +10,75 @@ const OrdersChart = ({ OrdersData }) => {
   };
   console.log(Array.isArray(OrdersData));
   // Define months of the current year
-  const months = ["Aug 2024", "Sep 2024", "Oct 2024", "Nov 2024"];
+//   const months = ["Aug 2024", "Sep 2024", "Oct 2024", "Nov 2024"];
 
   // Create data for the chart
-  const ordersChartData = {
-    labels: OrdersData.map((data) => data.month),
+  //   const ordersChartData = {
+  //     labels: OrdersData.map((data) => data.month),
 
-     
+  //     datasets: [
+  //       {
+  //         label: "Open-Orders",
+  //         data: OrdersData.map((data) => data.openOrders || 0),
+  //         backgroundColor: colorPalette.primary,
+  //         borderColor: colorPalette.primary,
+  //         borderWidth: 1,
+  //         barPercentage: 0.8,
+  //         categoryPercentage: 0.7,
+  //         order: 1,
+  //       },
+  //       {
+  //         label: "Closed-Orders",
+  //         data: OrdersData.map((data) => data.closedOrders || 0),
+  //         backgroundColor: colorPalette.orderLine,
+  //         borderColor: colorPalette.orderLine,
+  //         borderWidth: 1,
+  //         barPercentage: 0.8,
+  //         categoryPercentage: 0.7,
+  //         order: 1,
+  //       },
+  //     ],
+  //   };
+
+  // Assuming data.month is in a format like "2024-01-01" or "2024-02-01"
+  // Define the months of the year
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+
+  const ordersChartData = {
+    labels: OrdersData.map((data) => months[data.month - 1]), // Map the month number to month name
+
     datasets: [
       {
-        label: "Orders",
-        data: OrdersData.map((data) => data.orders || 0),
+        label: "Open-Orders",
+        data: OrdersData.map((data) => data.openOrders || 0),
         backgroundColor: colorPalette.primary,
         borderColor: colorPalette.primary,
         borderWidth: 1,
-        barPercentage: 0.6,
-        categoryPercentage: 1.0,
+        barPercentage: 1,
+        categoryPercentage: 0.7,
+        order: 1,
+      },
+      {
+        label: "Closed-Orders",
+        data: OrdersData.map((data) => data.closedOrders || 0),
+        backgroundColor: colorPalette.orderLine,
+        borderColor: colorPalette.orderLine,
+        borderWidth: 1,
+        barPercentage: 1,
+        categoryPercentage: 0.7,
         order: 1,
       },
     ],
@@ -50,9 +103,13 @@ const OrdersChart = ({ OrdersData }) => {
         titleFont: { size: 14, weight: "bold" },
         bodyFont: { size: 13 },
         padding: 12,
+        // callbacks: {
+        //   label: (tooltipItem) =>
+        //     `${tooltipItem.dataset.label}: ${formatCurrency(tooltipItem.raw)}`,
+        // },
         callbacks: {
           label: (tooltipItem) =>
-            `${tooltipItem.dataset.label}: ${formatCurrency(tooltipItem.raw)}`,
+            `${tooltipItem.dataset.label}: ${tooltipItem.raw}`,
         },
       },
     },
@@ -68,7 +125,8 @@ const OrdersChart = ({ OrdersData }) => {
         beginAtZero: true,
         grid: { color: "rgba(0, 0, 0, 0.05)" },
         ticks: {
-          callback: (value) => formatCurrency(value),
+          //   callback: (value) => formatCurrency(value),
+          callback: (value) => value,
           font: { family: "'Inter', sans-serif", size: 12 },
         },
       },
@@ -86,7 +144,7 @@ const OrdersChart = ({ OrdersData }) => {
             fontSize: "1.25rem",
           }}
         >
-          Monthly Orders
+          Monthly Open vs Closed Orders
         </h4>
       </Card.Header>
       <Card.Body
