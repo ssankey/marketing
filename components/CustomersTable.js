@@ -6,6 +6,7 @@ import TablePagination from "./TablePagination";
 import Link from "next/link";
 import usePagination from "hooks/usePagination";
 import useTableFilters from "hooks/useFilteredData";
+import downloadExcel from "utils/exporttoexcel";
 
 const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
   const ITEMS_PER_PAGE = 20;
@@ -13,13 +14,8 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
     totalItems,
     ITEMS_PER_PAGE
   );
-  const {
-    searchTerm,
-    sortField,
-    sortDirection,
-    handleSearch,
-    handleSort,
-  } = useTableFilters();
+  const { searchTerm, sortField, sortDirection, handleSearch, handleSort } =
+    useTableFilters();
 
   const columns = [
     {
@@ -50,6 +46,10 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
   ];
+  // Define handleExcelDownload function
+  const handleExcelDownload = () => {
+    downloadExcel(customers, "Customers");
+  };
 
   return (
     <Container fluid>
@@ -79,6 +79,7 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
             onSort={handleSort}
             sortField={sortField}
             sortDirection={sortDirection}
+            onExcelDownload={handleExcelDownload} // Passing the function as a prop
           />
           {customers.length === 0 && (
             <div className="text-center py-4">No customers found.</div>

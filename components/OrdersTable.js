@@ -10,12 +10,16 @@ import { formatDate } from 'utils/formatDate';
 import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
+import downloadExcel from "utils/exporttoexcel";
 
 const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
   console.log(orders);
 
   const ITEMS_PER_PAGE = 20;
-  const { currentPage, totalPages, onPageChange } = usePagination(totalItems, ITEMS_PER_PAGE);
+  const { currentPage, totalPages, onPageChange } = usePagination(
+    totalItems,
+    ITEMS_PER_PAGE
+  );
   const {
     searchTerm,
     statusFilter,
@@ -31,83 +35,90 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
 
   const columns = [
     {
-      field: 'DocNum',
-      label: 'Order#',
+      field: "DocNum",
+      label: "Order#",
       render: (value, row) => (
-        <Link href={`/orderdetails?d=${value}&e=${row.DocEntry}`} className="text-blue-600 hover:text-blue-800">
+        <Link
+          href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
+          className="text-blue-600 hover:text-blue-800"
+        >
           {value}
         </Link>
       ),
     },
     {
-      field: 'DocStatus',
-      label: 'Status',
+      field: "DocStatus",
+      label: "Status",
       render: (value) => <StatusBadge status={value} />,
     },
     {
-      field: 'DocDate',
-      label: 'Order Date',
+      field: "DocDate",
+      label: "Order Date",
       render: (value) => formatDate(value),
     },
     {
-      field: 'CardName',
-      label: 'Customer',
+      field: "CardName",
+      label: "Customer",
       render: (value) => truncateText(value, 20),
     },
     {
-      field: 'CustomerPONo',
-      label: 'Customer PO No',
-      render: (value) => value || 'N/A',
+      field: "CustomerPONo",
+      label: "Customer PO No",
+      render: (value) => value || "N/A",
     },
     {
-      field: 'PODate',
-      label: 'PO Date',
+      field: "PODate",
+      label: "PO Date",
       render: (value) => formatDate(value),
     },
     {
-      field: 'DeliveryDate',
-      label: 'Delivery Date',
+      field: "DeliveryDate",
+      label: "Delivery Date",
       render: (value) => formatDate(value),
     },
     {
-      field: 'DocTotal',
-      label: 'Total Amount',
+      field: "DocTotal",
+      label: "Total Amount",
       render: (value, row) => {
-        const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
+        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
         return formatCurrency(amountInINR);
       },
     },
     {
-      field: 'DocCur',
-      label: 'Currency',
-      render: (value) => value || 'N/A',
+      field: "DocCur",
+      label: "Currency",
+      render: (value) => value || "N/A",
     },
     {
-      field: 'SalesEmployee',
-      label: 'Sales Employee',
-      render: (value) => value || 'N/A',
+      field: "SalesEmployee",
+      label: "Sales Employee",
+      render: (value) => value || "N/A",
     },
   ];
+  // Define handleExcelDownload function
+  const handleExcelDownload = () => {
+    downloadExcel(orders, "Orders");
+  };
 
   return (
     <Container fluid>
       <TableFilters
         searchConfig={{
           enabled: true,
-          placeholder: 'Search orders...',
-          fields: ['DocNum', 'CardName', 'ItemCode', 'ItemName'],
+          placeholder: "Search orders...",
+          fields: ["DocNum", "CardName", "ItemCode", "ItemName"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         statusFilter={{
           enabled: true,
           options: [
-            { value: 'open', label: 'Open' },
-            { value: 'closed', label: 'Closed' },
-            { value: 'cancel', label: 'Cancelled' },
+            { value: "open", label: "Open" },
+            { value: "closed", label: "Closed" },
+            { value: "cancel", label: "Cancelled" },
           ],
           value: statusFilter,
-          label: 'Status',
+          label: "Status",
         }}
         onStatusChange={handleStatusChange}
         fromDate={fromDate}
@@ -131,13 +142,13 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
             onSort={handleSort}
             sortField={sortField}
             sortDirection={sortDirection}
+            onExcelDownload={handleExcelDownload} // Passing the function as a prop
           />
           {orders.length === 0 && (
             <div className="text-center py-4">No orders found.</div>
           )}
         </>
       )}
-
 
       <TablePagination
         currentPage={currentPage}
