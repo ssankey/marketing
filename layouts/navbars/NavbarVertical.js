@@ -121,6 +121,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import Accordion from "react-bootstrap/Accordion";
 import { useAccordionButton } from "react-bootstrap/AccordionButton";
+import { FaMoneyBillWave } from "react-icons/fa";
 import {
   House,
   Clipboard,
@@ -228,6 +229,18 @@ const handleLogout = () => {
           <a href="/products" className="nav-link d-flex align-items-center">
             <FaBox className="me-2" /> {/* Product icon */}
             Products
+          </a>
+        </li>
+
+        {/* Outstanding Payment */}
+        <li className="nav-item">
+          <a
+            href="/outstanding-payment"
+            className="nav-link d-flex align-items-center"
+          >
+            <FaMoneyBillWave className="me-2" />{" "}
+            {/* outstanding payment icon */}
+            Outstanding Payments
           </a>
         </li>
 

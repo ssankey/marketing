@@ -9,6 +9,7 @@ import { formatDate } from "utils/formatDate";
 import usePagination from "hooks/usePagination";
 import useTableFilters from "hooks/useFilteredData";
 import StatusBadge from "./StatusBadge";
+import downloadExcel from "utils/exporttoexcel";
 
 const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
   const ITEMS_PER_PAGE = 20;
@@ -34,7 +35,10 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       field: "DocNum",
       label: "Quotation#",
       render: (value, row) => (
-        <Link href={`/quotationdetails?d=${value}&e=${row.DocEntry}`} className="text-blue-600 hover:text-blue-800">
+        <Link
+          href={`/quotationdetails?d=${value}&e=${row.DocEntry}`}
+          className="text-blue-600 hover:text-blue-800"
+        >
           {value}
         </Link>
       ),
@@ -65,10 +69,10 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       render: (value) => formatDate(value),
     },
     {
-      field: 'DocTotal',
-      label: 'Total Amount',
+      field: "DocTotal",
+      label: "Total Amount",
       render: (value, row) => {
-        const amountInINR = row.DocCur === 'INR' ? value : value * row.DocRate;
+        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
         return formatCurrency(amountInINR);
       },
     },
@@ -83,7 +87,10 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
   ];
-  
+  // Define handleExcelDownload function
+  const handleExcelDownload = () => {
+    downloadExcel(quotations, "Quotations");
+  };
 
   return (
     <Container fluid>
@@ -127,6 +134,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
             onSort={handleSort}
             sortField={sortField}
             sortDirection={sortDirection}
+            onExcelDownload={handleExcelDownload} // Passing the function as a prop
           />
           {quotations.length === 0 && (
             <div className="text-center py-4">No quotations found.</div>

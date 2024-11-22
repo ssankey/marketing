@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import GenericTable from "./GenericTable";
+import downloadExcel from "utils/exporttoexcel";
 
 export default function ProductsTable({ products, totalItems, isLoading }) {
   const [sortField, setSortField] = useState("ItemCode");
@@ -25,9 +26,7 @@ export default function ProductsTable({ products, totalItems, isLoading }) {
       label: "CAT No.",
       field: "ItemCode",
       render: (value, row) => (
-        <Link href={`/products/${row.ItemCode}`}>
-          {value}
-        </Link>
+        <Link href={`/products/${row.ItemCode}`}>{value}</Link>
       ),
     },
     { label: "Item Name", field: "ItemName" },
@@ -47,12 +46,14 @@ export default function ProductsTable({ products, totalItems, isLoading }) {
       label: "Actions",
       field: "actions",
       render: (value, row) => (
-        <Link href={`/products/${row.ItemCode}`}>
-          View Details
-        </Link>
+        <Link href={`/products/${row.ItemCode}`}>View Details</Link>
       ),
     },
   ];
+  // Define handleExcelDownload function
+  const handleExcelDownload = () => {
+    downloadExcel(products, "Products");
+  };
 
   if (isLoading) {
     return <div>Loading products...</div>;
@@ -66,6 +67,7 @@ export default function ProductsTable({ products, totalItems, isLoading }) {
         onSort={handleSort}
         sortField={sortField}
         sortDirection={sortDirection}
+        onExcelDownload={handleExcelDownload} // Passing the function as a prop
       />
       {/* Pagination component can be added here */}
     </>
