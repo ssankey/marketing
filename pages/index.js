@@ -192,161 +192,188 @@ export default Dashboard;
 
 // Fetch data on the server side based on query parameters
 export async function getServerSideProps(context) {
-    const { dateFilter = 'today', startDate, endDate, region, customer } = context.query;
+  const {
+    dateFilter = "today",
+    startDate,
+    endDate,
+    region,
+    customer,
+  } = context.query;
 
-    let computedStartDate = startDate;
-    let computedEndDate = endDate;
-    let previousStartDate, previousEndDate;
+  let computedStartDate = startDate;
+  let computedEndDate = endDate;
+  let previousStartDate, previousEndDate;
 
-    // Determine date ranges for current and previous periods
-    const today = new Date();
+  // Determine date ranges for current and previous periods
+  const today = new Date();
 
-    if (!startDate || !endDate || dateFilter !== 'custom') {
-        if (dateFilter === 'today') {
-            computedStartDate = computedEndDate = today.toISOString().split('T')[0];
-            const yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
-            previousStartDate = previousEndDate = yesterday.toISOString().split('T')[0];
-        } else if (dateFilter === 'thisWeek') {
-            const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
-            const lastDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 7));
-            computedStartDate = firstDayOfWeek.toISOString().split('T')[0];
-            computedEndDate = lastDayOfWeek.toISOString().split('T')[0];
+  // Determine startDate and endDate for the current year
+  const firstDayOfYear = new Date(today.getFullYear(), 0, 1); // January 1st of the current year
+  const lastDayOfYear = new Date(today.getFullYear(), 11, 31); // December 31st of the current year
 
-            const previousWeekStart = new Date(firstDayOfWeek);
-            previousWeekStart.setDate(firstDayOfWeek.getDate() - 7);
-            const previousWeekEnd = new Date(lastDayOfWeek);
-            previousWeekEnd.setDate(lastDayOfWeek.getDate() - 7);
-            previousStartDate = previousWeekStart.toISOString().split('T')[0];
-            previousEndDate = previousWeekEnd.toISOString().split('T')[0];
-        } else if (dateFilter === 'thisMonth') {
-            const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-            computedStartDate = firstDayOfMonth.toISOString().split('T')[0];
-            computedEndDate = lastDayOfMonth.toISOString().split('T')[0];
+  const yearStartDate = firstDayOfYear.toISOString().split("T")[0];
+  const yearEndDate = lastDayOfYear.toISOString().split("T")[0];
 
-            const previousMonthStart = new Date(firstDayOfMonth);
-            previousMonthStart.setMonth(firstDayOfMonth.getMonth() - 1);
-            const previousMonthEnd = new Date(lastDayOfMonth);
-            previousMonthEnd.setMonth(lastDayOfMonth.getMonth() - 1);
-            previousStartDate = previousMonthStart.toISOString().split('T')[0];
-            previousEndDate = previousMonthEnd.toISOString().split('T')[0];
-        }
+  if (!startDate || !endDate || dateFilter !== "custom") {
+    if (dateFilter === "today") {
+      computedStartDate = computedEndDate = today.toISOString().split("T")[0];
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+      previousStartDate = previousEndDate = yesterday
+        .toISOString()
+        .split("T")[0];
+    } else if (dateFilter === "this Week") {
+      const firstDayOfWeek = new Date(
+        today.setDate(today.getDate() - today.getDay() + 1)
+      );
+      const lastDayOfWeek = new Date(
+        today.setDate(today.getDate() - today.getDay() + 7)
+      );
+      computedStartDate = firstDayOfWeek.toISOString().split("T")[0];
+      computedEndDate = lastDayOfWeek.toISOString().split("T")[0];
+
+      const previousWeekStart = new Date(firstDayOfWeek);
+      previousWeekStart.setDate(firstDayOfWeek.getDate() - 7);
+      const previousWeekEnd = new Date(lastDayOfWeek);
+      previousWeekEnd.setDate(lastDayOfWeek.getDate() - 7);
+      previousStartDate = previousWeekStart.toISOString().split("T")[0];
+      previousEndDate = previousWeekEnd.toISOString().split("T")[0];
+    } else if (dateFilter === "this Month") {
+      const firstDayOfMonth = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        1
+      );
+      const lastDayOfMonth = new Date(
+        today.getFullYear(),
+        today.getMonth() + 1,
+        0
+      );
+      computedStartDate = firstDayOfMonth.toISOString().split("T")[0];
+      computedEndDate = lastDayOfMonth.toISOString().split("T")[0];
+
+      const previousMonthStart = new Date(firstDayOfMonth);
+      previousMonthStart.setMonth(firstDayOfMonth.getMonth() - 1);
+      const previousMonthEnd = new Date(lastDayOfMonth);
+      previousMonthEnd.setMonth(lastDayOfMonth.getMonth() - 1);
+      previousStartDate = previousMonthStart.toISOString().split("T")[0];
+      previousEndDate = previousMonthEnd.toISOString().split("T")[0];
     }
+  }
 
-    const {
-        getNumberOfSalesOrders,
-        getTotalSalesRevenue,
-        getOutstandingInvoices,
-        getQuotationConversionRate,
-        getSalesAndCOGS,
-        getTopCustomers,
-    } = require('lib/models/dashboard');
-    
-    const {getMonthlyOrdersByStatus} = require('lib/models/orders')
-    try {
-        // Fetch current and previous period data
-        const [
-          quotationConversionRate,
-          NumberOfSalesOrders,
-          totalSalesRevenue,
-          outstandingInvoices,
-          salesData,
-          previousQuotationConversionRate,
-          previousNumberOfSalesOrders,
-          previousTotalSalesRevenue,
-          previousOutstandingInvoices,
-          OrdersData      ] 
-          = await Promise.all([
-          getQuotationConversionRate({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getNumberOfSalesOrders({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getTotalSalesRevenue({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getOutstandingInvoices({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getSalesAndCOGS({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getQuotationConversionRate({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getNumberOfSalesOrders({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getTotalSalesRevenue({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getOutstandingInvoices({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getMonthlyOrdersByStatus({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          })
-        ]);
+  const {
+    getNumberOfSalesOrders,
+    getTotalSalesRevenue,
+    getOutstandingInvoices,
+    getQuotationConversionRate,
+    getSalesAndCOGS,
+    getTopCustomers,
+  } = require("lib/models/dashboard");
 
-        console.log("OrdersData:", OrdersData);
-        return {
-          props: {
-            quotationConversionRate,
-            NumberOfSalesOrders,
-            totalSalesRevenue,
-            outstandingInvoices,
-            salesData,
-            topCustomers: [],
-            OrdersData: OrdersData || [],
-            previousData: {
-              quotationConversionRate: previousQuotationConversionRate,
-              NumberOfSalesOrders: previousNumberOfSalesOrders,
-              totalSalesRevenue: previousTotalSalesRevenue,
-              outstandingInvoices: previousOutstandingInvoices,
-            },
-          },
-        };
-    } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-        return {
-            props: {
-                salesData: [],
-                topCustomers: [],
-                OrdersData:[],
-                previousData: {}
-            },
-        };
-    }
+  const { getMonthlyOrdersByStatus } = require("lib/models/orders");
+  try {
+    // Fetch current and previous period data
+    const [
+      quotationConversionRate,
+      NumberOfSalesOrders,
+      totalSalesRevenue,
+      outstandingInvoices,
+      salesData,
+      previousQuotationConversionRate,
+      previousNumberOfSalesOrders,
+      previousTotalSalesRevenue,
+      previousOutstandingInvoices,
+      OrdersData,
+    ] = await Promise.all([
+      getQuotationConversionRate({
+        startDate: computedStartDate,
+        endDate: computedEndDate,
+        region,
+        customer,
+      }),
+      getNumberOfSalesOrders({
+        startDate: computedStartDate,
+        endDate: computedEndDate,
+        region,
+        customer,
+      }),
+      getTotalSalesRevenue({
+        startDate: computedStartDate,
+        endDate: computedEndDate,
+        region,
+        customer,
+      }),
+      getOutstandingInvoices({
+        startDate: computedStartDate,
+        endDate: computedEndDate,
+        region,
+        customer,
+      }),
+      getSalesAndCOGS({
+        startDate: computedStartDate,
+        endDate: computedEndDate,
+        region,
+        customer,
+      }),
+      getQuotationConversionRate({
+        startDate: previousStartDate,
+        endDate: previousEndDate,
+        region,
+        customer,
+      }),
+      getNumberOfSalesOrders({
+        startDate: previousStartDate,
+        endDate: previousEndDate,
+        region,
+        customer,
+      }),
+      getTotalSalesRevenue({
+        startDate: previousStartDate,
+        endDate: previousEndDate,
+        region,
+        customer,
+      }),
+      getOutstandingInvoices({
+        startDate: previousStartDate,
+        endDate: previousEndDate,
+        region,
+        customer,
+      }),
+      getMonthlyOrdersByStatus({
+        startDate: yearStartDate, // Use the first date of the current year
+        endDate: yearEndDate, // Use the last date of the current year
+        region,
+        customer,
+      }),
+    ]);
+
+    console.log("OrdersData:", OrdersData);
+    return {
+      props: {
+        quotationConversionRate,
+        NumberOfSalesOrders,
+        totalSalesRevenue,
+        outstandingInvoices,
+        salesData,
+        topCustomers: [],
+        OrdersData: OrdersData || [],
+        previousData: {
+          quotationConversionRate: previousQuotationConversionRate,
+          NumberOfSalesOrders: previousNumberOfSalesOrders,
+          totalSalesRevenue: previousTotalSalesRevenue,
+          outstandingInvoices: previousOutstandingInvoices,
+        },
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error);
+    return {
+      props: {
+        salesData: [],
+        topCustomers: [],
+        OrdersData: [],
+        previousData: {},
+      },
+    };
+  }
 }
