@@ -63,7 +63,7 @@ const PurchasesAmountChart = ({ data }) => {
         yAxisID: "y1",
       },
       {
-        label: "Amount Spent",
+        label: "Sales",
         data: data.map((item) => item.AmountSpend),
         backgroundColor: "rgba(0, 0, 0, 0)",
         borderColor: colorPalette.secondary,
@@ -138,7 +138,7 @@ const PurchasesAmountChart = ({ data }) => {
       <div className="p-4 border-b">
         <h4 className="text-xl font-semibold text-gray-900">
           {/* No. of Purchases & Amount Spent by Customer - Monthly ({year}) */}
-          No. of Purchases & Amount Spent by Customer - Monthly
+          No. of Purchases & Sales - Monthly
         </h4>
       </div>
       <div className="p-4 bg-gray-50">
