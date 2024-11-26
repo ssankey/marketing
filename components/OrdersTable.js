@@ -12,11 +12,11 @@ import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 
-const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
+const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
   console.log(orders);
 
   const ITEMS_PER_PAGE = 20;
-  const { currentPage, totalPages, onPageChange } = usePagination(
+  const { totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
@@ -47,9 +47,9 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       ),
     },
     {
-      field: "DocStatus",
-      label: "Status",
-      render: (value) => <StatusBadge status={value} />,
+      field: "CardName",
+      label: "Customer",
+      render: (value) => truncateText(value, 20),
     },
     {
       field: "DocDate",
@@ -57,19 +57,9 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       render: (value) => formatDate(value),
     },
     {
-      field: "CardName",
-      label: "Customer",
-      render: (value) => truncateText(value, 20),
-    },
-    {
-      field: "CustomerPONo",
-      label: "Customer PO No",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "PODate",
-      label: "PO Date",
-      render: (value) => formatDate(value),
+      field: "ProductCount",
+      label: "Product Count",
+      render: (value) => value || "0",
     },
     {
       field: "DeliveryDate",
@@ -80,22 +70,58 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       field: "DocTotal",
       label: "Total Amount",
       render: (value, row) => {
-        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
+        const amountInINR = row.DocCur === "INR" ? value : value * row.ExchangeRate;
         return formatCurrency(amountInINR);
       },
     },
     {
       field: "DocCur",
       label: "Currency",
-      render: (value) => value || "N/A",
+      render: (value) => value || "0",
+    },
+    {
+      field: "DocStatus",
+      label: "Order Status",
+      render: (value) => <StatusBadge status={value.toLowerCase()} />,
+    },
+    {
+      field: "InvoiceNum",
+      label: "Invoice#",
+      render: (value, row) => (
+        value ? (
+          <Link
+            href={`/invoicedetails?d=${row.InvoiceNum}&e=${row.InvoiceDocEntry}`}
+            className="text-green-600 hover:text-green-800"
+          >
+            {value}
+          </Link>
+        ) : (
+          "0"
+        )
+      ),
+    },
+    {
+      field: "InvoiceDate",
+      label: "Invoice Date",
+      render: (value) => value ? formatDate(value) : "0",
+    },
+    {
+      field: "InvoiceTotal",
+      label: "Invoice Amount",
+      render: (value) => formatCurrency(value || 0),
+    },
+    {
+      field: "InvoiceStatus",
+      label: "Invoice Status",
+      render: (value) => value ? <StatusBadge status={value.toLowerCase()} /> : "0",
     },
     {
       field: "SalesEmployee",
       label: "Sales Employee",
-      render: (value) => value || "N/A",
-    },
+      render: (value) => value || "0",
+    }
   ];
-  // Define handleExcelDownload function
+  
   const handleExcelDownload = () => {
     downloadExcel(orders, "Orders");
   };
@@ -106,7 +132,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
         searchConfig={{
           enabled: true,
           placeholder: "Search orders...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemName"],
+          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","InvoiceNum"], // Updated field names
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
@@ -115,7 +141,6 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
           options: [
             { value: "open", label: "Open" },
             { value: "closed", label: "Closed" },
-            { value: "cancel", label: "Cancelled" },
           ],
           value: statusFilter,
           label: "Status",
@@ -142,7 +167,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
             onSort={handleSort}
             sortField={sortField}
             sortDirection={sortDirection}
-            onExcelDownload={handleExcelDownload} // Passing the function as a prop
+            onExcelDownload={handleExcelDownload}
           />
           {orders.length === 0 && (
             <div className="text-center py-4">No orders found.</div>
@@ -156,7 +181,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
         onPageChange={onPageChange}
       />
 
-      <Row className="mb-2 ">
+      <Row className="mb-2">
         <Col className="text-center">
           <h5>
             Page {currentPage} of {totalPages}
