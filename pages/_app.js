@@ -1,5 +1,3 @@
-// pages/_app.js
-
 import { useMemo } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
@@ -45,7 +43,7 @@ function MyApp({ Component, pageProps }) {
   const pageURL = useMemo(() => `${baseURL}${router.asPath}`, [baseURL, router.asPath]);
 
   // Memoize the pageSEO
-  const pageSEO = useMemo(() => Component.seo || {}, [Component.seo]);
+  const pageSEO = useMemo(() => Component.seo || {}, [Component]);
 
   // Memoize SEO data
   const seoData = useMemo(
@@ -73,35 +71,36 @@ function MyApp({ Component, pageProps }) {
   );
 
   // Determine the layout based on the component or route
- // Determine the layout based on the component or route
-const Layout = useMemo(() => {
-  // If Layout is explicitly set to null, use a fragment layout
-  if (Component.Layout === null) {
-    const NullLayout = ({ children }) => <>{children}</>;
-    NullLayout.displayName = 'NullLayout';
-    return NullLayout;
-  }
+  const Layout = useMemo(() => {
+    // If Layout is explicitly set to null, use a fragment layout
+    if (Component.Layout === null) {
+      const NullLayout = ({ children }) => <>{children}</>;
+      NullLayout.displayName = 'NullLayout';
+      return NullLayout;
+    }
 
-  if (Component.noLayout || Component.Layout === null || Component.Layout === false) {
-    return ({ children }) => <>{children}</>;
-  }
+    // If noLayout or Layout is explicitly false
+    if (Component.noLayout || Component.Layout === false) {
+      const NoLayout = ({ children }) => <>{children}</>;
+      NoLayout.displayName = 'NoLayout';
+      return NoLayout;
+    }
 
+    // Use the Layout specified by the page component
+    if (Component.Layout !== undefined) {
+      return Component.Layout; // Could be a custom layout
+    }
 
-  // Use the Layout specified by the page component
-  if (Component.Layout !== undefined) {
-    return Component.Layout; // Could be a custom layout
-  }
+    // If it's an authentication page, use a simple layout
+    if (isAuthPage) {
+      const AuthLayout = ({ children }) => <>{children}</>;
+      AuthLayout.displayName = 'AuthLayout';
+      return AuthLayout;
+    }
 
-  // If it's an authentication page, use a simple layout
-  if (isAuthPage) {
-    const AuthLayout = ({ children }) => <>{children}</>;
-    AuthLayout.displayName = 'AuthLayout';
-    return AuthLayout;
-  }
-
-  // Use the DefaultDashboardLayout for other pages
-  return DefaultDashboardLayout;
-}, [Component.Layout, isAuthPage]);
+    // Use the DefaultDashboardLayout for other pages
+    return DefaultDashboardLayout;
+  }, [Component.Layout, Component.noLayout, isAuthPage]);
 
   MyApp.displayName = 'MyApp';
 

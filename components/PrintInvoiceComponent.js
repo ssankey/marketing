@@ -9,7 +9,12 @@ import { formatDate } from 'utils/formatDate';
 
 const PrintInvoiceComponent = ({ invoice }) => {
   const router = useRouter();
-
+  useEffect(() => {
+    if (!router.isFallback && invoice) {
+      window.print();
+    }
+  }, [router.isFallback, invoice]);
+  
   // Handle loading state
   if (router.isFallback) {
     return (
@@ -31,9 +36,7 @@ const PrintInvoiceComponent = ({ invoice }) => {
     window.print();
   };
 
-  useEffect(() => {
-    window.print();
-  }, []);
+
 
   // Function to convert amounts to INR
   const convertToINR = (amount) => {
