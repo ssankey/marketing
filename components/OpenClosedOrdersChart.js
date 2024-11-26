@@ -3,36 +3,23 @@ import { Bar } from "react-chartjs-2";
 import { Card } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 
-const OrdersChart = ({ OrdersData }) => {
+const OrdersChart = ({ orderStatistics }) => {
   const colorPalette = {
     primary: "#0d6efd",
     orderLine: "#198754", // Green for orders
   };
-  console.log(Array.isArray(OrdersData));
- 
-  // Define the months of the year
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
+  console.log(Array.isArray('orderStatistics',orderStatistics));
+  // Define months of the current year
 
+  // Create data for the chart
   const ordersChartData = {
-    labels: OrdersData.map((data) => months[data.month - 1]), // Map the month number to month name
+    labels: orderStatistics.map((data) => data.month),
 
+     
     datasets: [
       {
-        label: "Open-Orders",
-        data: OrdersData.map((data) => data.openOrders || 0),
+        label: "Orders",
+        data: orderStatistics.map((data) => data.orders || 0),
         backgroundColor: colorPalette.primary,
         borderColor: colorPalette.primary,
         borderWidth: 1,
