@@ -10,7 +10,7 @@ import { formatDate } from 'utils/formatDate';
 import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
 import downloadExcel from "utils/exporttoexcel";
-
+import { Printer } from 'react-bootstrap-icons';
 const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(
@@ -35,12 +35,22 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       field: "DocNum",
       label: "Invoice#",
       render: (value, row) => (
-        <Link
-          href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-          className="text-blue-600 hover:text-blue-800"
-        >
-          {value}
-        </Link>
+        <>
+          <Link
+            href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            {row.Type}-{value}
+          </Link>
+          &nbsp;
+          <Link
+            href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
+            className="text-blue-600 hover:text-blue-800"
+            target='_blank'
+          >
+            <Printer />
+          </Link>
+        </>
       ),
     },
     {
@@ -52,11 +62,6 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       field: "DocDate",
       label: "Invoice Date",
       render: (value) => formatDate(value),
-    },
-    {
-      field: "CustomerPONo",
-      label: "Customer PO No",
-      render: (value) => value || "N/A",
     },
     {
       field: "PODate",
@@ -74,9 +79,15 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       render: (value) => formatDate(value),
     },
     {
-      field: "DocTotal",
+      field: "TradeType",
+      label: "Trade Type",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "InvoiceTotal",
       label: "Total Amount",
       render: (value, row) => {
+        // Convert to INR if necessary and format currency
         const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
         return formatCurrency(amountInINR);
       },
@@ -92,6 +103,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
   ];
+  
   // Define handleExcelDownload function
   const handleExcelDownload = () => {
     downloadExcel(invoices, "Invoices");
