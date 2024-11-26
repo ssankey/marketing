@@ -8,13 +8,13 @@ import { formatCurrency } from 'utils/formatCurrency';
 import { useAuth } from 'hooks/useAuth';
 
 const Dashboard = ({
-  quotationConversionRate,
-  NumberOfSalesOrders,
-  totalSalesRevenue,
-  outstandingInvoices,
-  salesData = [],
-  OrdersData = [],
-  previousData = {},
+    quotationConversionRate,
+    NumberOfSalesOrders,
+    totalSalesRevenue,
+    outstandingInvoices,
+    salesData = [],
+    orderStatistics=[],
+    previousData = {}
 }) => {
   const router = useRouter();
   const { isAuthenticated, isLoading, redirecting } = useAuth();
@@ -151,39 +151,34 @@ const Dashboard = ({
     },
   ];
 
-  if (isLoading || redirecting) {
-    // Don't render anything if loading or redirecting
-    return null;
-  }
-
-  return isAuthenticated ? (
-    <Container
-      fluid
-      className="p-4"
-      style={{
-        backgroundColor: "#f8f9fa",
-        fontFamily: "'Inter', sans-serif",
-      }}
-    >
-      <DashboardFilters
-        dateFilter={dateFilter}
-        setDateFilter={setDateFilter}
-        startDate={startDate}
-        setStartDate={setStartDate}
-        endDate={endDate}
-        setEndDate={setEndDate}
-        region={region}
-        setRegion={setRegion}
-        customer={customer}
-        setCustomer={setCustomer}
-        handleFilterChange={handleFilterChange}
-      />
+    if (isLoading || redirecting) {
+        // Don't render anything if loading or redirecting
+        return null;
+    }
+    
+    return (
+        isAuthenticated ? (
+            <Container fluid className="p-4" style={{ backgroundColor: '#f8f9fa', fontFamily: "'Inter', sans-serif" }}>
+                <DashboardFilters
+                    dateFilter={dateFilter}
+                    setDateFilter={setDateFilter}
+                    startDate={startDate}
+                    setStartDate={setStartDate}
+                    endDate={endDate}
+                    setEndDate={setEndDate}
+                    region={region}
+                    setRegion={setRegion}
+                    customer={customer}
+                    setCustomer={setCustomer}
+                    handleFilterChange={handleFilterChange}
+                />
 
       <KPISection kpiData={kpiData} />
 
-      <DashboardCharts salesData={salesData} OrdersData={OrdersData} />
-    </Container>
-  ) : null; // Don't render if not authenticated
+                <DashboardCharts salesData={salesData} orderStatistics={orderStatistics} />
+            </Container>
+        ) : null // Don't render if not authenticated
+    );
 };
 
 export default Dashboard;
@@ -208,8 +203,10 @@ export async function getServerSideProps(context) {
             yesterday.setDate(today.getDate() - 1);
             previousStartDate = previousEndDate = yesterday.toISOString().split('T')[0];
         } else if (dateFilter === 'thisWeek') {
-            const firstDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 1));
-            const lastDayOfWeek = new Date(today.setDate(today.getDate() - today.getDay() + 7));
+            const firstDayOfWeek = new Date(today);
+            firstDayOfWeek.setDate(today.getDate() - today.getDay() + 1);
+            const lastDayOfWeek = new Date(firstDayOfWeek);
+            lastDayOfWeek.setDate(firstDayOfWeek.getDate() + 6);
             computedStartDate = firstDayOfWeek.toISOString().split('T')[0];
             computedEndDate = lastDayOfWeek.toISOString().split('T')[0];
 
@@ -240,6 +237,7 @@ export async function getServerSideProps(context) {
         getOutstandingInvoices,
         getQuotationConversionRate,
         getSalesAndCOGS,
+        getOrderStatistics, // Importing the new function
         getTopCustomers,
     } = require('lib/models/dashboard');
     
@@ -247,102 +245,60 @@ export async function getServerSideProps(context) {
     try {
         // Fetch current and previous period data
         const [
-          quotationConversionRate,
-          NumberOfSalesOrders,
-          totalSalesRevenue,
-          outstandingInvoices,
-          salesData,
-          previousQuotationConversionRate,
-          previousNumberOfSalesOrders,
-          previousTotalSalesRevenue,
-          previousOutstandingInvoices,
-          OrdersData      ] 
-          = await Promise.all([
-          getQuotationConversionRate({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getNumberOfSalesOrders({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getTotalSalesRevenue({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getOutstandingInvoices({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getSalesAndCOGS({
-            startDate: computedStartDate,
-            endDate: computedEndDate,
-            region,
-            customer,
-          }),
-          getQuotationConversionRate({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getNumberOfSalesOrders({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getTotalSalesRevenue({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getOutstandingInvoices({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          }),
-          getMonthlyOrdersByStatus({
-            startDate: previousStartDate,
-            endDate: previousEndDate,
-            region,
-            customer,
-          })
-        ]);
-
-        console.log("OrdersData:", OrdersData);
-        return {
-          props: {
             quotationConversionRate,
             NumberOfSalesOrders,
             totalSalesRevenue,
             outstandingInvoices,
             salesData,
-            topCustomers: [],
-            OrdersData: OrdersData || [],
-            previousData: {
-              quotationConversionRate: previousQuotationConversionRate,
-              NumberOfSalesOrders: previousNumberOfSalesOrders,
-              totalSalesRevenue: previousTotalSalesRevenue,
-              outstandingInvoices: previousOutstandingInvoices,
+            orderStatistics, // Fetching order statistics for the current period
+            previousQuotationConversionRate,
+            previousNumberOfSalesOrders,
+            previousTotalSalesRevenue,
+            previousOutstandingInvoices,
+            previousOrderStatistics // Fetching order statistics for the previous period
+        ] = await Promise.all([
+            getQuotationConversionRate({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
+            getNumberOfSalesOrders({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
+            getTotalSalesRevenue({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
+            getOutstandingInvoices({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
+            getSalesAndCOGS({ startDate: computedStartDate, endDate: computedEndDate, region, customer }),
+            getOrderStatistics({ startDate: computedStartDate, endDate: computedEndDate, region, customer }), // Current period
+            getQuotationConversionRate({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
+            getNumberOfSalesOrders({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
+            getTotalSalesRevenue({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
+            getOutstandingInvoices({ startDate: previousStartDate, endDate: previousEndDate, region, customer }),
+            getOrderStatistics({ startDate: previousStartDate, endDate: previousEndDate, region, customer }) // Previous period
+        ]);
+
+        console.log("OrdersData:", OrdersData);
+        return {
+            props: {
+                quotationConversionRate,
+                NumberOfSalesOrders,
+                totalSalesRevenue,
+                outstandingInvoices,
+                salesData,
+                orderStatistics, // Passing the order statistics to props
+                topCustomers: [],
+                previousData: {
+                    quotationConversionRate: previousQuotationConversionRate,
+                    NumberOfSalesOrders: previousNumberOfSalesOrders,
+                    totalSalesRevenue: previousTotalSalesRevenue,
+                    outstandingInvoices: previousOutstandingInvoices,
+                    orderStatistics: previousOrderStatistics // Passing previous order statistics
+                }
             },
-          },
         };
     } catch (error) {
         console.error('Error fetching dashboard data:', error);
         return {
             props: {
+                quotationConversionRate: null,
+                NumberOfSalesOrders: null,
+                totalSalesRevenue: null,
+                outstandingInvoices: null,
                 salesData: [],
+                orderStatistics: null,
                 topCustomers: [],
                 OrdersData:[],
                 previousData: {}
@@ -350,3 +306,4 @@ export async function getServerSideProps(context) {
         };
     }
 }
+
