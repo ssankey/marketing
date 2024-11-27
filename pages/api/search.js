@@ -1,6 +1,5 @@
-// pages/api/search.js
 import { queryDatabase } from '../../lib/db'; // Adjust the import path
-import sql from 'mssql'; // Add this import
+import sql from 'mssql';
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
@@ -53,6 +52,12 @@ export default async function handler(req, res) {
         SELECT TOP 5 'Employee' AS type, SlpName AS name, CAST(SlpCode AS VARCHAR(50)) AS id
         FROM OSLP
         WHERE SlpName LIKE @search
+
+        UNION ALL
+
+        SELECT TOP 5 'Category' AS type, ItmsGrpNam AS name, CAST(ItmsGrpCod AS VARCHAR(50)) AS id
+        FROM OITB
+        WHERE ItmsGrpNam LIKE @search
       `;
 
       // Execute the combined query
