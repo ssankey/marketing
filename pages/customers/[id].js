@@ -325,6 +325,14 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
                         <i className="bi bi-calendar me-1"></i>
                         Invoice Date: {formatDate(invoice.InvoiceDate)}
                       </div>
+                      <div>
+                        <i className="bi bi-calendar me-1"></i>
+                        Delivery Date: {formatDate(invoice.DeliveryDate)}
+                      </div>
+                      <div>
+                        <i className="bi bi-calendar me-1"></i>
+                        NetAmount : {invoice.NetAmount}
+                      </div>
                       <div className="fw-bold mt-2">
                         Status:{" "}
                         <span
