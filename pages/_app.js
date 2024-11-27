@@ -13,9 +13,9 @@ import 'styles/theme.scss';
 
 // Default SEO configuration
 const DEFAULT_SEO = {
-  title: "Density",
-  description: "A modern and responsive Next.js dashboard template.",
-  keywords: "Next.js, dashboard, UI kit, web application"
+  title: 'Density',
+  description: 'A modern and responsive Next.js dashboard template.',
+  keywords: 'Next.js, dashboard, UI kit, web application',
 };
 
 // SWR Configuration
@@ -32,7 +32,7 @@ const SWR_CONFIG = {
 
 function MyApp({ Component, pageProps }) {
   const router = useRouter();
-  
+
   // Memoize the base URL
   const baseURL = useMemo(
     () => process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000',
@@ -40,56 +40,68 @@ function MyApp({ Component, pageProps }) {
   );
 
   // Construct the full page URL
-  const pageURL = useMemo(
-    () => `${baseURL}${router.pathname}`, 
-    [baseURL, router.pathname]
-  );
+  const pageURL = useMemo(() => `${baseURL}${router.asPath}`, [baseURL, router.asPath]);
 
-  // Memoize the pageSEO to fix the dependency warning
-  const pageSEO = useMemo(
-    () => Component.seo || {},
-    [Component.seo]
-  );
+  // Memoize the pageSEO
+  const pageSEO = useMemo(() => Component.seo || {}, [Component]);
 
-  // Memoize SEO data with pageSEO inside the callback
-  const seoData = useMemo(() => ({
-    title: pageSEO.title || DEFAULT_SEO.title,
-    description: pageSEO.description || DEFAULT_SEO.description,
-    keywords: pageSEO.keywords || DEFAULT_SEO.keywords,
-    canonical: pageURL,
-    openGraph: {
-      url: pageURL,
+  // Memoize SEO data
+  const seoData = useMemo(
+    () => ({
       title: pageSEO.title || DEFAULT_SEO.title,
       description: pageSEO.description || DEFAULT_SEO.description,
-      site_name: process.env.NEXT_PUBLIC_SITE_NAME,
-    },
-  }), [pageSEO, pageURL]);
+      keywords: pageSEO.keywords || DEFAULT_SEO.keywords,
+      canonical: pageURL,
+      openGraph: {
+        url: pageURL,
+        title: pageSEO.title || DEFAULT_SEO.title,
+        description: pageSEO.description || DEFAULT_SEO.description,
+        site_name: process.env.NEXT_PUBLIC_SITE_NAME,
+      },
+    }),
+    [pageSEO, pageURL]
+  );
 
   const isAuthPage = useMemo(
-    () => 
-      router.pathname === "/login" ||
-      router.pathname === "/signup" ||
-      router.pathname === "/forgot-password",
+    () =>
+      router.pathname === '/login' ||
+      router.pathname === '/signup' ||
+      router.pathname === '/forgot-password',
     [router.pathname]
   );
 
   // Determine the layout based on the component or route
   const Layout = useMemo(() => {
+    // If Layout is explicitly set to null, use a fragment layout
+    if (Component.Layout === null) {
+      const NullLayout = ({ children }) => <>{children}</>;
+      NullLayout.displayName = 'NullLayout';
+      return NullLayout;
+    }
+
+    // If noLayout or Layout is explicitly false
+    if (Component.noLayout || Component.Layout === false) {
+      const NoLayout = ({ children }) => <>{children}</>;
+      NoLayout.displayName = 'NoLayout';
+      return NoLayout;
+    }
+
+    // Use the Layout specified by the page component
+    if (Component.Layout !== undefined) {
+      return Component.Layout; // Could be a custom layout
+    }
+
+    // If it's an authentication page, use a simple layout
     if (isAuthPage) {
       const AuthLayout = ({ children }) => <>{children}</>;
-      AuthLayout.displayName = 'AuthLayout'; // Add display name to fix the error
+      AuthLayout.displayName = 'AuthLayout';
       return AuthLayout;
     }
-    if (Component.Layout) {
-      return Component.Layout;
-    }
-    if (router.pathname.includes("dashboard")) {
-      return DefaultDashboardLayout;
-    }
-    return DefaultDashboardLayout;
-  }, [Component.Layout, router.pathname, isAuthPage]);
 
-  // Add display name to MyApp component
+    // Use the DefaultDashboardLayout for other pages
+    return DefaultDashboardLayout;
+  }, [Component.Layout, Component.noLayout, isAuthPage]);
+
   MyApp.displayName = 'MyApp';
 
   return (
@@ -97,11 +109,18 @@ function MyApp({ Component, pageProps }) {
       <SSRProvider>
         <Head>
           <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, shrink-to-fit=no"
+          />
           <meta name="keywords" content={seoData.keywords} />
           <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
         </Head>
         <NextSeo {...seoData} />
         <Layout>

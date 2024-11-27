@@ -28,6 +28,13 @@ const InvoiceDetails = ({ invoice }) => {
     );
   }
 
+  // Determine the document type
+  const isCreditNote = invoice.Type === 'CN';
+
+  // Adjust titles accordingly
+  const documentTitle = isCreditNote ? 'Credit Note Details' : 'Invoice Details';
+  const printButtonLabel = isCreditNote ? 'Print Credit Note' : 'Print Invoice';
+
   // Group products by Item Group or any relevant grouping
   const groupedProducts = invoice.LineItems.reduce((acc, product) => {
     const groupKey = product.ItemGroup || 'Others';
@@ -38,11 +45,35 @@ const InvoiceDetails = ({ invoice }) => {
     return acc;
   }, {});
 
+  // Function to convert amounts to INR
+  const convertToINR = (amount) => {
+    return invoice.DocCur === 'INR' ? amount : amount * invoice.DocRate;
+  };
+
+
+  // Converted amounts
+  const subtotalINR = convertToINR(invoice.Subtotal);
+  const taxTotalINR = convertToINR(invoice.TaxTotal);
+  const discountTotalINR = convertToINR(invoice.DiscountTotal);
+  const shippingFeeINR = convertToINR(invoice.ShippingFee);
+  const invoiceTotalINR = convertToINR(invoice.InvoiceTotal);
+
+
   return (
     <Container className="mt-4">
       <Card>
         <Card.Header>
-          <h2 className="mb-0">Invoice Details #{invoice.DocNum}</h2>
+          <div className="mt-3 d-flex justify-content-between">
+            <h2 className="mb-0">{documentTitle} #{invoice.DocNum}</h2>
+            <Button
+              variant="primary"
+              onClick={() =>
+                router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)
+              }
+            >
+              {printButtonLabel}
+            </Button>
+          </div>
         </Card.Header>
         <Card.Body>
           {/* Invoice Information */}
@@ -71,7 +102,7 @@ const InvoiceDetails = ({ invoice }) => {
             </Col>
             <Col md={6}>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Invoice Date:</Col>
+                <Col sm={5} className="fw-bold">Date:</Col>
                 <Col sm={7}>{formatDate(invoice.DocDate)}</Col>
               </Row>
               <Row className="mb-2">
@@ -102,23 +133,23 @@ const InvoiceDetails = ({ invoice }) => {
               <Row>
                 <Col md={4}>
                   <p>
-                    <strong>Subtotal:</strong> {formatCurrency(invoice.Subtotal)} {invoice.DocCur}
+                    <strong>Subtotal:</strong> {formatCurrency(subtotalINR, 'INR')}
                   </p>
                   <p>
-                    <strong>Tax Total:</strong> {formatCurrency(invoice.TaxTotal)} {invoice.DocCur}
-                  </p>
-                </Col>
-                <Col md={4}>
-                  <p>
-                    <strong>Discount Total:</strong> {formatCurrency(invoice.DiscountTotal)} {invoice.DocCur}
-                  </p>
-                  <p>
-                    <strong>Shipping Fee:</strong> {formatCurrency(invoice.ShippingFee)} {invoice.DocCur}
+                    <strong>Tax Total:</strong> {formatCurrency(taxTotalINR, 'INR')}
                   </p>
                 </Col>
                 <Col md={4}>
                   <p>
-                    <strong>Total Amount:</strong> {formatCurrency(invoice.DocTotal)} {invoice.DocCur}
+                    <strong>Discount Total:</strong> {formatCurrency(discountTotalINR, 'INR')}
+                  </p>
+                  <p>
+                    <strong>Shipping Fee:</strong> {formatCurrency(shippingFeeINR, 'INR')}
+                  </p>
+                </Col>
+                <Col md={4}>
+                  <p>
+                    <strong>Total Amount:</strong> {formatCurrency(invoiceTotalINR, 'INR')}
                   </p>
                   <p>
                     <strong>Payment Terms:</strong> {invoice.PaymentTerms || 'N/A'}
@@ -191,22 +222,28 @@ const InvoiceDetails = ({ invoice }) => {
                   </thead>
                   <tbody>
                     {products.map((product, index) => {
+                      // For credit notes, quantities and amounts are negative
+                      const quantity = product.Quantity;
+                      const price = product.Price;
                       const lineTotal = product.LineTotal || product.Quantity * product.Price;
+                      const priceINR = invoice.DocCur === 'INR' ? product.Price : product.Price * invoice.DocRate;
+                      const lineTotalINR = invoice.DocCur === 'INR' ? product.LineTotal : product.LineTotal * invoice.DocRate;
+
                       return (
                         <tr key={index}>
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
                           <td className="text-nowrap">{product.Description}</td>
                           <td className="text-nowrap">{product.WhsCode}</td>
-                          <td className="text-nowrap">{product.Quantity}</td>
+                          <td className="text-nowrap">{quantity}</td>
                           <td className="text-nowrap">{product.UnitMsr}</td>
                           <td className="text-nowrap">
-                            {formatCurrency(product.Price)} {product.Currency || invoice.DocCur}
+                            {formatCurrency(priceINR, 'INR')}
                           </td>
                           <td className="text-nowrap">{product.DiscountPercent || 0}%</td>
                           <td className="text-nowrap">{product.TaxPercent || 0}%</td>
                           <td className="text-nowrap">
-                            {formatCurrency(lineTotal)} {product.Currency || invoice.DocCur}
+                            {formatCurrency(lineTotalINR, 'INR')}
                           </td>
                           <td className="text-nowrap">{formatDate(product.ShipDate)}</td>
                           <td className="text-nowrap">{product.LineStatus}</td>
@@ -219,10 +256,18 @@ const InvoiceDetails = ({ invoice }) => {
             </Card>
           ))}
 
-          {/* Back Button */}
-          <div className="mt-3">
+          {/* Back and Print Buttons */}
+          <div className="mt-3 d-flex justify-content-between">
             <Button variant="secondary" onClick={() => router.back()}>
               Back to Invoices
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() =>
+                router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)
+              }
+            >
+              {printButtonLabel}
             </Button>
           </div>
         </Card.Body>
