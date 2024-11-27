@@ -1,4 +1,4 @@
-import { getCustomerPurchaseAndRevenue } from "../../../../lib/models/specifc-csutomer";
+import { getCustomerPurchaseAndRevenue } from "lib/models/specific-customer";
 
 // api/customers/[id]/metrices.js
 export default async function handler(req, res) {
