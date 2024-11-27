@@ -15,13 +15,16 @@ function formatDate(dateString) {
   return date.toLocaleDateString();
 }
 
-export default function CustomerDetails({ customer, purchaseData }) {
+
+export default function CustomerDetails({ customer, purchaseData,TopQuotationData,TopOrderData,TopInvoiceData }) {
 //export default function CustomerDetails({ customer }) {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-
+  
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString();
+  };
 
 
   // Handle client-side auth redirect
@@ -43,6 +46,7 @@ export default function CustomerDetails({ customer, purchaseData }) {
     );
   }
 
+    
   // Handle unauthorized access
   if (!isAuthenticated) {
     return null;
@@ -105,7 +109,7 @@ export default function CustomerDetails({ customer, purchaseData }) {
       </Card>
 
       {/*Purchase Analytics Card */}
-       {purchaseData && purchaseData.length > 0 && (
+      {purchaseData && purchaseData.length > 0 && (
         <Card className="mb-4">
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">
@@ -124,10 +128,223 @@ export default function CustomerDetails({ customer, purchaseData }) {
             </div>
           </Card.Header>
           <Card.Body>
-            <PurchasesAmountChart data={purchaseData}  />
+            <PurchasesAmountChart data={purchaseData} />
           </Card.Body>
         </Card>
       )}
+
+      {/* {Top 10 Quotation  / Orders / Invoices} */}
+
+      {/* <Row className="mb-4">
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Header className="bg-light border-bottom py-3">
+              
+              <h5 className="mb-0 fw-bold">Last 10 Quotations</h5>
+            </Card.Header>
+            <Card.Body>
+              <div className="p-4">
+                {TopQuotationData?.map((quote) => (
+                  <div
+                    key={quote.QuotationNumber}
+                    className="py-2 border-b last:border-b-0"
+                  >
+                    <div>Quotation#: {quote.QuotationNumber}</div>
+                    <div className="text-sm text-slate-600">
+                      <div>
+                        Quotation Date: {formatDate(quote.QuotationDate)}
+                      </div>
+                      <div>Delivery Date: {formatDate(quote.DeliveryDate)}</div>
+                      <div>Status: {quote.QuotationStatus == 'C'? "Closed" : "Open"}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Header className="bg-light border-bottom py-3">
+              
+              <h5 className="mb-0 fw-bold">Last 10 Orders</h5>
+            </Card.Header>
+            <Card.Body>
+              <div className="p-4">
+                {TopOrderData?.map((order) => (
+                  <div
+                    key={order.OrderNumber}
+                    className="py-2 border-b last:border-b-0"
+                  >
+                    <div>Order#: {order.OrderNumber}</div>
+                    <div className="text-sm text-slate-600">
+                      <div>Order Date: {formatDate(order.OrderDate)}</div>
+                      <div>Delivery Date: {formatDate(order.DeliveryDate)}</div>
+                       
+                      <div>
+                        Status: {order.OrderStatus === "C" ? "Closed" : "Open"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Header className="bg-light border-bottom py-3">
+         
+               
+              <h5 className="mb-0 fw-bold">Last 10 Invoices</h5>
+            </Card.Header>
+            <Card.Body>
+              <div className="p-4">
+                {TopInvoiceData?.map((invoice) => (
+                  <div
+                    key={invoice.InvoiceNumber}
+                    className="py-2 border-b last:border-b-0"
+                  >
+                    <div>Invoice#: {invoice.InvoiceNumber}</div>
+                    <div className="text-sm text-slate-600">
+                      <div>Invoice Date: {formatDate(invoice.InvoiceDate)}</div>
+                      <div>Status: {invoice.InvoiceStatus == "C" ? "Closed" : "Open"}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row> */}
+
+      <Row className="mb-4">
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Last 10 Quotations</h5>
+            </Card.Header>
+            <Card.Body>
+              <div className="p-3">
+                {TopQuotationData?.map((quote) => (
+                  <div
+                    key={quote.QuotationNumber}
+                    className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
+                  >
+                    <div className="fw-bold">
+                      Quotation#: {quote.QuotationNumber}
+                    </div>
+                    <div className="text-muted small mt-1">
+                      <div>
+                        <i className="bi bi-calendar-event me-1"></i>
+                        Quotation Date: {formatDate(quote.QuotationDate)}
+                      </div>
+                      <div>
+                        <i className="bi bi-truck me-1"></i>
+                        Delivery Date: {formatDate(quote.DeliveryDate)}
+                      </div>
+                      <div className="fw-bold mt-2">
+                        Status:{" "}
+                        <span
+                          className={`badge ${
+                            quote.QuotationStatus === "C"
+                              ? "bg-danger"
+                              : "bg-success"
+                          }`}
+                        >
+                          {quote.QuotationStatus === "C" ? "Closed" : "Open"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Last 10 Orders</h5>
+            </Card.Header>
+            <Card.Body>
+              <div className="p-3">
+                {TopOrderData?.map((order) => (
+                  <div
+                    key={order.OrderNumber}
+                    className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
+                  >
+                    <div className="fw-bold">Order#: {order.OrderNumber}</div>
+                    <div className="text-muted small mt-1">
+                      <div>
+                        <i className="bi bi-calendar-check me-1"></i>
+                        Order Date: {formatDate(order.OrderDate)}
+                      </div>
+                      <div>
+                        <i className="bi bi-truck me-1"></i>
+                        Delivery Date: {formatDate(order.DeliveryDate)}
+                      </div>
+                      <div className="fw-bold mt-2">
+                        Status:{" "}
+                        <span
+                          className={`badge ${
+                            order.OrderStatus === "C"
+                              ? "bg-danger"
+                              : "bg-success"
+                          }`}
+                        >
+                          {order.OrderStatus === "C" ? "Closed" : "Open"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col lg={4}>
+          <Card className="shadow-sm border-0 h-100">
+            <Card.Header className="d-flex justify-content-between align-items-center">
+              <h5 className="mb-0">Last 10 Invoices</h5>
+            </Card.Header>
+            <Card.Body>
+              <div className="p-3">
+                {TopInvoiceData?.map((invoice) => (
+                  <div
+                    key={invoice.InvoiceNumber}
+                    className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
+                  >
+                    <div className="fw-bold">
+                      Invoice#: {invoice.InvoiceNumber}
+                    </div>
+                    <div className="text-muted small mt-1">
+                      <div>
+                        <i className="bi bi-calendar me-1"></i>
+                        Invoice Date: {formatDate(invoice.InvoiceDate)}
+                      </div>
+                      <div className="fw-bold mt-2">
+                        Status:{" "}
+                        <span
+                          className={`badge ${
+                            invoice.InvoiceStatus === "C"
+                              ? "bg-danger"
+                              : "bg-success"
+                          }`}
+                        >
+                          {invoice.InvoiceStatus === "C" ? "Closed" : "Open"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Addresses Card */}
       <Card className="mb-4">
@@ -216,9 +433,8 @@ export async function getServerSideProps(context) {
     }
 
     // Fetch purchase and revenue data
-     const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
+    const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
     const metricsRes = await fetch(metricsUrl);
-
 
     if (!metricsRes.ok) {
       throw new Error(
@@ -229,10 +445,54 @@ export async function getServerSideProps(context) {
     const purchaseData = await metricsRes.json();
     console.log(purchaseData);
 
+
+   
+    /****Top quotation  */
+    const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
+    const quotationRes = await fetch(topquotation);
+    console.log(id);
+    if (!quotationRes.ok) {
+      throw new Error(
+        `Failed to fetch top quotation: ${quotationRes.statusText}`
+      );
+    }
+
+    const TopQuotationData = await quotationRes.json();
+    console.log(TopQuotationData);
+
+    /****Top Orders  */
+    const toporders = `${protocol}://${host}/api/customers/${id}?orders=true`;
+    const orderRes = await fetch(toporders);
+
+    if (!orderRes.ok) {
+      throw new Error(
+        `Failed to fetch top orders: ${orderRes.statusText}`
+      );
+    }
+
+    const TopOrderData = await orderRes.json();
+    console.log(TopOrderData);
+
+    /***Top Invoices */
+
+    const topinvoices = `${protocol}://${host}/api/customers/${id}?invoices=true`;
+    const invoiceRes = await fetch(topinvoices);
+
+    if (!invoiceRes.ok) {
+      throw new Error(`Failed to fetch top invoice ${invoiceRes.statusText}`);
+    }
+
+    const TopInvoiceData = await invoiceRes.json();
+    console.log(TopInvoiceData);
+
+
     return {
       props: {
         customer,
         purchaseData,
+        TopQuotationData,
+        TopOrderData,
+        TopInvoiceData,
       },
     };
   } catch (error) {
@@ -242,6 +502,9 @@ export async function getServerSideProps(context) {
       props: {
         customer: null,
         purchaseData: null,
+        TopQuotationData:null,
+        TopOrderData:null,
+        TopInvoiceData:null,
         error: error.message,
       },
     };
