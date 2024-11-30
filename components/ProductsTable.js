@@ -1,110 +1,3 @@
-// // ProductsTable.js
-// import { useState } from "react";
-// import Link from "next/link";
-// import GenericTable from "./GenericTable";
-// import downloadExcel from "utils/exporttoexcel";
-// import TableFilters from "./TableFilters";
-
-// export default function ProductsTable({ products, totalItems, isLoading }) {
-//   const [sortField, setSortField] = useState("ItemCode");
-//   const [sortDirection, setSortDirection] = useState("asc");
-//   const [searchTerm, setSearchTerm] = useState("");
-
-//   const handleSort = (field) => {
-//     // Toggle sort direction if the same field is clicked
-//     if (sortField === field) {
-//       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-//     } else {
-//       setSortField(field);
-//       setSortDirection("asc");
-//     }
-
-  
-//   };
-
-//    const handleSearch = (term) => {
-//      setSearchTerm(term);
-//    };
-
-//    const filteredProducts = products.filter((product) => {
-//      const searchFields = ["ItemCode", "ItemName", "ItemType", "U_CasNo"];
-//      return searchFields.some((field) =>
-//        product[field]
-//          ?.toString()
-//          .toLowerCase()
-//          .includes(searchTerm.toLowerCase())
-//      );
-//    });
-
-
-//   const columns = [
-//     {
-//       label: "CAT No.",
-//       field: "ItemCode",
-//       render: (value, row) => (
-//         <Link href={`/products/${row.ItemCode}`}>{value}</Link>
-//       ),
-//     },
-//     { label: "Item Name", field: "ItemName" },
-//     { label: "Item Type", field: "ItemType" },
-//     { label: "CAS No", field: "U_CasNo", render: (value) => value || "N/A" },
-//     {
-//       label: "Created Date",
-//       field: "CreateDate",
-//       render: (value) => (value ? value.split("T")[0] : "N/A"),
-//     },
-//     {
-//       label: "Updated Date",
-//       field: "UpdateDate",
-//       render: (value) => (value ? value.split("T")[0] : "N/A"),
-//     },
-//     {
-//       label: "Actions",
-//       field: "actions",
-//       render: (value, row) => (
-//         <Link href={`/products/${row.ItemCode}`}>View Details</Link>
-//       ),
-//     },
-//   ];
-//   // Define handleExcelDownload function
-//   const handleExcelDownload = () => {
-//     downloadExcel(products, "Products");
-//   };
-
-//   if (isLoading) {
-//     return <div>Loading products...</div>;
-//   }
-
-//   return (
-//     <>
-//       <TableFilters
-//         searchConfig={{
-//           enabled: true,
-//           placeholder: "Search products...",
-//           fields: ["ItemCode", "ItemName", "ItemType", "U_CasNo"],
-//         }}
-//         dateFilter={{ enabled: false }}
-//         onSearch={handleSearch}
-//         searchTerm={searchTerm}
-//         totalItems={filteredProducts.length}
-//         totalItemsLabel="Total Products"
-//       />
-//       <GenericTable
-//         columns={columns}
-//         data={filteredProducts}
-//         onSort={handleSort}
-//         sortField={sortField}
-//         sortDirection={sortDirection}
-//         onExcelDownload={handleExcelDownload} // Passing the function as a prop
-//       />
-//       {filteredProducts.length === 0 && (
-//         <div className="text-center py-4">No Products found.</div>
-//       )}
-//       {/* Pagination component can be added here */}
-      
-//     </>
-//   );
-// }
 
 
 import React, { useState } from "react";
@@ -248,3 +141,9 @@ export default function ProductsTable({ products, totalItems, isLoading }) {
     </>
   );
 }
+
+
+
+
+
+

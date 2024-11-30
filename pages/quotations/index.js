@@ -89,7 +89,7 @@ export async function getServerSideProps(context) {
       fromDate,
       toDate,
     } = context.query;
-
+    console.log(context.query);
     const ITEMS_PER_PAGE = 20;
     const offset = (parseInt(page, 10) - 1) * ITEMS_PER_PAGE;
 
@@ -103,6 +103,8 @@ export async function getServerSideProps(context) {
         T1.Dscription LIKE '%${search}%'
       )`;
     }
+
+   
 
     if (status && status !== "all") {
       whereClause += ` AND (
@@ -159,6 +161,9 @@ export async function getServerSideProps(context) {
       getQuotations(countQuery),
       getQuotations(dataQuery),
     ]);
+
+    console.log(totalResult);
+    console.log(rawQuotations);
 
     const totalItems = totalResult[0]?.total || 0;
     const quotations = rawQuotations.map((quotation) => ({
