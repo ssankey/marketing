@@ -47,6 +47,22 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       ),
     },
     {
+      field: "InvoiceNum",
+      label: "Invoice#",
+      render: (value, row) => (
+        value ? (
+          <Link
+            href={`/invoicedetails?d=${row.InvoiceNum}&e=${row.InvoiceDocEntry}`}
+            className="text-green-600 hover:text-green-800"
+          >
+            {value}
+          </Link>
+        ) : (
+          "0"
+        )
+      ),
+    },
+    {
       field: "CardName",
       label: "Customer",
       render: (value) => truncateText(value, 20),
@@ -84,22 +100,7 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       label: "Order Status",
       render: (value) => <StatusBadge status={value.toLowerCase()} />,
     },
-    {
-      field: "InvoiceNum",
-      label: "Invoice#",
-      render: (value, row) => (
-        value ? (
-          <Link
-            href={`/invoicedetails?d=${row.InvoiceNum}&e=${row.InvoiceDocEntry}`}
-            className="text-green-600 hover:text-green-800"
-          >
-            {value}
-          </Link>
-        ) : (
-          "0"
-        )
-      ),
-    },
+
     {
       field: "InvoiceDate",
       label: "Invoice Date",

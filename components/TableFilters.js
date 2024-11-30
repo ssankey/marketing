@@ -1,146 +1,132 @@
 import React from 'react';
 import { Col, Form, Row, Button, ButtonGroup } from 'react-bootstrap';
-import Colors from "././colors/colors";
 
-// import downloadExcel from 'utils/exporttoexcel';
-const TableFilters = ({ 
-    searchConfig = {
-      enabled: true,
-      placeholder: "Search...",
-      fields: [],
-    },
-    onSearch,
-    searchTerm = "",
-    statusFilter = {
-      enabled: false,
-      options: [],
-      value: "all",
-      label: "Status"
-    },
-    onStatusChange,
-    fromDate = "",
-    toDate = "",
-    onDateFilterChange,
-    totalItems,
-    totalItemsLabel = "Total Items",
-    customElement,
-  }) => {
-    
-    const handleReset = () => {
-      onSearch(""); 
-      if (onStatusChange) onStatusChange("all");
-      if (onDateFilterChange) onDateFilterChange({ fromDate: "", toDate: "" });
-    };
+const TableFilters = ({
+  searchConfig = {
+    enabled: true,
+    placeholder: "Search...",
+    fields: [],
+  },
+  onSearch,
+  searchTerm = "",
+  statusFilter = {
+    enabled: false,
+    options: [],
+    value: "all",
+    label: "Status"
+  },
+  onStatusChange,
+  dateFilter = {
+    enabled: true,
+  },
+  fromDate = "",
+  toDate = "",
+  onDateFilterChange,
+  totalItems,
+  totalItemsLabel = "Total Items",
+  customElement,
+}) => {
 
-    /*Calling excel function*/
+  const handleReset = () => {
+    onSearch("");
+    if (onStatusChange) onStatusChange("all");
+    if (onDateFilterChange && dateFilter.enabled) onDateFilterChange({ fromDate: "", toDate: "" });
+  };
 
-    // const sampleData = [
-    //   { Name: "John Doe", Age: 30, City: "New York" },
-    //   { Name: "Jane Doe", Age: 28, City: "Los Angeles" },
-    //   { Name: "Sam Smith", Age: 35, City: "Chicago" },
-    // ];
+  return (
+    <Row className="mb-3 mt-3 align-items-center g-2">
+      {/* Search Input */}
+      {searchConfig.enabled && (
+        <Col xs="auto">
+          <Form.Control
+            type="text"
+            placeholder={searchConfig.placeholder}
+            value={searchTerm}
+            onChange={(e) => onSearch(e.target.value)}
+            size="sm"
+          />
+        </Col>
+      )}
 
-    // const handleDownload = () => {
-    //   downloadExcel(sampleData, "UserDetails");
-    // };
+      {/* Status Filter Buttons */}
+      {statusFilter.enabled && (
+        <Col xs="auto">
+          <ButtonGroup size="sm">
+            <Button
+              variant={
+                statusFilter.value === "all" ? "primary" : "outline-primary"
+              }
+              onClick={() => onStatusChange("all")}
+            >
+              All {statusFilter.label}
+            </Button>
+            {statusFilter.options.map((option) => (
+              <Button
+                key={option.value}
+                variant={
+                  statusFilter.value === option.value
+                    ? "primary"
+                    : "outline-primary"
+                }
+                onClick={() => onStatusChange(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </ButtonGroup>
+        </Col>
+      )}
 
-    return (
-      <Row className="mb-3 mt-3 align-items-center g-2">
-        {/* Search Input */}
-        {searchConfig.enabled && (
+      {/* From Date Filter */}
+      {dateFilter.enabled && (
+        <>
           <Col xs="auto">
             <Form.Control
-              type="text"
-              placeholder={searchConfig.placeholder}
-              value={searchTerm}
-              onChange={(e) => onSearch(e.target.value)}
+              type="date"
+              value={fromDate}
+              onChange={(e) =>
+                onDateFilterChange({ fromDate: e.target.value, toDate })
+              }
+              placeholder="From Date"
               size="sm"
             />
           </Col>
-        )}
 
-        {/* Status Filter Buttons */}
-        {statusFilter.enabled && (
+          {/* To Date Filter */}
           <Col xs="auto">
-            <ButtonGroup size="sm">
-              <Button
-                variant={
-                  statusFilter.value === "all" ? "primary" : "outline-primary"
-                }
-                onClick={() => onStatusChange("all")}
-              >
-                All {statusFilter.label}
-              </Button>
-              {statusFilter.options.map((option) => (
-                <Button
-                  key={option.value}
-                  variant={
-                    statusFilter.value === option.value
-                      ? "primary"
-                      : "outline-primary"
-                  }
-                  onClick={() => onStatusChange(option.value)}
-                >
-                  {option.label}
-                </Button>
-              ))}
-            </ButtonGroup>
+            <Form.Control
+              type="date"
+              value={toDate}
+              onChange={(e) =>
+                onDateFilterChange({ fromDate, toDate: e.target.value })
+              }
+              placeholder="To Date"
+              size="sm"
+            />
           </Col>
-        )}
+        </>
+      )}
 
-        {/* From Date Filter */}
-        <Col xs="auto">
-          <Form.Control
-            type="date"
-            value={fromDate}
-            onChange={(e) =>
-              onDateFilterChange({ fromDate: e.target.value, toDate })
-            }
-            placeholder="From Date"
-            size="sm"
-          />
+      {/* Custom Element */}
+      {customElement && <Col xs="auto">{customElement.component}</Col>}
+
+      {/* Reset Button */}
+      <Col xs="auto">
+        <Button variant="outline-secondary" size="sm" onClick={handleReset}>
+          Reset
+        </Button>
+      </Col>
+
+      {/* Total Items Display */}
+      {totalItems !== undefined && (
+        <Col xs="auto" className="ms-auto">
+          <span>
+            {totalItemsLabel}: {totalItems}
+          </span>
         </Col>
-
-        {/* To Date Filter */}
-        <Col xs="auto">
-          <Form.Control
-            type="date"
-            value={toDate}
-            onChange={(e) =>
-              onDateFilterChange({ fromDate, toDate: e.target.value })
-            }
-            placeholder="To Date"
-            size="sm"
-          />
-        </Col>
-
-        {/* Custom Element */}
-        {customElement && <Col xs="auto">{customElement.component}</Col>}
-
-        {/* Reset Button */}
-        <Col xs="auto">
-          <Button variant="outline-secondary" size="sm" onClick={handleReset}>
-            Reset
-          </Button>
-        </Col>
-
-        {/* Export to Excel */}
-        {/* <Col xs="auto">
-          <Button variant="outline-primary" size="sm" onClick={handleDownload}>
-            Excel
-          </Button>
-        </Col> */}
-
-        {/* Total Items Display */}
-        {totalItems !== undefined && (
-          <Col xs="auto" className="ms-auto">
-            <span>
-              {totalItemsLabel}: {totalItems}
-            </span>
-          </Col>
-        )}
-      </Row>
-    );
-  };
+      )}
+    </Row>
+  );
+};
 
 export default TableFilters;
