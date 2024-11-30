@@ -59,6 +59,7 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
           placeholder: "Search customers...",
           fields: ["CustomerCode", "CustomerName", "Phone", "Email"],
         }}
+        dateFilter={{ enabled: false }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         totalItems={totalItems}
@@ -79,7 +80,7 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
             onSort={handleSort}
             sortField={sortField}
             sortDirection={sortDirection}
-            onExcelDownload={handleExcelDownload} // Passing the function as a prop
+            onExcelDownload={handleExcelDownload}
           />
           {customers.length === 0 && (
             <div className="text-center py-4">No customers found.</div>

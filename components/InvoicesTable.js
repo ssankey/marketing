@@ -40,7 +40,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
             href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
             className="text-blue-600 hover:text-blue-800"
           >
-            {row.Type}-{value}
+            {value}
           </Link>
           &nbsp;
           <Link
