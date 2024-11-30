@@ -117,16 +117,16 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
             </Col>
           </Row>
 
-          <Row className="mb-4">
+          {/* <Row className="mb-4">
             <Col>
               <h4>Sales Trend</h4>
               <Card className="p-3">
                 <Line data={salesTrendChartData} />
               </Card>
             </Col>
-          </Row>
+          </Row> */}
 
-          <Row className="mb-4">
+          {/* <Row className="mb-4">
             <Col>
               <h4>Top Customers</h4>
               <Table striped bordered hover>
@@ -148,9 +148,9 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                 </tbody>
               </Table>
             </Col>
-          </Row>
+          </Row> */}
 
-          <Row className="mb-4">
+          {/* <Row className="mb-4">
             <Col>
               <h4>Additional Information</h4>
               <Card body>
@@ -168,7 +168,7 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                 </p>
               </Card>
             </Col>
-          </Row>
+          </Row> */}
 
           {/* Back Button */}
           <div className="mt-3">
