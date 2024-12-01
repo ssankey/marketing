@@ -1,13 +1,7 @@
+
+
 import { useState } from "react";
-import {
-  Card,
-  Button,
-  Form,
-  Container,
-  Row,
-  Col,
-  Alert,
-} from "react-bootstrap";
+import { Row, Col, Card, Form, Button, Image, Alert } from "react-bootstrap";
 import Link from "next/link";
 
 export default function ForgotPasswordPage() {
@@ -29,79 +23,53 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <Container
-      fluid
-      className="min-vh-100 d-flex align-items-center justify-content-center"
-      style={{
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        padding: "20px",
-      }}
-    >
-      <Row className="w-100 justify-content-center">
-        <Col xs={12} sm={8} md={6} lg={4}>
-          <div className="text-center mb-4">
-            <h1
-              className="text-white fw-bold mb-2"
-              style={{ fontSize: "2.5rem" }}
-            >
-              Forgot Password
-            </h1>
-            <p className="text-white-50">Enter your email to reset password</p>
-          </div>
-
-          <Card
-            className="border-0"
-            style={{
-              background: "rgba(255, 255, 255, 0.95)",
-              backdropFilter: "blur(10px)",
-              borderRadius: "15px",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
-            }}
-          >
-            <Card.Body className="p-4 p-md-5">
-              <Form onSubmit={handleSubmit}>
-                {error && (
-                  <Alert
-                    variant="danger"
-                    className="mb-4 text-center"
-                    style={{
-                      borderRadius: "10px",
-                      border: "none",
-                      backgroundColor: "rgba(220, 53, 69, 0.1)",
-                    }}
-                  >
-                    {error}
-                  </Alert>
-                )}
-
-                <Form.Group controlId="formEmail" className="mb-4">
-                  <Form.Label className="text-muted small">EMAIL</Form.Label>
-                  <Form.Control
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="form-control-lg border-0 bg-light"
-                    style={{
-                      borderRadius: "10px",
-                      padding: "12px 20px",
-                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-                    }}
-                  />
-                </Form.Group>
-
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="lg"
-                  className="w-100 mb-4 text-uppercase fw-bold"
+    <Row className="align-items-center justify-content-center g-0 min-vh-100">
+      <Col xxl={3} lg={4} md={6} xs={8} className="py-8 py-xl-0">
+        {/* Card */}
+        <Card className="smooth-shadow-md" >
+          {/* Card body */}
+          <Card.Body className="p-6">
+            <div className="mb-4 text-center">
+              <Link href="/">
+                <img
+                  src="/assets/density_logo_new_trans.png"
+                  alt="Logo"
+                  className="img-fluid" // Makes the image responsive
                   style={{
-                    borderRadius: "10px",
-                    padding: "12px",
-                    background: "linear-gradient(to right, #667eea, #764ba2)",
-                    border: "none",
-                    boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-                  }}
+                    height: "70px",
+                    width: "auto",
+                    marginBottom: "6px",
+                  }} // Set height and keep aspect ratio
+                />
+              </Link>
+
+              <p className="mb-4 text-muted">
+                Don&apos;t worry, we&apos;ll send you an email to reset your
+                password.
+              </p>
+            </div>
+            {/* Form */}
+            <Form onSubmit={handleSubmit}>
+              {error && (
+                <Alert variant="danger" className="text-center mb-4">
+                  {error}
+                </Alert>
+              )}
+              <Form.Group className="mb-3" controlId="email">
+                <Form.Label>Email</Form.Label>
+                <Form.Control
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="form-control-lg"
+                />
+              </Form.Group>
+              <div className="mb-3 d-grid">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  className="btn-lg"
                   disabled={isLoading}
                 >
                   {isLoading ? (
@@ -112,29 +80,25 @@ export default function ForgotPasswordPage() {
                       <span className="visually-hidden">Loading...</span>
                     </div>
                   ) : (
-                    "Send Reset Link"
+                    "Reset Password"
                   )}
                 </Button>
-
-                <div className="text-center">
-                  <p className="mb-0">
-                    Remember your password?{" "}
-                    <Link
-                      href="/login"
-                      className="text-decoration-none fw-bold"
-                      style={{ color: "#667eea" }}
-                    >
-                      Login
-                    </Link>
-                  </p>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+              </div>
+              <div className="text-center">
+                <span className="text-muted">
+                  Don&apos;t have an account?{" "}
+                  <Link href="/login" className="text-primary">
+                    Sign In
+                  </Link>
+                </span>
+              </div>
+            </Form>
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
   );
 }
 
 ForgotPasswordPage.displayName = "ForgotPasswordPage";
+  

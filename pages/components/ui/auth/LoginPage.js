@@ -1,8 +1,12 @@
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import Link from 'next/link';
-import { Card, Button, Form, Container, Row, Col, Alert } from 'react-bootstrap';
-import { loginUser } from 'utils/auth';
+
+
+
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import { Row, Col, Card, Form, Button, Image, Alert } from "react-bootstrap";
+import { loginUser } from "utils/auth";
+
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -21,7 +25,7 @@ export default function LoginPage() {
   const handleLogin = async (event) => {
     event.preventDefault();
     setError("");
-    
+
     if (!username || !password) {
       setError("Please enter both username and password");
       return;
@@ -30,7 +34,7 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       const result = await loginUser(username, password);
-      
+
       if (result.success) {
         localStorage.setItem("token", result.token); // Store token
         await router.push("/"); // Redirect to the dashboard
@@ -46,134 +50,86 @@ export default function LoginPage() {
   };
 
   return (
-    <Container
-      fluid
-      className="min-vh-100 d-flex align-items-center justify-content-center"
-      style={{
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        padding: "20px",
-      }}
-    >
-      <Row className="w-100 justify-content-center">
-        <Col xs={12} sm={8} md={6} lg={4}>
-          <div className="text-center mb-4">
-            <h1 className="text-white fw-bold mb-2" style={{ fontSize: "2.5rem" }}>
-              Welcome Back
-            </h1>
-            <p className="text-white-50">Please login to your account</p>
-          </div>
+    <Row className="align-items-center justify-content-center g-0 min-vh-100">
+      <Col xxl={3} lg={4} md={6} xs={8} className="py-8 py-xl-0">
+        {/* Card */}
+        <Card className="smooth-shadow-md">
+          {/* Card body */}
+          <Card.Body className="p-6">
+            <div className="mb-4 text-center">
+              <Link href="/">
+                {/* <Image
+                  src="/images/brand/logo/logo-primary.svg"
+                  className="mb-2"
+                  alt="Logo"
+                /> */}
+                <img
+                  src="/assets/density_logo_new_trans.png"
+                  alt="Logo"
+                  className="img-fluid" // Makes the image responsive
+                  style={{ height: "70px", width: "auto", marginBottom: "6px" }} // Set height and keep aspect ratio
+                />
+              </Link>
+              <p className="mb-6">Welcome back!</p>
+            </div>
+            {/* Error Alert */}
+            {error && (
+              <Alert variant="danger" className="text-center">
+                {error}
+              </Alert>
+            )}
+            {/* Form */}
+            <Form onSubmit={handleLogin}>
+              {/* Username */}
+              <Form.Group className="mb-3" controlId="username">
+                <Form.Label>Username or Email</Form.Label>
+                <Form.Control
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </Form.Group>
 
-          <Card
-            className="border-0"
-            style={{
-              background: "rgba(255, 255, 255, 0.95)",
-              backdropFilter: "blur(10px)",
-              borderRadius: "15px",
-              boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
-            }}
-          >
-            <Card.Body className="p-4 p-md-5">
-              <Form onSubmit={handleLogin}>
-                {error && (
-                  <Alert
-                    variant="danger"
-                    className="mb-4 text-center"
-                    style={{
-                      borderRadius: "10px",
-                      border: "none",
-                      backgroundColor: "rgba(220, 53, 69, 0.1)",
-                    }}
-                  >
-                    {error}
-                  </Alert>
-                )}
+              {/* Password */}
+              <Form.Group className="mb-3" controlId="password">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </Form.Group>
 
-                <Form.Group controlId="formUsername" className="mb-4">
-                  <Form.Label className="text-muted small">USERNAME</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="form-control-lg border-0 bg-light"
-                    style={{
-                      borderRadius: "10px",
-                      padding: "12px 20px",
-                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-                    }}
-                  />
-                </Form.Group>
+              {/* Checkbox */}
+              {/* <Form.Check type="checkbox" id="rememberme" className="mb-4">
+                <Form.Check.Input />
+                <Form.Check.Label>Remember me</Form.Check.Label>
+              </Form.Check> */}
 
-                <Form.Group controlId="formPassword" className="mb-4">
-                  <Form.Label className="text-muted small">PASSWORD</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="form-control-lg border-0 bg-light"
-                    style={{
-                      borderRadius: "10px",
-                      padding: "12px 20px",
-                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
-                    }}
-                  />
-                </Form.Group>
-
-                <Button
-                  type="submit" // Update to use form submission
-                  variant="primary"
-                  size="lg"
-                  className="w-100 mb-4 text-uppercase fw-bold"
-                  style={{
-                    borderRadius: "10px",
-                    padding: "12px",
-                    background: "linear-gradient(to right, #667eea, #764ba2)",
-                    border: "none",
-                    boxShadow: "0 4px 15px rgba(102, 126, 234, 0.4)",
-                  }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <div
-                      className="spinner-border spinner-border-sm text-light"
-                      role="status"
-                    >
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                  ) : (
-                    "Sign In"
-                  )}
+              {/* Button */}
+              <div className="d-grid mb-3">
+                <Button variant="primary" type="submit" disabled={isLoading}>
+                  {isLoading ? "Signing In..." : "Sign In"}
                 </Button>
+              </div>
 
-                <div className="text-center">
-                  <Row className="justify-content-center align-items-center">
-                    <Col>
-                      <Link 
-                  href="/signup" 
-                  className="text-blue-600 hover:text-blue-700 font-semibold"
-                >
-                  Create Account
+              {/* Links */}
+              <div className="d-md-flex justify-content-between">
+                <Link href="/signup" className="text-primary">
+                  Create an Account
                 </Link>
-                    </Col>
-                    <Col>
-                      <div className="vr mx-3" style={{ height: "20px" }}></div>
-                    </Col>
-                    <Col>
-                      <Link 
-                  href="/forgot-password" 
-                  className="text-blue-600 hover:text-blue-700 font-semibold"
-                >
-                  Forgot Password?
+                <Link href="/forgot-password" className="text-primary">
+                  Forgot your password?
                 </Link>
-                    </Col>
-                  </Row>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-    </Container>
+              </div>
+            </Form>
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
   );
 }
