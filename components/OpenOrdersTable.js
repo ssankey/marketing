@@ -12,7 +12,7 @@ import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 
-const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
+const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
   console.log(orders);
 
   const ITEMS_PER_PAGE = 20;
@@ -22,13 +22,11 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
   );
   const {
     searchTerm,
-    statusFilter,
     fromDate,
     toDate,
     sortField,
     sortDirection,
     handleSearch,
-    handleStatusChange,
     handleDateFilterChange,
     handleSort,
   } = useTableFilters();
@@ -46,22 +44,6 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
         </Link>
       ),
     },
-    // {
-    //   field: "InvoiceNum",
-    //   label: "Invoice#",
-    //   render: (value, row) => (
-    //     value ? (
-    //       <Link
-    //         href={`/invoicedetails?d=${row.InvoiceNum}&e=${row.InvoiceDocEntry}`}
-    //         className="text-green-600 hover:text-green-800"
-    //       >
-    //         {value}
-    //       </Link>
-    //     ) : (
-    //       "0"
-    //     )
-    //   ),
-    // },
     {
       field: "CardName",
       label: "Customer",
@@ -73,58 +55,61 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       render: (value) => formatDate(value),
     },
     {
-      field: "ProductCount",
-      label: "Product Count",
-      render: (value) => value || "0",
-    },
-    {
       field: "DeliveryDate",
       label: "Delivery Date",
       render: (value) => formatDate(value),
     },
     {
+      field: "ItemCode",
+      label: "Item Code",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "ItemName",
+      label: "Item Name",
+      render: (value) => truncateText(value, 30),
+    },
+    {
+      field: "OpenQty",
+      label: "Open Quantity",
+      render: (value) => value || "0",
+    },
+    {
+      field: "Stock",
+      label: "In Stock",
+      render: (value) => value || "0",
+    },
+    {
+      field: "StockStatus",
+      label: "Stock Status",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "In Stock" ? "bg-success" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
       field: "DocTotal",
       label: "Total Amount",
       render: (value, row) => {
-        const amountInINR = row.DocCur === "INR" ? value : value * row.ExchangeRate;
+        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
         return formatCurrency(amountInINR);
       },
     },
     {
-      field: "DocCur",
-      label: "Currency",
-      render: (value) => value || "0",
-    },
-    {
-      field: "DocStatus",
-      label: "Order Status",
-      render: (value) => <StatusBadge status={value.toLowerCase()} />,
-    },
-
-    {
-      field: "InvoiceDate",
-      label: "Invoice Date",
-      render: (value) => value ? formatDate(value) : "0",
-    },
-    {
-      field: "InvoiceTotal",
-      label: "Invoice Amount",
-      render: (value) => formatCurrency(value || 0),
-    },
-    {
-      field: "InvoiceStatus",
-      label: "Invoice Status",
-      render: (value) => value ? <StatusBadge status={value.toLowerCase()} /> : "0",
-    },
-    {
       field: "SalesEmployee",
       label: "Sales Employee",
-      render: (value) => value || "0",
-    }
+      render: (value) => value || "N/A",
+    },
   ];
   
+
   const handleExcelDownload = () => {
-    downloadExcel(orders, "Orders");
+    downloadExcel(orders, "Open Orders");
   };
 
   return (
@@ -132,32 +117,25 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       <TableFilters
         searchConfig={{
           enabled: true,
-          placeholder: "Search orders...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","InvoiceNum"], // Updated field names
+          placeholder: "Search open orders...",
+          fields: ["DocNum", "CardName"], // Searchable fields
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         statusFilter={{
-          enabled: true,
-          options: [
-            { value: "open", label: "Open" },
-            { value: "closed", label: "Closed" },
-          ],
-          value: statusFilter,
-          label: "Status",
+          enabled: false, // Disable status filter as we are only showing open orders
         }}
-        onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
-        totalItemsLabel="Total Orders"
+        totalItemsLabel="Total Open Orders"
       />
       {isLoading ? (
         <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
           <div className="text-center">
             <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading orders...</p>
+            <p className="text-gray-600">Loading open orders...</p>
           </div>
         </div>
       ) : (
@@ -171,7 +149,7 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
             onExcelDownload={handleExcelDownload}
           />
           {orders.length === 0 && (
-            <div className="text-center py-4">No orders found.</div>
+            <div className="text-center py-4">No open orders found.</div>
           )}
         </>
       )}
@@ -193,4 +171,4 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
   );
 };
 
-export default OrdersTable;
+export default OpenOrdersTable;
