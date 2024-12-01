@@ -1,6 +1,5 @@
 
 
-
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
@@ -14,7 +13,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Check if user is already logged in
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
@@ -50,86 +48,188 @@ export default function LoginPage() {
   };
 
   return (
-    <Row className="align-items-center justify-content-center g-0 min-vh-100">
-      <Col xxl={3} lg={4} md={6} xs={8} className="py-8 py-xl-0">
-        {/* Card */}
-        <Card className="smooth-shadow-md">
-          {/* Card body */}
-          <Card.Body className="p-6">
-            <div className="mb-4 text-center">
-              <Link href="/">
-                {/* <Image
-                  src="/images/brand/logo/logo-primary.svg"
-                  className="mb-2"
-                  alt="Logo"
-                /> */}
-                <img
-                  src="/assets/density_logo_new_trans.png"
-                  alt="Logo"
-                  className="img-fluid" // Makes the image responsive
-                  style={{ height: "70px", width: "auto", marginBottom: "6px" }} // Set height and keep aspect ratio
-                />
-              </Link>
-              <p className="mb-6">Welcome back!</p>
-            </div>
-            {/* Error Alert */}
-            {error && (
-              <Alert variant="danger" className="text-center">
-                {error}
-              </Alert>
-            )}
-            {/* Form */}
-            <Form onSubmit={handleLogin}>
-              {/* Username */}
-              <Form.Group className="mb-3" controlId="username">
-                <Form.Label>Username or Email</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Enter your username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </Form.Group>
+    // <div className="container-fluid p-0 vh-100 d-flex justify-content-center align-items-center">
+    //   <Row
+    //     className="g-0 w-100 h-auto"
+    //     style={{ maxWidth: "1200px", padding: "40px 130px" }}
+    //   >
+    //     {/* Left Side (Form Section) */}
+    //     <Col md={6} className="d-flex align-items-center p-0">
+    //       <Card
+    //         className="shadow-sm w-100 h-100"
+    //         style={{
+    //           borderRadius:"0px",
+    //           height: "auto",
+    //         }}
+    //       >
+    //         <Card.Body className="p-5 d-flex flex-column justify-content-center">
+    //           <div className="mb-4 text-center">
+    //             <Link href="/">
+    //               <img
+    //                 src="/assets/density_logo_new_trans.png"
+    //                 alt="Logo"
+    //                 className="img-fluid mb-3"
+    //                 style={{ height: "70px", width: "auto" }}
+    //               />
+    //             </Link>
+    //             <p className="mb-6">Welcome back!</p>
+    //           </div>
+    //           {error && (
+    //             <Alert variant="danger" className="text-center">
+    //               {error}
+    //             </Alert>
+    //           )}
+    //           <Form onSubmit={handleLogin}>
+    //             <Form.Group className="mb-3" controlId="username">
+    //               <Form.Label>Username or Email</Form.Label>
+    //               <Form.Control
+    //                 type="text"
+    //                 placeholder="Enter your username"
+    //                 value={username}
+    //                 onChange={(e) => setUsername(e.target.value)}
+    //                 required
+    //               />
+    //             </Form.Group>
+    //             <Form.Group className="mb-3" controlId="password">
+    //               <Form.Label>Password</Form.Label>
+    //               <Form.Control
+    //                 type="password"
+    //                 placeholder="Enter your password"
+    //                 value={password}
+    //                 onChange={(e) => setPassword(e.target.value)}
+    //                 required
+    //               />
+    //             </Form.Group>
+    //             <div className="d-grid mb-3">
+    //               <Button variant="primary" type="submit" disabled={isLoading}>
+    //                 {isLoading ? "Signing In..." : "Sign In"}
+    //               </Button>
+    //             </div>
+    //             <div className="d-flex justify-content-between">
+    //               <Link href="/signup" className="text-primary">
+    //                 Create an Account
+    //               </Link>
+    //               <Link href="/forgot-password" className="text-primary">
+    //                 Forgot your password?
+    //               </Link>
+    //             </div>
+    //           </Form>
+    //         </Card.Body>
+    //       </Card>
+    //     </Col>
 
-              {/* Password */}
-              <Form.Group className="mb-3" controlId="password">
-                <Form.Label>Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </Form.Group>
+    //     {/* Right Side (Image Section) */}
+    //     {/* <Col md={6} className="p-0 ">
+    //       <Image
+    //         src="/assets/login-image-square.jpg"
+    //         alt="Right Side Image"
+    //         className="w-100 h-100"
+    //         style={{
+    //           objectFit: "cover"
+    //         }}
+    //       />
+    //     </Col> */}
 
-              {/* Checkbox */}
-              {/* <Form.Check type="checkbox" id="rememberme" className="mb-4">
-                <Form.Check.Input />
-                <Form.Check.Label>Remember me</Form.Check.Label>
-              </Form.Check> */}
+    //     <Col md={6} className="p-0 d-flex align-items-center">
+    //       <Image
+    //         src="/assets/login-image-square-2.jpg"
+    //         alt="Right Side Image"
+    //         className="w-100"
+    //         style={{
+    //           height: "100%",
+    //           objectFit: "cover",
 
-              {/* Button */}
-              <div className="d-grid mb-3">
-                <Button variant="primary" type="submit" disabled={isLoading}>
-                  {isLoading ? "Signing In..." : "Sign In"}
-                </Button>
-              </div>
-
-              {/* Links */}
-              <div className="d-md-flex justify-content-between">
-                <Link href="/signup" className="text-primary">
-                  Create an Account
+    //         }}
+    //       />
+    //     </Col>
+    //   </Row>
+    // </div>
+    <div className="container-fluid p-0 vh-100 d-flex justify-content-center align-items-center">
+      <Row
+        className="g-0 w-100 h-auto"
+        style={{ maxWidth: "1200px", padding: "25px 150px" }} // Adjust padding for smaller screens
+      >
+        {/* Left Side (Form Section) */}
+        <Col xs={12} md={6} className="d-flex align-items-center p-0">
+          <Card
+            className="shadow-sm w-100"
+            style={{
+              borderRadius: "0px",
+            }}
+          >
+            <Card.Body className="p-4 d-flex flex-column justify-content-center">
+              <div className="mb-4 text-center">
+                <Link href="/">
+                  <img
+                    src="/assets/density_logo_new_trans.png"
+                    alt="Logo"
+                    className="img-fluid mb-3"
+                    style={{ height: "70px", width: "auto" }}
+                  />
                 </Link>
-                <Link href="/forgot-password" className="text-primary">
-                  Forgot your password?
-                </Link>
-              </div>
-            </Form>
-          </Card.Body>
-        </Card>
-      </Col>
-    </Row>
+                {/* <h4 className="mb-4"><strong>Welcome back!</strong></h4> */}
+              </div> 
+              {error && (
+                <Alert variant="danger" className="text-center">
+                  {error}
+                </Alert>
+              )}
+              <Form onSubmit={handleLogin}>
+                <Form.Group className="mb-3" controlId="username">
+                  <Form.Label >Username or Email</Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </Form.Group>
+                <Form.Group className="mb-3" controlId="password">
+                  <Form.Label>Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </Form.Group>
+                <div className="d-grid mb-3">
+                  <Button variant="primary" type="submit" disabled={isLoading}>
+                    {isLoading ? "Signing In..." : "Sign In"}
+                  </Button>
+                </div>
+                <div className="d-flex justify-content-between">
+                  <Link href="/signup" className="text-primary">
+                    Create an Account
+                  </Link>
+                  <Link href="/forgot-password" className="text-primary">
+                    Forgot your password?
+                  </Link>
+                </div>
+              </Form>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Right Side (Image Section) */}
+        <Col xs={12} md={6} className="p-0 d-flex align-items-center">
+          <Image
+            src="/assets/login-image-square-2.jpg"
+            alt="Right Side Image"
+            className="w-100"
+            style={{
+              height: "100%",
+              objectFit: "cover",
+              borderRadius: "0px", // Optional for rounded corners
+            }}
+          />
+        </Col>
+      </Row>
+    </div>
   );
 }
+
+
+ 
