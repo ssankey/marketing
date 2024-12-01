@@ -17,15 +17,16 @@ function formatDate(dateString) {
 
 
 export default function CustomerDetails({ customer, purchaseData,TopQuotationData,TopOrderData,TopInvoiceData }) {
-//export default function CustomerDetails({ customer }) {
+  //export default function CustomerDetails({ customer }) {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
   
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
-
 
   // Handle client-side auth redirect
   useEffect(() => {
@@ -46,7 +47,6 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
     );
   }
 
-    
   // Handle unauthorized access
   if (!isAuthenticated) {
     return null;
@@ -231,8 +231,22 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
                     key={quote.QuotationNumber}
                     className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
                   >
-                    <div className="fw-bold">
+                    {/* <div className="fw-bold">
                       Quotation#: {quote.QuotationNumber}
+                    </div> */}
+                    <div className="fw-bold">
+                      Quotation#:{" "}
+                      <span
+                        style={{ cursor: "pointer", color: "blue" }}
+                        onClick={() =>
+                          // router.push(`/quotationdetails?/${quote.QuotationNumber}`)
+                          router.push(
+                            `/quotationdetails?d=${quote.QuotationNumber}&e=${quote.DocEntry}`
+                          )
+                        }
+                      >
+                        {quote.QuotationNumber}
+                      </span>
                     </div>
                     <div className="text-muted small mt-1">
                       <div>
@@ -275,7 +289,21 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
                     key={order.OrderNumber}
                     className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
                   >
-                    <div className="fw-bold">Order#: {order.OrderNumber}</div>
+                    {/* <div className="fw-bold">Order#: {order.OrderNumber}</div> */}
+                    <div className="fw-bold">
+                      Order#:{" "}
+                      <span
+                        style={{ cursor: "pointer", color: "blue" }}
+                        onClick={() =>
+                          // router.push(`/orders/${order.OrderNumber}`)
+                          router.push(
+                            `/orderdetails?d=${order.OrderNumber}&e=${order.DocEntry}`
+                          )
+                        }
+                      >
+                        {order.OrderNumber}
+                      </span>
+                    </div>
                     <div className="text-muted small mt-1">
                       <div>
                         <i className="bi bi-calendar-check me-1"></i>
@@ -317,8 +345,22 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
                     key={invoice.InvoiceNumber}
                     className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
                   >
-                    <div className="fw-bold">
+                    {/* <div className="fw-bold">
                       Invoice#: {invoice.InvoiceNumber}
+                    </div> */}
+                    <div className="fw-bold">
+                      Invoice#:{" "}
+                      <span
+                        style={{ cursor: "pointer", color: "blue" }}
+                        onClick={() =>
+                          // router.push(`/invoices/${invoice.InvoiceNumber}`)
+                          router.push(
+                            `/invoicedetails?d=${invoice.InvoiceNumber}&e=${invoice.DocEntry}`
+                          )
+                        }
+                      >
+                        {invoice.InvoiceNumber}
+                      </span>
                     </div>
                     <div className="text-muted small mt-1">
                       <div>

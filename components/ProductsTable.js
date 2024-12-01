@@ -96,6 +96,7 @@ export default function ProductsTable({ products, totalItems, isLoading }) {
   }
 
   return (
+    
     <>
       <TableFilters
         searchConfig={{

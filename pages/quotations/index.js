@@ -103,6 +103,15 @@ export async function getServerSideProps(context) {
         T1.Dscription LIKE '%${search}%'
       )`;
     }
+      
+      // if (search) {
+      //   whereClause += ` AND (
+      //   CAST(T0.DocNum AS VARCHAR) LIKE '%${search}%' OR 
+      //   T0.CardName LIKE '%${search}%' OR 
+      //   T1.ItemCode LIKE '%${search}%' OR 
+      //   T1.Dscription LIKE '%${search}%'
+      // )`;
+      // }
 
    
 
