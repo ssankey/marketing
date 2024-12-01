@@ -46,22 +46,22 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
         </Link>
       ),
     },
-    {
-      field: "InvoiceNum",
-      label: "Invoice#",
-      render: (value, row) => (
-        value ? (
-          <Link
-            href={`/invoicedetails?d=${row.InvoiceNum}&e=${row.InvoiceDocEntry}`}
-            className="text-green-600 hover:text-green-800"
-          >
-            {value}
-          </Link>
-        ) : (
-          "0"
-        )
-      ),
-    },
+    // {
+    //   field: "InvoiceNum",
+    //   label: "Invoice#",
+    //   render: (value, row) => (
+    //     value ? (
+    //       <Link
+    //         href={`/invoicedetails?d=${row.InvoiceNum}&e=${row.InvoiceDocEntry}`}
+    //         className="text-green-600 hover:text-green-800"
+    //       >
+    //         {value}
+    //       </Link>
+    //     ) : (
+    //       "0"
+    //     )
+    //   ),
+    // },
     {
       field: "CardName",
       label: "Customer",

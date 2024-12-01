@@ -18,7 +18,6 @@ export default function OrderDetailsPage({ order, error }) {
   return <OrderDetails order={order} />;
 }
 
-
 export async function getServerSideProps(context) {
   const { d: docNum, e: docEntry } = context.query;
 
@@ -38,7 +37,7 @@ export async function getServerSideProps(context) {
       };
     }
 
-    // Convert Date fields to strings
+    // Convert Date fields to strings for serialization
     const processedOrder = {
       ...order,
       DocDate: order.DocDate ? order.DocDate.toISOString() : null,
@@ -48,6 +47,13 @@ export async function getServerSideProps(context) {
         ...item,
         ShipDate: item.ShipDate ? item.ShipDate.toISOString() : null,
       })),
+      Invoices: order.Invoices
+        ? order.Invoices.map((invoice) => ({
+            ...invoice,
+            DocDate: invoice.DocDate ? invoice.DocDate.toISOString() : null,
+            DocDueDate: invoice.DocDueDate ? invoice.DocDueDate.toISOString() : null,
+          }))
+        : [],
     };
 
     return {

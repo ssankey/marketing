@@ -36,17 +36,17 @@ const NavbarVertical = () => {
     );
   };
 
- // Handle logout functionality
-const handleLogout = () => {
-  // Clear localStorage to remove the token
-  localStorage.removeItem("token"); // Remove token specifically
+  // Handle logout functionality
+  const handleLogout = () => {
+    // Clear localStorage to remove the token
+    localStorage.removeItem("token"); // Remove token specifically
 
-  // Optionally, you could also clear all localStorage items
-  // localStorage.clear();
+    // Optionally, you could also clear all localStorage items
+    // localStorage.clear();
 
-  // Redirect to the login page
-  router.push("/login");
-};
+    // Redirect to the login page
+    router.push("/login");
+  };
 
 
   return (
@@ -88,12 +88,33 @@ const handleLogout = () => {
         </li>
 
         {/* Orders */}
+        {/* Orders */}
         <li className="nav-item">
-          <a href="/orders" className="nav-link d-flex align-items-center">
-            <Clipboard className="me-2" /> {/* Orders icon */}
-            Orders
-          </a>
+          <Accordion>
+            <CustomToggle eventKey="orders" icon="clipboard">
+              Orders
+            </CustomToggle>
+            <Accordion.Collapse eventKey="orders">
+              <ul className="nav flex-column ms-3">
+                <li className="nav-item">
+                  <a href="/orders" className="nav-link d-flex align-items-center">
+                    <Clipboard className="me-2" /> All Orders
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a
+                    href="/open-orders"
+                    className="nav-link d-flex align-items-center"
+                  >
+                    <Clipboard className="me-2" /> Open Orders
+                  </a>
+                </li>
+              </ul>
+            </Accordion.Collapse>
+          </Accordion>
         </li>
+
+
 
         {/* Invoice */}
         <li className="nav-item">
