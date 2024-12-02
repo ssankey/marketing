@@ -110,7 +110,7 @@ const OrderDetails = ({ order }) => {
                                 </Col>
                                 <Col md={4}>
                                     <p>
-                                        <strong>Discount Total:</strong> {formatCurrency(order.DiscountTotal)} {order.DocCur}
+                                        <strong>Discount Total:</strong> {formatCurrency(order.DiscountTotal)}
                                     </p>
                                     <p>
                                         <strong>Shipping Fee:</strong> {formatCurrency(order.ShippingFee)} {order.DocCur}
@@ -201,12 +201,12 @@ const OrderDetails = ({ order }) => {
                                                     <td className="text-nowrap">{product.Quantity}</td>
                                                     <td className="text-nowrap">{product.UnitMsr}</td>
                                                     <td className="text-nowrap">
-                                                        {formatCurrency(product.Price)} {product.Currency || order.DocCur}
+                                                        {formatCurrency(product.Price)}
                                                     </td>
                                                     <td className="text-nowrap">{product.DiscountPercent || 0}%</td>
                                                     <td className="text-nowrap">{product.TaxPercent || 0}%</td>
                                                     <td className="text-nowrap">
-                                                        {formatCurrency(lineTotal)} {product.Currency || order.DocCur}
+                                                        {formatCurrency(lineTotal)}
                                                     </td>
                                                     <td className="text-nowrap">{formatDate(product.ShipDate)}</td>
                                                     <td className="text-nowrap">{product.LineStatus}</td>

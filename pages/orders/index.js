@@ -1,4 +1,7 @@
+// 
+
 import { useState, useEffect } from "react";
+import LoadingSpinner from "components/LoadingSpinner";
 import OrdersTable from "components/OrdersTable";
 import { useRouter } from "next/router";
 import { getOrders } from "lib/models/orders";
@@ -6,10 +9,8 @@ import { getOrders } from "lib/models/orders";
 export default function OrdersPage({
   orders: initialOrders,
   totalItems: initialTotalItems,
-  totalPages,
 }) {
   const router = useRouter();
-  const { page = 1 } = router.query;
   const [isLoading, setIsLoading] = useState(false);
   const [orders, setOrders] = useState(initialOrders);
   const [totalItems, setTotalItems] = useState(initialTotalItems);
@@ -30,23 +31,24 @@ export default function OrdersPage({
     };
   }, [router]);
 
-  // Update local state when props or page change
+  // Update local state when props change
   useEffect(() => {
     setOrders(initialOrders);
     setTotalItems(initialTotalItems);
-  }, [initialOrders, initialTotalItems, page]);
+  }, [initialOrders, initialTotalItems]);
+
+
 
   return (
     <OrdersTable
       orders={orders}
       totalItems={totalItems}
       isLoading={isLoading}
-      currentPage={parseInt(page, 10)}
-      totalPages={totalPages}
     />
   );
 }
 
+// SEO properties for OrdersPage
 OrdersPage.seo = {
   title: "Orders | Density",
   description: "View and manage all your orders.",
@@ -111,30 +113,48 @@ export async function getServerSideProps(context) {
 
     // Get paginated data
     const dataQuery = `
-      SELECT 
-        CASE 
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Cancelled'
-          WHEN T0.DocStatus='O' THEN 'Open' 
-          ELSE 'NA' 
-        END AS DocStatus,
-        T0.DocEntry,
-        T0.DocNum,
-        T0.DocDate,
-        T0.NumAtCard AS CustomerPONo,
-        T0.TaxDate AS PODate,
-        T0.DocDueDate AS DeliveryDate,
-        T0.CardName,
-        T0.DocTotal,
-        T0.DocCur,
-        T5.SlpName AS SalesEmployee
-      FROM ORDR T0
-      INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-      WHERE ${whereClause}
-      ORDER BY ${sortField} ${sortDir}
-      OFFSET ${offset} ROWS
-      FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-    `;
+  SELECT 
+    CASE 
+      WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
+      WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Cancelled'
+      WHEN T0.DocStatus='O' THEN 'Open' 
+      ELSE 'NA' 
+    END AS DocStatus,
+    T0.DocEntry,
+    T0.DocNum,
+    T0.DocDate,
+    T0.NumAtCard AS CustomerPONo,
+    T0.TaxDate AS PODate,
+    T0.DocDueDate AS DeliveryDate,
+    T0.CardName,
+    T0.DocTotal,
+    T0.DocCur,
+    T0.DocRate,
+    T5.SlpName AS SalesEmployee,
+    COUNT(DISTINCT T1.ItemCode) AS ProductCount -- Count of unique products in the order
+  FROM ORDR T0
+  INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
+  INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry -- Join to get product details
+  WHERE ${whereClause}
+  GROUP BY 
+    T0.DocStatus,
+    T0.CANCELED,
+    T0.DocEntry,
+    T0.DocNum,
+    T0.DocDate,
+    T0.NumAtCard,
+    T0.TaxDate,
+    T0.DocDueDate,
+    T0.CardName,
+    T0.DocTotal,
+    T0.DocCur,
+    T0.DocRate,
+    T5.SlpName
+  ORDER BY ${sortField} ${sortDir}
+  OFFSET ${offset} ROWS
+  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
+`;
+
 
     const [totalResult, rawOrders] = await Promise.all([
       getOrders(countQuery),
@@ -167,3 +187,4 @@ export async function getServerSideProps(context) {
     };
   }
 }
+
