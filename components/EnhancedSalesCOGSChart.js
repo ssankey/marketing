@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Card, Table, Button, Spinner } from 'react-bootstrap';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement, LineController } from 'chart.js';
 import { formatCurrency } from 'utils/formatCurrency';
 import SearchBar from './SearchBar';
 
 // Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, LineController);
 
 const EnhancedSalesCOGSChart = () => {
     const [salesData, setSalesData] = useState([]);

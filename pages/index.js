@@ -107,7 +107,7 @@ const Dashboard = () => {
         <KPISection kpiData={data.kpiData} />
       )}
 
-      {!dataLoading && !error && <DashboardCharts data={data.chartData} />}
+      {!dataLoading && !error && <DashboardCharts />}
     </Container>
   ) : null;
 };

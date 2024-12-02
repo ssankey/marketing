@@ -7,6 +7,8 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, T
 import EnhancedSalesCOGSChart from './EnhancedSalesCOGSChart';
 import OrdersChart from "./OpenClosedOrdersChart";
 import FilterDropdown from './FilterDropdown';
+import CustomerBalancesChart from './CustomerBalancesChart'; // Import the new component
+import VendorPaymentsChart from './VendorPaymentsChart';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
@@ -35,6 +37,7 @@ const colorPalette = {
 };
 
 const DashboardCharts = () => {
+  // Existing State Variables
   const [topCustomers, setTopCustomers] = useState([]);
   const [topCategories, setTopCategories] = useState([]);
   const [customersDateFilter, setCustomersDateFilter] = useState('today');
@@ -200,7 +203,6 @@ const DashboardCharts = () => {
     cutout: '70%'
   };
 
-
   const NoDataDisplay = () => (
     <div className="d-flex flex-column justify-content-center align-items-center h-100 text-muted">
       <svg
@@ -225,7 +227,6 @@ const DashboardCharts = () => {
     </div>
   );
 
-
   // Loading and Error States
   if (error) {
     return (
@@ -247,6 +248,15 @@ const DashboardCharts = () => {
 
       {/* Open vs Closed Orders Chart */}
       <OrdersChart />
+
+      <Row className="g-4 mt-4">
+          <Col lg={6} md={6}>
+            <CustomerBalancesChart /> {/* Include the new component */}
+          </Col>
+          <Col lg={6} md={6}>
+            <VendorPaymentsChart />
+          </Col>
+        </Row>
 
       {/* Top Customers and Sales by Category */}
       <Row className="g-4 mt-4">
@@ -280,6 +290,9 @@ const DashboardCharts = () => {
             </Card.Body>
           </Card>
         </Col>
+
+        {/* Customer Balances Chart */}
+
 
         {/* Sales by Category */}
         <Col lg={5} md={12}>
@@ -342,6 +355,8 @@ const DashboardCharts = () => {
           </Card>
         </Col>
       </Row>
+
+
     </div>
   );
 };
