@@ -79,7 +79,8 @@ export async function getServerSideProps(context) {
     if (search) {
       whereClause += ` AND (
         T0.DocNum LIKE '%${search}%' OR 
-        T0.CardName LIKE '%${search}%'
+        T0.CardName LIKE '%${search}%' OR
+        T5.SlpName LIKE '%${search}%'
       )`;
     }
 

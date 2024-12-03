@@ -6,6 +6,7 @@ import SSRProvider from 'react-bootstrap/SSRProvider';
 import { Analytics } from '@vercel/analytics/react';
 import { SWRConfig } from 'swr';
 import '../components/components.css';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 // Import layouts
 import DefaultDashboardLayout from 'layouts/DefaultDashboardLayout';
 // Import styles
