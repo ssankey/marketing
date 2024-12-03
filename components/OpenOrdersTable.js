@@ -12,11 +12,10 @@ import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 
-const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
-  console.log(orders);
-
+const OpenOrdersTable = ({ orders, totalItems, isLoading = false }) => {
+  
   const ITEMS_PER_PAGE = 20;
-  const { totalPages, onPageChange } = usePagination(
+  const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
@@ -24,10 +23,12 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
     searchTerm,
     fromDate,
     toDate,
+    statusFilter,
     sortField,
     sortDirection,
     handleSearch,
     handleDateFilterChange,
+    handleStatusChange,
     handleSort,
   } = useTableFilters();
 
@@ -123,8 +124,15 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
         onSearch={handleSearch}
         searchTerm={searchTerm}
         statusFilter={{
-          enabled: false, // Disable status filter as we are only showing open orders
+          enabled: true,
+          options: [
+            { value: "open", label: "In Stock" },
+            { value: "closed", label: "Out Of Stock" },
+          ],
+          value: statusFilter,
+          label: "StockStatus",
         }}
+        onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
         onDateFilterChange={handleDateFilterChange}

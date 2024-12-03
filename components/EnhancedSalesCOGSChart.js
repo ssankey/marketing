@@ -1,7 +1,7 @@
 // src/components/EnhancedSalesCOGSChart.js
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { Card, Table, Button, Spinner } from 'react-bootstrap';
+import { Card, Table, Button, Spinner, Dropdown } from 'react-bootstrap';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement, LineController } from 'chart.js';
 import { formatCurrency } from 'utils/formatCurrency';
 import SearchBar from './SearchBar';
@@ -21,6 +21,7 @@ const EnhancedSalesCOGSChart = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState('Customer'); // Added state for selected category
 
     const fetchSalesData = async () => {
         const queryParams = new URLSearchParams();
@@ -44,21 +45,24 @@ const EnhancedSalesCOGSChart = () => {
         }
     };
 
+    const fetchCategoryData = async (category) => {
+        try {
+            const response = await fetch(`/api/search?query=${searchQuery}`);
+            if (!response.ok) throw new Error('Failed to fetch category data');
+            const results = await response.json();
+            setSearchResults(results.filter(result => result.type === category));
+        } catch (error) {
+            console.error('Error fetching search results:', error);
+        }
+    };
+
     const handleSearch = async (query) => {
         setSearchQuery(query);
         if (query.length < 3) {
             setSearchResults([]);
             return;
         }
-
-        try {
-            const response = await fetch(`/api/search?query=${query}`);
-            if (!response.ok) throw new Error('Failed to fetch search results');
-            const results = await response.json();
-            setSearchResults(results);
-        } catch (error) {
-            console.error('Error fetching search results:', error);
-        }
+        fetchCategoryData(selectedCategory);  // Fetch based on selected category
     };
 
     const handleSelectResult = (result) => {
@@ -89,6 +93,14 @@ const EnhancedSalesCOGSChart = () => {
     useEffect(() => {
         fetchSalesData();
     }, [filters]);
+
+    useEffect(() => {
+        if (searchQuery.length >= 3) {
+            fetchCategoryData(selectedCategory);  // Re-fetch when search query or category changes
+        } else {
+            setSearchResults([]);
+        }
+    }, [searchQuery, selectedCategory]);
 
     const salesAndCOGSChartData = {
         labels: salesData.map((data) => data.month),
@@ -208,12 +220,27 @@ const EnhancedSalesCOGSChart = () => {
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
                     <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>Sales, COGS, and Gross Margin %</h4>
                     <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center  mt-3 mt-md-0">
+                        <Dropdown>
+                            <Dropdown.Toggle
+                                variant="outline-secondary"
+                                id="filter-dropdown"
+                                className="d-flex align-items-center"
+                            >
+                                <i className="bi bi-list-ul me-2" /> {selectedCategory}
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                                <Dropdown.Item onClick={() => setSelectedCategory('Customer')}>Customer</Dropdown.Item>
+                                <Dropdown.Item onClick={() => setSelectedCategory('Product')}>Product</Dropdown.Item>
+                                <Dropdown.Item onClick={() => setSelectedCategory('Employee')}>Sales Person</Dropdown.Item>
+                                <Dropdown.Item onClick={() => setSelectedCategory('Category')}>Category</Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
                         <SearchBar
                             searchQuery={searchQuery}
                             setSearchQuery={setSearchQuery}
                             searchResults={searchResults}
                             handleSelectResult={handleSelectResult}
-                            placeholder="Search customer or products or category"
+                            placeholder={`Search ${selectedCategory}`}
                             onSearch={handleSearch}
                         />
                         <div className="d-flex gap-2">
@@ -232,7 +259,6 @@ const EnhancedSalesCOGSChart = () => {
                             >
                                 Export CSV
                             </Button>
-
                         </div>
                     </div>
                 </div>

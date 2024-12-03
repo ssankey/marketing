@@ -12,11 +12,9 @@ import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 
-const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
-  console.log(orders);
-
+const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
   const ITEMS_PER_PAGE = 20;
-  const { totalPages, onPageChange } = usePagination(
+  const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
@@ -101,21 +99,21 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       render: (value) => <StatusBadge status={value.toLowerCase()} />,
     },
 
-    {
-      field: "InvoiceDate",
-      label: "Invoice Date",
-      render: (value) => value ? formatDate(value) : "0",
-    },
-    {
-      field: "InvoiceTotal",
-      label: "Invoice Amount",
-      render: (value) => formatCurrency(value || 0),
-    },
-    {
-      field: "InvoiceStatus",
-      label: "Invoice Status",
-      render: (value) => value ? <StatusBadge status={value.toLowerCase()} /> : "0",
-    },
+    // {
+    //   field: "InvoiceDate",
+    //   label: "Invoice Date",
+    //   render: (value) => value ? formatDate(value) : "0",
+    // },
+    // {
+    //   field: "InvoiceTotal",
+    //   label: "Invoice Amount",
+    //   render: (value) => formatCurrency(value || 0),
+    // },
+    // {
+    //   field: "InvoiceStatus",
+    //   label: "Invoice Status",
+    //   render: (value) => value ? <StatusBadge status={value.toLowerCase()} /> : "0",
+    // },
     {
       field: "SalesEmployee",
       label: "Sales Employee",
@@ -133,7 +131,7 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
         searchConfig={{
           enabled: true,
           placeholder: "Search orders...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","InvoiceNum"], // Updated field names
+          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","SalesEmployee"], // Updated field names
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}

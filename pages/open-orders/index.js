@@ -57,6 +57,7 @@ export async function getServerSideProps(context) {
       search = "",
       fromDate,
       toDate,
+      status, // Extract statusFilter from query
     } = context.query;
 
     // Set default sorting parameters
@@ -86,11 +87,21 @@ export async function getServerSideProps(context) {
       whereClause += ` AND T0.DocDate <= '${toDate}'`;
     }
 
+    // Apply status filter
+    if (status) {
+      if (status === "open") {
+        whereClause += ` AND T3.OnHand >= T1.OpenQty`;
+      } else if (status === "closed") {
+        whereClause += ` AND T3.OnHand < T1.OpenQty`;
+      }
+    }
+
     // Get total count
     const countQuery = `
       SELECT COUNT(DISTINCT T0.DocEntry) as total
       FROM ORDR T0
       INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
+      LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
       WHERE ${whereClause};
     `;
 
@@ -147,7 +158,6 @@ export async function getServerSideProps(context) {
       props: {
         orders: Array.isArray(orders) ? orders : [],
         totalItems,
-        currentPage: parseInt(page, 10),
       },
     };
   } catch (error) {
@@ -160,3 +170,4 @@ export async function getServerSideProps(context) {
     };
   }
 }
+
