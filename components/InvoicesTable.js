@@ -88,8 +88,8 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       label: "Total Amount",
       render: (value, row) => {
         // Convert to INR if necessary and format currency
-        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
-        return formatCurrency(amountInINR);
+        // const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
+        return formatCurrency(value);
       },
     },
     {

@@ -1,5 +1,4 @@
-
-// "use client";
+// components/NavbarVertical.js
 
 "use client";
 
@@ -9,27 +8,21 @@ import Link from "next/link";
 import Accordion from "react-bootstrap/Accordion";
 import { useAccordionButton } from "react-bootstrap/AccordionButton";
 import { FaMoneyBillWave, FaSignOutAlt } from "react-icons/fa";
-import {
-  House,
-  Clipboard,
-  FileText,
-  CurrencyDollar,
-} from "react-bootstrap-icons"; // Import the relevant icons
-import { FaUser } from "react-icons/fa";
-import { FaBox } from "react-icons/fa";
+import { House, Clipboard, FileText, CurrencyDollar } from "react-bootstrap-icons"; // Import the relevant icons
+import { FaUser, FaBox } from "react-icons/fa";
 import { Button } from "react-bootstrap"; // Import Button component from React-Bootstrap
 import { useRouter } from "next/router"; // Import useRouter for redirection
 
 const NavbarVertical = () => {
   const router = useRouter(); // For redirection
 
-  // Custom Toggle for dropdown items
-  const CustomToggle = ({ children, eventKey, icon }) => {
+  // Custom Toggle for dropdown items using React Icon Components
+  const CustomToggle = ({ children, eventKey, Icon }) => {
     const decoratedOnClick = useAccordionButton(eventKey);
     return (
       <li className="nav-item">
-        <Link href="#" className="nav-link" onClick={decoratedOnClick}>
-          <i className={`nav-icon fe fe-${icon} me-2`}></i>
+        <Link href="#" className="nav-link d-flex align-items-center" onClick={decoratedOnClick}>
+          <Icon className="me-2" />
           {children}
         </Link>
       </li>
@@ -48,7 +41,6 @@ const NavbarVertical = () => {
     router.push("/login");
   };
 
-
   return (
     <Fragment>
       {/* Dash UI and Dashboard section */}
@@ -61,95 +53,85 @@ const NavbarVertical = () => {
       >
         {/* Dash UI */}
         <li className="nav-item">
-          <a href="/" className="nav-link d-flex align-items-center">
+          <Link href="/" className="nav-link d-flex align-items-center">
             <img
               src="/assets/density_logo_new_trans.png"
               alt="Logo"
               className="img-fluid" // Makes the image responsive
               style={{ height: "80px", width: "auto" }} // Set height and keep aspect ratio
             />
-          </a>
+          </Link>
         </li>
 
         {/* Dashboard */}
         <li className="nav-item">
-          <a href="/" className="nav-link d-flex align-items-center">
+          <Link href="/" className="nav-link d-flex align-items-center">
             <House className="me-2" />
             Dashboard
-          </a>
+          </Link>
         </li>
 
         {/* Quotation */}
         <li className="nav-item">
-          <a href="/quotations" className="nav-link d-flex align-items-center">
+          <Link href="/quotations" className="nav-link d-flex align-items-center">
             <CurrencyDollar className="me-2" /> {/* Quotation icon */}
             Quotation
-          </a>
+          </Link>
         </li>
 
         {/* Orders */}
-        {/* Orders */}
         <li className="nav-item">
           <Accordion>
-            <CustomToggle eventKey="orders" icon="clipboard">
+            <CustomToggle eventKey="orders" Icon={Clipboard}>
               Orders
             </CustomToggle>
             <Accordion.Collapse eventKey="orders">
               <ul className="nav flex-column ms-3">
                 <li className="nav-item">
-                  <a href="/orders" className="nav-link d-flex align-items-center">
+                  <Link href="/orders" className="nav-link d-flex align-items-center">
                     <Clipboard className="me-2" /> All Orders
-                  </a>
+                  </Link>
                 </li>
                 <li className="nav-item">
-                  <a
-                    href="/open-orders"
-                    className="nav-link d-flex align-items-center"
-                  >
+                  <Link href="/open-orders" className="nav-link d-flex align-items-center">
                     <Clipboard className="me-2" /> Open Orders
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </Accordion.Collapse>
           </Accordion>
         </li>
 
-
-
         {/* Invoice */}
         <li className="nav-item">
-          <a href="/invoices" className="nav-link d-flex align-items-center">
+          <Link href="/invoices" className="nav-link d-flex align-items-center">
             <FileText className="me-2" /> {/* Invoice icon */}
             Invoice
-          </a>
+          </Link>
         </li>
 
         {/* Customers */}
         <li className="nav-item">
-          <a href="/customers" className="nav-link d-flex align-items-center">
+          <Link href="/customers" className="nav-link d-flex align-items-center">
             <FaUser className="me-2" /> {/* Customer icon */}
             Customers
-          </a>
+          </Link>
         </li>
 
         {/* Products */}
         <li className="nav-item">
-          <a href="/products" className="nav-link d-flex align-items-center">
+          <Link href="/products" className="nav-link d-flex align-items-center">
             <FaBox className="me-2" /> {/* Product icon */}
             Products
-          </a>
+          </Link>
         </li>
 
         {/* Outstanding Payment */}
         <li className="nav-item">
-          <a
-            href="/outstanding-payment"
-            className="nav-link d-flex align-items-center"
-          >
-            <FaMoneyBillWave className="me-2" />{" "}
-            {/* outstanding payment icon */}
+          <Link href="/outstanding-payment" className="nav-link d-flex align-items-center">
+            <FaMoneyBillWave className="me-2" /> {/* Outstanding payment icon */}
             Outstanding Payments
-          </a>
+          </Link>
         </li>
 
         {/* Logout Button at the bottom */}

@@ -18,15 +18,11 @@ export default function ProductsTable({
   isLoading,
   error, // New prop
 }) {
-  const ITEMS_PER_PAGE = 20; // Define items per page
+  const ITEMS_PER_PAGE = 100; // Define items per page
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
-
-
-
-
 
   const {
     searchTerm,
@@ -147,28 +143,29 @@ export default function ProductsTable({
       field: "Stock_In_China", // Corresponds to T0.U_ChinaStock AS Stock_In_China
       sortable: true,
     },
-    {
-      label: "Quantity",
-      field: "U_Quantity",
-      sortable: true,
-    },
-    {
-      label: "Unit of Measure",
-      field: "U_UOM",
-      sortable: true,
-    },
-    {
-      label: "Price",
-      field: "U_Price",
-      sortable: true,
-      render: (value) => `$${value.toFixed(2)}`,
-    },
-    {
-      label: "Price (USD)",
-      field: "U_PriceUSD",
-      sortable: true,
-      render: (value) => `$${value.toFixed(2)}`,
-    },
+    // Removed pricing-related columns
+    // {
+    //   label: "Quantity",
+    //   field: "U_Quantity",
+    //   sortable: true,
+    // },
+    // {
+    //   label: "Unit of Measure",
+    //   field: "U_UOM",
+    //   sortable: true,
+    // },
+    // {
+    //   label: "Price",
+    //   field: "U_Price",
+    //   sortable: true,
+    //   render: (value) => `$${value.toFixed(2)}`,
+    // },
+    // {
+    //   label: "Price (USD)",
+    //   field: "U_PriceUSD",
+    //   sortable: true,
+    //   render: (value) => `$${value.toFixed(2)}`,
+    // },
     {
       label: "Item Type",
       field: "ItemType",
@@ -241,7 +238,9 @@ export default function ProductsTable({
 
   // Handle Excel download
   const handleExcelDownload = () => {
-    downloadExcel(products, "Products");
+    // Exclude pricing-related columns from the Excel export
+    const exportColumns = columns.filter(col => !["U_Quantity", "U_UOM", "U_Price", "U_PriceUSD"].includes(col.field));
+    downloadExcel(products, "Products", exportColumns);
   };
 
   return (
