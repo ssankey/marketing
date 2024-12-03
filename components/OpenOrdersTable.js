@@ -1,5 +1,5 @@
 import React from 'react';
-import { Container, Row, Col, Spinner } from 'react-bootstrap';
+import { Container, Row, Col, Spinner, Badge } from 'react-bootstrap';
 import GenericTable from './GenericTable';
 import TableFilters from './TableFilters';
 import TablePagination from './TablePagination';
@@ -12,7 +12,13 @@ import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 
-const OpenOrdersTable = ({ orders, totalItems, isLoading = false }) => {
+const OpenOrdersTable = ({
+  orders,
+  totalItems,
+  isLoading = false,
+  inStockCount,      // New prop
+  outOfStockCount,   // New prop
+}) => {
   
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(
@@ -115,6 +121,19 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false }) => {
 
   return (
     <Container fluid>
+      {/* Display Stock Status Counts */}
+      <Row className="mb-3">
+        <Col className="d-flex justify-content-start align-items-center">
+          <Badge bg="success" className="me-2">
+            In Stock: {inStockCount}
+          </Badge>
+          <Badge bg="danger">
+            Out of Stock: {outOfStockCount}
+          </Badge>
+        </Col>
+      </Row>
+
+      {/* Table Filters */}
       <TableFilters
         searchConfig={{
           enabled: true,
@@ -139,6 +158,8 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false }) => {
         totalItems={totalItems}
         totalItemsLabel="Total Open Orders"
       />
+
+      {/* Loading Spinner */}
       {isLoading ? (
         <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
           <div className="text-center">
@@ -148,6 +169,7 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false }) => {
         </div>
       ) : (
         <>
+          {/* Generic Table */}
           <GenericTable
             columns={columns}
             data={orders}
@@ -156,18 +178,22 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false }) => {
             sortDirection={sortDirection}
             onExcelDownload={handleExcelDownload}
           />
+
+          {/* No Orders Found Message */}
           {orders.length === 0 && (
             <div className="text-center py-4">No open orders found.</div>
           )}
         </>
       )}
 
+      {/* Pagination Controls */}
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={onPageChange}
       />
 
+      {/* Page Indicator */}
       <Row className="mb-2">
         <Col className="text-center">
           <h5>

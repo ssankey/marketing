@@ -139,13 +139,29 @@ export async function getServerSideProps(context) {
       FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
     `;
 
-    const [totalResult, rawOrders] = await Promise.all([
+    // Get counts for In Stock and Out of Stock
+    const statusCountQuery = `
+      SELECT 
+        SUM(CASE WHEN T3.OnHand >= T1.OpenQty THEN 1 ELSE 0 END) AS inStockCount,
+        SUM(CASE WHEN T3.OnHand < T1.OpenQty THEN 1 ELSE 0 END) AS outOfStockCount
+      FROM ORDR T0
+      INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
+      LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
+      WHERE ${whereClause};
+    `;
+    console.log('statusCountQuery',statusCountQuery);
+    
+    // Execute all queries in parallel
+    const [totalResult, rawOrders, statusCounts] = await Promise.all([
       getOrders(countQuery),
       getOrders(dataQuery),
+      getOrders(statusCountQuery),
     ]);
 
     // Process data and return as props
     const totalItems = totalResult[0]?.total || 0;
+    const inStockCount = statusCounts[0]?.inStockCount || 0;
+    const outOfStockCount = statusCounts[0]?.outOfStockCount || 0;
     const orders = rawOrders.map((order) => ({
       ...order,
       DocDate: order.DocDate ? order.DocDate.toISOString() : null,
@@ -158,6 +174,8 @@ export async function getServerSideProps(context) {
       props: {
         orders: Array.isArray(orders) ? orders : [],
         totalItems,
+        inStockCount,
+        outOfStockCount,
       },
     };
   } catch (error) {
@@ -166,6 +184,8 @@ export async function getServerSideProps(context) {
       props: {
         orders: [],
         totalItems: 0,
+        inStockCount: 0,
+        outOfStockCount: 0,
       },
     };
   }

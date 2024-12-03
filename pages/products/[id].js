@@ -6,15 +6,9 @@ import { getProductDetail, getProductKPIs } from "../../lib/models/products";
 import { useAuth } from '../../hooks/useAuth';
 import { Line, Bar } from 'react-chartjs-2';
 import 'chart.js/auto'; // Required for Chart.js 3.x and above
+import { formatDate } from "utils/formatDate";
 
-function formatDate(dateString) {
-  if (!dateString) return "N/A";
-  const date = new Date(dateString);
-  const options = { day: "2-digit", month: "short", year: "numeric" };
-  return date.toLocaleDateString("en-GB", options);
-}
-
-export default function ProductDetails({ product, kpiData, salesTrendData, topCustomersData, inventoryData, pricingHistoryData }) {
+export default function ProductDetails({ product, kpiData, salesTrendData, topCustomersData, inventoryData }) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -36,14 +30,14 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
 
   // Prepare data for sales trend chart
   const salesTrendLabels = salesTrendData.map(item => item.Month);
-  const salesTrendRevenue = salesTrendData.map(item => item.MonthlyRevenue);
-  const salesTrendUnits = salesTrendData.map(item => item.MonthlyUnitsSold);
+  const salesTrendRevenue = salesTrendData.map(item => Number(item.MonthlyRevenue));
+  const salesTrendUnits = salesTrendData.map(item => Number(item.MonthlyUnitsSold));
 
   const salesTrendChartData = {
     labels: salesTrendLabels,
     datasets: [
       {
-        label: 'Revenue ($)',
+        label: 'Revenue (₹)',
         data: salesTrendRevenue,
         borderColor: '#007bff',
         backgroundColor: 'rgba(0, 123, 255, 0.5)',
@@ -61,7 +55,7 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
 
   // Prepare data for inventory levels
   const inventoryLevels = inventoryData.map(item => item.Location);
-  const inventoryQuantities = inventoryData.map(item => item.Quantity);
+  const inventoryQuantities = inventoryData.map(item => Number(item.Quantity));
 
   const inventoryChartData = {
     labels: inventoryLevels,
@@ -74,22 +68,16 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
     ],
   };
 
-  // Prepare data for pricing history
-  // const pricingLabels = pricingHistoryData.map(item => formatDate(item.Date));
-  // const pricingValues = pricingHistoryData.map(item => item.Price);
-
-  // const pricingChartData = {
-  //   labels: pricingLabels,
-  //   datasets: [
-  //     {
-  //       label: 'Price ($)',
-  //       data: pricingValues,
-  //       borderColor: '#dc3545',
-  //       backgroundColor: 'rgba(220, 53, 69, 0.5)',
-  //       fill: false,
-  //     },
-  //   ],
-  // };
+  // Chart options to ensure visibility
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+    },
+  };
 
   return (
     <Container className="mt-4">
@@ -141,7 +129,7 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                 <tbody>
                   <tr>
                     <th>Total Revenue Generated</th>
-                    <td>${Number(kpiData.TotalRevenue).toLocaleString()}</td>
+                    <td>₹{Number(kpiData.TotalRevenue).toLocaleString()}</td>
                   </tr>
                   <tr>
                     <th>Units Sold</th>
@@ -160,8 +148,8 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
           <Row className="mb-4">
             <Col>
               <h4>Sales Trend</h4>
-              <Card className="p-3">
-                <Line data={salesTrendChartData} />
+              <Card className="p-3" style={{ height: '400px' }}>
+                <Line data={salesTrendChartData} options={chartOptions} />
               </Card>
             </Col>
           </Row>
@@ -175,7 +163,7 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                   <tr>
                     <th>Customer Code</th>
                     <th>Customer Name</th>
-                    <th>Total Spent ($)</th>
+                    <th>Total Spent (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -184,7 +172,7 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                       <tr key={customer.CustomerCode}>
                         <td>{customer.CustomerCode}</td>
                         <td>{customer.CustomerName}</td>
-                        <td>${Number(customer.TotalSpent).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td>₹{Number(customer.TotalSpent).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
@@ -201,8 +189,8 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
           <Row className="mb-4">
             <Col>
               <h4>Inventory Levels</h4>
-              <Card className="p-3">
-                <Bar data={inventoryChartData} />
+              <Card className="p-3" style={{ height: '400px' }}>
+                <Bar data={inventoryChartData} options={chartOptions} />
               </Card>
               <Table striped bordered hover className="mt-3">
                 <thead>
@@ -230,7 +218,8 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
           </Row>
 
           {/* Pricing History */}
-          {/* <Row className="mb-4">
+          {/* Uncomment and update if you decide to include pricing history
+          <Row className="mb-4">
             <Col>
               <h4>Pricing History</h4>
               <Card className="p-3">
@@ -240,7 +229,7 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                 <thead>
                   <tr>
                     <th>Date</th>
-                    <th>Price ($)</th>
+                    <th>Price (₹)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -248,7 +237,7 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                     pricingHistoryData.map((price, index) => (
                       <tr key={index}>
                         <td>{formatDate(price.Date)}</td>
-                        <td>${Number(price.Price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td>₹{Number(price.Price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                       </tr>
                     ))
                   ) : (
@@ -259,7 +248,8 @@ export default function ProductDetails({ product, kpiData, salesTrendData, topCu
                 </tbody>
               </Table>
             </Col>
-          </Row> */}
+          </Row> 
+          */}
 
           {/* Additional Information */}
           <Row className="mb-4">
@@ -326,18 +316,12 @@ export async function getServerSideProps(context) {
 
     const { kpiData, salesTrendData, topCustomersData, inventoryData } = await getProductKPIs(id);
 
-    // Serialize date fields in kpiData, salesTrendData, topCustomersData, inventoryData, and pricingHistoryData if necessary
-    const serializedKPIData = serializeDates(kpiData);
+    // Serialize date fields in kpiData, salesTrendData, topCustomersData, inventoryData if necessary
+    const serializedKPIData = kpiData ? serializeDates(kpiData) : null;
 
-    const serializedSalesTrendData = salesTrendData.map(item => serializeDates(item));
-    const serializedTopCustomersData = topCustomersData.map(item => serializeDates(item));
-    const serializedInventoryData = inventoryData.map(item => serializeDates(item));
-    // const serializedPricingHistoryData = pricingHistoryData.map(item => serializeDates(item));
-
-    console.log("Sales Trend Data:", salesTrendData);
-    console.log("Top Customers Data:", topCustomersData);
-    console.log("Inventory Data:", inventoryData);
-    // console.log("Pricing History Data:", pricingHistoryData);
+    const serializedSalesTrendData = salesTrendData ? salesTrendData.map(item => serializeDates(item)) : [];
+    const serializedTopCustomersData = topCustomersData ? topCustomersData.map(item => serializeDates(item)) : [];
+    const serializedInventoryData = inventoryData ? inventoryData.map(item => serializeDates(item)) : [];
 
     return {
       props: {
@@ -346,7 +330,7 @@ export async function getServerSideProps(context) {
         salesTrendData: serializedSalesTrendData,
         topCustomersData: serializedTopCustomersData,
         inventoryData: serializedInventoryData,
-        // pricingHistoryData: serializedPricingHistoryData,
+        // pricingHistoryData: [], // If you include pricing history
       },
     };
   } catch (error) {

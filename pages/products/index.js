@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
 import ProductsTable from "components/ProductsTable";
-import { getProducts } from "lib/models/products";
 import { useRouter } from "next/router";
-import sql from 'mssql'; // Import sql for parameter types
+
 export default function ProductsPage({
   products,
   totalItems,
@@ -13,7 +12,7 @@ export default function ProductsPage({
   search,
   sortField,
   sortDir,
-  error, // New prop for error handling
+  error,
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -61,120 +60,38 @@ ProductsPage.seo = {
 
 export async function getServerSideProps(context) {
   try {
-    const {
-      page = "1",
-      search = "",
-      sortField = "T0.[ItemCode]",
-      sortDir = "asc",
-    } = context.query;
+    const { query } = context;
+    const { page = "1", search = "", sortField = "T0.[ItemCode]", sortDir = "asc" } = query;
 
-    const ITEMS_PER_PAGE = 20;
-    const pageNumber = parseInt(page, 10);
-    const validPageNumber = Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
-    const offset = (validPageNumber - 1) * ITEMS_PER_PAGE;
+    // Construct the absolute URL for the API endpoint
+    const protocol = context.req.headers['x-forwarded-proto'] || 'http';
+    const host = context.req.headers['host'];
+    const baseUrl = `${protocol}://${host}`;
 
-    let whereClause = "1=1";
-    
-    // Parameters for countQuery
-    const countParams = [];
-    
-    // Parameters for dataQuery
-    const dataParams = [];
+    const params = new URLSearchParams({
+      page,
+      search,
+      sortField,
+      sortDir,
+    });
 
-    if (search) {
-      whereClause += ` AND (
-        T0.[ItemCode] LIKE @search OR 
-        T0.[ItemName] LIKE @search
-      )`;
-      
-      // Add parameters to both countParams and dataParams
-      const searchParam = { name: 'search', type: sql.VarChar, value: `%${search}%` };
-      countParams.push(searchParam);
-      dataParams.push(searchParam);
+    const response = await fetch(`${baseUrl}/api/products?${params.toString()}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products: ${response.status}`);
     }
 
-    // Count Query with alias
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM [dbo].[OITM] T0
-      WHERE ${whereClause};
-    `;
-
-    // Data Query with parameters
-    const dataQuery = `
-      SELECT 
-        T0.[ItemCode] AS Cat_size_main,
-        T0.[ItemName] AS english,
-        T0.[U_ALTCAT] AS Cat_No,
-        T0.[U_CasNo] AS Cas,
-        T0.[U_MolucularFormula],
-        T0.[U_MolucularWeight],
-        T0.[U_MSDS],
-        T5.[U_COA],
-        T0.[U_Purity],
-        T0.[U_Smiles],
-        T1.[ItmsGrpNam],
-        T0.[U_WebsiteDisplay],
-        T0.[U_MeltingPoint],
-        T0.[U_BoilingPoint],
-        T0.[U_Appearance],
-        T0.[U_UNNumber],
-        T2.[OnHand] AS Stock_In_India,
-        T0.U_ChinaStock AS Stock_In_China,
-        T4.[U_Quantity],
-        T4.[U_UOM],
-        T4.[U_Price],
-        T4.[U_PriceUSD],
-        T0.[ItemType],
-        T0.[validFor],
-        T0.[validFrom],
-        T0.[validTo],
-        T0.[CreateDate],
-        T0.[UpdateDate],
-        T0.[U_IUPACName],
-        T0.[U_Synonyms],
-        T0.[U_Applications],
-        T0.[U_Structure]
-      FROM [dbo].[OITM] T0
-      INNER JOIN [dbo].[OITB] T1 ON T0.[ItmsGrpCod] = T1.[ItmsGrpCod]
-      INNER JOIN [dbo].[OITW] T2 ON T0.[ItemCode] = T2.[ItemCode]
-      INNER JOIN [dbo].[@PRICING_H] T3 ON T0.[ItemCode] = T3.[U_Code]
-      INNER JOIN [dbo].[@PRICING_R] T4 ON T3.[DocEntry] = T4.[DocEntry] AND T3.[U_Code] = T4.[U_Code]
-      LEFT JOIN [dbo].[OBTN] T5 ON T0.[ItemCode] = T5.[ItemCode]
-      WHERE ${whereClause}
-      ORDER BY ${sortField} ${sortDir}
-      OFFSET @offset ROWS
-      FETCH NEXT @limit ROWS ONLY;
-    `;
-
-    // Add pagination parameters to dataParams
-    dataParams.push(
-      { name: 'offset', type: sql.Int, value: offset },
-      { name: 'limit', type: sql.Int, value: ITEMS_PER_PAGE }
-    );
-
-    // Execute both queries in parallel
-    const [totalResult, rawProducts] = await Promise.all([
-      getProducts(countQuery, countParams),
-      getProducts(dataQuery, dataParams),
-    ]);
-
-    const totalItems = parseInt(totalResult[0]?.total || "0", 10);
-    const products = rawProducts.map((product) => ({
-      ...product,
-      CreateDate: product.CreateDate
-        ? new Date(product.CreateDate).toISOString()
-        : null,
-      UpdateDate: product.UpdateDate
-        ? new Date(product.UpdateDate).toISOString()
-        : null,
-    }));
+    const data = await response.json();
 
     return {
       props: {
-        products: Array.isArray(products) ? products : [],
-        totalItems,
-        currentPage: validPageNumber,
+        products: data.products || [],
+        totalItems: data.totalItems || 0,
+        currentPage: data.currentPage || 1,
+        search,
+        sortField,
+        sortDir,
+        error: data.error || null,
       },
     };
   } catch (error) {
@@ -184,7 +101,10 @@ export async function getServerSideProps(context) {
         products: [],
         totalItems: 0,
         currentPage: 1,
-        error: "Failed to fetch products"
+        search: "",
+        sortField: "T0.[ItemCode]",
+        sortDir: "asc",
+        error: "Failed to fetch products",
       },
     };
   }

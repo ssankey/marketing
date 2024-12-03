@@ -113,12 +113,12 @@ const OrderDetails = ({ order }) => {
                                         <strong>Discount Total:</strong> {formatCurrency(order.DiscountTotal)}
                                     </p>
                                     <p>
-                                        <strong>Shipping Fee:</strong> {formatCurrency(order.ShippingFee)} {order.DocCur}
+                                        <strong>Shipping Fee:</strong> {formatCurrency(order.ShippingFee)} 
                                     </p>
                                 </Col>
                                 <Col md={4}>
                                     <p>
-                                        <strong>Total Amount:</strong> {formatCurrency(order.DocTotal)} {order.DocCur}
+                                        <strong>Total Amount:</strong> {formatCurrency(order.DocTotal)}
                                     </p>
                                     <p>
                                         <strong>Payment Terms:</strong> {order.PaymentTerms || 'N/A'}

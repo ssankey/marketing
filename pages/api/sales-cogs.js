@@ -1,10 +1,10 @@
 import { queryDatabase } from '../../lib/db'; // Adjust the import path
 
 export default async function handler(req, res) {
-    const { customerId, productId, salesPersonId, categoryid } = req.query; // Added category to req.query
+    const { customerId, productId, salesPersonId, categoryid } = req.query;
     console.log(salesPersonId);
     
-    let whereClause = 'WHERE T1.LineTotal <> 0'; // Base condition
+    let whereClause = `WHERE T0.DOCTOTAL <> 0 AND T0.CANCELED <> 'N' `; // Base condition
     if (customerId) whereClause += ` AND T2.CardCode = '${customerId}'`;
     if (productId) whereClause += ` AND T1.ItemCode = '${productId}'`;
     if (salesPersonId) whereClause += ` AND T0.SlpCode = '${salesPersonId}'`;
@@ -12,10 +12,10 @@ export default async function handler(req, res) {
 
     const query = `
         SELECT 
-            FORMAT(T0.DocDate, 'MMM yyyy') as month,
-            SUM(T1.LineTotal) as sales,
-            SUM(T1.GrossBuyPr * T1.Quantity) as cogs,
-            SUM(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) as grossMargin
+            FORMAT(T0.DocDate, 'MMM yyyy') AS month,
+            SUM(T0.DOCTOTAL) AS sales, -- Changed from T1.DOCTOTAL to T0.DOCTOTAL
+            SUM(T1.GrossBuyPr * T1.Quantity) AS cogs,
+            SUM(T0.DOCTOTAL - (T1.GrossBuyPr * T1.Quantity)) AS grossMargin -- Changed to use T0.DOCTOTAL
         FROM OINV T0
         INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
         INNER JOIN OCRD T2 ON T0.CardCode = T2.CardCode
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     `;
 
     try {
-        console.log('cogssss',query);
+        console.log('Executing Query:', query);
         
         const results = await queryDatabase(query);
 

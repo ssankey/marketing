@@ -84,8 +84,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       field: "DocTotal",
       label: "Total Amount",
       render: (value, row) => {
-        const amountInINR = row.DocCur === "INR" ? value : value * row.ExchangeRate;
-        return formatCurrency(amountInINR);
+        return formatCurrency(value);
       },
     },
     {
