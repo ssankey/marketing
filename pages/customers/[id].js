@@ -373,7 +373,7 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
                       </div>
                       <div>
                         <i className="bi bi-calendar me-1"></i>
-                        NetAmount : {invoice.NetAmount}
+                        NetAmount : {formatCurrency(invoice.NetAmount)}
                       </div>
                       <div className="fw-bold mt-2">
                         Status:{" "}

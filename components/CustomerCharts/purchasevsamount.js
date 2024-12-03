@@ -14,6 +14,8 @@ import {
   Legend,
   LineElement,
 } from "chart.js";
+// import { callback } from "chart.js/dist/helpers/helpers.core";
+import { callback } from "chart.js/helpers";
 
 // Register chart.js components
 ChartJS.register(
@@ -92,9 +94,14 @@ const PurchasesAmountChart = ({ data }) => {
         titleFont: { size: 14, weight: "bold" },
         bodyFont: { size: 13 },
         padding: 12,
+        // callbacks: {
+        //   label: (tooltipItem) =>
+        //     `${tooltipItem.dataset.label}: ₹${tooltipItem.raw.toFixed(2)}`,
+        // },
         callbacks: {
-          label: (tooltipItem) =>
-            `${tooltipItem.dataset.label}: ₹${tooltipItem.raw.toFixed(2)}`,
+          label: (tooltipItem) => {
+            return formatCurrency(tooltipItem.raw);
+          }
         },
       },
     },
@@ -109,7 +116,10 @@ const PurchasesAmountChart = ({ data }) => {
         beginAtZero: true,
         grid: { color: "rgba(0, 0, 0, 0.05)" },
         ticks: {
-          callback: (value) => `₹${value.toFixed(0)}`,
+          // callback: (value) => `₹${value.toFixed(0)}`,
+          callback : (value) => {
+            return formatCurrency(value);
+          },
           font: { family: "'Inter', sans-serif", size: 12 },
         },
       },
