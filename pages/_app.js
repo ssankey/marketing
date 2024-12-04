@@ -67,7 +67,8 @@ function MyApp({ Component, pageProps }) {
     () =>
       router.pathname === '/login' ||
       router.pathname === '/signup' ||
-      router.pathname === '/forgot-password',
+      router.pathname === '/forgot-password'||
+      router.pathname === '/set-password',
     [router.pathname]
   );
 
