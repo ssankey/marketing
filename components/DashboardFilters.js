@@ -265,7 +265,7 @@ const DashboardFilters = ({
             ))}
           </ButtonGroup> */}
           <ButtonGroup size="sm">
-            {["today", "this Week", "this Month", "custom"].map((option) => (
+            {["today", "thisWeek", "thisMonth", "custom"].map((option) => (
               <Button
                 key={option}
                 variant={dateFilter === option ? "primary" : "outline-primary"}
@@ -274,18 +274,18 @@ const DashboardFilters = ({
               >
                 {option === "today" ? (
                   <FaCalendarDay />
-                ) : option === "this Week" ? (
+                ) : option === "thisWeek" ? (
                   <FaCalendarWeek />
-                ) : option === "this Month" ? (
+                ) : option === "thisMonth" ? (
                   <FaCalendarAlt />
                 ) : (
                   <FaRegCalendarCheck />
                 )}
                 {option === "today"
                   ? "Today"
-                  : option === "this Week"
+                  : option === "thisWeek"
                   ? "This Week"
-                  : option === "this Month"
+                  : option === "thisMonth"
                   ? "This Month"
                   : "Custom"}
               </Button>
