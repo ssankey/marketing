@@ -14,7 +14,7 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
     totalItems,
     ITEMS_PER_PAGE
   );
-  const { searchTerm, sortField, sortDirection, handleSearch, handleSort } =
+  const { searchTerm, sortField, sortDirection, handleSearch, handleSort,handleReset } =
     useTableFilters();
 
   const columns = [
@@ -63,6 +63,7 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
         onSearch={handleSearch}
         searchTerm={searchTerm}
         totalItems={totalItems}
+        onReset={handleReset}
         totalItemsLabel="Total Customers"
       />
       {isLoading ? (

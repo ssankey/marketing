@@ -29,6 +29,7 @@ export default function ProductsTable({
     sortField,
     handleSearch,
     handleSort,
+    handleReset
   } = useTableFilters();
 
 
@@ -260,6 +261,7 @@ export default function ProductsTable({
           dateFilter={{ enabled: false }}
           onSearch={handleSearch}
           searchTerm={searchTerm}
+        onReset={handleReset}
           totalItems={totalItems}
           totalItemsLabel="Total Products"
         />
