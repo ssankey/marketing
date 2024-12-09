@@ -87,8 +87,22 @@ export default function ProductsTable({ products, totalItems, isLoading }) {
   ];
 
   // Handle Excel download
-  const handleExcelDownload = () => {
-    downloadExcel(products, "Products");
+  // const handleExcelDownload = () => {
+  //   downloadExcel(products, "Products");
+  // };
+  const handleExcelDownload = async () => {
+    try {
+      const response = await fetch("api/excel/getAllProducts");
+      const allProducts = await response.json();
+      if (allProducts && allProducts.length > 0) {
+        downloadExcel(allProducts, "Products");
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
 
   if (isLoading) {

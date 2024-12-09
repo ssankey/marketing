@@ -105,8 +105,23 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
   ];
   
   // Define handleExcelDownload function
-  const handleExcelDownload = () => {
-    downloadExcel(invoices, "Invoices");
+  // const handleExcelDownload = () => {
+  //   downloadExcel(invoices, "Invoices");
+  // };
+
+  const handleExcelDownload = async () => {
+    try {
+      const response = await fetch("api/excel/getAllInvoices");
+      const allInvoices = await response.json();
+      if (allInvoices && allInvoices.length > 0) {
+        downloadExcel(allInvoices, "Invoices");
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
 
   return (

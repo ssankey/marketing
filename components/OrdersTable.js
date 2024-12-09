@@ -123,8 +123,23 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
     }
   ];
   
-  const handleExcelDownload = () => {
-    downloadExcel(orders, "Orders");
+  // const handleExcelDownload = () => {
+  //   downloadExcel(orders, "Orders");
+  // };
+
+  const handleExcelDownload = async () => {
+    try {
+      const response = await fetch("api/excel/getAllOrders");
+      const allOrders = await response.json();
+      if (allOrders && allOrders.length > 0) {
+        downloadExcel(allOrders, "Orders");
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
 
   return (

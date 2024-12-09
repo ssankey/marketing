@@ -11,6 +11,7 @@ import useTableFilters from "hooks/useFilteredData";
 import StatusBadge from "./StatusBadge";
 import downloadExcel from "utils/exporttoexcel";
 
+
 const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(
@@ -88,9 +89,24 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     },
   ];
   // Define handleExcelDownload function
-  const handleExcelDownload = () => {
-    downloadExcel(quotations, "Quotations");
+  // const handleExcelDownload = () => {
+  //   downloadExcel(quotations, "Quotations");
+  // };
+  const handleExcelDownload = async () => {
+    try {
+      const response = await fetch("api/excel/getAllQuotations");
+      const allQuotations = await response.json();
+      if (allQuotations && allQuotations.length > 0) {
+        downloadExcel(allQuotations, "Quotations");
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
+
 
   return (
     <Container fluid>
