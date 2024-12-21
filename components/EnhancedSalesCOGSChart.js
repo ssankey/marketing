@@ -208,14 +208,14 @@ const EnhancedSalesCOGSChart = () => {
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
                     <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>Sales, COGS, and Gross Margin %</h4>
                     <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center  mt-3 mt-md-0">
-                        <SearchBar
+                        {/* <SearchBar
                             searchQuery={searchQuery}
                             setSearchQuery={setSearchQuery}
                             searchResults={searchResults}
                             handleSelectResult={handleSelectResult}
                             placeholder="Search customer or products or category"
                             onSearch={handleSearch}
-                        />
+                        /> */}
                         <div className="d-flex gap-2">
                             <Button
                                 variant="outline-secondary"

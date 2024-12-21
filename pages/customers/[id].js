@@ -450,114 +450,150 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
 }
 
 
-export async function getServerSideProps(context) {
-  const { id } = context.params;
-  const currentYear = new Date().getFullYear();
+// export async function getServerSideProps(context) {
+//   const { id } = context.params;
+//   const currentYear = new Date().getFullYear();
   
-  try {
-    // Ensure customer ID is provided
-    if (!id) {
-      throw new Error("Customer ID is required");
-    }
+//   try {
+//     // Ensure customer ID is provided
+//     if (!id) {
+//       throw new Error("Customer ID is required");
+//     }
 
-    const protocol = context.req.headers["x-forwarded-proto"] || "http";
-    const host = context.req.headers.host || "localhost:3000";
+//     const protocol = context.req.headers["x-forwarded-proto"] || "http";
+//     const host = context.req.headers.host || "localhost:3000";
 
-    // Fetch customer details
-    const customerUrl = `${protocol}://${host}/api/customers/${id}`;
-    const customerRes = await fetch(customerUrl);
+//     // Fetch customer details
+//     const customerUrl = `${protocol}://${host}/api/customers/${id}`;
+//     const customerRes = await fetch(customerUrl);
 
-    if (!customerRes.ok) {
-      throw new Error(
-        `Failed to fetch customer data: ${customerRes.statusText}`
-      );
-    }
+//     if (!customerRes.ok) {
+//       throw new Error(
+//         `Failed to fetch customer data: ${customerRes.statusText}`
+//       );
+//     }
 
-    const customerData = await customerRes.json();
-    const customer = Array.isArray(customerData)
-      ? customerData[0]
-      : customerData;
+//     const customerData = await customerRes.json();
+//     const customer = Array.isArray(customerData)
+//       ? customerData[0]
+//       : customerData;
 
-    if (!customer) {
-      throw new Error("Customer not found");
-    }
+//     if (!customer) {
+//       throw new Error("Customer not found");
+//     }
 
-    // Fetch purchase and revenue data
-    const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
-    const metricsRes = await fetch(metricsUrl);
+//     // Fetch purchase and revenue data
+//     const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
+//     const metricsRes = await fetch(metricsUrl);
 
-    if (!metricsRes.ok) {
-      throw new Error(
-        `Failed to fetch purchase metrics: ${metricsRes.statusText}`
-      );
-    }
+//     if (!metricsRes.ok) {
+//       throw new Error(
+//         `Failed to fetch purchase metrics: ${metricsRes.statusText}`
+//       );
+//     }
 
-    const purchaseData = await metricsRes.json();
-    console.log(purchaseData);
+//     const purchaseData = await metricsRes.json();
+//     console.log(purchaseData);
 
 
    
-    /****Top quotation  */
-    const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
-    const quotationRes = await fetch(topquotation);
-    console.log(id);
-    if (!quotationRes.ok) {
-      throw new Error(
-        `Failed to fetch top quotation: ${quotationRes.statusText}`
-      );
-    }
+//     /****Top quotation  */
+//     const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
+//     const quotationRes = await fetch(topquotation);
+//     console.log(id);
+//     if (!quotationRes.ok) {
+//       throw new Error(
+//         `Failed to fetch top quotation: ${quotationRes.statusText}`
+//       );
+//     }
 
-    const TopQuotationData = await quotationRes.json();
-    console.log(TopQuotationData);
+//     const TopQuotationData = await quotationRes.json();
+//     console.log(TopQuotationData);
 
-    /****Top Orders  */
-    const toporders = `${protocol}://${host}/api/customers/${id}?orders=true`;
-    const orderRes = await fetch(toporders);
+//     /****Top Orders  */
+//     const toporders = `${protocol}://${host}/api/customers/${id}?orders=true`;
+//     const orderRes = await fetch(toporders);
 
-    if (!orderRes.ok) {
-      throw new Error(
-        `Failed to fetch top orders: ${orderRes.statusText}`
-      );
-    }
+//     if (!orderRes.ok) {
+//       throw new Error(
+//         `Failed to fetch top orders: ${orderRes.statusText}`
+//       );
+//     }
 
-    const TopOrderData = await orderRes.json();
-    console.log(TopOrderData);
+//     const TopOrderData = await orderRes.json();
+//     console.log(TopOrderData);
 
-    /***Top Invoices */
+//     /***Top Invoices */
 
-    const topinvoices = `${protocol}://${host}/api/customers/${id}?invoices=true`;
-    const invoiceRes = await fetch(topinvoices);
+//     const topinvoices = `${protocol}://${host}/api/customers/${id}?invoices=true`;
+//     const invoiceRes = await fetch(topinvoices);
 
-    if (!invoiceRes.ok) {
-      throw new Error(`Failed to fetch top invoice ${invoiceRes.statusText}`);
-    }
+//     if (!invoiceRes.ok) {
+//       throw new Error(`Failed to fetch top invoice ${invoiceRes.statusText}`);
+//     }
 
-    const TopInvoiceData = await invoiceRes.json();
-    console.log(TopInvoiceData);
+//     const TopInvoiceData = await invoiceRes.json();
+//     console.log(TopInvoiceData);
 
+
+//     return {
+//       props: {
+//         customer,
+//         purchaseData,
+//         TopQuotationData,
+//         TopOrderData,
+//         TopInvoiceData,
+//       },
+//     };
+//   } catch (error) {
+//     console.error("Error in getServerSideProps:", error.message);
+
+//     return {
+//       props: {
+//         customer: null,
+//         purchaseData: null,
+//         TopQuotationData:null,
+//         TopOrderData:null,
+//         TopInvoiceData:null,
+//         error: error.message,
+//       },
+//     };
+//   }
+// } 
+
+export async function getServerSideProps(context) {
+  try {
+    const {
+      page = 1,
+      search = "",
+      sortField = "CardName",
+      sortDir = "asc",
+      status = "all",
+    } = context.query;
+
+    const protocol = context.req.headers["x-forwarded-proto"] || "http";
+    const host = context.req.headers.host || "localhost:3000";
+    const apiUrl = `${protocol}://${host}/api/customers`;
+
+    const response = await fetch(
+      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
+    );
+    const { customers, totalItems } = await response.json();
 
     return {
       props: {
-        customer,
-        purchaseData,
-        TopQuotationData,
-        TopOrderData,
-        TopInvoiceData,
+        customers: customers || [],
+        totalItems,
+        currentPage: parseInt(page, 10),
       },
     };
   } catch (error) {
-    console.error("Error in getServerSideProps:", error.message);
-
+    console.error("Error fetching customers:", error);
     return {
       props: {
-        customer: null,
-        purchaseData: null,
-        TopQuotationData:null,
-        TopOrderData:null,
-        TopInvoiceData:null,
-        error: error.message,
+        customers: [],
+        totalItems: 0,
       },
     };
   }
-} 
-
+}

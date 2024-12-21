@@ -4,7 +4,7 @@ import InvoicesTable from 'components/InvoicesTable';
 import { useRouter } from 'next/router';
 import { useAuth } from 'hooks/useAuth';
 import { Spinner } from 'react-bootstrap';
-import { getInvoices } from 'lib/models/invoices';
+// import { getInvoices } from 'lib/models/invoices';
 
 export default function InvoicesPage({ invoices: initialInvoices, totalItems: initialTotalItems }) {
   const { isAuthenticated, isLoading: authLoading } = useAuth(); // Renamed for clarity
@@ -67,211 +67,173 @@ InvoicesPage.seo = {
   keywords: "invoices, billing, management, density",
 };
 
-export async function getServerSideProps(context) {
-  try {
-    const { 
-      page = 1, 
-      search = '', 
-      status = 'all',
-      fromDate,
-      toDate
-    } = context.query;
+// export async function getServerSideProps(context) {
+//   try {
+//     const { 
+//       page = 1, 
+//       search = '', 
+//       status = 'all',
+//       fromDate,
+//       toDate
+//     } = context.query;
 
-    // Set default sorting parameters
-    const sortField = 'DocDate';
-    const sortDir = 'desc';
+//     // Set default sorting parameters
+//     const sortField = 'DocDate';
+//     const sortDir = 'desc';
 
-    const ITEMS_PER_PAGE = 20;
-    const offset = (parseInt(page, 10) - 1) * ITEMS_PER_PAGE;
+//     const ITEMS_PER_PAGE = 20;
+//     const offset = (parseInt(page, 10) - 1) * ITEMS_PER_PAGE;
 
-    let whereClause = '1=1';
+//     let whereClause = '1=1';
 
-    if (search) {
-      whereClause += ` AND (
-        T0.DocNum LIKE '%${search}%' OR 
-        T0.CardName LIKE '%${search}%' OR 
-        T0.NumAtCard LIKE '%${search}%'
-      )`;
-    }
+//     if (search) {
+//       whereClause += ` AND (
+//         T0.DocNum LIKE '%${search}%' OR 
+//         T0.CardName LIKE '%${search}%' OR 
+//         T0.NumAtCard LIKE '%${search}%'
+//       )`;
+//     }
 
-    if (status !== 'all') {
-      whereClause += ` AND (
-        CASE 
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'closed'
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'canceled'
-          WHEN T0.DocStatus='O' THEN 'open'
-          ELSE 'NA'
-        END = '${status}'
-      )`;
-    }
+//     if (status !== 'all') {
+//       whereClause += ` AND (
+//         CASE 
+//           WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'closed'
+//           WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'canceled'
+//           WHEN T0.DocStatus='O' THEN 'open'
+//           ELSE 'NA'
+//         END = '${status}'
+//       )`;
+//     }
 
-    if (fromDate) {
-      whereClause += ` AND T0.DocDate >= '${fromDate}'`;
-    }
-    if (toDate) {
-      whereClause += ` AND T0.DocDate <= '${toDate}'`;
-    }
+//     if (fromDate) {
+//       whereClause += ` AND T0.DocDate >= '${fromDate}'`;
+//     }
+//     if (toDate) {
+//       whereClause += ` AND T0.DocDate <= '${toDate}'`;
+//     }
 
-    const countQuery = `
-      SELECT COUNT(DISTINCT T0.DocEntry) as total
-      FROM OINV T0
-      INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-      WHERE ${whereClause};
-    `;
-
-    const dataQuery = `
-  SELECT 
-    CASE 
-      WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
-      WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Canceled'
-      WHEN T0.DocStatus='O' THEN 'Open' 
-      ELSE 'NA' 
-    END AS DocStatus,
-    T0.DocEntry,
-    T0.DocNum,
-    T0.DocDate,
-    T0.NumAtCard AS CustomerPONo,
-    T0.TaxDate AS PODate,
-    T0.DocDueDate,
-    T0.CardName,
-    -- Calculate InvoiceTotal based on the logic for Invoice or Credit Note
-    CASE 
-      WHEN T0.CurSource='L' AND T0.DpmAmnt <> 0 THEN (T0.DpmAmnt + T0.DpmVat) 
-      ELSE T0.DocTotal 
-    END AS InvoiceTotal,
-    T0.DocCur,
-    T0.DocRate,
-    T5.SlpName AS SalesEmployee,
-    CASE 
-      WHEN T1.Country = 'IN' THEN 'Domestic' 
-      ELSE 'Export' 
-    END AS TradeType,
-    T1.GroupCode,
-    (SELECT GroupName FROM OCRG WHERE GroupCode = T1.GroupCode) AS [CustomerGroup],
-    T0.ShipToCode,
-    (SELECT TOP 1 GSTRegnNo FROM CRD1 WHERE CardCode = T0.CardCode AND AdresType='S' AND Address = T0.ShipToCode) AS GSTIN,
-    T0.Comments
-  FROM OINV T0
-  INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-  INNER JOIN OCRD T1 ON T0.CardCode = T1.CardCode
-  WHERE ${whereClause}
-  ORDER BY ${sortField} ${sortDir}
-  OFFSET ${offset} ROWS
-  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-`;
+//     const countQuery = `
+//       SELECT COUNT(DISTINCT T0.DocEntry) as total
+//       FROM OINV T0
+//       INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
+//       WHERE ${whereClause};
+//     `;
 
 //     const dataQuery = `
-//   SELECT * FROM (
-//     SELECT 
-//       'IN' AS [Type],
-//       CASE 
-//         WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
-//         WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Canceled'
-//         WHEN T0.DocStatus='O' THEN 'Open' 
-//         ELSE 'NA' 
-//       END AS DocStatus,
-//       T0.DocEntry,
-//       T0.DocNum,
-//       T0.DocDate,
-//       T0.NumAtCard AS CustomerPONo,
-//       T0.TaxDate AS PODate,
-//       T0.DocDueDate,
-//       T0.CardName,
-//       -- Calculate Invoice Total as per your first query logic
-//       CASE 
-//         WHEN T0.CurSource='L' AND T0.DpmAmnt <> 0 THEN (T0.DpmAmnt + T0.DpmVat) 
-//         ELSE T0.DocTotal 
-//       END AS InvoiceTotal,
-//       T0.DocCur,
-//       T0.DocRate,
-//       T5.SlpName AS SalesEmployee,
-//       CASE 
-//         WHEN T1.Country = 'IN' THEN 'Domestic' 
-//         ELSE 'Export' 
-//       END AS TradeType,
-//       T1.GroupCode,
-//       (SELECT GroupName FROM OCRG WHERE GroupCode = T1.GroupCode) AS [CustomerGroup],
-//       T0.ShipToCode,
-//       (SELECT TOP 1 GSTRegnNo FROM CRD1 WHERE CardCode = T0.CardCode AND AdresType='S' AND Address = T0.ShipToCode) AS GSTIN,
-//       T0.Comments
-//     FROM OINV T0
-//     INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-//     INNER JOIN OCRD T1 ON T0.CardCode = T1.CardCode
-//     WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
-
-//     UNION ALL
-
-//     SELECT 
-//       'CN' AS [Type],
-//       CASE 
-//         WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
-//         WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Canceled'
-//         WHEN T0.DocStatus='O' THEN 'Open' 
-//         ELSE 'NA' 
-//       END AS DocStatus,
-//       T0.DocEntry,
-//       T0.DocNum,
-//       T0.DocDate,
-//       T0.NumAtCard AS CustomerPONo,
-//       T0.TaxDate AS PODate,
-//       T0.DocDueDate,
-//       T0.CardName,
-//       -- For Credit Notes, make InvoiceTotal negative
-//       -CASE 
-//         WHEN T0.CurSource='L' THEN T0.DocTotal 
-//         ELSE T0.DocTotalFC 
-//       END AS InvoiceTotal,
-//       T0.DocCur,
-//       T0.DocRate,
-//       T5.SlpName AS SalesEmployee,
-//       CASE 
-//         WHEN T1.Country = 'IN' THEN 'Domestic' 
-//         ELSE 'Export' 
-//       END AS TradeType,
-//       T1.GroupCode,
-//       (SELECT GroupName FROM OCRG WHERE GroupCode = T1.GroupCode) AS [CustomerGroup],
-//       T0.ShipToCode,
-//       (SELECT TOP 1 GSTRegnNo FROM CRD1 WHERE CardCode = T0.CardCode AND AdresType='S' AND Address = T0.ShipToCode) AS GSTIN,
-//       T0.Comments
-//     FROM ORIN T0
-//     INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-//     INNER JOIN OCRD T1 ON T0.CardCode = T1.CardCode
-//     WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
-//   ) AS A
+//   SELECT 
+//     CASE 
+//       WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
+//       WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Canceled'
+//       WHEN T0.DocStatus='O' THEN 'Open' 
+//       ELSE 'NA' 
+//     END AS DocStatus,
+//     T0.DocEntry,
+//     T0.DocNum,
+//     T0.DocDate,
+//     T0.NumAtCard AS CustomerPONo,
+//     T0.TaxDate AS PODate,
+//     T0.DocDueDate,
+//     T0.CardName,
+//     -- Calculate InvoiceTotal based on the logic for Invoice or Credit Note
+//     CASE 
+//       WHEN T0.CurSource='L' AND T0.DpmAmnt <> 0 THEN (T0.DpmAmnt + T0.DpmVat) 
+//       ELSE T0.DocTotal 
+//     END AS InvoiceTotal,
+//     T0.DocCur,
+//     T0.DocRate,
+//     T5.SlpName AS SalesEmployee,
+//     CASE 
+//       WHEN T1.Country = 'IN' THEN 'Domestic' 
+//       ELSE 'Export' 
+//     END AS TradeType,
+//     T1.GroupCode,
+//     (SELECT GroupName FROM OCRG WHERE GroupCode = T1.GroupCode) AS [CustomerGroup],
+//     T0.ShipToCode,
+//     (SELECT TOP 1 GSTRegnNo FROM CRD1 WHERE CardCode = T0.CardCode AND AdresType='S' AND Address = T0.ShipToCode) AS GSTIN,
+//     T0.Comments
+//   FROM OINV T0
+//   INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
+//   INNER JOIN OCRD T1 ON T0.CardCode = T1.CardCode
 //   WHERE ${whereClause}
 //   ORDER BY ${sortField} ${sortDir}
 //   OFFSET ${offset} ROWS
 //   FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
 // `;
 
-    const [totalResult, rawInvoices] = await Promise.all([
-      getInvoices(countQuery),
-      getInvoices(dataQuery),
-    ]);
 
-    const totalItems = totalResult[0]?.total || 0;
-    const invoices = rawInvoices.map((invoice) => ({
-      ...invoice,
-      DocDate: invoice.DocDate ? invoice.DocDate.toISOString() : null,
-      PODate: invoice.PODate ? invoice.PODate.toISOString() : null,
-      DocDueDate: invoice.DocDueDate ? invoice.DocDueDate.toISOString() : null,
-    }));
+
+//     const [totalResult, rawInvoices] = await Promise.all([
+//       getInvoices(countQuery),
+//       getInvoices(dataQuery),
+//     ]);
+
+//     const totalItems = totalResult[0]?.total || 0;
+//     const invoices = rawInvoices.map((invoice) => ({
+//       ...invoice,
+//       DocDate: invoice.DocDate ? invoice.DocDate.toISOString() : null,
+//       PODate: invoice.PODate ? invoice.PODate.toISOString() : null,
+//       DocDueDate: invoice.DocDueDate ? invoice.DocDueDate.toISOString() : null,
+//     }));
+
+//     return {
+//       props: {
+//         invoices: Array.isArray(invoices) ? invoices : [],
+//         totalItems,
+//         currentPage: parseInt(page, 10),
+//       },
+//     };
+//   } catch (error) {
+//     console.error('Error fetching invoices:', error);
+//     return {
+//       props: {
+//         invoices: [],
+//         totalItems: 0,
+//         currentPage: 1,
+//         error: 'Failed to fetch invoices',
+//       },
+//     };
+//   }
+// }
+
+
+
+export async function getServerSideProps(context) {
+  try {
+    const {
+      page = 1,
+      search = "",
+      status = "all",
+      fromDate,
+      toDate,
+    } = context.query;
+
+    const protocol = context.req.headers["x-forwarded-proto"] || "http";
+    const host = context.req.headers.host || "localhost:3000";
+    const apiUrl = `${protocol}://${host}/api/invoices`;
+
+    // Fetch invoices via API
+    const response = await fetch(
+      `${apiUrl}?page=${page}&search=${search}&status=${status}&fromDate=${
+        fromDate || ""
+      }&toDate=${toDate || ""}`
+    );
+    const data = await response.json();
 
     return {
       props: {
-        invoices: Array.isArray(invoices) ? invoices : [],
-        totalItems,
+        invoices: data.invoices || [],
+        totalItems: data.totalItems || 0,
         currentPage: parseInt(page, 10),
       },
     };
   } catch (error) {
-    console.error('Error fetching invoices:', error);
+    console.error("Error fetching invoices:", error);
     return {
       props: {
         invoices: [],
         totalItems: 0,
         currentPage: 1,
-        error: 'Failed to fetch invoices',
+        error: "Failed to fetch invoices",
       },
     };
   }

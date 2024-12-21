@@ -1,7 +1,11 @@
-// src/components/OpenClosedOrdersChart.js
+
+
+
 import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import { Card, Button, Spinner } from "react-bootstrap";
+import { useRouter } from "next/router";
+import { useRef } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -11,8 +15,9 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import SearchBar from './SearchBar';
-import useDebounce from '../hooks/useDebounce';
+import SearchBar from "./SearchBar";
+import useDebounce from "../hooks/useDebounce";
+import {  getElementsAtEvent } from "react-chartjs-2";
 
 // Register ChartJS components
 ChartJS.register(
@@ -26,11 +31,11 @@ ChartJS.register(
 
 const OrdersChart = () => {
   const [ordersData, setOrdersData] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [filters, setFilters] = useState({
     customer: null,
-    region: null
+    region: null,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,79 +46,123 @@ const OrdersChart = () => {
     primary: "#0d6efd",
     orderLine: "#198754",
   };
+  const chartRef = useRef(null);
+  const router = useRouter();
+
+  const handleBarClick = (event) => {
+    // Get clicked elements from the chart instance
+    // const elements = getElementsAtEvent(chartRef.current, event);
+    const elements = chartRef.current.getElementsAtEventForMode(
+      event,
+      "nearest",
+      { intersect: true },
+      true
+    );
+
+    if (!elements || elements.length === 0) return; // No element clicked, exit
+
+    const { datasetIndex, index } = elements[0]; // Get the clicked bar's dataset and index
+    // Get the clicked dataset
+    const dataset = chartRef.current.data.datasets[datasetIndex];
+
+    console.log("Clicked Bar Dataset Label:", dataset.label); // Log the label for debugging
+    console.log("Clicked Bar Dataset Index:", datasetIndex); // Log dataset index
+    console.log("Clicked Bar Index:", index); // Log the clicked index
+
+    const status = dataset.label === "Closed Orders" ? "closed" : "open";
+    console.log("status : ", status);
+
+    const selectedMonth = filteredOrdersData[index]; // Corresponding month data
+
+    // Format the month to always be two digits
+    const formattedMonth = String(selectedMonth.month).padStart(2, "0");
+
+    // Function to get the last day of the month based on the year and month
+    const getLastDayOfMonth = (year, month) => {
+      // For February, check for leap year
+      if (month === 2) {
+        return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)
+          ? 29
+          : 28;
+      }
+      // For months with 30 days
+      if ([4, 6, 9, 11].includes(month)) {
+        return 30;
+      }
+      // For months with 31 days
+      return 31;
+    };
+
+    // Get the last day of the selected month
+    const lastDayOfMonth = getLastDayOfMonth(
+      new Date().getFullYear(),
+      selectedMonth.month
+    );
+
+     const queryParams = {
+       status,
+       fromDate: `${new Date().getFullYear()}-${formattedMonth}-01`,
+       toDate: `${new Date().getFullYear()}-${formattedMonth}-${String(
+         lastDayOfMonth
+       ).padStart(2, "0")}`,
+     };
+   
+
+    router.push({
+      pathname: "/orders",
+      query: queryParams,
+    });
+  };
+
+ 
 
   const fetchOrdersData = async () => {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams();
-      if (filters.customer) queryParams.append('customer', filters.customer);
-      if (filters.region) queryParams.append('region', filters.region);
+      if (filters.customer) queryParams.append("customer", filters.customer);
+      if (filters.region) queryParams.append("region", filters.region);
 
-      const response = await fetch(`/api/monthly-orders?${queryParams.toString()}`);
+      const response = await fetch(
+        `/api/monthly-orders?${queryParams.toString()}`
+      );
       if (!response.ok) {
-        throw new Error('Failed to fetch orders data');
+        throw new Error("Failed to fetch orders data");
       }
       const data = await response.json();
       setOrdersData(data.length ? data : []);
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching orders data:', err);
+      console.error("Error fetching orders data:", err);
       setOrdersData([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = async (query) => {
-    if (query.length < 3) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/search?query=${query}`);
-      if (!response.ok) throw new Error('Failed to fetch search results');
-      const results = await response.json();
-      setSearchResults(results);
-    } catch (error) {
-      console.error('Error fetching search results:', error);
-    }
-  };
-
-  const handleSelectResult = (result) => {
-    setSearchQuery(result.name);
-    setSearchResults([]);
-
-    if (result.type === 'Customer') {
-      setFilters(prev => ({ ...prev, customer: result.id }));
-    } else if (result.type === 'Region') {
-      setFilters(prev => ({ ...prev, region: result.id }));
-    }
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      customer: null,
-      region: null
-    });
-    setSearchQuery('');
-  };
-
   useEffect(() => {
     fetchOrdersData();
   }, [filters]);
 
-  useEffect(() => {
-    handleSearch(debouncedSearchQuery);
-  }, [debouncedSearchQuery]);
-
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
 
   // Filter out months with zero data
-  const filteredOrdersData = ordersData.filter(data => data.openOrders > 0 || data.closedOrders > 0);
+  const filteredOrdersData = ordersData.filter(
+    (data) => data.openOrders > 0 || data.closedOrders > 0
+  );
 
   const ordersChartData = {
     labels: filteredOrdersData.map((data) => months[data.month - 1]),
@@ -144,16 +193,13 @@ const OrdersChart = () => {
     maintainAspectRatio: false,
     animation: {
       duration: 1000, // Duration of animation in ms
-      easing: 'easeInOutQuart',
+      easing: "easeInOutQuart",
     },
     plugins: {
       legend: {
         position: "top",
         labels: {
-          font: {
-            family: "'Inter', sans-serif",
-            size: 13,
-          },
+          font: { family: "'Inter', sans-serif", size: 13 },
           padding: 20,
         },
       },
@@ -183,23 +229,42 @@ const OrdersChart = () => {
         },
       },
     },
+    onHover: (event, chartElement) => {
+      // Check if the mouse is over a chart element (like a bar)
+      const isOverElement = chartElement.length > 0;
+      if (isOverElement) {
+        event.native.target.style.cursor = "pointer"; // Change the cursor to pointer
+      } else {
+        event.native.target.style.cursor = "default"; // Set cursor back to default if not over element
+      }
+    },
+    interaction: {
+      mode: "nearest", // This ensures the chart listens to hover events on nearby elements
+      intersect: true,
+    },
   };
 
   const exportToCSV = () => {
     if (!filteredOrdersData.length) return;
     const csvData = [
-      ['Month', ...filteredOrdersData.map(data => months[data.month - 1])],
-      ['Open Orders', ...filteredOrdersData.map(data => data.openOrders || 0)],
-      ['Closed Orders', ...filteredOrdersData.map(data => data.closedOrders || 0)]
+      ["Month", ...filteredOrdersData.map((data) => months[data.month - 1])],
+      [
+        "Open Orders",
+        ...filteredOrdersData.map((data) => data.openOrders || 0),
+      ],
+      [
+        "Closed Orders",
+        ...filteredOrdersData.map((data) => data.closedOrders || 0),
+      ],
     ];
 
-    const csvContent = csvData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = csvData.map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', 'orders_data.csv');
+    link.setAttribute("download", "orders_data.csv");
     link.click();
   };
 
@@ -207,23 +272,18 @@ const OrdersChart = () => {
     <Card className="shadow-sm border-0 mb-4">
       <Card.Header className="bg-white py-3">
         <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-          <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>
+          <h4
+            className="mb-3 mb-md-0"
+            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+          >
             Monthly Open vs Closed Orders
           </h4>
           <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
-            <SearchBar
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              searchResults={searchResults}
-              handleSelectResult={handleSelectResult}
-              placeholder="Search customer or region"
-              onSearch={handleSearch}
-            />
             <div className="d-flex gap-2">
               <Button
                 variant="outline-secondary"
-                onClick={clearFilters}
-                style={{ whiteSpace: 'nowrap' }}
+                onClick={() => setFilters({ customer: null, region: null })}
+                style={{ whiteSpace: "nowrap" }}
               >
                 Clear Filters
               </Button>
@@ -231,7 +291,7 @@ const OrdersChart = () => {
                 variant="outline-primary"
                 onClick={exportToCSV}
                 disabled={!filteredOrdersData.length}
-                style={{ whiteSpace: 'nowrap' }}
+                style={{ whiteSpace: "nowrap" }}
               >
                 Export CSV
               </Button>
@@ -243,8 +303,22 @@ const OrdersChart = () => {
         {error && (
           <p className="text-center mt-4 text-danger">Error: {error}</p>
         )}
-        <div className="chart-container" style={{ height: "450px", padding: "10px" }}>
-          <Bar data={ordersChartData} options={ordersChartOptions} />
+        <div
+          className="chart-container"
+          style={{ height: "450px", padding: "10px" }}
+        >
+          {/* <Bar
+            ref={chartRef} // Step 3: Pass ref to the Bar component
+            data={ordersChartData}
+            options={ordersChartOptions}
+            onClick={(e, chartElement) => handleBarClick(e, chartElement)}
+          /> */}
+          <Bar
+            ref={chartRef} // Step 3: Pass ref to the Bar component
+            data={ordersChartData}
+            options={{ responsive: true }}
+            onClick={handleBarClick}
+          />
           {loading && (
             <div className="position-absolute top-50 start-50 translate-middle bg-white bg-opacity-75 p-3 rounded d-flex align-items-center">
               <Spinner animation="border" role="status" className="me-2">
@@ -255,7 +329,9 @@ const OrdersChart = () => {
           )}
         </div>
         {!loading && !filteredOrdersData.length && !error && (
-          <p className="text-center mt-4">No data available for the selected filters.</p>
+          <p className="text-center mt-4">
+            No data available for the selected filters.
+          </p>
         )}
       </Card.Body>
     </Card>

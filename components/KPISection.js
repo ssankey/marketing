@@ -97,7 +97,7 @@ const KPICard = ({ title, value, icon, color, trend, trendValue }) => (
 );
 
 // Main KPI Section Component
-const KPISection = ({ kpiData }) => (
+const KPISection = ({ kpiData = []}) => (
     <Row className="g-4 mb-4">
         {kpiData.map((card, index) => (
             <Col key={index} xs={12} sm={6} xl={3}>
