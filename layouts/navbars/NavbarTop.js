@@ -48,59 +48,66 @@ const NavbarTop = (props) => {
             href="#"
             id="nav-toggle"
             className="nav-icon me-2 icon-xs"
-            onClick={() =>
-              props.data.SidebarToggleMenu(!props.data.showMenu)
-            }
+            onClick={() => props.data.SidebarToggleMenu(!props.data.showMenu)}
           >
             <Menu size="18px" />
           </Link>
-          <div className="ms-lg-3 d-none d-md-none d-lg-block position-relative" style={{ width: '800px' }}>
+          <div
+            className="ms-lg-3 d-none d-md-none d-lg-block position-relative"
+            style={{ width: "800px" }}
+          >
             <Form className="d-flex align-items-center">
               <FormControl
                 type="search"
                 placeholder="Search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: '100%' }}
+                style={{ width: "100%" }}
               />
             </Form>
             {showSuggestions && (
               <ListGroup
                 className="position-absolute suggestion-box"
-                style={{ width: '100%', zIndex: 1000 }}
+                style={{ width: "100%", zIndex: 1000 }}
               >
                 {searchResults.length === 0 && (
                   <ListGroup.Item className="text-center">
                     No results found
                   </ListGroup.Item>
                 )}
-                {searchResults.map((item) => (
-                  <ListGroup.Item
-                    key={`${item.type}-${item.id}`}
-                    className="d-flex justify-content-between align-items-center"
-                  >
-                    <Link href={`/${item.type.toLowerCase()}s/${item.id}`}>
-                      {item.name}
-                    </Link>
-                    <Badge
-                      bg={
-                        item.type === 'Customer' ? 'primary' :
-                          item.type === 'Product' ? 'success' :
-                            item.type === 'Employee' ? 'warning' :
-                              item.type === 'Order' ? 'info' :
-                                item.type === 'Quotation' ? 'secondary' :
-                                  item.type === 'Invoice' ? 'dark' :
-                                    'light'
-                      }
+                {Array.isArray(searchResults) &&
+                  searchResults.map((item) => (
+                    <ListGroup.Item
+                      key={`${item.type}-${item.id}`}
+                      className="d-flex justify-content-between align-items-center"
                     >
-                      {item.type}
-                    </Badge>
-                  </ListGroup.Item>
-                ))}
+                      <Link href={`/${item.type.toLowerCase()}s/${item.id}`}>
+                        {item.name}
+                      </Link>
+                      <Badge
+                        bg={
+                          item.type === "Customer"
+                            ? "primary"
+                            : item.type === "Product"
+                            ? "success"
+                            : item.type === "Employee"
+                            ? "warning"
+                            : item.type === "Order"
+                            ? "info"
+                            : item.type === "Quotation"
+                            ? "secondary"
+                            : item.type === "Invoice"
+                            ? "dark"
+                            : "light"
+                        }
+                      >
+                        {item.type}
+                      </Badge>
+                    </ListGroup.Item>
+                  ))}
               </ListGroup>
             )}
           </div>
-
         </div>
       </div>
 

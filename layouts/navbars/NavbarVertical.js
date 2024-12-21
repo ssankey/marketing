@@ -8,6 +8,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 import Accordion from "react-bootstrap/Accordion";
 import { useAccordionButton } from "react-bootstrap/AccordionButton";
+import {  People } from "react-bootstrap-icons";
 import { FaMoneyBillWave, FaSignOutAlt } from "react-icons/fa";
 import {
   House,
@@ -79,6 +80,13 @@ const NavbarVertical = () => {
           </a>
         </li>
 
+        <li className="nav-item">
+          <a href="/customer-chart" className="nav-link d-flex align-items-center">
+            <House className="me-2" />
+            Search By Customer
+          </a>
+        </li>
+
         {/* Quotation */}
         <li className="nav-item">
           <a href="/quotations" className="nav-link d-flex align-items-center">
@@ -97,7 +105,10 @@ const NavbarVertical = () => {
             <Accordion.Collapse eventKey="orders">
               <ul className="nav flex-column ms-3">
                 <li className="nav-item">
-                  <a href="/orders" className="nav-link d-flex align-items-center">
+                  <a
+                    href="/orders"
+                    className="nav-link d-flex align-items-center"
+                  >
                     <Clipboard className="me-2" /> All Orders
                   </a>
                 </li>
@@ -114,8 +125,6 @@ const NavbarVertical = () => {
           </Accordion>
         </li>
 
-
-
         {/* Invoice */}
         <li className="nav-item">
           <a href="/invoices" className="nav-link d-flex align-items-center">
@@ -127,7 +136,8 @@ const NavbarVertical = () => {
         {/* Customers */}
         <li className="nav-item">
           <a href="/customers" className="nav-link d-flex align-items-center">
-            <FaUser className="me-2" /> {/* Customer icon */}
+            {/* <FaUser className="me-2" /> Customer icon */}
+            <People className="me-2" />
             Customers
           </a>
         </li>
