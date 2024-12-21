@@ -229,18 +229,18 @@ const OrdersChart = () => {
         },
       },
     },
+    interaction: {
+      mode: "nearest", // This ensures it listens to hover events on nearby elements
+      intersect: true, // Ensures interaction only happens when over the chart element
+    },
     onHover: (event, chartElement) => {
-      // Check if the mouse is over a chart element (like a bar)
-      const isOverElement = chartElement.length > 0;
-      if (isOverElement) {
+      console.log("Hover event triggered"); // Log to check if event triggers
+      if (chartElement.length > 0) {
+        console.log("Hovered over element:", chartElement);
         event.native.target.style.cursor = "pointer"; // Change the cursor to pointer
       } else {
-        event.native.target.style.cursor = "default"; // Set cursor back to default if not over element
+        event.native.target.style.cursor = "default"; // Reset cursor if not over element
       }
-    },
-    interaction: {
-      mode: "nearest", // This ensures the chart listens to hover events on nearby elements
-      intersect: true,
     },
   };
 
