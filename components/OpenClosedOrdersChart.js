@@ -7,6 +7,10 @@ import { Card, Button, Spinner } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import { useRouter } from "next/router";
 import { useRef } from "react";
+
+import LoadingSpinner from "../components/LoadingSpinner";
+
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -31,6 +35,7 @@ ChartJS.register(
 );
 
 const OrdersChart = () => {
+  const [isNavigating, setIsNavigating] = useState(false); // Add this line
   const [ordersData, setOrdersData] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -147,9 +152,24 @@ const OrdersChart = () => {
   // useEffect(() => {
   //  if (chartRef.current) {
   //    chartRef.current.update();
-  //  }  
+  //  }
   // }, [ordersData]); // This runs every time ordersData changes
+  // Add router event listeners
+  useEffect(() => {
+    const handleStart = () => setIsNavigating(true);
+    const handleComplete = () => setIsNavigating(false);
+    const handleError = () => setIsNavigating(false);
 
+    router.events.on("routeChangeStart", handleStart);
+    router.events.on("routeChangeComplete", handleComplete);
+    router.events.on("routeChangeError", handleError);
+
+    return () => {
+      router.events.off("routeChangeStart", handleStart);
+      router.events.off("routeChangeComplete", handleComplete);
+      router.events.off("routeChangeError", handleError);
+    };
+  }, [router]);
   const months = [
     "Jan",
     "Feb",
@@ -251,17 +271,12 @@ const OrdersChart = () => {
         },
       },
     },
-    interaction: {
-      mode: "nearest", // This ensures it listens to hover events on nearby elements
-      intersect: true, // Ensures interaction only happens when over the chart element
-    },
-    onHover: (event, chartElement) => {
-      console.log("Hover event triggered"); // Log to check if event triggers
-      if (chartElement.length > 0) {
-        console.log("Hovered over element:", chartElement);
-        event.native.target.style.cursor = "pointer"; // Change the cursor to pointer
+    onHover: (event, elements) => {
+      const chartCanvas = event.chart.canvas;
+      if (elements && elements.length > 0) {
+        chartCanvas.style.cursor = "pointer";
       } else {
-        event.native.target.style.cursor = "default"; // Reset cursor if not over element
+        chartCanvas.style.cursor = "default";
       }
     },
   };
@@ -303,73 +318,76 @@ const OrdersChart = () => {
   };
 
   return (
-    <Card className="shadow-sm border-0 mb-4">
-      <Card.Header className="bg-white py-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-          <h4
-            className="mb-3 mb-md-0"
-            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
-          >
-            Monthly Open vs Closed Orders
-          </h4>
-          <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
-            <div className="d-flex gap-2">
-              {/* <Button
+    <>
+      {isNavigating && <LoadingSpinner />}
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Header className="bg-white py-3">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <h4
+              className="mb-3 mb-md-0"
+              style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+            >
+              Monthly Open vs Closed Orders
+            </h4>
+            <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
+              <div className="d-flex gap-2">
+                {/* <Button
                 variant="outline-secondary"
                 onClick={() => setFilters({ customer: null, region: null })}
                 style={{ whiteSpace: "nowrap" }}
               >
                 Clear Filters
               </Button> */}
-              <Button
-                variant="outline-primary"
-                onClick={exportToCSV}
-                disabled={!filteredOrdersData.length}
-                style={{ whiteSpace: "nowrap" }}
-              >
-                Export CSV
-              </Button>
+                <Button
+                  variant="outline-primary"
+                  onClick={exportToCSV}
+                  disabled={!filteredOrdersData.length}
+                  style={{ whiteSpace: "nowrap" }}
+                >
+                  Export CSV
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </Card.Header>
-      <Card.Body className="position-relative">
-        {error && (
-          <p className="text-center mt-4 text-danger">Error: {error}</p>
-        )}
-        <div
-          className="chart-container"
-          style={{ height: "450px", padding: "10px" }}
-        >
-          {/* <Bar
+        </Card.Header>
+        <Card.Body className="position-relative">
+          {error && (
+            <p className="text-center mt-4 text-danger">Error: {error}</p>
+          )}
+          <div
+            className="chart-container"
+            style={{ height: "450px", padding: "10px" }}
+          >
+            {/* <Bar
             ref={chartRef} // Step 3: Pass ref to the Bar component
             data={ordersChartData}
             options={ordersChartOptions}
             onClick={(e, chartElement) => handleBarClick(e, chartElement)}
           /> */}
-          <Bar
-            ref={chartRef} // Step 3: Pass ref to the Bar component
-            data={ordersChartData}
-            // options={{ responsive: true }}
-            options={ordersChartOptions}
-            onClick={handleBarClick}
-          />
-          {loading && (
-            <div className="position-absolute top-50 start-50 translate-middle bg-white bg-opacity-75 p-3 rounded d-flex align-items-center">
-              <Spinner animation="border" role="status" className="me-2">
-                <span className="visually-hidden">Loading...</span>
-              </Spinner>
-              <span>Updating chart data...</span>
-            </div>
+            <Bar
+              ref={chartRef} // Step 3: Pass ref to the Bar component
+              data={ordersChartData}
+              // options={{ responsive: true }}
+              options={ordersChartOptions}
+              onClick={handleBarClick}
+            />
+            {loading && (
+              <div className="position-absolute top-50 start-50 translate-middle bg-white bg-opacity-75 p-3 rounded d-flex align-items-center">
+                <Spinner animation="border" role="status" className="me-2">
+                  <span className="visually-hidden">Loading...</span>
+                </Spinner>
+                <span>Updating chart data...</span>
+              </div>
+            )}
+          </div>
+          {!loading && !filteredOrdersData.length && !error && (
+            <p className="text-center mt-4">
+              No data available for the selected filters.
+            </p>
           )}
-        </div>
-        {!loading && !filteredOrdersData.length && !error && (
-          <p className="text-center mt-4">
-            No data available for the selected filters.
-          </p>
-        )}
-      </Card.Body>
-    </Card>
+        </Card.Body>
+      </Card>
+    </>
   );
 };
 
