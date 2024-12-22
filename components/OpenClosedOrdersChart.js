@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
 import { Card, Button, Spinner } from "react-bootstrap";
+import { formatCurrency } from "utils/formatCurrency";
 import { useRouter } from "next/router";
 import { useRef } from "react";
 import {
@@ -99,22 +100,19 @@ const OrdersChart = () => {
       selectedMonth.month
     );
 
-     const queryParams = {
-       status,
-       fromDate: `${new Date().getFullYear()}-${formattedMonth}-01`,
-       toDate: `${new Date().getFullYear()}-${formattedMonth}-${String(
-         lastDayOfMonth
-       ).padStart(2, "0")}`,
-     };
-   
+    const queryParams = {
+      status,
+      fromDate: `${new Date().getFullYear()}-${formattedMonth}-01`,
+      toDate: `${new Date().getFullYear()}-${formattedMonth}-${String(
+        lastDayOfMonth
+      ).padStart(2, "0")}`,
+    };
 
     router.push({
       pathname: "/orders",
       query: queryParams,
     });
   };
-
- 
 
   const fetchOrdersData = async () => {
     try {
@@ -130,6 +128,7 @@ const OrdersChart = () => {
         throw new Error("Failed to fetch orders data");
       }
       const data = await response.json();
+      console.log("Fetched Orders Data:", data);
       setOrdersData(data.length ? data : []);
     } catch (err) {
       setError(err.message);
@@ -143,6 +142,13 @@ const OrdersChart = () => {
   useEffect(() => {
     fetchOrdersData();
   }, [filters]);
+
+  // Add this useEffect to log ordersData whenever it changes
+  // useEffect(() => {
+  //  if (chartRef.current) {
+  //    chartRef.current.update();
+  //  }  
+  // }, [ordersData]); // This runs every time ordersData changes
 
   const months = [
     "Jan",
@@ -206,11 +212,27 @@ const OrdersChart = () => {
       tooltip: {
         backgroundColor: "#212529",
         titleFont: { size: 14, weight: "bold" },
+        enabled: true,
         bodyFont: { size: 13 },
         padding: 12,
+
         callbacks: {
-          label: (tooltipItem) =>
-            `${tooltipItem.dataset.label}: ${tooltipItem.raw}`,
+          label: function (context) {
+            const datasetLabel = context.dataset.label;
+            const value = context.raw;
+            const dataPoint = filteredOrdersData[context.dataIndex];
+
+            if (datasetLabel === "Open Orders") {
+              return `${datasetLabel}: ${value} (Sales: ${formatCurrency(
+                dataPoint.openSales
+              )})`;
+            } else if (datasetLabel === "Closed Orders") {
+              return `${datasetLabel}: ${value} (Sales: ${formatCurrency(
+                dataPoint.closedSales
+              )})`;
+            }
+            return `${datasetLabel}: ${value}`;
+          },
         },
       },
     },
@@ -248,13 +270,25 @@ const OrdersChart = () => {
     if (!filteredOrdersData.length) return;
     const csvData = [
       ["Month", ...filteredOrdersData.map((data) => months[data.month - 1])],
+      // [
+      //   "Open Orders",
+      //   ...filteredOrdersData.map((data) => data.openOrders || 0),
+      // ],
+      // [
+      //   "Closed Orders",
+      //   ...filteredOrdersData.map((data) => data.closedOrders || 0),
+      // ],
       [
-        "Open Orders",
-        ...filteredOrdersData.map((data) => data.openOrders || 0),
+        "Open Orders (Sales)",
+        ...filteredOrdersData.map((data) =>
+          formatCurrency(data.openSales || 0)
+        ),
       ],
       [
-        "Closed Orders",
-        ...filteredOrdersData.map((data) => data.closedOrders || 0),
+        "Closed Orders (Sales)",
+        ...filteredOrdersData.map((data) =>
+          formatCurrency(data.closedSales || 0)
+        ),
       ],
     ];
 
@@ -280,13 +314,13 @@ const OrdersChart = () => {
           </h4>
           <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
             <div className="d-flex gap-2">
-              <Button
+              {/* <Button
                 variant="outline-secondary"
                 onClick={() => setFilters({ customer: null, region: null })}
                 style={{ whiteSpace: "nowrap" }}
               >
                 Clear Filters
-              </Button>
+              </Button> */}
               <Button
                 variant="outline-primary"
                 onClick={exportToCSV}
@@ -316,7 +350,8 @@ const OrdersChart = () => {
           <Bar
             ref={chartRef} // Step 3: Pass ref to the Bar component
             data={ordersChartData}
-            options={{ responsive: true }}
+            // options={{ responsive: true }}
+            options={ordersChartOptions}
             onClick={handleBarClick}
           />
           {loading && (

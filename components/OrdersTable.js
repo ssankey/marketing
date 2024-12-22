@@ -14,6 +14,7 @@ import downloadExcel from "utils/exporttoexcel";
 
 const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
   console.log(orders);
+  console.log("current page",currentPage);
 
   const ITEMS_PER_PAGE = 20;
   const { totalPages, onPageChange } = usePagination(
