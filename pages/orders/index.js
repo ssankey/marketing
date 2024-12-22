@@ -183,6 +183,7 @@ export async function getServerSideProps(context) {
       props: {
         orders: [],
         totalItems: 0,
+        currentPage: 1,
       },
     };
   }

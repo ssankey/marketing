@@ -217,13 +217,13 @@ const EnhancedSalesCOGSChart = () => {
                             onSearch={handleSearch}
                         /> */}
                         <div className="d-flex gap-2">
-                            <Button
+                            {/* <Button
                                 variant="outline-secondary"
                                 onClick={clearFilters}
                                 style={{ whiteSpace: 'nowrap' }}
                             >
                                 Clear Filters
-                            </Button>
+                            </Button> */}
                             <Button
                                 variant="outline-primary"
                                 onClick={exportToCSV}
