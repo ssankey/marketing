@@ -242,7 +242,7 @@ const DashboardCharts = () => {
   }
 
   return (
-    <div className="p-4 bg-light">
+    <div className="g-4">
       {/* Enhanced Sales and COGS Chart */}
       <EnhancedSalesCOGSChart />
 

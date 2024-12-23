@@ -28,6 +28,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
+    handleReset
   } = useTableFilters();
 
   const columns = [
@@ -46,7 +47,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
           <Link
             href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
             className="text-blue-600 hover:text-blue-800"
-            target='_blank'
+            target="_blank"
           >
             <Printer />
           </Link>
@@ -84,13 +85,19 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
     {
+      field: "LineTotal",
+      label: "Line Total",
+      render: (value) => formatCurrency(value),
+    },
+    {
+      field: "TaxAmount",
+      label: "Tax Amount",
+      render: (value) => formatCurrency(value),
+    },
+    {
       field: "InvoiceTotal",
-      label: "Total Amount",
-      render: (value, row) => {
-        // Convert to INR if necessary and format currency
-        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
-        return formatCurrency(amountInINR);
-      },
+      label: "Invoice Total",
+      render: (value) => formatCurrency(value),
     },
     {
       field: "DocCur",
@@ -103,6 +110,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
   ];
+  
   
   // Define handleExcelDownload function
   // const handleExcelDownload = () => {
@@ -149,6 +157,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
         toDate={toDate}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
+        onReset={handleReset}
         totalItemsLabel="Total Invoices"
       />
       {isLoading ? (
