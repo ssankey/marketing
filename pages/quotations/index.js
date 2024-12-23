@@ -1,7 +1,8 @@
+//pages/quotation/index.js
+
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
 import QuotationsTable from "components/QuotationsTable";
-// import { getQuotations } from "lib/models/quotations";
 import { useRouter } from "next/router";
 import { useAuth } from "hooks/useAuth";
 import { Spinner } from "react-bootstrap";
