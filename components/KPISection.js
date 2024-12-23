@@ -1,20 +1,21 @@
 import React from 'react';
 import { Row, Col, Card, Badge } from 'react-bootstrap';
-import { 
-    Cart4, 
-    GraphUpArrow, 
+import {
+    Cart4,
+    GraphUpArrow,
     ExclamationCircle,
     ArrowUpShort,
-    ArrowDownShort
+    ArrowDownShort,
 } from 'react-bootstrap-icons';
-import { MdOutlineCurrencyRupee } from "react-icons/md";
+import { MdOutlineCurrencyRupee } from 'react-icons/md';
+
 // Enhanced color palette
 const colors = {
-    primary: '#0d6efd',
-    success: '#198754',
+    primary: '#124f94', // Updated primary color
+    success: '#3bac4e', // Updated success (secondary) color
     warning: '#ffc107',
     danger: '#dc3545',
-    muted: '#6c757d'
+    muted: '#6c757d',
 };
 
 // Icon Rendering Functions
@@ -26,7 +27,7 @@ const renderIcon = (icon, color) => {
             </div>
         ),
         Cart4: () => (
-            <div className="rounded-circle p-2  " style={{ backgroundColor: `${colors[color]}15` }}>
+            <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
                 <Cart4 size={24} color={colors[color]} />
             </div>
         ),
@@ -39,19 +40,18 @@ const renderIcon = (icon, color) => {
             <div className="rounded-circle p-2" style={{ backgroundColor: `${colors[color]}15` }}>
                 <ExclamationCircle size={24} color={colors[color]} />
             </div>
-        )
+        ),
     };
 
     return iconComponents[icon] ? iconComponents[icon]() : null;
 };
 
-// Rest of the code remains the same as in the previous implementation
 const KPICard = ({ title, value, icon, color, trend, trendValue }) => (
-    <Card 
+    <Card
         className="h-100 shadow-sm border-0"
-        style={{ 
+        style={{
             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            cursor: 'pointer'
+            cursor: 'pointer',
         }}
         onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-5px)';
@@ -66,30 +66,30 @@ const KPICard = ({ title, value, icon, color, trend, trendValue }) => (
             {/* Icon and Trend Badge Row */}
             <div className="d-flex justify-content-between align-items-center mb-3">
                 {renderIcon(icon, color)}
-                {trend && (
-                    <Badge 
-                        bg={trend === 'up' ? 'success' : 'danger'} 
+                {trendValue !== null && (
+                    <Badge
+                        bg={trend === 'up' ? 'success' : 'danger'}
                         className="d-flex align-items-center gap-1 px-2 py-1"
                         style={{ fontSize: '0.8rem' }}
                     >
-                        {trend === 'up' ? 
-                            <ArrowUpShort size={16} /> : 
-                            <ArrowDownShort size={16} />
-                        }
+                        {trend === 'up' ? <ArrowUpShort size={16} /> : <ArrowDownShort size={16} />}
                         {trendValue}%
                     </Badge>
                 )}
             </div>
-            
+
             {/* Value and Title */}
             <h3 className="mb-2 fw-bold" style={{ color: colors[color], fontSize: '1.75rem' }}>
                 {value || 0}
             </h3>
-            <p className="text-muted mb-0" style={{ 
-                fontSize: '0.875rem', 
-                letterSpacing: '0.5px',
-                fontWeight: '500'
-            }}>
+            <p
+                className="text-muted mb-0"
+                style={{
+                    fontSize: '0.875rem',
+                    letterSpacing: '0.5px',
+                    fontWeight: '500',
+                }}
+            >
                 {title}
             </p>
         </Card.Body>
@@ -113,5 +113,6 @@ const KPISection = ({ kpiData = []}) => (
         ))}
     </Row>
 );
+
 
 export default KPISection;

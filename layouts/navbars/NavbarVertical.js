@@ -1,30 +1,17 @@
-
-// "use client";
-
-"use client";
-
-// Import necessary components from React and Bootstrap
 import { Fragment } from "react";
 import Link from "next/link";
 import Accordion from "react-bootstrap/Accordion";
 import { useAccordionButton } from "react-bootstrap/AccordionButton";
-import {  People } from "react-bootstrap-icons";
-import { FaMoneyBillWave, FaSignOutAlt } from "react-icons/fa";
-import {
-  House,
-  Clipboard,
-  FileText,
-  CurrencyDollar,
-} from "react-bootstrap-icons"; // Import the relevant icons
-import { FaUser } from "react-icons/fa";
-import { FaBox } from "react-icons/fa";
-import { Button } from "react-bootstrap"; // Import Button component from React-Bootstrap
-import { useRouter } from "next/router"; // Import useRouter for redirection
+import { People, House, Clipboard, FileText, CurrencyDollar } from "react-bootstrap-icons";
+import { FaMoneyBillWave, FaSignOutAlt, FaUser, FaBox } from "react-icons/fa";
+import { Button } from "react-bootstrap";
+import { useRouter } from "next/router";
+import { useAuth } from "contexts/AuthContext";
 
 const NavbarVertical = () => {
-  const router = useRouter(); // For redirection
-
-  // Custom Toggle for dropdown items
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  
   const CustomToggle = ({ children, eventKey, icon }) => {
     const decoratedOnClick = useAccordionButton(eventKey);
     return (
@@ -37,47 +24,74 @@ const NavbarVertical = () => {
     );
   };
 
-  // Handle logout functionality
-  const handleLogout = () => {
-    // Clear localStorage to remove the token
-    localStorage.removeItem("token"); // Remove token specifically
-
-    // Optionally, you could also clear all localStorage items
-    // localStorage.clear();
-
-    // Redirect to the login page
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.clear();
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      localStorage.clear();
+      window.location.href = '/login';
+    }
   };
 
-
   return (
-    <Fragment>
-      {/* Dash UI and Dashboard section */}
+    <Fragment>     
       <Accordion
         defaultActiveKey="0"
         as="ul"
-        className="navbar-nav flex-column d-flex" // Add `d-flex` to make the navbar a flex container
+        className="navbar-nav flex-column d-flex"
         alwaysOpen
-        style={{ height: "100vh" }} // Set the navbar height to full screen
+        style={{
+          height: "100vh",
+          width: "250px",
+          backgroundColor: "#fff"
+        }}
       >
-        {/* Dash UI */}
         <li className="nav-item">
           <a href="/" className="nav-link d-flex align-items-center">
             <img
-              src="/assets/density_logo_new_trans.png"
+              src="/assets/Density _LOGO.jpg"
               alt="Logo"
-              className="img-fluid" // Makes the image responsive
-              style={{ height: "80px", width: "auto" }} // Set height and keep aspect ratio
+              className="img-fluid"
+              style={{ height: "80px", width: "auto" }}
             />
           </a>
         </li>
 
-        {/* Dashboard */}
+        {/* Dashboard Accordion */}
         <li className="nav-item">
-          <a href="/" className="nav-link d-flex align-items-center">
-            <House className="me-2" />
-            Dashboard
-          </a>
+          <Accordion>
+            <CustomToggle eventKey="dashboard" icon="house">
+              <House className="me-2" />
+              Dashboard
+            </CustomToggle>
+            <Accordion.Collapse eventKey="dashboard">
+              <ul className="nav flex-column ms-3">
+                <li className="nav-item">
+                  <a href="/" className="nav-link d-flex align-items-center">
+                    <House className="me-2" /> All
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a href="/dashboard/customer" className="nav-link d-flex align-items-center">
+                    <People className="me-2" /> Customer
+                  </a>
+                </li>
+                <li className="nav-item">
+                  <a href="/dashboard/sales-person" className="nav-link d-flex align-items-center">
+                    <FaUser className="me-2" /> Sales Person
+                  </a>
+                </li>
+              </ul>
+            </Accordion.Collapse>
+          </Accordion>
         </li>
 
         <li className="nav-item">
@@ -87,16 +101,13 @@ const NavbarVertical = () => {
           </a>
         </li>
 
-        {/* Quotation */}
         <li className="nav-item">
           <a href="/quotations" className="nav-link d-flex align-items-center">
-            <CurrencyDollar className="me-2" /> {/* Quotation icon */}
+            <CurrencyDollar className="me-2" />
             Quotation
           </a>
         </li>
 
-        {/* Orders */}
-        {/* Orders */}
         <li className="nav-item">
           <Accordion>
             <CustomToggle eventKey="orders" icon="clipboard">
@@ -105,18 +116,12 @@ const NavbarVertical = () => {
             <Accordion.Collapse eventKey="orders">
               <ul className="nav flex-column ms-3">
                 <li className="nav-item">
-                  <a
-                    href="/orders"
-                    className="nav-link d-flex align-items-center"
-                  >
+                  <a href="/orders" className="nav-link d-flex align-items-center">
                     <Clipboard className="me-2" /> All Orders
                   </a>
                 </li>
                 <li className="nav-item">
-                  <a
-                    href="/open-orders"
-                    className="nav-link d-flex align-items-center"
-                  >
+                  <a href="/open-orders" className="nav-link d-flex align-items-center">
                     <Clipboard className="me-2" /> Open Orders
                   </a>
                 </li>
@@ -125,61 +130,47 @@ const NavbarVertical = () => {
           </Accordion>
         </li>
 
-        {/* Invoice */}
         <li className="nav-item">
           <a href="/invoices" className="nav-link d-flex align-items-center">
-            <FileText className="me-2" /> {/* Invoice icon */}
+            <FileText className="me-2" />
             Invoice
           </a>
         </li>
 
-        {/* Customers */}
         <li className="nav-item">
           <a href="/customers" className="nav-link d-flex align-items-center">
-            {/* <FaUser className="me-2" /> Customer icon */}
             <People className="me-2" />
             Customers
           </a>
         </li>
 
-        {/* Products */}
         <li className="nav-item">
           <a href="/products" className="nav-link d-flex align-items-center">
-            <FaBox className="me-2" /> {/* Product icon */}
+            <FaBox className="me-2" />
             Products
           </a>
         </li>
 
-        {/* Outstanding Payment */}
         <li className="nav-item">
-          <a
-            href="/outstanding-payment"
-            className="nav-link d-flex align-items-center"
-          >
-            <FaMoneyBillWave className="me-2" />{" "}
-            {/* outstanding payment icon */}
+          <a href="/outstanding-payment" className="nav-link d-flex align-items-center">
+            <FaMoneyBillWave className="me-2" />
             Outstanding Payments
           </a>
         </li>
 
-        {/* Logout Button at the bottom */}
-        <li
-          className="nav-item mt-auto"
-          style={{ padding: "10px 15px", marginLeft: "0", marginRight: "0" }}
-        >
-          {/* mt-auto ensures the button stays at the bottom */}
+        <li className="nav-item mt-auto" style={{ padding: "10px 15px", marginLeft: "0", marginRight: "0" }}>
           <Button
-            variant="primary" // Dark blue color
+            variant="primary"
             onClick={handleLogout}
             className="w-100"
             style={{
               backgroundColor: "#003366",
               borderColor: "#003366",
-              padding: "10px", // Add padding to the button for spacing
-              marginTop: "auto", // Keeps the button at the bottom
-              marginLeft: "0", // Ensure no left margin
-              marginRight: "0", // Ensure no right margin
-              borderRadius: "5px", // Optional: add border-radius for a rounded button
+              padding: "10px",
+              marginTop: "auto",
+              marginLeft: "0",
+              marginRight: "0",
+              borderRadius: "5px",
             }}
           >
             <FaSignOutAlt className="me-2" /> Logout

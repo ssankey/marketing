@@ -28,9 +28,9 @@ const TableFilters = ({
 }) => {
 
   const handleReset = () => {
-    onSearch("");
-    if (onStatusChange) onStatusChange("all");
-    if (onDateFilterChange && dateFilter.enabled) onDateFilterChange({ fromDate: "", toDate: "" });
+    if (onReset) {
+      onReset();
+    }
   };
 
   return (

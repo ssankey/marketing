@@ -29,6 +29,7 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
     handleSearch,
     handleDateFilterChange,
     handleSort,
+    handleReset
   } = useTableFilters();
 
   const columns = [
@@ -142,6 +143,7 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
         }}
         fromDate={fromDate}
         toDate={toDate}
+        onReset={handleReset}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
         totalItemsLabel="Total Open Orders"

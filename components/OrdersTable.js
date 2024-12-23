@@ -32,6 +32,7 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
+    handleReset
   } = useTableFilters();
 
   const columns = [
@@ -165,6 +166,7 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
         onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
+        onReset={handleReset}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
         totalItemsLabel="Total Orders"

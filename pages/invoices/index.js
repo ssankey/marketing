@@ -36,8 +36,8 @@ export default function InvoicesPage({ invoices: initialInvoices, totalItems: in
     setTotalItems(initialTotalItems);
   }, [initialInvoices, initialTotalItems]);
 
-   // Show a loader if still loading or redirecting
-   if (authLoading) {
+  // Show a loader if still loading or redirecting
+  if (authLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
         <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
@@ -52,9 +52,9 @@ export default function InvoicesPage({ invoices: initialInvoices, totalItems: in
   return (
     isAuthenticated ? (
       <InvoicesTable
-      invoices={invoices}
-      totalItems={totalItems}
-      isLoading={isLoading}
+        invoices={invoices}
+        totalItems={totalItems}
+        isLoading={isLoading}
       />
     ) : null
   );

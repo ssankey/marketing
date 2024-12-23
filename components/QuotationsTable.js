@@ -29,6 +29,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
+    handleReset
   } = useTableFilters();
 
   const columns = [
@@ -131,6 +132,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
         onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
+        onReset={handleReset}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
         totalItemsLabel="Total Quotations"

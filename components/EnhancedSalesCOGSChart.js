@@ -1,7 +1,7 @@
 // src/components/EnhancedSalesCOGSChart.js
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
-import { Card, Table, Button, Spinner } from 'react-bootstrap';
+import { Card, Table, Button, Spinner, Dropdown } from 'react-bootstrap';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement, LineController } from 'chart.js';
 import { formatCurrency } from 'utils/formatCurrency';
 import SearchBar from './SearchBar';
@@ -67,8 +67,6 @@ const EnhancedSalesCOGSChart = () => {
 
         if (result.type === 'Customer') {
             setFilters((prev) => ({ ...prev, customerId: result.id }));
-        } else if (result.type === 'Product') {
-            setFilters((prev) => ({ ...prev, productId: result.id }));
         } else if (result.type === 'Employee') {
             setFilters((prev) => ({ ...prev, salesPersonId: result.id }));
         } else if (result.type === 'Category') {
@@ -96,13 +94,13 @@ const EnhancedSalesCOGSChart = () => {
             {
                 label: 'Sales',
                 data: salesData.map((data) => data.sales || 0),
-                backgroundColor: '#0d6efd',
+                backgroundColor: '#124f94', // Primary color
                 borderWidth: 1,
             },
             {
                 label: 'COGS',
                 data: salesData.map((data) => data.cogs || 0),
-                backgroundColor: '#ffc107',
+                backgroundColor: '#3bac4e', // Secondary color
                 borderWidth: 1,
             },
             {
@@ -111,8 +109,8 @@ const EnhancedSalesCOGSChart = () => {
                     data.sales ? (data.grossMargin / data.sales) * 100 : 0
                 ),
                 type: 'line',
-                borderColor: '#198754',
-                backgroundColor: '#198754',
+                borderColor: '#3bac4e', // Secondary color for line
+                backgroundColor: '#3bac4e', // Same as line color
                 borderWidth: 2,
                 fill: false,
                 yAxisID: 'y1',
@@ -122,6 +120,7 @@ const EnhancedSalesCOGSChart = () => {
             },
         ],
     };
+    
 
     const salesAndCOGSChartOptions = {
         responsive: true,
@@ -233,7 +232,7 @@ const EnhancedSalesCOGSChart = () => {
                                 Export CSV
                             </Button>
 
-                        </div>
+                        </div> 
                     </div>
                 </div>
             </Card.Header>

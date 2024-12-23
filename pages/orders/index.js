@@ -1,4 +1,4 @@
-// 
+// pages/orders/index.js
 
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
