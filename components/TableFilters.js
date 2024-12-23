@@ -8,12 +8,13 @@ const TableFilters = ({
     fields: [],
   },
   onSearch,
+  onReset,
   searchTerm = "",
   statusFilter = {
     enabled: false,
     options: [],
     value: "all",
-    label: "Status"
+    label: "Status",
   },
   onStatusChange,
   dateFilter = {
@@ -26,7 +27,6 @@ const TableFilters = ({
   totalItemsLabel = "Total Items",
   customElement,
 }) => {
-
   const handleReset = () => {
     if (onReset) {
       onReset();
