@@ -1,4 +1,4 @@
-
+//page/customers/[id].js
 
 import { useAuth } from "hooks/useAuth";
 import { useRouter } from "next/router";
@@ -114,17 +114,7 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">
               <h3 className="mb-0">Purchase Analytics</h3>
-              <select
-                className="form-select w-auto"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-              >
-                {[2022, 2023, 2024].map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+              
             </div>
           </Card.Header>
           <Card.Body>
@@ -133,90 +123,7 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
         </Card>
       )}
 
-      {/* {Top 10 Quotation  / Orders / Invoices} */}
-
-      {/* <Row className="mb-4">
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-light border-bottom py-3">
-              
-              <h5 className="mb-0 fw-bold">Last 10 Quotations</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-4">
-                {TopQuotationData?.map((quote) => (
-                  <div
-                    key={quote.QuotationNumber}
-                    className="py-2 border-b last:border-b-0"
-                  >
-                    <div>Quotation#: {quote.QuotationNumber}</div>
-                    <div className="text-sm text-slate-600">
-                      <div>
-                        Quotation Date: {formatDate(quote.QuotationDate)}
-                      </div>
-                      <div>Delivery Date: {formatDate(quote.DeliveryDate)}</div>
-                      <div>Status: {quote.QuotationStatus == 'C'? "Closed" : "Open"}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-light border-bottom py-3">
-              
-              <h5 className="mb-0 fw-bold">Last 10 Orders</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-4">
-                {TopOrderData?.map((order) => (
-                  <div
-                    key={order.OrderNumber}
-                    className="py-2 border-b last:border-b-0"
-                  >
-                    <div>Order#: {order.OrderNumber}</div>
-                    <div className="text-sm text-slate-600">
-                      <div>Order Date: {formatDate(order.OrderDate)}</div>
-                      <div>Delivery Date: {formatDate(order.DeliveryDate)}</div>
-                       
-                      <div>
-                        Status: {order.OrderStatus === "C" ? "Closed" : "Open"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-light border-bottom py-3">
-         
-               
-              <h5 className="mb-0 fw-bold">Last 10 Invoices</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-4">
-                {TopInvoiceData?.map((invoice) => (
-                  <div
-                    key={invoice.InvoiceNumber}
-                    className="py-2 border-b last:border-b-0"
-                  >
-                    <div>Invoice#: {invoice.InvoiceNumber}</div>
-                    <div className="text-sm text-slate-600">
-                      <div>Invoice Date: {formatDate(invoice.InvoiceDate)}</div>
-                      <div>Status: {invoice.InvoiceStatus == "C" ? "Closed" : "Open"}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row> */}
+      
 
       <Row className="mb-4">
         <Col lg={4}>
@@ -450,150 +357,150 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
 }
 
 
-// export async function getServerSideProps(context) {
-//   const { id } = context.params;
-//   const currentYear = new Date().getFullYear();
-  
-//   try {
-//     // Ensure customer ID is provided
-//     if (!id) {
-//       throw new Error("Customer ID is required");
-//     }
-
-//     const protocol = context.req.headers["x-forwarded-proto"] || "http";
-//     const host = context.req.headers.host || "localhost:3000";
-
-//     // Fetch customer details
-//     const customerUrl = `${protocol}://${host}/api/customers/${id}`;
-//     const customerRes = await fetch(customerUrl);
-
-//     if (!customerRes.ok) {
-//       throw new Error(
-//         `Failed to fetch customer data: ${customerRes.statusText}`
-//       );
-//     }
-
-//     const customerData = await customerRes.json();
-//     const customer = Array.isArray(customerData)
-//       ? customerData[0]
-//       : customerData;
-
-//     if (!customer) {
-//       throw new Error("Customer not found");
-//     }
-
-//     // Fetch purchase and revenue data
-//     const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
-//     const metricsRes = await fetch(metricsUrl);
-
-//     if (!metricsRes.ok) {
-//       throw new Error(
-//         `Failed to fetch purchase metrics: ${metricsRes.statusText}`
-//       );
-//     }
-
-//     const purchaseData = await metricsRes.json();
-//     console.log(purchaseData);
-
-
-   
-//     /****Top quotation  */
-//     const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
-//     const quotationRes = await fetch(topquotation);
-//     console.log(id);
-//     if (!quotationRes.ok) {
-//       throw new Error(
-//         `Failed to fetch top quotation: ${quotationRes.statusText}`
-//       );
-//     }
-
-//     const TopQuotationData = await quotationRes.json();
-//     console.log(TopQuotationData);
-
-//     /****Top Orders  */
-//     const toporders = `${protocol}://${host}/api/customers/${id}?orders=true`;
-//     const orderRes = await fetch(toporders);
-
-//     if (!orderRes.ok) {
-//       throw new Error(
-//         `Failed to fetch top orders: ${orderRes.statusText}`
-//       );
-//     }
-
-//     const TopOrderData = await orderRes.json();
-//     console.log(TopOrderData);
-
-//     /***Top Invoices */
-
-//     const topinvoices = `${protocol}://${host}/api/customers/${id}?invoices=true`;
-//     const invoiceRes = await fetch(topinvoices);
-
-//     if (!invoiceRes.ok) {
-//       throw new Error(`Failed to fetch top invoice ${invoiceRes.statusText}`);
-//     }
-
-//     const TopInvoiceData = await invoiceRes.json();
-//     console.log(TopInvoiceData);
-
-
-//     return {
-//       props: {
-//         customer,
-//         purchaseData,
-//         TopQuotationData,
-//         TopOrderData,
-//         TopInvoiceData,
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error in getServerSideProps:", error.message);
-
-//     return {
-//       props: {
-//         customer: null,
-//         purchaseData: null,
-//         TopQuotationData:null,
-//         TopOrderData:null,
-//         TopInvoiceData:null,
-//         error: error.message,
-//       },
-//     };
-//   }
-// } 
-
 export async function getServerSideProps(context) {
+  const { id } = context.params;
+  const currentYear = new Date().getFullYear();
+  
   try {
-    const {
-      page = 1,
-      search = "",
-      sortField = "CardName",
-      sortDir = "asc",
-      status = "all",
-    } = context.query;
+    // Ensure customer ID is provided
+    if (!id) {
+      throw new Error("Customer ID is required");
+    }
 
     const protocol = context.req.headers["x-forwarded-proto"] || "http";
     const host = context.req.headers.host || "localhost:3000";
-    const apiUrl = `${protocol}://${host}/api/customers`;
 
-    const response = await fetch(
-      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
-    );
-    const { customers, totalItems } = await response.json();
+    // Fetch customer details
+    const customerUrl = `${protocol}://${host}/api/customers/${id}`;
+    const customerRes = await fetch(customerUrl);
+
+    if (!customerRes.ok) {
+      throw new Error(
+        `Failed to fetch customer data: ${customerRes.statusText}`
+      );
+    }
+
+    const customerData = await customerRes.json();
+    const customer = Array.isArray(customerData)
+      ? customerData[0]
+      : customerData;
+
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+
+    // Fetch purchase and revenue data
+    const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
+    const metricsRes = await fetch(metricsUrl);
+
+    if (!metricsRes.ok) {
+      throw new Error(
+        `Failed to fetch purchase metrics: ${metricsRes.statusText}`
+      );
+    }
+
+    const purchaseData = await metricsRes.json();
+    console.log(purchaseData);
+
+
+   
+    /****Top quotation  */
+    const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
+    const quotationRes = await fetch(topquotation);
+    console.log(id);
+    if (!quotationRes.ok) {
+      throw new Error(
+        `Failed to fetch top quotation: ${quotationRes.statusText}`
+      );
+    }
+
+    const TopQuotationData = await quotationRes.json();
+    console.log(TopQuotationData);
+
+    /****Top Orders  */
+    const toporders = `${protocol}://${host}/api/customers/${id}?orders=true`;
+    const orderRes = await fetch(toporders);
+
+    if (!orderRes.ok) {
+      throw new Error(
+        `Failed to fetch top orders: ${orderRes.statusText}`
+      );
+    }
+
+    const TopOrderData = await orderRes.json();
+    console.log(TopOrderData);
+
+    /***Top Invoices */
+
+    const topinvoices = `${protocol}://${host}/api/customers/${id}?invoices=true`;
+    const invoiceRes = await fetch(topinvoices);
+
+    if (!invoiceRes.ok) {
+      throw new Error(`Failed to fetch top invoice ${invoiceRes.statusText}`);
+    }
+
+    const TopInvoiceData = await invoiceRes.json();
+    console.log(TopInvoiceData);
+
 
     return {
       props: {
-        customers: customers || [],
-        totalItems,
-        currentPage: parseInt(page, 10),
+        customer,
+        purchaseData,
+        TopQuotationData,
+        TopOrderData,
+        TopInvoiceData,
       },
     };
   } catch (error) {
-    console.error("Error fetching customers:", error);
+    console.error("Error in getServerSideProps:", error.message);
+
     return {
       props: {
-        customers: [],
-        totalItems: 0,
+        customer: null,
+        purchaseData: null,
+        TopQuotationData:null,
+        TopOrderData:null,
+        TopInvoiceData:null,
+        error: error.message,
       },
     };
   }
-}
+} 
+
+// export async function getServerSideProps(context) {
+//   try {
+//     const {
+//       page = 1,
+//       search = "",
+//       sortField = "CardName",
+//       sortDir = "asc",
+//       status = "all",
+//     } = context.query;
+
+//     const protocol = context.req.headers["x-forwarded-proto"] || "http";
+//     const host = context.req.headers.host || "localhost:3000";
+//     const apiUrl = `${protocol}://${host}/api/customers`;
+
+//     const response = await fetch(
+//       `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
+//     );
+//     const { customers, totalItems } = await response.json();
+
+//     return {
+//       props: {
+//         customers: customers || [],
+//         totalItems,
+//         currentPage: parseInt(page, 10),
+//       },
+//     };
+//   } catch (error) {
+//     console.error("Error fetching customers:", error);
+//     return {
+//       props: {
+//         customers: [],
+//         totalItems: 0,
+//       },
+//     };
+//   }
+// }
