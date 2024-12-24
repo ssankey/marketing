@@ -1,3 +1,5 @@
+// components/QuotationsTable.js
+
 import React from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
 import GenericTable from "./GenericTable";
@@ -29,7 +31,6 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
-    handleReset
   } = useTableFilters();
 
   const columns = [
@@ -95,7 +96,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
   // };
   const handleExcelDownload = async () => {
     try {
-      const response = await fetch("api/excel/getAllQuotations");
+      const response = await fetch("api/excel/getAllQuotations  ");
       const allQuotations = await response.json();
       if (allQuotations && allQuotations.length > 0) {
         downloadExcel(allQuotations, "Quotations");
@@ -132,7 +133,6 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
         onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
-        onReset={handleReset}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
         totalItemsLabel="Total Quotations"

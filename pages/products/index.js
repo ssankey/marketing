@@ -1,5 +1,4 @@
 
-
 // pages/products/index.js
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
@@ -14,6 +13,7 @@ export default function ProductsPage({
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState(initialProducts);
   const [totalItems, setTotalItems] = useState(initialTotalItems);
+  const [status, setStatus] = useState("all");
 
   // Handle loading state for client-side transitions
   useEffect(() => {
@@ -31,11 +31,49 @@ export default function ProductsPage({
     };
   }, [router]);
 
+  // Fetch products whenever status changes
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoading(true);
+      try {
+        const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc" } = router.query;
+        const protocol = router.basePath.startsWith("http") ? "http" : "https";
+        const host = window.location.host;
+        const apiUrl = `${protocol}://${host}/api/products`;
+
+        const res = await fetch(
+          `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
+        );
+
+        if (!res.ok) throw new Error("Failed to fetch products");
+
+        const data = await res.json();
+
+        setProducts(data.products);
+        setTotalItems(data.totalItems);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts([]);
+        setTotalItems(0);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [status, router.query]);
+
   // Update local state when props change
   useEffect(() => {
     setProducts(initialProducts);
     setTotalItems(initialTotalItems);
   }, [initialProducts, initialTotalItems]);
+
+  // Handle status change
+   const handleStatusChange = (newStatus) => {
+     setStatus(newStatus);
+    //  setCurrentPage(1); // Reset pagination when status changes
+   };
 
   if (router.isFallback) {
     return <LoadingSpinner />;
@@ -46,6 +84,8 @@ export default function ProductsPage({
       products={products}
       totalItems={totalItems}
       isLoading={isLoading}
+      status={status}
+      onStatusChange={handleStatusChange} // Pass status handler to the table
     />
   );
 }
@@ -57,53 +97,47 @@ ProductsPage.seo = {
   keywords: "products, density",
 };
 
-// export async function getServerSideProps(context) {
-//   const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc" } = context.query;
-
-//   const protocol = context.req.headers["x-forwarded-proto"] || "http";
-//   const host = context.req.headers.host || "localhost:3000";
-//   const apiUrl = `${protocol}://${host}/api/products`;
-
-//   const res = await fetch(`${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}`);
-//   const data = await res.json();
-
-//   const products = Array.isArray(data.products) ? data.products : [];
-//   const totalItems = data.totalItems || 0;
-
-//   return {
-//     props: {
-//       products,
-//       totalItems,
-//       currentPage: parseInt(page, 10),
-//     },
-//   };
-// }
-
 export async function getServerSideProps(context) {
   const {
     page = 1,
     search = "",
     sortField = "ItemCode",
     sortDir = "asc",
+    status = "all",
   } = context.query;
 
   const protocol = context.req.headers["x-forwarded-proto"] || "http";
   const host = context.req.headers.host || "localhost:3000";
   const apiUrl = `${protocol}://${host}/api/products`;
 
-  const res = await fetch(
-    `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}`
-  );
-  const data = await res.json();
+  try {
+    const res = await fetch(
+      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
+    );
 
-  const products = Array.isArray(data.products) ? data.products : [];
-  const totalItems = data.totalItems || 0;
+    if (!res.ok) throw new Error("Failed to fetch products");
 
-  return {
-    props: {
-      products,
-      totalItems,
-      currentPage: parseInt(page, 10),
-    },
-  };
+    const data = await res.json();
+
+    const products = Array.isArray(data.products) ? data.products : [];
+    const totalItems = data.totalItems || 0;
+
+    return {
+      props: {
+        products,
+        totalItems,
+        currentPage: parseInt(page, 10),
+      },
+    };
+  } catch (error) {
+    console.error("Error in getServerSideProps:", error);
+    return {
+      props: {
+        products: [],
+        totalItems: 0,
+        currentPage: 1,
+        error: "Failed to fetch products",
+      },
+    };
+  }
 }

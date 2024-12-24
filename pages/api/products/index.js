@@ -1,5 +1,4 @@
 
-
 // pages/api/products/index.js
 import { getProductsFromDatabase } from "../../../lib/models/products";
 
@@ -13,6 +12,7 @@ export default async function handler(req, res) {
       search = "",
       sortField = "ItemCode",
       sortDir = "asc",
+      status = "all",
     } = req.query;
 
     const ITEMS_PER_PAGE = 20; // Keep it consistent
@@ -28,6 +28,7 @@ export default async function handler(req, res) {
         sortDir,
         offset,
         ITEMS_PER_PAGE,
+        status,
       });
 
       res.status(200).json(productsData);
@@ -39,4 +40,5 @@ export default async function handler(req, res) {
     res.status(405).json({ message: "Method Not Allowed" });
   }
 }
+
 
