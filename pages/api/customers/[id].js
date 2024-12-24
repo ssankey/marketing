@@ -1,4 +1,4 @@
-
+//api/customers/[id].js
 
 import { getCustomerDetail } from "lib/models/customers";
 import { getCustomerPurchaseAndRevenue } from "lib/models/specific-customer";
