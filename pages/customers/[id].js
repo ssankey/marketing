@@ -7,6 +7,10 @@ import { Container, Row, Col, Card, Spinner, Table } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import  PurchasesAmountChart  from "../../components/CustomerCharts/purchasevsamount";
 
+import SalesTable from "../../components/CustomerCharts/salestable";
+import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
+
+
 
 // Utility function to format date
 function formatDate(dateString) {
@@ -16,13 +20,18 @@ function formatDate(dateString) {
 }
 
 
-export default function CustomerDetails({ customer, purchaseData,TopQuotationData,TopOrderData,TopInvoiceData }) {
+export default function CustomerDetails({
+  customer,
+  purchaseData,
+  TopQuotationData,
+  TopOrderData,
+  TopInvoiceData,
+  salesByCategoryData,
+}) {
   //export default function CustomerDetails({ customer }) {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-  
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
@@ -107,14 +116,12 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           </Row>
         </Card.Body>
       </Card>
-
       {/*Purchase Analytics Card */}
       {purchaseData && purchaseData.length > 0 && (
         <Card className="mb-4">
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">
               <h3 className="mb-0">Purchase Analytics</h3>
-              
             </div>
           </Card.Header>
           <Card.Body>
@@ -122,9 +129,28 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           </Card.Body>
         </Card>
       )}
-
-      
-
+      {/*salesByCategory */}
+      {purchaseData && purchaseData.length > 0 && (
+        <Card className="mb-4">
+          <Card.Header>
+            <div className="d-flex justify-content-between align-items-center">
+              <h3 className="mb-0">Sales by Category</h3>
+            </div>
+          </Card.Header>
+          <Card.Body>
+            <Row>
+              <Col lg={6}>
+                {/* Table for Sales by Category */}
+                <SalesTable data={salesByCategoryData} />
+              </Col>
+              <Col lg={6}>
+                {/* Pie Chart for Sales by Category */}
+                <SalesPieChart data={salesByCategoryData} />
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+      )}
       <Row className="mb-4">
         <Col lg={4}>
           <Card className="shadow-sm border-0 h-100">
@@ -302,7 +328,6 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           </Card>
         </Col>
       </Row>
-
       {/* Addresses Card */}
       <Card className="mb-4">
         <Card.Header>
@@ -345,7 +370,6 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           )}
         </Card.Body>
       </Card>
-
       {/* Back Button */}
       <div className="mt-3 mb-4">
         <button className="btn btn-secondary" onClick={() => router.back()}>
@@ -357,10 +381,124 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
 }
 
 
+// export async function getServerSideProps(context) {
+//   const { id } = context.params;
+//   const currentYear = new Date().getFullYear();
+  
+//   try {
+//     // Ensure customer ID is provided
+//     if (!id) {
+//       throw new Error("Customer ID is required");
+//     }
+
+//     const protocol = context.req.headers["x-forwarded-proto"] || "http";
+//     const host = context.req.headers.host || "localhost:3000";
+
+//     // Fetch customer details
+//     const customerUrl = `${protocol}://${host}/api/customers/${id}`;
+//     const customerRes = await fetch(customerUrl);
+
+//     if (!customerRes.ok) {
+//       throw new Error(
+//         `Failed to fetch customer data: ${customerRes.statusText}`
+//       );
+//     }
+
+//     const customerData = await customerRes.json();
+//     const customer = Array.isArray(customerData)
+//       ? customerData[0]
+//       : customerData;
+
+//     if (!customer) {
+//       throw new Error("Customer not found");
+//     }
+
+//     // Fetch purchase and revenue data
+//     const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
+//     const metricsRes = await fetch(metricsUrl);
+
+//     if (!metricsRes.ok) {
+//       throw new Error(
+//         `Failed to fetch purchase metrics: ${metricsRes.statusText}`
+//       );
+//     }
+
+//     const purchaseData = await metricsRes.json();
+//     console.log(purchaseData);
+
+
+   
+//     /****Top quotation  */
+//     const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
+//     const quotationRes = await fetch(topquotation);
+//     console.log(id);
+//     if (!quotationRes.ok) {
+//       throw new Error(
+//         `Failed to fetch top quotation: ${quotationRes.statusText}`
+//       );
+//     }
+
+//     const TopQuotationData = await quotationRes.json();
+//     console.log(TopQuotationData);
+
+//     /****Top Orders  */
+//     const toporders = `${protocol}://${host}/api/customers/${id}?orders=true`;
+//     const orderRes = await fetch(toporders);
+
+//     if (!orderRes.ok) {
+//       throw new Error(
+//         `Failed to fetch top orders: ${orderRes.statusText}`
+//       );
+//     }
+
+//     const TopOrderData = await orderRes.json();
+//     console.log(TopOrderData);
+
+//     /***Top Invoices */
+
+//     const topinvoices = `${protocol}://${host}/api/customers/${id}?invoices=true`;
+//     const invoiceRes = await fetch(topinvoices);
+
+//     if (!invoiceRes.ok) {
+//       throw new Error(`Failed to fetch top invoice ${invoiceRes.statusText}`);
+//     }
+
+//     const TopInvoiceData = await invoiceRes.json();
+//     console.log(TopInvoiceData);
+
+
+//     return {
+//       props: {
+//         customer,
+//         purchaseData,
+//         TopQuotationData,
+//         TopOrderData,
+//         TopInvoiceData,
+//       },
+//     };
+//   } catch (error) {
+//     console.error("Error in getServerSideProps:", error.message);
+
+//     return {
+//       props: {
+//         customer: null,
+//         purchaseData: null,
+//         TopQuotationData:null,
+//         TopOrderData:null,
+//         TopInvoiceData:null,
+//         error: error.message,
+//       },
+//     };
+//   }
+// } 
+
+
+
+
 export async function getServerSideProps(context) {
   const { id } = context.params;
   const currentYear = new Date().getFullYear();
-  
+
   try {
     // Ensure customer ID is provided
     if (!id) {
@@ -402,8 +540,6 @@ export async function getServerSideProps(context) {
     const purchaseData = await metricsRes.json();
     console.log(purchaseData);
 
-
-   
     /****Top quotation  */
     const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
     const quotationRes = await fetch(topquotation);
@@ -422,9 +558,7 @@ export async function getServerSideProps(context) {
     const orderRes = await fetch(toporders);
 
     if (!orderRes.ok) {
-      throw new Error(
-        `Failed to fetch top orders: ${orderRes.statusText}`
-      );
+      throw new Error(`Failed to fetch top orders: ${orderRes.statusText}`);
     }
 
     const TopOrderData = await orderRes.json();
@@ -442,6 +576,16 @@ export async function getServerSideProps(context) {
     const TopInvoiceData = await invoiceRes.json();
     console.log(TopInvoiceData);
 
+    const salesByCategoryUrl = `${protocol}://${host}/api/customers/salesbycategory?id=${id}`;
+    const salesByCategoryRes = await fetch(salesByCategoryUrl);
+
+    if (!salesByCategoryRes.ok) {
+      throw new Error(
+        `Failed to fetch sales by category: ${salesByCategoryRes.statusText}`
+      );
+    }
+
+    const salesByCategoryData = await salesByCategoryRes.json();
 
     return {
       props: {
@@ -450,6 +594,7 @@ export async function getServerSideProps(context) {
         TopQuotationData,
         TopOrderData,
         TopInvoiceData,
+        salesByCategoryData,
       },
     };
   } catch (error) {
@@ -459,48 +604,12 @@ export async function getServerSideProps(context) {
       props: {
         customer: null,
         purchaseData: null,
-        TopQuotationData:null,
-        TopOrderData:null,
-        TopInvoiceData:null,
+        TopQuotationData: null,
+        TopOrderData: null,
+        TopInvoiceData: null,
+        salesByCategoryData: null,
         error: error.message,
       },
     };
   }
 } 
-
-// export async function getServerSideProps(context) {
-//   try {
-//     const {
-//       page = 1,
-//       search = "",
-//       sortField = "CardName",
-//       sortDir = "asc",
-//       status = "all",
-//     } = context.query;
-
-//     const protocol = context.req.headers["x-forwarded-proto"] || "http";
-//     const host = context.req.headers.host || "localhost:3000";
-//     const apiUrl = `${protocol}://${host}/api/customers`;
-
-//     const response = await fetch(
-//       `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
-//     );
-//     const { customers, totalItems } = await response.json();
-
-//     return {
-//       props: {
-//         customers: customers || [],
-//         totalItems,
-//         currentPage: parseInt(page, 10),
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error fetching customers:", error);
-//     return {
-//       props: {
-//         customers: [],
-//         totalItems: 0,
-//       },
-//     };
-//   }
-// }
