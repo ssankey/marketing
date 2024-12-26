@@ -94,12 +94,12 @@ const NavbarVertical = () => {
           </Accordion>
         </li>
 
-        <li className="nav-item">
+        {/* <li className="nav-item">
           <a href="/customer-chart" className="nav-link d-flex align-items-center">
             <House className="me-2" />
             Search By Customer
           </a>
-        </li>
+        </li> */}
 
         <li className="nav-item">
           <a href="/quotations" className="nav-link d-flex align-items-center">
