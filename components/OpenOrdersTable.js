@@ -96,7 +96,7 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
       ),
     },
     {
-      field: "DocTotal",
+      field: "LineTotal",
       label: "Total Amount",
       render: (value, row) => {
         const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;

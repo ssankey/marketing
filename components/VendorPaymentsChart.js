@@ -85,62 +85,65 @@ const VendorPaymentsChart = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
+      datalabels: {
+        display: false, // Disable datalabels for this chart
+      },
       legend: {
-        display: false
+        display: false,
       },
       tooltip: {
         backgroundColor: colorPalette.dark,
         titleFont: {
           size: 14,
-          weight: 'bold'
+          weight: "bold",
         },
         bodyFont: {
-          size: 13
+          size: 13,
         },
         padding: 12,
         callbacks: {
-          label: (tooltipItem) => `${formatCurrency(tooltipItem.raw)}`
-        }
-      }
+          label: (tooltipItem) => `${formatCurrency(tooltipItem.raw)}`,
+        },
+      },
     },
     scales: {
       x: {
         grid: {
-          display: false
+          display: false,
         },
         ticks: {
           font: {
             size: 12,
-            family: "'Inter', sans-serif"
+            family: "'Inter', sans-serif",
           },
           color: colorPalette.dark,
-          maxRotation: 45,  // Rotate labels 45 degrees
-          minRotation: 45,  // Keep rotation consistent
+          maxRotation: 45, // Rotate labels 45 degrees
+          minRotation: 45, // Keep rotation consistent
           callback: function (value, index) {
             // Truncate long names to 15 characters + ellipsis
             const label = this.getLabelForValue(value);
             if (label.length > 15) {
-              return label.substr(0, 12) + '...';
+              return label.substr(0, 12) + "...";
             }
             return label;
-          }
-        }
+          },
+        },
       },
       y: {
         grid: {
-          color: 'rgba(0,0,0,0.05)'
+          color: "rgba(0,0,0,0.05)",
         },
         ticks: {
           callback: (value) => formatCurrency(value),
           font: {
             size: 12,
-            family: "'Inter', sans-serif"
+            family: "'Inter', sans-serif",
           },
-          color: colorPalette.dark
+          color: colorPalette.dark,
         },
-        beginAtZero: true
-      }
-    }
+        beginAtZero: true,
+      },
+    },
   };
 
   // No Data Display Component

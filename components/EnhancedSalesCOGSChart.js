@@ -123,63 +123,66 @@ const EnhancedSalesCOGSChart = () => {
     
 
     const salesAndCOGSChartOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            tooltip: {
-                callbacks: {
-                    label: (context) => {
-                        if (context.dataset.label === 'Gross Margin %') {
-                            return `${context.raw.toFixed(2)}%`;
-                        }
-                        return formatCurrency(context.raw);
-                    },
-                },
-                backgroundColor: '#212529',
-                titleFont: { size: 14, weight: "bold" },
-                bodyFont: { size: 13 },
-                padding: 12,
-            },
-            legend: {
-                position: 'top',
-                labels: {
-                    font: {
-                        family: "'Inter', sans-serif",
-                        size: 13,
-                    },
-                    padding: 20,
-                },
-            },
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        datalabels: {
+          display: false, // Disable datalabels for this chart
         },
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: {
-                    callback: (value) => formatCurrency(value),
-                    font: { family: "'Inter', sans-serif", size: 12 },
-                },
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)',
-                },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              if (context.dataset.label === "Gross Margin %") {
+                return `${context.raw.toFixed(2)}%`;
+              }
+              return formatCurrency(context.raw);
             },
-            y1: {
-                position: 'right',
-                beginAtZero: true,
-                ticks: {
-                    callback: (value) => `${value}%`,
-                    font: { family: "'Inter', sans-serif", size: 12 },
-                },
-                grid: {
-                    drawOnChartArea: false,
-                },
-            },
-            x: {
-                grid: { display: false },
-                ticks: {
-                    font: { family: "'Inter', sans-serif", size: 12 },
-                },
-            },
+          },
+          backgroundColor: "#212529",
+          titleFont: { size: 14, weight: "bold" },
+          bodyFont: { size: 13 },
+          padding: 12,
         },
+        legend: {
+          position: "top",
+          labels: {
+            font: {
+              family: "'Inter', sans-serif",
+              size: 13,
+            },
+            padding: 20,
+          },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => formatCurrency(value),
+            font: { family: "'Inter', sans-serif", size: 12 },
+          },
+          grid: {
+            color: "rgba(0, 0, 0, 0.05)",
+          },
+        },
+        y1: {
+          position: "right",
+          beginAtZero: true,
+          ticks: {
+            callback: (value) => `${value}%`,
+            font: { family: "'Inter', sans-serif", size: 12 },
+          },
+          grid: {
+            drawOnChartArea: false,
+          },
+        },
+        x: {
+          grid: { display: false },
+          ticks: {
+            font: { family: "'Inter', sans-serif", size: 12 },
+          },
+        },
+      },
     };
 
     const exportToCSV = () => {
