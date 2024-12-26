@@ -646,7 +646,7 @@ const OrdersChart = () => {
         color: "#212529",
         font: {
           weight: "bold",
-          size: 11,
+          size: 12,
         },
         // Make the labels clickable by adding a listener
         listeners: {

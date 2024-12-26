@@ -4,7 +4,7 @@ import { queryDatabase } from '../../../lib/db';
 export default async function handler(req, res) {
   try {
     const query = `
-      SELECT 
+      SELECT TOP 5
         t1.cardcode, 
         t1.cardname,
         (SUM(T0.Debit) - SUM(T0.Credit)) AS Balance
