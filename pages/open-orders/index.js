@@ -111,7 +111,7 @@ export async function getServerSideProps(context) {
           ELSE 'Out of Stock'
         END AS StockStatus,
         T1.Price,
-        T0.DocTotal,
+        T1.LineTotal,
         T1.Currency,
         (T1.OpenQty * T1.Price) AS OpenAmount,
         T0.DocCur,
