@@ -1,3 +1,4 @@
+//components/invoiesTable.js
 import React from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
@@ -11,8 +12,12 @@ import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
-const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
+const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   const ITEMS_PER_PAGE = 20;
+
+
+
+
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
@@ -28,7 +33,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
-    handleReset
+    handleReset,
   } = useTableFilters();
 
   const columns = [
@@ -110,19 +115,36 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
   ];
-  
-  
+
   // Define handleExcelDownload function
   // const handleExcelDownload = () => {
   //   downloadExcel(invoices, "Invoices");
   // };
 
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const response = await fetch("api/excel/getAllInvoices");
+  //     const allInvoices = await response.json();
+  //     if (allInvoices && allInvoices.length > 0) {
+  //       downloadExcel(allInvoices, "Invoices");
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
+
   const handleExcelDownload = async () => {
     try {
-      const response = await fetch("api/excel/getAllInvoices");
-      const allInvoices = await response.json();
-      if (allInvoices && allInvoices.length > 0) {
-        downloadExcel(allInvoices, "Invoices");
+      const response = await fetch(
+        `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
+      );
+      const filteredInvoices = await response.json();
+
+      if (filteredInvoices && filteredInvoices.length > 0) {
+        downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
       } else {
         alert("No data available to export.");
       }

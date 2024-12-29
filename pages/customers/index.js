@@ -143,6 +143,7 @@ export async function getServerSideProps(context) {
       ...customer,
       IsActive: customer.IsActive === 'Y',
     }));
+    // Console.log(customers);
 
     return {
       props: {

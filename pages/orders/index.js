@@ -1,21 +1,24 @@
-// pages/orders/index.js
-
+//pages/orders/index.js
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
 import OrdersTable from "components/OrdersTable";
 import { useRouter } from "next/router";
-import { getOrders } from "lib/models/orders";
+import { useAuth } from "hooks/useAuth";
+import { Spinner } from "react-bootstrap";
 
 export default function OrdersPage({
   orders: initialOrders,
   totalItems: initialTotalItems,
+  currentPage: initialCurrentPage,
 }) {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [orders, setOrders] = useState(initialOrders);
   const [totalItems, setTotalItems] = useState(initialTotalItems);
+  const [currentPage, setCurrentPage] = useState(initialCurrentPage);
 
-  // Handle loading state for client-side transitions
+  // Handle client-side route transitions
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
@@ -35,145 +38,74 @@ export default function OrdersPage({
   useEffect(() => {
     setOrders(initialOrders);
     setTotalItems(initialTotalItems);
-  }, [initialOrders, initialTotalItems]);
+    setCurrentPage(initialCurrentPage);
+  }, [initialOrders, initialTotalItems, initialCurrentPage]);
 
+  // Show a loader if authentication is loading
+  if (authLoading) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
+          <span className="sr-only">Loading...</span>
+        </Spinner>
+        <div className="ms-3">Checking authentication...</div>
+      </div>
+    );
+  }
 
+  if (router.isFallback) {
+    return <LoadingSpinner />;
+  }
 
-  return (
+  return isAuthenticated ? (
     <OrdersTable
       orders={orders}
       totalItems={totalItems}
+      currentPage={currentPage}
       isLoading={isLoading}
     />
-  );
+  ) : null;
 }
 
-// SEO properties for OrdersPage
 OrdersPage.seo = {
   title: "Orders | Density",
   description: "View and manage all your orders.",
-  keywords: "orders, sales, management",
+  keywords: "orders, density",
 };
 
 export async function getServerSideProps(context) {
+  const {
+    page = 1,
+    search = "",
+    status = "all",
+    sortField = "DocNum",
+    sortDir = "desc",
+    fromDate,
+    toDate,
+  } = context.query;
+
   try {
-    const {
-      page = 1,
-      search = "",
-      status = "all",
-      fromDate,
-      toDate,
-    } = context.query;
+    const protocol = context.req.headers["x-forwarded-proto"] || "http";
+    const host = context.req.headers.host || "localhost:3000";
+    const apiUrl = `${protocol}://${host}/api/orders`;
 
-    // Set default sorting parameters
-    const sortField = 'DocDate';
-    const sortDir = 'desc';
+    const response = await fetch(
+      `${apiUrl}?page=${page}&search=${search}&status=${status}&sortField=${sortField}&sortDir=${sortDir}&fromDate=${fromDate}&toDate=${toDate}`
+    );
 
-    const ITEMS_PER_PAGE = 20;
-    const offset = (parseInt(page) - 1) * ITEMS_PER_PAGE;
-
-    // Build the WHERE clause based on filters
-    let whereClause = "1=1"; // Base condition that's always true
-
-    // Apply search filters
-    if (search) {
-      whereClause += ` AND (
-        T0.DocNum LIKE '%${search}%' OR 
-        T0.CardName LIKE '%${search}%'
-      )`;
+    if (!response.ok) {
+      throw new Error("Failed to fetch orders from API");
     }
 
-    // Apply status filter
-    if (status && status !== "all") {
-      whereClause += ` AND (
-        CASE 
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'closed'
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'cancel'
-          WHEN T0.DocStatus='O' THEN 'open'
-          ELSE 'NA'
-        END = '${status}'
-      )`;
-    }
-
-    // Add date filters
-    if (fromDate) {
-      whereClause += ` AND T0.DocDate >= '${fromDate}'`;
-    }
-    if (toDate) {
-      whereClause += ` AND T0.DocDate <= '${toDate}'`;
-    }
-
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(DISTINCT T0.DocEntry) as total
-      FROM ORDR T0
-      INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-      WHERE ${whereClause};
-    `;
-
-    // Get paginated data
-    const dataQuery = `
-  SELECT 
-    CASE 
-      WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
-      WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Cancelled'
-      WHEN T0.DocStatus='O' THEN 'Open' 
-      ELSE 'NA' 
-    END AS DocStatus,
-    T0.DocEntry,
-    T0.DocNum,
-    T0.DocDate,
-    T0.NumAtCard AS CustomerPONo,
-    T0.TaxDate AS PODate,
-    T0.DocDueDate AS DeliveryDate,
-    T0.CardName,
-    T0.DocTotal,
-    T0.DocCur,
-    T0.DocRate,
-    T5.SlpName AS SalesEmployee,
-    COUNT(DISTINCT T1.ItemCode) AS ProductCount -- Count of unique products in the order
-  FROM ORDR T0
-  INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-  INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry -- Join to get product details
-  WHERE ${whereClause}
-  GROUP BY 
-    T0.DocStatus,
-    T0.CANCELED,
-    T0.DocEntry,
-    T0.DocNum,
-    T0.DocDate,
-    T0.NumAtCard,
-    T0.TaxDate,
-    T0.DocDueDate,
-    T0.CardName,
-    T0.DocTotal,
-    T0.DocCur,
-    T0.DocRate,
-    T5.SlpName
-  ORDER BY ${sortField} ${sortDir}
-  OFFSET ${offset} ROWS
-  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-`;
-
-
-    const [totalResult, rawOrders] = await Promise.all([
-      getOrders(countQuery),
-      getOrders(dataQuery),
-    ]);
-
-    // Process data and return as props
-    const totalItems = totalResult[0]?.total || 0;
-    const orders = rawOrders.map((order) => ({
-      ...order,
-      DocDate: order.DocDate ? order.DocDate.toISOString() : null,
-      PODate: order.PODate ? order.PODate.toISOString() : null,
-      DeliveryDate: order.DeliveryDate ? order.DeliveryDate.toISOString() : null,
-    }));
+    const { orders, totalItems } = await response.json();
 
     return {
       props: {
         orders: Array.isArray(orders) ? orders : [],
-        totalItems,
+        totalItems: totalItems || 0,
         currentPage: parseInt(page, 10),
       },
     };
@@ -184,8 +116,132 @@ export async function getServerSideProps(context) {
         orders: [],
         totalItems: 0,
         currentPage: 1,
+        error: "Failed to fetch orders",
       },
     };
   }
 }
 
+
+
+// import { useState, useEffect } from "react";
+// import LoadingSpinner from "components/LoadingSpinner";
+// import OpenOrdersTable from "components/OpenOrdersTable";
+// import { useRouter } from "next/router";
+// import { useAuth } from "hooks/useAuth";
+// import { Spinner } from "react-bootstrap";
+
+// export default function OpenOrdersPage({
+//   orders: initialOrders,
+//   totalItems: initialTotalItems,
+//   currentPage: initialCurrentPage,
+// }) {
+//   const { isAuthenticated, isLoading: authLoading } = useAuth();
+//   const router = useRouter();
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [orders, setOrders] = useState(initialOrders);
+//   const [totalItems, setTotalItems] = useState(initialTotalItems);
+//   const [currentPage, setCurrentPage] = useState(initialCurrentPage);
+
+//   // Handle client-side route transitions
+//   useEffect(() => {
+//     const handleStart = () => setIsLoading(true);
+//     const handleComplete = () => setIsLoading(false);
+
+//     router.events.on("routeChangeStart", handleStart);
+//     router.events.on("routeChangeComplete", handleComplete);
+//     router.events.on("routeChangeError", handleComplete);
+
+//     return () => {
+//       router.events.off("routeChangeStart", handleStart);
+//       router.events.off("routeChangeComplete", handleComplete);
+//       router.events.off("routeChangeError", handleComplete);
+//     };
+//   }, [router]);
+
+//   // Update local state when props change
+//   useEffect(() => {
+//     setOrders(initialOrders);
+//     setTotalItems(initialTotalItems);
+//     setCurrentPage(initialCurrentPage);
+//   }, [initialOrders, initialTotalItems, initialCurrentPage]);
+
+//   // Show a loader if authentication is loading
+//   if (authLoading) {
+//     return (
+//       <div
+//         className="d-flex justify-content-center align-items-center"
+//         style={{ minHeight: "100vh" }}
+//       >
+//         <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
+//           <span className="sr-only">Loading...</span>
+//         </Spinner>
+//         <div className="ms-3">Checking authentication...</div>
+//       </div>
+//     );
+//   }
+
+//   if (router.isFallback) {
+//     return <LoadingSpinner />;
+//   }
+
+//   return isAuthenticated ? (
+//     <OpenOrdersTable
+//       orders={orders}
+//       totalItems={totalItems}
+//       currentPage={currentPage}
+//       isLoading={isLoading}
+//     />
+//   ) : null;
+// }
+
+// OpenOrdersPage.seo = {
+//   title: "Open Orders | Density",
+//   description: "View and manage all your open orders with stock details.",
+//   keywords: "open orders, sales, stock management",
+// };
+
+// export async function getServerSideProps(context) {
+//   const {
+//     page = 1,
+//     search = "",
+//     sortField = "DocNum",
+//     sortDir = "desc",
+//     fromDate,
+//     toDate,
+//   } = context.query;
+
+//   try {
+//     const protocol = context.req.headers["x-forwarded-proto"] || "http";
+//     const host = context.req.headers.host || "localhost:3000";
+//     const apiUrl = `${protocol}://${host}/api/open-orders`;
+
+//     const response = await fetch(
+//       `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&fromDate=${fromDate}&toDate=${toDate}`
+//     );
+
+//     if (!response.ok) {
+//       throw new Error("Failed to fetch open orders from API");
+//     }
+
+//     const { orders, totalItems } = await response.json();
+
+//     return {
+//       props: {
+//         orders: Array.isArray(orders) ? orders : [],
+//         totalItems: totalItems || 0,
+//         currentPage: parseInt(page, 10),
+//       },
+//     };
+//   } catch (error) {
+//     console.error("Error fetching open orders:", error);
+//     return {
+//       props: {
+//         orders: [],
+//         totalItems: 0,
+//         currentPage: 1,
+//         error: "Failed to fetch open orders",
+//       },
+//     };
+//   }
+// }

@@ -31,6 +31,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
+    handleReset,
   } = useTableFilters();
 
   const columns = [
@@ -90,16 +91,19 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
   ];
-  // Define handleExcelDownload function
-  // const handleExcelDownload = () => {
-  //   downloadExcel(quotations, "Quotations");
-  // };
+ 
+
   const handleExcelDownload = async () => {
     try {
-      const response = await fetch("api/excel/getAllQuotations  ");
-      const allQuotations = await response.json();
-      if (allQuotations && allQuotations.length > 0) {
-        downloadExcel(allQuotations, "Quotations");
+      const response = await fetch(
+        `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+          fromDate || ""
+        }&toDate=${toDate || ""}`
+      );
+      const filteredQuotations = await response.json();
+  
+      if (filteredQuotations && filteredQuotations.length > 0) {
+        downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
       } else {
         alert("No data available to export.");
       }
@@ -125,7 +129,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
           options: [
             { value: "open", label: "Open" },
             { value: "closed", label: "Closed" },
-            { value: "cancel", label: "Cancelled" },
+            { value: "canceled", label: "Cancelled" },
           ],
           value: statusFilter,
           label: "Status",
@@ -135,6 +139,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
         toDate={toDate}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
+        onReset={handleReset}
         totalItemsLabel="Total Quotations"
       />
       {isLoading ? (
