@@ -1,3 +1,4 @@
+//components/OrderTable.js
 import React from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
@@ -48,6 +49,11 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
         </Link>
       ),
     },
+    {
+      field: "DocStatus",
+      label: "Order Status",
+      render: (value) => <StatusBadge status={value.toLowerCase()} />,
+    },
     // {
     //   field: "InvoiceNum",
     //   label: "Invoice#",
@@ -88,7 +94,8 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       field: "DocTotal",
       label: "Total Amount",
       render: (value, row) => {
-        const amountInINR = row.DocCur === "INR" ? value : value * row.ExchangeRate;
+        const amountInINR =
+          row.DocCur === "INR" ? value : value * row.ExchangeRate;
         return formatCurrency(amountInINR);
       },
     },
@@ -97,44 +104,47 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       label: "Currency",
       render: (value) => value || "0",
     },
-    {
-      field: "DocStatus",
-      label: "Order Status",
-      render: (value) => <StatusBadge status={value.toLowerCase()} />,
-    },
+    // {
+    //   field: "DocStatus",
+    //   label: "Order Status",
+    //   render: (value) => <StatusBadge status={value.toLowerCase()} />,
+    // },
 
-    {
-      field: "InvoiceDate",
-      label: "Invoice Date",
-      render: (value) => value ? formatDate(value) : "0",
-    },
-    {
-      field: "InvoiceTotal",
-      label: "Invoice Amount",
-      render: (value) => formatCurrency(value || 0),
-    },
-    {
-      field: "InvoiceStatus",
-      label: "Invoice Status",
-      render: (value) => value ? <StatusBadge status={value.toLowerCase()} /> : "0",
-    },
+    // {
+    //   field: "InvoiceDate",
+    //   label: "Invoice Date",
+    //   render: (value) => value ? formatDate(value) : "0",
+    // },
+    // {
+    //   field: "InvoiceTotal",
+    //   label: "Invoice Amount",
+    //   render: (value) => formatCurrency(value || 0),
+    // },
+    // {
+    //   field: "InvoiceStatus",
+    //   label: "Invoice Status",
+    //   render: (value) => value ? <StatusBadge status={value.toLowerCase()} /> : "0",
+    // },
     {
       field: "SalesEmployee",
       label: "Sales Employee",
       render: (value) => value || "0",
-    }
+    },
   ];
   
-  // const handleExcelDownload = () => {
-  //   downloadExcel(orders, "Orders");
-  // };
+  
 
   const handleExcelDownload = async () => {
     try {
-      const response = await fetch("api/excel/getAllOrders");
-      const allOrders = await response.json();
-      if (allOrders && allOrders.length > 0) {
-        downloadExcel(allOrders, "Orders");
+      const response = await fetch(
+        `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+          fromDate || ""
+        }&toDate=${toDate || ""}`
+      );
+      const filteredOrders = await response.json();
+
+      if (filteredOrders && filteredOrders.length > 0) {
+        downloadExcel(filteredOrders, `Orders_${statusFilter}`);
       } else {
         alert("No data available to export.");
       }
@@ -212,3 +222,5 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
 };
 
 export default OrdersTable;
+
+

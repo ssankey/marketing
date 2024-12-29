@@ -1,3 +1,4 @@
+//pages/invoices/index.js
 import { useState, useEffect } from 'react';
 import LoadingSpinner from 'components/LoadingSpinner';
 import InvoicesTable from 'components/InvoicesTable';
@@ -9,10 +10,11 @@ import { Spinner } from 'react-bootstrap';
 export default function InvoicesPage({ invoices: initialInvoices, totalItems: initialTotalItems }) {
   const { isAuthenticated, isLoading: authLoading } = useAuth(); // Renamed for clarity
 
-  const router = useRouter();
+  const router = useRouter();   
   const [isLoading, setIsLoading] = useState(false);
   const [invoices, setInvoices] = useState(initialInvoices);
   const [totalItems, setTotalItems] = useState(initialTotalItems);
+  const [status, setStatus] = useState("all");
 
   // Handle loading state for client-side transitions
   useEffect(() => {
@@ -36,8 +38,8 @@ export default function InvoicesPage({ invoices: initialInvoices, totalItems: in
     setTotalItems(initialTotalItems);
   }, [initialInvoices, initialTotalItems]);
 
-  // Show a loader if still loading or redirecting
-  if (authLoading) {
+   // Show a loader if still loading or redirecting
+   if (authLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ minHeight: "100vh" }}>
         <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
@@ -49,15 +51,14 @@ export default function InvoicesPage({ invoices: initialInvoices, totalItems: in
   }
 
 
-  return (
-    isAuthenticated ? (
-      <InvoicesTable
-        invoices={invoices}
-        totalItems={totalItems}
-        isLoading={isLoading}
-      />
-    ) : null
-  );
+  return isAuthenticated ? (
+    <InvoicesTable
+      invoices={invoices}
+      totalItems={totalItems}
+      isLoading={isLoading}
+      status={router.query.status || "all"}
+    />
+  ) : null;
 }
 
 // Static SEO properties for InvoicesPage

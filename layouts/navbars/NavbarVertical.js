@@ -68,8 +68,8 @@ const NavbarVertical = () => {
         {/* Dashboard Accordion */}
         <li className="nav-item">
           <Accordion>
-            <CustomToggle eventKey="dashboard" icon="house">
-              <House className="me-2" />
+            <CustomToggle eventKey="dashboard" icon="House">
+              {/* <House className="me-2" /> */}
               Dashboard
             </CustomToggle>
             <Accordion.Collapse eventKey="dashboard">

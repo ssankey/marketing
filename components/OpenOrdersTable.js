@@ -1,38 +1,128 @@
 //components/OpenOrdersTable.js
 
-import React from 'react';
-import { Container, Row, Col, Spinner } from 'react-bootstrap';
-import GenericTable from './GenericTable';
-import TableFilters from './TableFilters';
-import TablePagination from './TablePagination';
-import { formatCurrency } from 'utils/formatCurrency';
-import Link from 'next/link';
-import StatusBadge from './StatusBadge';
-import { formatDate } from 'utils/formatDate';
-import usePagination from 'hooks/usePagination';
-import useTableFilters from 'hooks/useFilteredData';
-import { truncateText } from 'utils/truncateText';
+
+
+import React from "react";
+import { Container, Row, Col, Spinner } from "react-bootstrap";
+import GenericTable from "./GenericTable";
+import TableFilters from "./TableFilters";
+import TablePagination from "./TablePagination";
+import { formatCurrency } from "utils/formatCurrency";
+import Link from "next/link";
+import StatusBadge from "./StatusBadge";
+import { formatDate } from "utils/formatDate";
+import usePagination from "hooks/usePagination";
+import useTableFilters from "hooks/useFilteredData";
+import { truncateText } from "utils/truncateText";
 import downloadExcel from "utils/exporttoexcel";
 
-const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
-  console.log(orders);
-
+const OpenOrdersTable = ({
+  orders,
+  totalItems,
+  currentPage,
+  isLoading = false,
+}) => {
   const ITEMS_PER_PAGE = 20;
+
   const { totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
+
   const {
     searchTerm,
     fromDate,
     toDate,
     sortField,
     sortDirection,
+    statusFilter,
     handleSearch,
+    handleStatusChange,
     handleDateFilterChange,
     handleSort,
-    handleReset
+    handleReset,
   } = useTableFilters();
+
+  
+  
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const constructedUrl = `/api/excel/getOpenOrders?status=${statusFilter}search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+  //       fromDate || ""
+  //     }&toDate=${toDate || ""}`;
+  //     console.log("Constructed API URL:", constructedUrl);
+
+  //     const response = await fetch(constructedUrl);
+
+  //     if (!response.ok) {
+  //       console.error("API Response Error:", response.statusText);
+  //       throw new Error(`API request failed with status ${response.status}`);
+  //     }
+
+  //     const filteredOpenOrders = await response.json();
+  //     console.log("Fetched Data:", filteredOpenOrders);
+
+  //     if (filteredOpenOrders && filteredOpenOrders.length > 0) {
+
+  //       const formatDate = (date) => {
+  //         if (!date) return "NoDate";
+  //         const [year, month, day] = date.split("-");
+  //         return `${day}-${month}-${year}`;
+  //       };
+
+  //       const startDate = formatDate(fromDate);
+  //       const endDate = formatDate(toDate);
+  //       const fileName = `OpenOrders_${startDate}_to_${endDate}.xlsx`;
+
+  //       downloadExcel(filteredOpenOrders, fileName);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error during Excel export:", error.message);
+  //     alert(`Failed to export data. Error: ${error.message}`);
+  //   }
+  // };
+
+
+  const handleExcelDownload = async () => {
+    try {
+      const constructedUrl = `/api/excel/getOpenOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+        fromDate || ""
+      }&toDate=${toDate || ""}`;
+      console.log("Constructed API URL:", constructedUrl);
+
+      const response = await fetch(constructedUrl);
+
+      if (!response.ok) {
+        console.error("API Response Error:", response.statusText);
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const filteredOpenOrders = await response.json();
+      console.log("Fetched Data:", filteredOpenOrders);
+
+      if (filteredOpenOrders && filteredOpenOrders.length > 0) {
+        const formatDate = (date) => {
+          if (!date) return "NoDate";
+          const [year, month, day] = date.split("-");
+          return `${day}-${month}-${year}`;
+        };
+
+        const startDate = formatDate(fromDate);
+        const endDate = formatDate(toDate);
+        const fileName = `OpenOrders_${startDate}_to_${endDate}.xlsx`;
+
+        downloadExcel(filteredOpenOrders, fileName);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Error during Excel export:", error.message);
+      alert(`Failed to export data. Error: ${error.message}`);
+    }
+  };
+
 
   const columns = [
     {
@@ -45,6 +135,19 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
         >
           {value}
         </Link>
+      ),
+    },
+    {
+      field: "StockStatus",
+      label: "Stock Status",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "In Stock" ? "bg-success" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
       ),
     },
     {
@@ -82,21 +185,9 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
       label: "In Stock",
       render: (value) => value || "0",
     },
+  
     {
-      field: "StockStatus",
-      label: "Stock Status",
-      render: (value) => (
-        <span
-          className={`badge ${
-            value === "In Stock" ? "bg-success" : "bg-danger"
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
-    {
-      field: "LineTotal",
+      field: "TotalAmount",
       label: "Total Amount",
       render: (value, row) => {
         const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
@@ -109,26 +200,6 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
       render: (value) => value || "N/A",
     },
   ];
-  
-
-  // const handleExcelDownload = () => {
-  //   downloadExcel(orders, "Open Orders");
-  // };
-
-  const handleExcelDownload = async () => {
-    try {
-      const response = await fetch("api/excel/getOpenOrders");
-      const allOpenOrders = await response.json();
-      if (allOpenOrders && allOpenOrders.length > 0) {
-        downloadExcel(allOpenOrders, "Open-Orders");
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
-      alert("Failed to export data. Please try again.");
-    }
-  };
 
   return (
     <Container fluid>
@@ -136,16 +207,27 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
         searchConfig={{
           enabled: true,
           placeholder: "Search open orders...",
-          fields: ["DocNum", "CardName"], // Searchable fields
+          fields: ["DocNum", "CardName"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
+        // statusFilter={{
+        //   enabled: false, // Only open orders
+        // }}
         statusFilter={{
-          enabled: false, // Disable status filter as we are only showing open orders
+          enabled: true,
+          options: [
+            // { value: "all", label: "All" },
+            { value: "inStock", label: "In Stock" },
+            { value: "outOfStock", label: "Out of Stock" },
+          ],
+          value: statusFilter,
+          
         }}
         fromDate={fromDate}
         toDate={toDate}
         onReset={handleReset}
+        onStatusChange={handleStatusChange}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
         totalItemsLabel="Total Open Orders"
@@ -161,7 +243,7 @@ const OpenOrdersTable = ({ orders, totalItems, currentPage, isLoading = false })
         <>
           <GenericTable
             columns={columns}
-            data={orders}
+            data={orders || []}
             onSort={handleSort}
             sortField={sortField}
             sortDirection={sortDirection}
