@@ -86,29 +86,53 @@ export default async function handler(req, res) {
         if (region) whereClause += ` AND T0.Region = '${region}'`;
         if (customer) whereClause += ` AND T0.CardCode = '${customer}'`;
 
-        const query = `
-            SELECT 
-                MONTH(T0.DocDate) AS Month,
-                CASE 
-                    WHEN T0.DocStatus = 'O' THEN 'Open'
-                    WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-                    ELSE 'NA'
-                END AS OrderStatus,
-                COUNT(T0.DocEntry) AS OrderCount,
-                ISNULL(SUM(T1.DocTotal), 0) AS SalesTotal
-            FROM ORDR T0
-            LEFT JOIN OINV T1 ON T0.DocNum = T1.DocNum
-            ${whereClause}
-            GROUP BY 
-                MONTH(T0.DocDate),
-                CASE 
-                    WHEN T0.DocStatus = 'O' THEN 'Open'
-                    WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-                    ELSE 'NA'
-                END
-            ORDER BY Month ASC
-        `;
+        // const query = `
+        //     SELECT 
+        //         MONTH(T0.DocDate) AS Month,
+        //         CASE 
+        //             WHEN T0.DocStatus = 'O' THEN 'Open'
+        //             WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
+        //             ELSE 'NA'
+        //         END AS OrderStatus,
+        //         COUNT(T0.DocEntry) AS OrderCount,
+        //         ISNULL(SUM(T1.DocTotal), 0) AS SalesTotal
+        //     FROM ORDR T0
+        //     LEFT JOIN OINV T1 ON T0.DocNum = T1.DocNum
+        //     ${whereClause}
+        //     GROUP BY 
+        //         MONTH(T0.DocDate),
+        //         CASE 
+        //             WHEN T0.DocStatus = 'O' THEN 'Open'
+        //             WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
+        //             ELSE 'NA'
+        //         END
+        //     ORDER BY Month ASC
+        // `;
 
+
+        const query = `
+        SELECT 
+    MONTH(T0.DocDate) AS Month,
+    CASE 
+        WHEN T0.DocStatus = 'O' THEN 'Open'
+        WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
+        ELSE 'NA'
+    END AS OrderStatus,
+    COUNT(T0.DocEntry) AS OrderCount,
+    COALESCE(SUM(T1.DocTotal), 0) AS SalesTotal -- Use COALESCE for NULL-safe summation
+FROM ORDR T0
+LEFT JOIN OINV T1 ON T0.DocNum = T1.DocNum
+${whereClause}
+GROUP BY 
+    MONTH(T0.DocDate),
+    CASE 
+        WHEN T0.DocStatus = 'O' THEN 'Open'
+        WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
+        ELSE 'NA'
+    END
+ORDER BY Month ASC;
+`;
+        
         console.log('Order Status Query:', query);
 
         const results = await queryDatabase(query);
