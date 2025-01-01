@@ -26,7 +26,10 @@ const TableFilters = ({
   onDateFilterChange,
   totalItems,
   totalItemsLabel = "Total Items",
+  categories = [], // Pass categories from parent
   customElement,
+  selectedCategory,
+  onCategoryChange,
 }) => {
   const handleReset = () => {
     if (onReset) {
@@ -77,6 +80,22 @@ const TableFilters = ({
           </ButtonGroup>
         </Col>
       )}
+
+      {/* Category Dropdown */}
+      <Col xs="auto">
+        <Form.Select
+          size="sm"
+          value={selectedCategory || ""}
+          onChange={(e) => onCategoryChange(e.target.value)}
+        >
+          <option value="">All Categories</option>
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </Form.Select>
+      </Col>
 
       {/* From Date Filter */}
       {dateFilter.enabled && (
@@ -131,3 +150,5 @@ const TableFilters = ({
 };
 
 export default TableFilters;
+
+
