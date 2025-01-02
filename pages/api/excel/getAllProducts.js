@@ -19,11 +19,18 @@ export default async function handler(req, res) {
     status = "all",
     search = "",
     sortField = "ItemCode",
+    category = "",
     sortDir = "asc",
   } = req.query; // Extract filters from the query parameters
 
   try {
-    const data = await getAllProducts({ status, search, sortField, sortDir }); // Pass filters to the model
+    const data = await getAllProducts({
+      status,
+      search,
+      category,
+      sortField,
+      sortDir,
+    }); // Pass filters to the model
     res.status(200).json(data);
   } catch (error) {
     console.error("Error fetching products:", error);
