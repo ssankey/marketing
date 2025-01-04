@@ -1,6 +1,7 @@
 // contexts/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getUser, setUser as setUserInStorage, logout as logoutUser } from '../utils/auth';
+import { jwtDecode } from 'jwt-decode'; // Updated import syntax
+import { getUser, setUser as setUserInStorage, logout as logoutUser } from 'utils/auth';
 
 const AuthContext = createContext(null);
 
@@ -9,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize user state from localStorage on mount
     const storedUser = getUser();
     if (storedUser) {
       setUserState(storedUser);
@@ -18,6 +18,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const setUser = (userData) => {
+    if (userData?.token) {
+      try {
+        const decoded = jwtDecode(userData.token);
+        userData.contactCodes = decoded.contactCodes || [];
+      } catch (error) {
+        console.error('Error decoding token:', error);
+      }
+    }
+    
     setUserState(userData);
     setUserInStorage(userData);
   };
@@ -28,7 +37,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      setUser, 
+      logout, 
+      loading,
+      contactCodes: user?.contactCodes || [] 
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,165 +1,107 @@
-// import { queryDatabase } from '../../lib/db'; // Adjust the import path
-
-// export default async function handler(req, res) {
-//     const { startDate, endDate, region, customer } = req.query;
-    
-//     try {
-//         let whereClause = 'WHERE 1=1';
-        
-//         // Add date filters if provided
-//         if (startDate && endDate) {
-//             whereClause += ` AND T0.DocDate BETWEEN '${startDate}' AND '${endDate}'`;
-//         } else {
-//             whereClause += ` AND YEAR(T0.DocDate) = YEAR(GETDATE())`; // Default to current year
-//         }
-
-//         // Add region filter if provided
-//         if (region) whereClause += ` AND T0.Region = '${region}'`;
-        
-//         // Add customer filter if provided
-//         if (customer) whereClause += ` AND T0.CardCode = '${customer}'`;
-
-//         const query = `
-//             SELECT 
-//                 MONTH(T0.DocDate) AS Month,
-//                 CASE 
-//                     WHEN T0.DocStatus = 'O' THEN 'Open'
-//                     WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-//                     ELSE 'NA'
-//                 END AS OrderStatus,
-//                 COUNT(T0.DocEntry) AS OrderCount
-//             FROM ORDR T0
-//             ${whereClause}
-//             GROUP BY 
-//                 MONTH(T0.DocDate),
-//                 CASE 
-//                     WHEN T0.DocStatus = 'O' THEN 'Open'
-//                     WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-//                     ELSE 'NA'
-//                 END
-//             ORDER BY Month ASC
-//         `;
-
-//         console.log('Order Status Query:', query);
-        
-//         const results = await queryDatabase(query);
-        
-//         // Transform the results into the required format
-//         const monthlyData = new Array(12).fill(null).map((_, index) => ({
-//             month: index + 1,
-//             openOrders: 0,
-//             closedOrders: 0
-//         }));
-
-//         results.forEach((row) => {
-//             const monthIndex = row.Month - 1;
-//             if (row.OrderStatus === 'Open') {
-//                 monthlyData[monthIndex].openOrders = parseInt(row.OrderCount, 10);
-//             } else if (row.OrderStatus === 'Closed') {
-//                 monthlyData[monthIndex].closedOrders = parseInt(row.OrderCount, 10);
-//             }
-//         });
-
-//         res.status(200).json(monthlyData);
-        
-//     } catch (error) {
-//         console.error('Error fetching order status data:', error);
-//         res.status(500).json({ error: 'Failed to fetch order status data' });
-//     }
-// }
-
-
-import { queryDatabase } from '../../lib/db'; // Adjust the import path
+import { verify } from 'jsonwebtoken';
+import sql from 'mssql';
+import { queryDatabase } from '../../lib/db';
 
 export default async function handler(req, res) {
-    const { startDate, endDate, region, customer } = req.query;
-
     try {
-        let whereClause = 'WHERE 1=1';
-        
-        if (startDate && endDate) {
-            whereClause += ` AND T0.DocDate BETWEEN '${startDate}' AND '${endDate}'`;
-        } else {
-            whereClause += ` AND YEAR(T0.DocDate) = YEAR(GETDATE())`; // Default to current year
+        const { year } = req.query;
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                error: 'Missing or malformed Authorization header',
+                received: authHeader
+            });
         }
 
-        if (region) whereClause += ` AND T0.Region = '${region}'`;
-        if (customer) whereClause += ` AND T0.CardCode = '${customer}'`;
-
-        // const query = `
-        //     SELECT 
-        //         MONTH(T0.DocDate) AS Month,
-        //         CASE 
-        //             WHEN T0.DocStatus = 'O' THEN 'Open'
-        //             WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-        //             ELSE 'NA'
-        //         END AS OrderStatus,
-        //         COUNT(T0.DocEntry) AS OrderCount,
-        //         ISNULL(SUM(T1.DocTotal), 0) AS SalesTotal
-        //     FROM ORDR T0
-        //     LEFT JOIN OINV T1 ON T0.DocNum = T1.DocNum
-        //     ${whereClause}
-        //     GROUP BY 
-        //         MONTH(T0.DocDate),
-        //         CASE 
-        //             WHEN T0.DocStatus = 'O' THEN 'Open'
-        //             WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-        //             ELSE 'NA'
-        //         END
-        //     ORDER BY Month ASC
-        // `;
-
-
-        const query = `
-        SELECT 
-    MONTH(T0.DocDate) AS Month,
-    CASE 
-        WHEN T0.DocStatus = 'O' THEN 'Open'
-        WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-        ELSE 'NA'
-    END AS OrderStatus,
-    COUNT(T0.DocEntry) AS OrderCount,
-    COALESCE(SUM(T1.DocTotal), 0) AS SalesTotal -- Use COALESCE for NULL-safe summation
-FROM ORDR T0
-LEFT JOIN OINV T1 ON T0.DocNum = T1.DocNum
-${whereClause}
-GROUP BY 
-    MONTH(T0.DocDate),
-    CASE 
-        WHEN T0.DocStatus = 'O' THEN 'Open'
-        WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-        ELSE 'NA'
-    END
-ORDER BY Month ASC;
-`;
+        const token = authHeader.split(' ')[1];
+        let decoded;
         
-        console.log('Order Status Query:', query);
+        try {
+            decoded = verify(token, process.env.JWT_SECRET);
+        } catch (verifyError) {
+            console.error('Token verification failed:', verifyError);
+            return res.status(401).json({ error: 'Token verification failed' });
+        }
 
-        const results = await queryDatabase(query);
+        const isAdmin = decoded.role === 'admin';
+        let baseQuery = `
+            SELECT 
+                YEAR(T0.DocDate) AS year,
+                DATENAME(MONTH, T0.DocDate) AS month,
+                MONTH(T0.DocDate) AS monthNumber,
+                SUM(CASE WHEN T0.DocStatus = 'O' THEN 1 ELSE 0 END) AS openOrders,
+                SUM(CASE WHEN T0.DocStatus = 'C' THEN 1 ELSE 0 END) AS closedOrders,
+                SUM(CASE WHEN T0.DocStatus = 'O' THEN T0.DocTotal ELSE 0 END) AS openSales,
+                SUM(CASE WHEN T0.DocStatus = 'C' THEN T0.DocTotal ELSE 0 END) AS closedSales
+            FROM ORDR T0
+            WHERE T0.CANCELED = 'N'
+            ${year ? 'AND YEAR(T0.DocDate) = @year' : ''}
+        `;
 
-        // Transform the results into the required format
-        const monthlyData = new Array(12).fill(null).map((_, index) => ({
-            month: index + 1,
-            openOrders: 0,
-            closedOrders: 0,
-            openSales: 0,
-            closedSales: 0,
+        let whereClause = '';
+        let params = year ? [{ name: 'year', type: sql.Int, value: parseInt(year) }] : [];
+
+        if (!isAdmin) {
+            const contactCodes = decoded.contactCodes || [];
+            if (!contactCodes.length) {
+                return res.status(403).json({ error: 'No contact codes available' });
+            }
+
+            const contactParams = contactCodes.map((code, index) => ({
+                name: `contactCode${index}`,
+                type: sql.VarChar(50),
+                value: code
+            }));
+
+            whereClause = `AND T0.CardCode IN (
+                SELECT CardCode FROM OCPR 
+                WHERE CntctCode IN (${contactParams.map((_, i) => `@contactCode${i}`).join(',')})
+            )`;
+
+            params = [...params, ...contactParams];
+        }
+
+        const fullQuery = `
+            ${baseQuery}
+            ${whereClause}
+            GROUP BY 
+                YEAR(T0.DocDate),
+                DATENAME(MONTH, T0.DocDate),
+                MONTH(T0.DocDate)
+            ORDER BY 
+                MONTH(T0.DocDate)
+        `;
+
+        const results = await queryDatabase(fullQuery, params);
+        
+        const data = results.map(row => ({
+            year: row.year,
+            month: row.month,
+            monthNumber: row.monthNumber,
+            openOrders: parseInt(row.openOrders) || 0,
+            closedOrders: parseInt(row.closedOrders) || 0,
+            openSales: parseFloat(row.openSales) || 0,
+            closedSales: parseFloat(row.closedSales) || 0,
         }));
 
-        results.forEach((row) => {
-            const monthIndex = row.Month - 1;
-            if (row.OrderStatus === 'Open') {
-                monthlyData[monthIndex].openOrders = parseInt(row.OrderCount, 10);
-                monthlyData[monthIndex].openSales = parseFloat(row.SalesTotal);
-            } else if (row.OrderStatus === 'Closed') {
-                monthlyData[monthIndex].closedOrders = parseInt(row.OrderCount, 10);
-                monthlyData[monthIndex].closedSales = parseFloat(row.SalesTotal);
-            }
-        });
+        // Get available years
+        const yearsQuery = `
+            SELECT DISTINCT YEAR(DocDate) as year
+            FROM ORDR
+            WHERE CANCELED = 'N'
+            ORDER BY year DESC
+        `;
+        const yearsResult = await queryDatabase(yearsQuery);
+        const availableYears = yearsResult.map(row => row.year);
 
-        res.status(200).json(monthlyData);
+        return res.status(200).json({ data, availableYears });
     } catch (error) {
-        console.error('Error fetching order status data:', error);
-        res.status(500).json({ error: 'Failed to fetch order status data' });
+        console.error('API handler error:', error);
+        return res.status(500).json({
+            error: 'Internal server error',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+        
     }
-};
+}
