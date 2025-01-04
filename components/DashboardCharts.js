@@ -247,6 +247,8 @@ const DashboardCharts = () => {
     );
   }
 
+  
+
   return (
     <div className="g-4">
       {/* Enhanced Sales and COGS Chart */}

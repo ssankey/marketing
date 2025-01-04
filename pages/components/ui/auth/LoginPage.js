@@ -1,8 +1,8 @@
-// LoginPage.jsx
+// pages/login.js (or wherever your login page component is located)
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { Card, Form, Button, Image, Alert } from "react-bootstrap";
+import { Card, Form, Button, Alert } from "react-bootstrap";
 import { useAuth } from "contexts/AuthContext";
 
 export default function LoginPage() {
@@ -10,12 +10,10 @@ export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
-    password: "",
-    selectedUser: ""
+    password: ""
   });
   const [loginState, setLoginState] = useState({
-    step: "EMAIL", // Steps: EMAIL, SELECT_USER, SET_PASSWORD, ENTER_PASSWORD
-    users: [],
+    showPassword: false,
     error: "",
     isLoading: false
   });
@@ -44,8 +42,7 @@ export default function LoginPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email,
-          password: formData.password,
-          contactCode: formData.selectedUser
+          password: formData.password
         })
       });
 
@@ -53,24 +50,22 @@ export default function LoginPage() {
 
       if (response.ok) {
         switch (data.message) {
-          case 'SELECT_USER':
-            setLoginState(prev => ({
-              ...prev,
-              step: "SELECT_USER",
-              users: data.users
-            }));
-            break;
           case 'PASSWORD_NOT_SET':
-            router.push(`/set-password?email=${encodeURIComponent(formData.email)}&contactCode=${encodeURIComponent(formData.selectedUser || data.contactCode)}`);
+            localStorage.setItem('token', data.token);
+            router.push(`/set-password?email=${encodeURIComponent(data.email)}`);
             break;
           case 'SHOW_PASSWORD_FIELD':
             setLoginState(prev => ({
               ...prev,
-              step: "ENTER_PASSWORD"
+              showPassword: true
             }));
             break;
           case 'Login_successful':
-            setUser(data.user);
+            const userData = {
+              ...data.user,
+              token: data.token
+            };
+            setUser(userData);
             router.push('/');
             break;
           default:
@@ -86,60 +81,6 @@ export default function LoginPage() {
       }));
     } finally {
       setLoginState(prev => ({ ...prev, isLoading: false }));
-    }
-  };
-
-  const renderFormFields = () => {
-    switch (loginState.step) {
-      case "EMAIL":
-        return (
-          <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              placeholder="Enter your email"
-              required
-            />
-          </Form.Group>
-        );
-
-      case "SELECT_USER":
-        return (
-          <Form.Group className="mb-3">
-            <Form.Label>Select User</Form.Label>
-            <Form.Select
-              name="selectedUser"
-              value={formData.selectedUser}
-              onChange={handleInputChange}
-              required
-            >
-              <option value="">Choose your account</option>
-              {loginState.users.map(user => (
-                <option key={user.CntctCode} value={user.CntctCode}>
-                  {user.Name}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        );
-
-      case "ENTER_PASSWORD":
-        return (
-          <Form.Group className="mb-3">
-            <Form.Label>Password</Form.Label>
-            <Form.Control
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              placeholder="Enter your password"
-              required
-            />
-          </Form.Group>
-        );
     }
   };
 
@@ -165,7 +106,31 @@ export default function LoginPage() {
           )}
 
           <Form onSubmit={handleLogin}>
-            {renderFormFields()}
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Enter your email"
+                required
+              />
+            </Form.Group>
+
+            {loginState.showPassword && (
+              <Form.Group className="mb-3">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Enter your password"
+                  required
+                />
+              </Form.Group>
+            )}
             
             <div className="d-grid mb-3">
               <Button 

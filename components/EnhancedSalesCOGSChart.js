@@ -5,6 +5,7 @@ import { Card, Table, Button, Spinner, Dropdown } from 'react-bootstrap';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement, LineController } from 'chart.js';
 import { formatCurrency } from 'utils/formatCurrency';
 import SearchBar from './SearchBar';
+import { useAuth } from '../contexts/AuthContext';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, LineController);
@@ -13,6 +14,9 @@ const EnhancedSalesCOGSChart = () => {
     const [salesData, setSalesData] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    const [availableYears, setAvailableYears] = useState([]);
+    const { user, contactCodes } = useAuth(); // Get both user and contactCodes
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [filters, setFilters] = useState({
         customerId: null,
         productId: null,
@@ -23,70 +27,39 @@ const EnhancedSalesCOGSChart = () => {
     const [error, setError] = useState(null);
 
     const fetchSalesData = async () => {
-        const queryParams = new URLSearchParams();
-        if (filters.customerId) queryParams.append('customerId', filters.customerId);
-        if (filters.productId) queryParams.append('productId', filters.productId);
-        if (filters.salesPersonId) queryParams.append('salesPersonId', filters.salesPersonId);
-        if (filters.categoryId) queryParams.append('categoryId', filters.categoryId);
-
         try {
             setLoading(true);
-            const response = await fetch(`/api/sales-cogs?${queryParams.toString()}`);
-            if (!response.ok) throw new Error('Failed to fetch sales data');
-            const data = await response.json();
-            setSalesData(data.length ? data : []);
+            setError(null);
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/sales-cogs?year=${selectedYear}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const { data, availableYears } = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to fetch data');
+            }
+
+            setSalesData(data);
+            setAvailableYears(availableYears);
         } catch (error) {
-            setError(error.message);
             console.error('Error fetching sales data:', error);
-            setSalesData([]);
+            setError(error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSearch = async (query) => {
-        setSearchQuery(query);
-        if (query.length < 3) {
-            setSearchResults([]);
-            return;
-        }
-
-        try {
-            const response = await fetch(`/api/search?query=${query}`);
-            if (!response.ok) throw new Error('Failed to fetch search results');
-            const results = await response.json();
-            setSearchResults(results);
-        } catch (error) {
-            console.error('Error fetching search results:', error);
-        }
-    };
-
-    const handleSelectResult = (result) => {
-        setSearchQuery(result.name);
-        setSearchResults([]);
-
-        if (result.type === 'Customer') {
-            setFilters((prev) => ({ ...prev, customerId: result.id }));
-        } else if (result.type === 'Employee') {
-            setFilters((prev) => ({ ...prev, salesPersonId: result.id }));
-        } else if (result.type === 'Category') {
-            setFilters((prev) => ({ ...prev, categoryId: result.id }));
-        }
-    };
-
-    const clearFilters = () => {
-        setFilters({
-            customerId: null,
-            productId: null,
-            salesPersonId: null,
-            categoryId: null
-        });
-        setSearchQuery('');
-    };
-
     useEffect(() => {
-        fetchSalesData();
-    }, [filters]);
+        if (user?.token) {
+            fetchSalesData();
+        }
+    }, [user, selectedYear]);
+
 
     const salesAndCOGSChartData = {
         labels: salesData.map((data) => data.month),
@@ -120,69 +93,69 @@ const EnhancedSalesCOGSChart = () => {
             },
         ],
     };
-    
+
 
     const salesAndCOGSChartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        datalabels: {
-          display: false, // Disable datalabels for this chart
-        },
-        tooltip: {
-          callbacks: {
-            label: (context) => {
-              if (context.dataset.label === "Gross Margin %") {
-                return `${context.raw.toFixed(2)}%`;
-              }
-              return formatCurrency(context.raw);
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            datalabels: {
+                display: false, // Disable datalabels for this chart
             },
-          },
-          backgroundColor: "#212529",
-          titleFont: { size: 14, weight: "bold" },
-          bodyFont: { size: 13 },
-          padding: 12,
-        },
-        legend: {
-          position: "top",
-          labels: {
-            font: {
-              family: "'Inter', sans-serif",
-              size: 13,
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        if (context.dataset.label === "Gross Margin %") {
+                            return `${context.raw.toFixed(2)}%`;
+                        }
+                        return formatCurrency(context.raw);
+                    },
+                },
+                backgroundColor: "#212529",
+                titleFont: { size: 14, weight: "bold" },
+                bodyFont: { size: 13 },
+                padding: 12,
             },
-            padding: 20,
-          },
+            legend: {
+                position: "top",
+                labels: {
+                    font: {
+                        family: "'Inter', sans-serif",
+                        size: 13,
+                    },
+                    padding: 20,
+                },
+            },
         },
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: (value) => formatCurrency(value),
-            font: { family: "'Inter', sans-serif", size: 12 },
-          },
-          grid: {
-            color: "rgba(0, 0, 0, 0.05)",
-          },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: (value) => formatCurrency(value),
+                    font: { family: "'Inter', sans-serif", size: 12 },
+                },
+                grid: {
+                    color: "rgba(0, 0, 0, 0.05)",
+                },
+            },
+            y1: {
+                position: "right",
+                beginAtZero: true,
+                ticks: {
+                    callback: (value) => `${value}%`,
+                    font: { family: "'Inter', sans-serif", size: 12 },
+                },
+                grid: {
+                    drawOnChartArea: false,
+                },
+            },
+            x: {
+                grid: { display: false },
+                ticks: {
+                    font: { family: "'Inter', sans-serif", size: 12 },
+                },
+            },
         },
-        y1: {
-          position: "right",
-          beginAtZero: true,
-          ticks: {
-            callback: (value) => `${value}%`,
-            font: { family: "'Inter', sans-serif", size: 12 },
-          },
-          grid: {
-            drawOnChartArea: false,
-          },
-        },
-        x: {
-          grid: { display: false },
-          ticks: {
-            font: { family: "'Inter', sans-serif", size: 12 },
-          },
-        },
-      },
     };
 
     const exportToCSV = () => {
@@ -203,12 +176,30 @@ const EnhancedSalesCOGSChart = () => {
         link.setAttribute('download', 'sales_cogs_data.csv');
         link.click();
     };
-
+    const YearSelector = () => (
+        <Dropdown>
+            <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
+                {selectedYear}
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+                {availableYears.map(year => (
+                    <Dropdown.Item 
+                        key={year} 
+                        onClick={() => setSelectedYear(year)}
+                        active={year === selectedYear}
+                    >
+                        {year}
+                    </Dropdown.Item>
+                ))}
+            </Dropdown.Menu>
+        </Dropdown>
+    );
     return (
         <Card className="shadow-sm border-0 mb-4">
             <Card.Header className="bg-white py-3">
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
                     <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>Sales, COGS, and Gross Margin %</h4>
+                    {/* <YearSelector /> */}
                     <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center  mt-3 mt-md-0">
                         {/* <SearchBar
                             searchQuery={searchQuery}
@@ -226,16 +217,10 @@ const EnhancedSalesCOGSChart = () => {
                             >
                                 Clear Filters
                             </Button> */}
-                            <Button
-                                variant="outline-primary"
-                                onClick={exportToCSV}
-                                disabled={!salesData.length}
-                                style={{ whiteSpace: 'nowrap' }}
-                            >
-                                Export CSV
-                            </Button>
+                                                <YearSelector />
 
-                        </div> 
+
+                        </div>
                     </div>
                 </div>
             </Card.Header>

@@ -10,7 +10,7 @@ import { useAuth } from "contexts/AuthContext";
 
 const NavbarVertical = () => {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, contactCodes } = useAuth();
   
   const CustomToggle = ({ children, eventKey, icon }) => {
     const decoratedOnClick = useAccordionButton(eventKey);
@@ -30,16 +30,20 @@ const NavbarVertical = () => {
         method: 'POST',
         credentials: 'include',
       });
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      sessionStorage.clear();
-      window.location.href = '/login';
+      logout(); // This will handle clearing storage and redirecting
     } catch (error) {
       console.error('Logout error:', error);
-      localStorage.clear();
-      window.location.href = '/login';
+      logout(); // Fallback to local logout if API call fails
     }
   };
+
+  // Check if user is authenticated
+  if (!user) {
+    return null; // Or a loading spinner if you prefer
+  }
+
+  // Determine user role for conditional rendering
+  const isAdmin = user.role === 'admin';
 
   return (
     <Fragment>     
@@ -137,12 +141,14 @@ const NavbarVertical = () => {
           </a>
         </li>
 
-        <li className="nav-item">
-          <a href="/customers" className="nav-link d-flex align-items-center">
-            <People className="me-2" />
-            Customers
-          </a>
-        </li>
+        {isAdmin && (
+          <li className="nav-item">
+            <a href="/customers" className="nav-link d-flex align-items-center">
+              <People className="me-2" />
+              Customers
+            </a>
+          </li>
+        )}
 
         <li className="nav-item">
           <a href="/products" className="nav-link d-flex align-items-center">
@@ -159,6 +165,9 @@ const NavbarVertical = () => {
         </li>
 
         <li className="nav-item mt-auto" style={{ padding: "10px 15px", marginLeft: "0", marginRight: "0" }}>
+          <div className="text-muted mb-2 text-center">
+            Logged in as: {user.name}
+          </div>
           <Button
             variant="primary"
             onClick={handleLogout}

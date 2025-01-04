@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Form,
   Button,
@@ -29,6 +30,48 @@ const DashboardFilters = ({
   region,
   handleFilterChange,
 }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Update URL when filters change
+  const updateURL = (filters) => {
+    const params = new URLSearchParams(searchParams);
+    
+    // Update or remove parameters based on filter values
+    if (filters.dateFilter) {
+      params.set('dateFilter', filters.dateFilter);
+    } else {
+      params.delete('dateFilter');
+    }
+    
+    if (filters.startDate) {
+      params.set('startDate', filters.startDate);
+    } else {
+      params.delete('startDate');
+    }
+    
+    if (filters.endDate) {
+      params.set('endDate', filters.endDate);
+    } else {
+      params.delete('endDate');
+    }
+    
+    if (filters.region) {
+      params.set('region', filters.region);
+    } else {
+      params.delete('region');
+    }
+    
+    if (filters.customer) {
+      params.set('customer', filters.customer);
+    } else {
+      params.delete('customer');
+    }
+
+    // Update the URL without refreshing the page
+    router.push(`?${params.toString()}`, { scroll: false });
+  };
+
   const getActiveFiltersText = () => {
     const filters = [];
 
@@ -62,20 +105,53 @@ const DashboardFilters = ({
     setEndDate("");
     setRegion("");
     setCustomer("");
-    handleFilterChange({
+    
+    const resetFilters = {
       dateFilter: "today",
       startDate: "",
       endDate: "",
       region: "",
       customer: "",
-    });
+    };
+    
+    handleFilterChange(resetFilters);
+    updateURL(resetFilters);
+  };
+
+  const handleDateFilterClick = (option) => {
+    setDateFilter(option);
+    const newFilters = {
+      dateFilter: option,
+      startDate,
+      endDate,
+      region,
+      customer,
+    };
+    updateURL(newFilters);
   };
 
   useEffect(() => {
     if (dateFilter !== "custom") {
-      handleFilterChange({ dateFilter, startDate, endDate, region, customer });
+      const filters = { dateFilter, startDate, endDate, region, customer };
+      handleFilterChange(filters);
+      updateURL(filters);
     }
   }, [dateFilter, startDate, endDate, region, customer]);
+
+  // Load initial state from URL on component mount
+  useEffect(() => {
+    const dateFilterParam = searchParams.get('dateFilter');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+    const regionParam = searchParams.get('region');
+    const customerParam = searchParams.get('customer');
+
+    if (dateFilterParam) setDateFilter(dateFilterParam);
+    if (startDateParam) setStartDate(startDateParam);
+    if (endDateParam) setEndDate(endDateParam);
+    if (regionParam) setRegion(regionParam);
+    if (customerParam) setCustomer(customerParam);
+  }, []);
 
   return (
     <div className="mb-4">
@@ -86,7 +162,7 @@ const DashboardFilters = ({
               <Button
                 key={option}
                 variant={dateFilter === option ? "primary" : "outline-primary"}
-                onClick={() => setDateFilter(option)}
+                onClick={() => handleDateFilterClick(option)}
                 className="d-flex align-items-center gap-2"
               >
                 {option === "today" ? (
@@ -110,14 +186,24 @@ const DashboardFilters = ({
           </ButtonGroup>
         </Col>
 
-        {/* Custom Date Range Inputs */}
         {dateFilter === "custom" && (
           <>
             <Col xs="auto">
               <Form.Control
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(e) => {
+                  const newStartDate = e.target.value;
+                  setStartDate(newStartDate);
+                  const newFilters = {
+                    dateFilter,
+                    startDate: newStartDate,
+                    endDate,
+                    region,
+                    customer,
+                  };
+                  updateURL(newFilters);
+                }}
                 size="sm"
                 className="rounded-pill"
               />
@@ -126,7 +212,18 @@ const DashboardFilters = ({
               <Form.Control
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(e) => {
+                  const newEndDate = e.target.value;
+                  setEndDate(newEndDate);
+                  const newFilters = {
+                    dateFilter,
+                    startDate,
+                    endDate: newEndDate,
+                    region,
+                    customer,
+                  };
+                  updateURL(newFilters);
+                }}
                 size="sm"
                 className="rounded-pill"
               />
@@ -134,21 +231,22 @@ const DashboardFilters = ({
           </>
         )}
 
-        {/* Apply and Reset Buttons */}
         {dateFilter === "custom" && (
           <Col xs="auto">
             <Button
               variant="primary"
               size="sm"
-              onClick={() =>
-                handleFilterChange({
+              onClick={() => {
+                const filters = {
                   dateFilter,
                   startDate,
                   endDate,
                   region,
                   customer,
-                })
-              }
+                };
+                handleFilterChange(filters);
+                updateURL(filters);
+              }}
               className="d-flex align-items-center gap-2"
             >
               <FaFilter />
@@ -168,7 +266,6 @@ const DashboardFilters = ({
           </Button>
         </Col>
 
-        {/* Active Filters Text */}
         <Col xs="auto" className="ms-auto">
           <small className="text-muted">{getActiveFiltersText()}</small>
         </Col>
@@ -178,5 +275,3 @@ const DashboardFilters = ({
 };
 
 export default DashboardFilters;
-
-
