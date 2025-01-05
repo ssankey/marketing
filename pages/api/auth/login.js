@@ -3,8 +3,16 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { queryDatabase } from 'lib/db';
 import sql from 'mssql';
+import { serialize } from 'cookie';
 
-// Admin credentials
+// Cookie configuration
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  path: '/',
+  maxAge: 3600 // 1 hour in seconds
+};
 const ADMIN_CREDENTIALS = {
     email: 'satish@densitypharmachem.com',
     password: 'Satish@123'
@@ -34,6 +42,9 @@ export default async function handler(req, res) {
             expiresIn: '1h'
         });
 
+        // Set cookie
+        res.setHeader('Set-Cookie', serialize('token', token, COOKIE_OPTIONS));
+
         return res.status(200).json({
             message: 'Login_successful',
             token,
@@ -59,20 +70,15 @@ export default async function handler(req, res) {
             return res.status(401).json({ message: 'User Not Found' });
         }
 
-        // If password not provided, show password field
         if (!password) {
             return res.status(200).json({
                 message: 'SHOW_PASSWORD_FIELD'
             });
         }
 
-        // Get all contact codes for the email
         const contactCodes = results.map(user => user.CntctCode.toString().trim());
-
-        // Check if any user has a password set
         const userWithPassword = results.find(user => user.Password && user.Password.trim() !== '');
 
-        // If no password is set for any user
         if (!userWithPassword) {
             const token = jwt.sign({
                 email,
@@ -82,6 +88,9 @@ export default async function handler(req, res) {
                 expiresIn: process.env.JWT_EXPIRES_IN || '1h'
             });
 
+            // Set cookie
+            res.setHeader('Set-Cookie', serialize('token', token, COOKIE_OPTIONS));
+
             return res.status(200).json({
                 message: 'PASSWORD_NOT_SET',
                 token,
@@ -89,13 +98,11 @@ export default async function handler(req, res) {
             });
         }
 
-        // Verify password if provided
         const isMatch = await bcrypt.compare(password, userWithPassword.Password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Incorrect Password' });
         }
 
-        // Create JWT token with all contact codes
         const token = jwt.sign({
             email,
             role: 'contact_person',
@@ -103,6 +110,9 @@ export default async function handler(req, res) {
         }, process.env.JWT_SECRET, {
             expiresIn: process.env.JWT_EXPIRES_IN || '1h'
         });
+
+        // Set cookie
+        res.setHeader('Set-Cookie', serialize('token', token, COOKIE_OPTIONS));
 
         return res.status(200).json({
             message: 'Login_successful',

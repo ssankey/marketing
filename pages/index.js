@@ -22,6 +22,12 @@ const Dashboard = () => {
       setToken(storedToken);
     }
   }, []);
+  let user = null;
+  if (token) {
+    user = JSON.parse(atob(token.split('.')[1])) 
+    
+  }
+
   const {
     dateFilter: initialDateFilter = "today",
     startDate: initialStartDate,
