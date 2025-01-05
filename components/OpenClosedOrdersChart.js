@@ -233,14 +233,14 @@ const OrdersChart = () => {
             <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
               <div className="d-flex gap-2">
                 <YearSelector />
-                <Button
+                {/* <Button
                   variant="outline-primary"
                   onClick={exportToCSV}
                   disabled={!ordersData.length}
                   style={{ whiteSpace: "nowrap" }}
                 >
                   Export CSV
-                </Button>
+                </Button> */}
               </div>
             </div>
           </div>
