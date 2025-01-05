@@ -125,7 +125,10 @@ export default function CustomerDetails({
             </div>
           </Card.Header>
           <Card.Body>
-            <PurchasesAmountChart data={purchaseData} />
+            {/* <PurchasesAmountChart data={purchaseData} /> */}
+            <PurchasesAmountChart
+              customerId={customer?.CustomerCode}
+            />
           </Card.Body>
         </Card>
       )}
@@ -419,7 +422,13 @@ export async function getServerSideProps(context) {
 
     // Fetch purchase and revenue data
     const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
+    console.log(metricsUrl);
     const metricsRes = await fetch(metricsUrl);
+
+    if (!id) {
+      throw new Error("Customer ID is required");
+    }
+    console.log("Customer ID in getServerSideProps:", id);
 
     if (!metricsRes.ok) {
       throw new Error(
