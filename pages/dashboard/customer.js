@@ -101,12 +101,16 @@ const CustomerDashboard = () => {
   }
 
   return isAuthenticated ? (
-    <Container fluid className="py-4 px-4" style={{ backgroundColor: '#f8f9fa' }}>
+    <Container
+      fluid
+      className="py-4 px-4"
+      style={{ backgroundColor: "#f8f9fa" }}
+    >
       {/* Selection Section */}
       <Card className="mb-4 border-0 shadow-sm">
         <Card.Body className="p-4">
           <h2 className="mb-4 text-primary">Customer Dashboard</h2>
-          <Form onSubmit={handleSubmit}>
+          {/* <Form onSubmit={handleSubmit}>
             <Row className="align-items-end">
               <Col md={6}>
                 <Form.Group>
@@ -137,7 +141,7 @@ const CustomerDashboard = () => {
                   {customersError && <Form.Text className="text-danger">{customersError}</Form.Text>}
                 </Form.Group>
               </Col>
-              <Col md={4}>
+              {/* <Col md={4}>
                 <Form.Group>
                   <Form.Label className="text-muted mb-2">Search</Form.Label>
                   <InputGroup>
@@ -152,13 +156,65 @@ const CustomerDashboard = () => {
                     </Button>
                   </InputGroup>
                 </Form.Group>
-              </Col>
-              <Col md={2}>
+              </Col> */}
+          {/* <Col md={2}>
                 <Button
                   type="submit"
                   variant="primary"
                   size="lg"
                   className="w-100"
+                  disabled={!selectedCustomer}
+                >
+                  View
+                </Button>
+              </Col>
+            </Row>
+          </Form>  */}
+
+          <Form onSubmit={handleSubmit}>
+            <Row className="align-items-end">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label className="text-muted mb-2">
+                    Select Customer
+                  </Form.Label>
+                  <Select
+                    value={selectedCustomer}
+                    onChange={(option) => {
+                      setSelectedCustomer(option);
+                      setShowDashboard(false);
+                    }}
+                    options={customers?.map((customer) => ({
+                      value: customer.CustomerCode, // Use CustomerCode as value
+                      label: customer.CustomerName, // Use CustomerName as label
+                    }))}
+                    isLoading={customersLoading}
+                    placeholder="Choose a customer..."
+                    className="basic-single"
+                    classNamePrefix="select"
+                    noOptionsMessage={() => "No customers found"}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: "45px",
+                        borderColor: "#dee2e6",
+                      }),
+                    }}
+                  />
+                  {customersError && (
+                    <Form.Text className="text-danger">
+                      {customersError}
+                    </Form.Text>
+                  )}
+                </Form.Group>
+              </Col>
+
+              <Col md="auto">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  className="mt-md-0" // ensures no extra top margin on medium screens
                   disabled={!selectedCustomer}
                 >
                   View
@@ -171,10 +227,19 @@ const CustomerDashboard = () => {
           {totalItems > 20 && (
             <div className="mt-3 d-flex justify-content-end">
               <Pagination>
-                <Pagination.First onClick={() => handlePageChange(1)} disabled={currentPage === 1} />
-                <Pagination.Prev onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1} />
+                <Pagination.First
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                />
+                <Pagination.Prev
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                />
                 {/* Display up to 5 page numbers centered around current page */}
-                {Array.from({ length: Math.ceil(totalItems / 20) }, (_, i) => i + 1)
+                {Array.from(
+                  { length: Math.ceil(totalItems / 20) },
+                  (_, i) => i + 1
+                )
                   .filter(
                     (pageNum) =>
                       pageNum >= currentPage - 2 && pageNum <= currentPage + 2
@@ -188,8 +253,14 @@ const CustomerDashboard = () => {
                       {pageNum}
                     </Pagination.Item>
                   ))}
-                <Pagination.Next onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === Math.ceil(totalItems / 20)} />
-                <Pagination.Last onClick={() => handlePageChange(Math.ceil(totalItems / 20))} disabled={currentPage === Math.ceil(totalItems / 20)} />
+                <Pagination.Next
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === Math.ceil(totalItems / 20)}
+                />
+                <Pagination.Last
+                  onClick={() => handlePageChange(Math.ceil(totalItems / 20))}
+                  disabled={currentPage === Math.ceil(totalItems / 20)}
+                />
               </Pagination>
             </div>
           )}
@@ -220,7 +291,9 @@ const CustomerDashboard = () => {
               <Spinner animation="border" variant="primary" />
             </div>
           ) : dataError ? (
-            <Alert variant="danger">Failed to load customer dashboard data.</Alert>
+            <Alert variant="danger">
+              Failed to load customer dashboard data.
+            </Alert>
           ) : (
             <>
               <KPISection kpiData={data.kpiData} viewType="customer" />
