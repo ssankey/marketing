@@ -1,3 +1,4 @@
+//pages/api/sales-cogs.js
 import { verify } from 'jsonwebtoken';
 import sql from 'mssql';
 import { queryDatabase } from '../../lib/db';

@@ -1,24 +1,10 @@
-// // pages/api/orders/index.js
+// pages/api/orders.js
 
-
-// import { getOrders } from '../../../lib/models/orders';
-
-// export default async function handler(req, res) {
-//   if (req.method === 'GET') {
-//     const orders = await getOrders();
-//     res.status(200).json(orders);
-//   } else {
-//     res.status(405).json({ message: 'Method Not Allowed' });
-//   }
-// }
-
-
-//  pages/api/orders/index.js
-
-
-import { getOrdersFromDatabase } from "../../../lib/models/orders";
+import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
+import { getOrdersFromDatabase } from "../../../lib/models/orders";
 
+/** Utility to validate date strings via date-fns */
 function isValidDate(date) {
   return date && isValid(parseISO(date));
 }
@@ -29,6 +15,31 @@ export default async function handler(req, res) {
   }
 
   try {
+    // 1) Check for Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        error: "Missing or malformed Authorization header",
+        received: authHeader,
+      });
+    }
+
+    // 2) Verify token
+    const token = authHeader.split(" ")[1];
+    let decodedToken;
+    try {
+      decodedToken = verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      console.error("Token verification failed:", err);
+      return res.status(401).json({ error: "Token verification failed" });
+    }
+
+    // 3) Extract role-based or contactCodes-based logic
+    const isAdmin = decodedToken.role === "admin";
+    // If your JWT includes an array of contactCodes, extract it:
+    const contactCodes = decodedToken.contactCodes || [];
+
+    // 4) Parse query params
     const {
       page = 1,
       search = "",
@@ -41,22 +52,32 @@ export default async function handler(req, res) {
 
     const ITEMS_PER_PAGE = 20;
 
+    // Validate date filters
+    const validFromDate = isValidDate(fromDate) ? fromDate : undefined;
+    const validToDate = isValidDate(toDate) ? toDate : undefined;
+
+    // 5) Fetch from database with role/contact filtering
     const { totalItems, orders } = await getOrdersFromDatabase({
+      page: parseInt(page, 10),
       search,
+      status,
       sortField,
       sortDir,
-      offset: (parseInt(page, 10) - 1) * ITEMS_PER_PAGE,
-      ITEMS_PER_PAGE,
-      status,
-      fromDate: isValidDate(fromDate) ? fromDate : undefined,
-      toDate: isValidDate(toDate) ? toDate : undefined,
+      fromDate: validFromDate,
+      toDate: validToDate,
+      itemsPerPage: ITEMS_PER_PAGE,
+      isAdmin,         // pass admin flag
+      contactCodes,    // pass contact codes
     });
 
-    res
-      .status(200)
-      .json({ orders, totalItems, currentPage: parseInt(page, 10) });
+    // 6) Respond
+    return res.status(200).json({
+      orders,
+      totalItems,
+      currentPage: parseInt(page, 10),
+    });
   } catch (error) {
     console.error("Error fetching orders:", error);
-    res.status(500).json({ error: "Failed to fetch orders" });
+    return res.status(500).json({ error: "Failed to fetch orders" });
   }
 }

@@ -1,24 +1,39 @@
-//pages/orders/index.js
+// pages/orders/index.js
+
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { Spinner } from "react-bootstrap";
+import { useAuth } from "hooks/useAuth";
 import LoadingSpinner from "components/LoadingSpinner";
 import OrdersTable from "components/OrdersTable";
-import { useRouter } from "next/router";
-import { useAuth } from "hooks/useAuth";
-import { Spinner } from "react-bootstrap";
 
-export default function OrdersPage({
-  orders: initialOrders,
-  totalItems: initialTotalItems,
-  currentPage: initialCurrentPage,
-}) {
+/**
+ * OrdersPage: Fetches orders client-side from /api/orders with Bearer token.
+ */
+export default function OrdersPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [orders, setOrders] = useState(initialOrders);
-  const [totalItems, setTotalItems] = useState(initialTotalItems);
-  const [currentPage, setCurrentPage] = useState(initialCurrentPage);
 
-  // Handle client-side route transitions
+  // Local states
+  const [orders, setOrders] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Grab query params from URL if you support them: ?page=2, etc.
+  const {
+    page = 1,
+    search = "",
+    status = "all",
+    sortField = "DocNum",
+    sortDir = "asc",
+    fromDate,
+    toDate,
+  } = router.query;
+
+  /**
+   * Optional: show spinner during route transitions (page changes).
+   */
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
@@ -34,14 +49,75 @@ export default function OrdersPage({
     };
   }, [router]);
 
-  // Update local state when props change
+  /**
+   * Fetch orders from /api/orders when user is authenticated.
+   */
   useEffect(() => {
-    setOrders(initialOrders);
-    setTotalItems(initialTotalItems);
-    setCurrentPage(initialCurrentPage);
-  }, [initialOrders, initialTotalItems, initialCurrentPage]);
+    async function fetchOrders() {
+      try {
+        setIsLoading(true);
 
-  // Show a loader if authentication is loading
+        // 1) Ensure user is authenticated
+        if (!isAuthenticated) {
+          return;
+        }
+
+        // 2) Get token from localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found in localStorage");
+          return;
+        }
+
+        // 3) Build query string from router.query
+        const queryParams = new URLSearchParams({
+          page,
+          search,
+          status,
+          sortField,
+          sortDir,
+        });
+        if (fromDate) queryParams.append("fromDate", fromDate);
+        if (toDate) queryParams.append("toDate", toDate);
+
+        // 4) Make the request, including Authorization header
+        const response = await fetch(`/api/orders?${queryParams.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch orders from API");
+        }
+
+        // 5) Parse the JSON result
+        const data = await response.json();
+        setOrders(data.orders || []);
+        setTotalItems(data.totalItems || 0);
+        setCurrentPage(data.currentPage || 1);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchOrders();
+  }, [
+    isAuthenticated,
+    page,
+    search,
+    status,
+    sortField,
+    sortDir,
+    fromDate,
+    toDate,
+  ]);
+
+  /**
+   * If still checking auth, show spinner
+   */
   if (authLoading) {
     return (
       <div
@@ -56,192 +132,37 @@ export default function OrdersPage({
     );
   }
 
-  if (router.isFallback) {
-    return <LoadingSpinner />;
+  /**
+   * If not authenticated, return null or redirect
+   */
+  if (!isAuthenticated) {
+    return null;
   }
 
-  return isAuthenticated ? (
+  /**
+   * Render OrdersTable with the data
+   */
+  return (
     <OrdersTable
       orders={orders}
       totalItems={totalItems}
       currentPage={currentPage}
       isLoading={isLoading}
     />
-  ) : null;
+  );
 }
 
+// Next.js SEO
 OrdersPage.seo = {
   title: "Orders | Density",
   description: "View and manage all your orders.",
   keywords: "orders, density",
 };
 
+// Remove or comment out getServerSideProps if you previously used it
+/*
 export async function getServerSideProps(context) {
-  const {
-    page = 1,
-    search = "",
-    status = "all",
-    sortField = "DocNum",
-    sortDir = "desc",
-    fromDate,
-    toDate,
-  } = context.query;
-
-  try {
-    const protocol = context.req.headers["x-forwarded-proto"] || "http";
-    const host = context.req.headers.host || "localhost:3000";
-    const apiUrl = `${protocol}://${host}/api/orders`;
-
-    const response = await fetch(
-      `${apiUrl}?page=${page}&search=${search}&status=${status}&sortField=${sortField}&sortDir=${sortDir}&fromDate=${fromDate}&toDate=${toDate}`
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch orders from API");
-    }
-
-    const { orders, totalItems } = await response.json();
-
-    return {
-      props: {
-        orders: Array.isArray(orders) ? orders : [],
-        totalItems: totalItems || 0,
-        currentPage: parseInt(page, 10),
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching orders:", error);
-    return {
-      props: {
-        orders: [],
-        totalItems: 0,
-        currentPage: 1,
-        error: "Failed to fetch orders",
-      },
-    };
-  }
+  // Not needed anymore if we're fetching token-based data client side
 }
+*/
 
-
-
-// import { useState, useEffect } from "react";
-// import LoadingSpinner from "components/LoadingSpinner";
-// import OpenOrdersTable from "components/OpenOrdersTable";
-// import { useRouter } from "next/router";
-// import { useAuth } from "hooks/useAuth";
-// import { Spinner } from "react-bootstrap";
-
-// export default function OpenOrdersPage({
-//   orders: initialOrders,
-//   totalItems: initialTotalItems,
-//   currentPage: initialCurrentPage,
-// }) {
-//   const { isAuthenticated, isLoading: authLoading } = useAuth();
-//   const router = useRouter();
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [orders, setOrders] = useState(initialOrders);
-//   const [totalItems, setTotalItems] = useState(initialTotalItems);
-//   const [currentPage, setCurrentPage] = useState(initialCurrentPage);
-
-//   // Handle client-side route transitions
-//   useEffect(() => {
-//     const handleStart = () => setIsLoading(true);
-//     const handleComplete = () => setIsLoading(false);
-
-//     router.events.on("routeChangeStart", handleStart);
-//     router.events.on("routeChangeComplete", handleComplete);
-//     router.events.on("routeChangeError", handleComplete);
-
-//     return () => {
-//       router.events.off("routeChangeStart", handleStart);
-//       router.events.off("routeChangeComplete", handleComplete);
-//       router.events.off("routeChangeError", handleComplete);
-//     };
-//   }, [router]);
-
-//   // Update local state when props change
-//   useEffect(() => {
-//     setOrders(initialOrders);
-//     setTotalItems(initialTotalItems);
-//     setCurrentPage(initialCurrentPage);
-//   }, [initialOrders, initialTotalItems, initialCurrentPage]);
-
-//   // Show a loader if authentication is loading
-//   if (authLoading) {
-//     return (
-//       <div
-//         className="d-flex justify-content-center align-items-center"
-//         style={{ minHeight: "100vh" }}
-//       >
-//         <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
-//           <span className="sr-only">Loading...</span>
-//         </Spinner>
-//         <div className="ms-3">Checking authentication...</div>
-//       </div>
-//     );
-//   }
-
-//   if (router.isFallback) {
-//     return <LoadingSpinner />;
-//   }
-
-//   return isAuthenticated ? (
-//     <OpenOrdersTable
-//       orders={orders}
-//       totalItems={totalItems}
-//       currentPage={currentPage}
-//       isLoading={isLoading}
-//     />
-//   ) : null;
-// }
-
-// OpenOrdersPage.seo = {
-//   title: "Open Orders | Density",
-//   description: "View and manage all your open orders with stock details.",
-//   keywords: "open orders, sales, stock management",
-// };
-
-// export async function getServerSideProps(context) {
-//   const {
-//     page = 1,
-//     search = "",
-//     sortField = "DocNum",
-//     sortDir = "desc",
-//     fromDate,
-//     toDate,
-//   } = context.query;
-
-//   try {
-//     const protocol = context.req.headers["x-forwarded-proto"] || "http";
-//     const host = context.req.headers.host || "localhost:3000";
-//     const apiUrl = `${protocol}://${host}/api/open-orders`;
-
-//     const response = await fetch(
-//       `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&fromDate=${fromDate}&toDate=${toDate}`
-//     );
-
-//     if (!response.ok) {
-//       throw new Error("Failed to fetch open orders from API");
-//     }
-
-//     const { orders, totalItems } = await response.json();
-
-//     return {
-//       props: {
-//         orders: Array.isArray(orders) ? orders : [],
-//         totalItems: totalItems || 0,
-//         currentPage: parseInt(page, 10),
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error fetching open orders:", error);
-//     return {
-//       props: {
-//         orders: [],
-//         totalItems: 0,
-//         currentPage: 1,
-//         error: "Failed to fetch open orders",
-//       },
-//     };
-//   }
-// }
