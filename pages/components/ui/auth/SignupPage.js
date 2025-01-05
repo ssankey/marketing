@@ -165,11 +165,6 @@ export default function SignupPage() {
                   />
                 </Link>
               </div>
-              {error && (
-                <Alert variant="danger" className="text-center">
-                  {error}
-                </Alert>
-              )}
               <Form onSubmit={handleSignup}>
                 {/* Username */}
                 <Form.Group className="mb-3" controlId="username">

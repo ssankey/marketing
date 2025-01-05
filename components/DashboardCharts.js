@@ -36,8 +36,10 @@ const colorPalette = {
   ]
 };
 
-const DashboardCharts = () => {
+const DashboardCharts = (userRole) => {
   // Existing State Variables
+  console.log(userRole);
+
   const [topCustomers, setTopCustomers] = useState([]);
   const [topCategories, setTopCategories] = useState([]);
   const [customersDateFilter, setCustomersDateFilter] = useState('today');
@@ -247,126 +249,123 @@ const DashboardCharts = () => {
     );
   }
 
-  
+
 
   return (
     <div className="g-4">
       {/* Enhanced Sales and COGS Chart */}
       <EnhancedSalesCOGSChart />
-
-      {/* Open vs Closed Orders Chart */}
+  
+      {/* Orders Chart */}
       <OrdersChart />
-
-      <Row className="g-4 mt-4">
-          <Col lg={6} md={6}>
-            <CustomerBalancesChart /> {/* Include the new component */}
-          </Col>
-          <Col lg={6} md={6}>
-            <VendorPaymentsChart />
-          </Col>
-        </Row>
-
-      {/* Top Customers and Sales by Category */}
-      <Row className="g-4 mt-4">
-        {/* Top Customers */}
-        <Col lg={7} md={12}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-white border-0 py-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 fw-bold">Top Customers</h5>
-                <FilterDropdown
-                  currentFilter={customersDateFilter}
-                  setFilter={setCustomersDateFilter}
-                />
-              </div>
-            </Card.Header>
-            <Card.Body className="d-flex flex-column">
-              {loadingCustomers ? (
-                <div className="d-flex justify-content-center align-items-center flex-grow-1">
-                  <Spinner animation="border" variant="primary" />
-                </div>
-              ) : topCustomers.length === 0 ? (
-                <NoDataDisplay />
-              ) : (
-                <div className="chart-container" style={{ height: "400px" }}>
-                  <Bar
-                    data={customersChartData}
-                    options={commonChartOptions}
-                  />
-                </div>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-
-        {/* Customer Balances Chart */}
-
-
-        {/* Sales by Category */}
-        <Col lg={5} md={12}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-white border-0 py-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0 fw-bold">Sales by Category</h5>
-                <FilterDropdown
-                  currentFilter={categoriesDateFilter}
-                  setFilter={setCategoriesDateFilter}
-                />
-              </div>
-            </Card.Header>
-            <Card.Body className="d-flex flex-column">
-              {loadingCategories ? (
-                <div className="d-flex justify-content-center align-items-center flex-grow-1">
-                  <Spinner animation="border" variant="primary" />
-                </div>
-              ) : topCategories.length === 0 ? (
-                <NoDataDisplay />
-              ) : (
-                <Row className="flex-grow-1">
-                  <Col md={7} className="d-flex justify-content-center align-items-center">
-                    <Doughnut
-                      data={categoriesChartData}
-                      options={doughnutOptions}
+  
+      {/* The content below OrdersChart is hidden */}
+      {userRole === 'admin' && (
+        <>
+          {userRole === 'admin' && (
+            <Row className="g-4 mt-4">
+              <Col lg={6} md={6}>
+                <CustomerBalancesChart /> {/* Include the new component */}
+              </Col>
+              <Col lg={6} md={6}>
+                <VendorPaymentsChart />
+              </Col>
+            </Row>
+          )}
+          <Row className="g-4 mt-4">
+            {/* Top Customers */}
+            <Col lg={7} md={12}>
+              <Card className="shadow-sm border-0 h-100">
+                <Card.Header className="bg-white border-0 py-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h5 className="mb-0 fw-bold">Top Customers</h5>
+                    <FilterDropdown
+                      currentFilter={customersDateFilter}
+                      setFilter={setCustomersDateFilter}
                     />
-                  </Col>
-                  <Col md={5} className="d-flex align-items-center">
-                    <ListGroup variant="flush" className="w-100">
-                      {topCategories.map((category, index) => (
-                        <ListGroup.Item
-                          key={index}
-                          className="d-flex justify-content-between align-items-center px-2 py-1"
-                        >
-                          <div className="d-flex align-items-center">
-                            <span
-                              className="me-2"
-                              style={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: '50%',
-                                backgroundColor: colorPalette.gradient[index % colorPalette.gradient.length],
-                              }}
-                            />
-                            <span className="small text-capitalize">
-                              {category.Category}
-                            </span>
-                          </div>
-                          <span className="fw-bold small">
-                            {formatCurrency(category.Sales || 0)}
-                          </span>
-                        </ListGroup.Item>
-                      ))}
-                    </ListGroup>
-                  </Col>
-                </Row>
-              )}
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-
+                  </div>
+                </Card.Header>
+                <Card.Body className="d-flex flex-column">
+                  {loadingCustomers ? (
+                    <div className="d-flex justify-content-center align-items-center flex-grow-1">
+                      <Spinner animation="border" variant="primary" />
+                    </div>
+                  ) : topCustomers.length === 0 ? (
+                    <NoDataDisplay />
+                  ) : (
+                    <div className="chart-container" style={{ height: "400px" }}>
+                      <Bar data={customersChartData} options={commonChartOptions} />
+                    </div>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+  
+            {/* Sales by Category */}
+            <Col lg={5} md={12}>
+              <Card className="shadow-sm border-0 h-100">
+                <Card.Header className="bg-white border-0 py-3">
+                  <div className="d-flex justify-content-between align-items-center">
+                    <h5 className="mb-0 fw-bold">Sales by Category</h5>
+                    <FilterDropdown
+                      currentFilter={categoriesDateFilter}
+                      setFilter={setCategoriesDateFilter}
+                    />
+                  </div>
+                </Card.Header>
+                <Card.Body className="d-flex flex-column">
+                  {loadingCategories ? (
+                    <div className="d-flex justify-content-center align-items-center flex-grow-1">
+                      <Spinner animation="border" variant="primary" />
+                    </div>
+                  ) : topCategories.length === 0 ? (
+                    <NoDataDisplay />
+                  ) : (
+                    <Row className="flex-grow-1">
+                      <Col md={7} className="d-flex justify-content-center align-items-center">
+                        <Doughnut data={categoriesChartData} options={doughnutOptions} />
+                      </Col>
+                      <Col md={5} className="d-flex align-items-center">
+                        <ListGroup variant="flush" className="w-100">
+                          {topCategories.map((category, index) => (
+                            <ListGroup.Item
+                              key={index}
+                              className="d-flex justify-content-between align-items-center px-2 py-1"
+                            >
+                              <div className="d-flex align-items-center">
+                                <span
+                                  className="me-2"
+                                  style={{
+                                    width: 12,
+                                    height: 12,
+                                    borderRadius: '50%',
+                                    backgroundColor:
+                                      colorPalette.gradient[index % colorPalette.gradient.length],
+                                  }}
+                                />
+                                <span className="small text-capitalize">
+                                  {category.Category}
+                                </span>
+                              </div>
+                              <span className="fw-bold small">
+                                {formatCurrency(category.Sales || 0)}
+                              </span>
+                            </ListGroup.Item>
+                          ))}
+                        </ListGroup>
+                      </Col>
+                    </Row>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          </Row>
+        </>
+      )}
     </div>
   );
+  
+
 };
 
 export default DashboardCharts;
