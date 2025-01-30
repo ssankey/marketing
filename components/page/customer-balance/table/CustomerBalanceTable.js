@@ -9,7 +9,6 @@ import Link from "next/link";
 import { formatDate } from "utils/formatDate";
 import usePagination from "hooks/usePagination";
 import useTableFilters from "hooks/useFilteredData";
-import downloadExcel from "utils/exportToExcel";
 
 const CustBalanceTable = ({ balances, totalItems, isLoading = false}) => {
   const ITEMS_PER_PAGE = 20;
