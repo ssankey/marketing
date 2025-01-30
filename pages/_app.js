@@ -7,6 +7,8 @@ import { Analytics } from '@vercel/analytics/react';
 import { SWRConfig } from 'swr';
 import '../components/components.css';
 // Import layouts
+import "styles/theme.scss";
+
 import DefaultDashboardLayout from 'layouts/DefaultDashboardLayout';
 // Import styles
 import 'styles/theme.scss';

@@ -144,7 +144,7 @@ const OrdersChart = () => {
         bodyFont: { size: 13 },
         padding: 12,
         callbacks: {
-          label: function(context) {
+          label: (context) => {
             const datasetLabel = context.dataset.label;
             const value = context.raw;
             const dataPoint = ordersData[context.dataIndex];
@@ -176,6 +176,43 @@ const OrdersChart = () => {
           font: { family: "'Inter', sans-serif", size: 12 },
         },
       },
+    },
+    hover: {
+    onHover: (event, elements) => {
+      if (elements.length > 0) {
+        event.native.target.style.cursor = "pointer";
+      } else {
+        event.native.target.style.cursor = "default";
+      }
+    },
+  },
+    onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const chart = chartRef.current;
+        if (!chart) return;
+
+        const datasetIndex = elements[0].datasetIndex;
+        const dataIndex = elements[0].index;
+
+        const selectedMonth = ordersData[dataIndex].month; // e.g., "January"
+        const status = datasetIndex === 0 ? "open" : "closed"; // 0: Open Orders, 1: Closed Orders
+
+        // Convert month name to numeric value
+        const monthIndex = new Date(Date.parse(`${selectedMonth} 1, ${selectedYear}`)).getMonth() + 1;
+        const fromDate = `${selectedYear}-${String(monthIndex).padStart(2, "0")}-01`;
+        const toDate = new Date(selectedYear, monthIndex, 0).toISOString().split("T")[0]; // Last day of month
+
+        // Navigate using router.push
+        router.push({
+          pathname: "/orders",
+          query: {
+            status,
+            page: 1,
+            fromDate,
+            toDate,
+          },
+        });
+      }
     },
   };
 
