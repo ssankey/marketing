@@ -169,12 +169,21 @@ const NavbarVertical = (props) => {
 
           {/* Outstanding Payments (Hidden for Admin) */}
           {isAdmin && (
-            <li className="nav-item mb-3">
-              <Link href="/outstanding-payment" className="nav-link d-flex align-items-center">
-                <FaMoneyBillWave className="me-2" /> Outstanding Payments
-              </Link>
-            </li>
-          )}
+  <>
+    <li className="nav-item mb-3">
+      <Link href="/customer-balance" className="nav-link d-flex align-items-center">
+        <FaMoneyBillWave className="me-2" /> Customer Balance
+      </Link>
+    </li>
+
+    <li className="nav-item mb-3">
+      <Link href="/vendor-payment" className="nav-link d-flex align-items-center">
+        <FaMoneyBillWave className="me-2" /> Vendor Payments
+      </Link>
+    </li>
+  </>
+)}
+
 
           {/* Logout Section */}
           <li className="nav-item mt-4 mb-3" style={{ padding: "10px 15px" }}>
