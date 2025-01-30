@@ -23,12 +23,12 @@ const DashboardFilters = ({
   startDate,
   setStartDate,
   endDate,
+  setEndDate,
   setRegion,
   setCustomer,
-  setEndDate,
   customer,
   region,
-  handleFilterChange,
+  handleFilterChange = () => {}, // Default to a no-op function
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,36 +36,36 @@ const DashboardFilters = ({
   // Update URL when filters change
   const updateURL = (filters) => {
     const params = new URLSearchParams(searchParams);
-    
+
     // Update or remove parameters based on filter values
     if (filters.dateFilter) {
-      params.set('dateFilter', filters.dateFilter);
+      params.set("dateFilter", filters.dateFilter);
     } else {
-      params.delete('dateFilter');
+      params.delete("dateFilter");
     }
-    
+
     if (filters.startDate) {
-      params.set('startDate', filters.startDate);
+      params.set("startDate", filters.startDate);
     } else {
-      params.delete('startDate');
+      params.delete("startDate");
     }
-    
+
     if (filters.endDate) {
-      params.set('endDate', filters.endDate);
+      params.set("endDate", filters.endDate);
     } else {
-      params.delete('endDate');
+      params.delete("endDate");
     }
-    
+
     if (filters.region) {
-      params.set('region', filters.region);
+      params.set("region", filters.region);
     } else {
-      params.delete('region');
+      params.delete("region");
     }
-    
+
     if (filters.customer) {
-      params.set('customer', filters.customer);
+      params.set("customer", filters.customer);
     } else {
-      params.delete('customer');
+      params.delete("customer");
     }
 
     // Update the URL without refreshing the page
@@ -105,7 +105,7 @@ const DashboardFilters = ({
     setEndDate("");
     setRegion("");
     setCustomer("");
-    
+
     const resetFilters = {
       dateFilter: "today",
       startDate: "",
@@ -113,8 +113,8 @@ const DashboardFilters = ({
       region: "",
       customer: "",
     };
-    
-    handleFilterChange(resetFilters);
+
+    handleFilterChange?.(resetFilters); // Call if defined
     updateURL(resetFilters);
   };
 
@@ -133,18 +133,18 @@ const DashboardFilters = ({
   useEffect(() => {
     if (dateFilter !== "custom") {
       const filters = { dateFilter, startDate, endDate, region, customer };
-      handleFilterChange(filters);
+      handleFilterChange?.(filters); // Call if defined
       updateURL(filters);
     }
   }, [dateFilter, startDate, endDate, region, customer]);
 
   // Load initial state from URL on component mount
   useEffect(() => {
-    const dateFilterParam = searchParams.get('dateFilter');
-    const startDateParam = searchParams.get('startDate');
-    const endDateParam = searchParams.get('endDate');
-    const regionParam = searchParams.get('region');
-    const customerParam = searchParams.get('customer');
+    const dateFilterParam = searchParams.get("dateFilter");
+    const startDateParam = searchParams.get("startDate");
+    const endDateParam = searchParams.get("endDate");
+    const regionParam = searchParams.get("region");
+    const customerParam = searchParams.get("customer");
 
     if (dateFilterParam) setDateFilter(dateFilterParam);
     if (startDateParam) setStartDate(startDateParam);
@@ -244,7 +244,7 @@ const DashboardFilters = ({
                   region,
                   customer,
                 };
-                handleFilterChange(filters);
+                handleFilterChange?.(filters); // Call if defined
                 updateURL(filters);
               }}
               className="d-flex align-items-center gap-2"

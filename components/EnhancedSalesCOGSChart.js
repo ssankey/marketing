@@ -60,7 +60,6 @@ const EnhancedSalesCOGSChart = () => {
         }
     }, [user, selectedYear]);
 
-
     const salesAndCOGSChartData = {
         labels: salesData.map((data) => data.month),
         datasets: [
@@ -76,24 +75,28 @@ const EnhancedSalesCOGSChart = () => {
                 backgroundColor: '#3bac4e', // Secondary color
                 borderWidth: 1,
             },
-            {
-                label: 'Gross Margin %',
-                data: salesData.map((data) =>
-                    data.sales ? (data.grossMargin / data.sales) * 100 : 0
-                ),
-                type: 'line',
-                borderColor: '#3bac4e', // Secondary color for line
-                backgroundColor: '#3bac4e', // Same as line color
-                borderWidth: 2,
-                fill: false,
-                yAxisID: 'y1',
-                tension: 0.4,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-            },
+            // Conditionally add the Gross Margin % dataset if the user is an admin
+            ...(user?.role === 'admin'
+                ? [
+                      {
+                          label: 'Gross Margin %',
+                          data: salesData.map((data) =>
+                              data.sales ? (data.grossMargin / data.sales) * 100 : 0
+                          ),
+                          type: 'line',
+                          borderColor: '#3bac4e', // Secondary color for line
+                          backgroundColor: '#3bac4e', // Same as line color
+                          borderWidth: 2,
+                          fill: false,
+                          yAxisID: 'y1',
+                          tension: 0.4,
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                      },
+                  ]
+                : []),
         ],
     };
-
 
     const salesAndCOGSChartOptions = {
         responsive: true,
@@ -164,7 +167,17 @@ const EnhancedSalesCOGSChart = () => {
             ['Metric', ...salesData.map((data) => data.month)],
             ['Sales', ...salesData.map((data) => data.sales || 0)],
             ['COGS', ...salesData.map((data) => data.cogs || 0)],
-            ['Gross Margin %', ...salesData.map((data) => (data.sales ? ((data.grossMargin / data.sales) * 100).toFixed(2) : '-'))],
+            // Conditionally include Gross Margin % row for admin users
+            ...(user?.role === 'admin'
+                ? [
+                      [
+                          'Gross Margin %',
+                          ...salesData.map((data) =>
+                              data.sales ? ((data.grossMargin / data.sales) * 100).toFixed(2) : '-'
+                          ),
+                      ],
+                  ]
+                : []),
         ];
 
         const csvContent = csvData.map((row) => row.join(',')).join('\n');
@@ -176,6 +189,7 @@ const EnhancedSalesCOGSChart = () => {
         link.setAttribute('download', 'sales_cogs_data.csv');
         link.click();
     };
+
     const YearSelector = () => (
         <Dropdown>
             <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
@@ -183,8 +197,8 @@ const EnhancedSalesCOGSChart = () => {
             </Dropdown.Toggle>
             <Dropdown.Menu>
                 {availableYears.map(year => (
-                    <Dropdown.Item 
-                        key={year} 
+                    <Dropdown.Item
+                        key={year}
                         onClick={() => setSelectedYear(year)}
                         active={year === selectedYear}
                     >
@@ -194,32 +208,17 @@ const EnhancedSalesCOGSChart = () => {
             </Dropdown.Menu>
         </Dropdown>
     );
+
     return (
         <Card className="shadow-sm border-0 mb-4">
             <Card.Header className="bg-white py-3">
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                    <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>Sales, COGS, and Gross Margin %</h4>
-                    {/* <YearSelector /> */}
-                    <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center  mt-3 mt-md-0">
-                        {/* <SearchBar
-                            searchQuery={searchQuery}
-                            setSearchQuery={setSearchQuery}
-                            searchResults={searchResults}
-                            handleSelectResult={handleSelectResult}
-                            placeholder="Search customer or products or category"
-                            onSearch={handleSearch}
-                        /> */}
+                    <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>
+                        Sales, COGS, and Gross Margin %
+                    </h4>
+                    <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
                         <div className="d-flex gap-2">
-                            {/* <Button
-                                variant="outline-secondary"
-                                onClick={clearFilters}
-                                style={{ whiteSpace: 'nowrap' }}
-                            >
-                                Clear Filters
-                            </Button> */}
-                                                <YearSelector />
-
-
+                            <YearSelector />
                         </div>
                     </div>
                 </div>
@@ -263,16 +262,19 @@ const EnhancedSalesCOGSChart = () => {
                                             <td key={index}>{formatCurrency(data.cogs || 0)}</td>
                                         ))}
                                     </tr>
-                                    <tr>
-                                        <td>Gross Margin %</td>
-                                        {salesData.map((data, index) => (
-                                            <td key={index}>
-                                                {data.sales
-                                                    ? `${((data.grossMargin / data.sales) * 100).toFixed(2)}%`
-                                                    : '-'}
-                                            </td>
-                                        ))}
-                                    </tr>
+                                    {/* Conditionally render Gross Margin % row for admin users */}
+                                    {user?.role === 'admin' && (
+                                        <tr>
+                                            <td>Gross Margin %</td>
+                                            {salesData.map((data, index) => (
+                                                <td key={index}>
+                                                    {data.sales
+                                                        ? `${((data.grossMargin / data.sales) * 100).toFixed(2)}%`
+                                                        : '-'}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    )}
                                 </tbody>
                             </Table>
                         </div>

@@ -4,7 +4,7 @@
 
   import { getOpenOrdersFromDatabase } from "../../../lib/models/orders";
   import { parseISO, isValid } from "date-fns";
-
+  import { verify } from "jsonwebtoken";
   // Helper function to validate dates
   function isValidDate(date) {
     return date && isValid(parseISO(date));
@@ -16,6 +16,26 @@
     }
 
     try {
+
+      // 1) Check for Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({
+          error: "Missing or malformed Authorization header",
+          received: authHeader,
+        });
+      }
+
+      // 2) Verify token
+      const token = authHeader.split(" ")[1];
+      let decodedToken;
+      try {
+        decodedToken = verify(token, process.env.JWT_SECRET);
+      } catch (err) {
+        console.error("Token verification failed:", err);
+        return res.status(401).json({ error: "Token verification failed" });
+      }
+      
       const {
         page = 1,
         search = "",
@@ -36,6 +56,10 @@
       const validatedFromDate = isValidDate(fromDate) ? fromDate : undefined;
       const validatedToDate = isValidDate(toDate) ? toDate : undefined;
 
+    // 3) Extract role-based or contactCodes-based logic
+    const isAdmin = decodedToken.role === "admin";
+    // If your JWT includes an array of contactCodes, extract it:
+    const contactCodes = decodedToken.contactCodes || [];
       // Fetch open orders from the database
       const { orders, totalItems } = await getOpenOrdersFromDatabase({
         search,
@@ -46,6 +70,9 @@
         ITEMS_PER_PAGE,
         fromDate: validatedFromDate,
         toDate: validatedToDate,
+        isAdmin,
+        contactCodes,
+        
       });
 
       // Respond with data
