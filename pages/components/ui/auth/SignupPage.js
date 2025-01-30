@@ -3,7 +3,7 @@
 "use client";
 
 import { useState } from "react";
-import { Row, Col, Card, Form, Button, Image } from "react-bootstrap";
+import { Row, Col, Card, Form, Button } from "react-bootstrap";
 import Link from "next/link";
 import Image from "next/image";
 
