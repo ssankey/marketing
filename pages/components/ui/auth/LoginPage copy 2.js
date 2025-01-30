@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Row, Col, Card, Form, Button, Image, Alert } from "react-bootstrap";
-import { loginUser } from "utils/auth";
+// import { loginUser } from "utils/auth";
 
 export default function LoginPage() {
   const router = useRouter();
