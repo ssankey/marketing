@@ -77,7 +77,7 @@ export default function InvoiceDetailsPage({ invoice, status, error }) {
 
   return (
     <div className="p-6">
-      <StatusFlowDiagram status={status} />
+      {/* <StatusFlowDiagram status={status} /> */}
       <InvoiceDetails invoice={invoice} />
     </div>
   );
