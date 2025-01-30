@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Row, Col, Card, Form, Button, Image } from "react-bootstrap";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function SignupPage() {
   const [username, setUsername] = useState("");
@@ -157,12 +158,14 @@ export default function SignupPage() {
             <Card.Body className="p-4 d-flex flex-column justify-content-center">
               <div className="mb-4 text-center">
                 <Link href="/">
-                  <img
+                <Image
                     src="/assets/density_logo_new_trans.png"
                     alt="Logo"
-                    className="img-fluid mb-3"
-                    style={{ height: "70px", width: "auto" }}
+                    width={140} // Set explicit width
+                    height={70} // Set explicit height
+                    priority // Loads the image faster
                   />
+
                 </Link>
               </div>
               <Form onSubmit={handleSignup}>
@@ -231,16 +234,15 @@ export default function SignupPage() {
 
         {/* Right Side (Image Section) */}
         <Col xs={12} md={6} className="p-0 d-flex align-items-center">
-          <Image
-            src="/assets/login-image-square-2.jpg"
-            alt="Right Side Image"
-            className="w-100"
-            style={{
-              height: "100%",
-              objectFit: "cover",
-              borderRadius: "0px", // Adjust for rounded corners if needed
-            }}
-          />
+        <Image
+  src="/assets/login-image-square-2.jpg"
+  alt="Right Side Image"
+  width={600} // Adjust width as needed
+  height={800} // Adjust height as needed
+  layout="intrinsic" // Keeps aspect ratio
+  objectFit="cover"
+/>
+
         </Col>
       </Row>
     </div>
