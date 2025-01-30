@@ -1,12 +1,11 @@
 //components/CustomerBalanceTable.js
 import React from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
-import GenericTable from "components/tabel/GenericTable";
-import TableFilters from "components/tabel/TableFilters";
-import TablePagination from "components/tabel/TablePagination";
+import GenericTable from "components/GenericTable";
+import TableFilters from "components/TableFilters";
+import TablePagination from "components/TablePagination";
 import { formatCurrency } from "utils/formatCurrency";
 import Link from "next/link";
-import StatusBadge from "../../../ui-module/badge/StatusBadge";
 import { formatDate } from "utils/formatDate";
 import usePagination from "hooks/usePagination";
 import useTableFilters from "hooks/useFilteredData";
