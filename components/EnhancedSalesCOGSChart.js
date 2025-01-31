@@ -214,7 +214,7 @@ const EnhancedSalesCOGSChart = () => {
             <Card.Header className="bg-white py-3">
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
                     <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>
-                        Sales, COGS, and Gross Margin %
+                        Sales
                     </h4>
                     <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
                         <div className="d-flex gap-2">
