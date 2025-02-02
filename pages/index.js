@@ -29,7 +29,8 @@ const Dashboard = () => {
   }
 
   const {
-    dateFilter: initialDateFilter = "today",
+    // dateFilter: initialDateFilter = "today",
+    dateFilter: initialDateFilter = "thisMonth",
     startDate: initialStartDate,
     endDate: initialEndDate,
     region: initialRegion,

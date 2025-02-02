@@ -147,6 +147,7 @@ const QuotationDetails = ({ quotation }) => {
                     <tr>
                       <th className="text-nowrap">Line #</th>
                       <th className="text-nowrap">Item Code</th>
+                      <th className="text-nowrap">Status</th>
                       <th className="text-nowrap">Description</th>
                       <th className="text-nowrap">Quantity</th>
                       <th className="text-nowrap">Unit</th>
@@ -154,7 +155,7 @@ const QuotationDetails = ({ quotation }) => {
                       <th className="text-nowrap">Discount (%)</th>
                       <th className="text-nowrap">Tax (%)</th>
                       <th className="text-nowrap">Line Total</th>
-                      <th className="text-nowrap">Status</th>
+                      {/* <th className="text-nowrap">Status</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -164,6 +165,7 @@ const QuotationDetails = ({ quotation }) => {
                         <tr key={index}>
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
+                          <td className="text-nowrap">{product.LineStatus}</td>
                           <td className="text-nowrap">{product.Description}</td>
                           <td className="text-nowrap">{product.Quantity}</td>
                           <td className="text-nowrap">{product.UnitMsr}</td>
@@ -175,7 +177,7 @@ const QuotationDetails = ({ quotation }) => {
                           <td className="text-nowrap">
                             {formatCurrency(lineTotal)} {product.Currency || quotation.DocCur}
                           </td>
-                          <td className="text-nowrap">{product.LineStatus}</td>
+                          {/* <td className="text-nowrap">{product.LineStatus}</td> */}
                         </tr>
                       );
                     })}
