@@ -159,6 +159,32 @@ const InvoiceDetails = ({ invoice }) => {
             </Card.Body>
           </Card>
 
+          {/* Timeline */}
+          <Card className="mb-4">
+            <Card.Header>
+              <h5 className="mb-0">Timeline</h5>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+                <Col md={4}>
+                  <p>
+                    <strong>Timeline</strong> { invoice.Timeline||'N/A'}
+                  </p>
+                </Col>
+                <Col md={4}>
+                  <p>
+                    <strong>Quote Status</strong> {invoice.QuoteStatus|| 'N/A'}
+                  </p>
+                </Col>
+                <Col md={4}>
+                  <p>
+                    <strong>Mkt Feedback</strong> { invoice.Mkt_Feedback||'N/A'}
+                  </p>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card>
+
           {/* Addresses */}
           <Row className="mb-4">
             <Col md={6}>
@@ -208,7 +234,9 @@ const InvoiceDetails = ({ invoice }) => {
                     <tr>
                       <th className="text-nowrap">Line #</th>
                       <th className="text-nowrap">Item Code</th>
+                       <th className="text-nowrap">Status</th>
                       <th className="text-nowrap">Description</th>
+                      
                       <th className="text-nowrap">Warehouse</th>
                       <th className="text-nowrap">Quantity</th>
                       <th className="text-nowrap">Unit</th>
@@ -217,7 +245,7 @@ const InvoiceDetails = ({ invoice }) => {
                       <th className="text-nowrap">Tax (%)</th>
                       <th className="text-nowrap">Line Total</th>
                       <th className="text-nowrap">Delivery Date</th>
-                      <th className="text-nowrap">Status</th>
+                      {/* <th className="text-nowrap">Status</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -233,6 +261,7 @@ const InvoiceDetails = ({ invoice }) => {
                         <tr key={index}>
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
+                           <td className="text-nowrap">{product.LineStatus}</td>
                           <td className="text-nowrap">{product.Description}</td>
                           <td className="text-nowrap">{product.WhsCode}</td>
                           <td className="text-nowrap">{quantity}</td>
@@ -246,7 +275,7 @@ const InvoiceDetails = ({ invoice }) => {
                             {formatCurrency(lineTotalINR, 'INR')}
                           </td>
                           <td className="text-nowrap">{formatDate(product.ShipDate)}</td>
-                          <td className="text-nowrap">{product.LineStatus}</td>
+                          {/* <td className="text-nowrap">{product.LineStatus}</td> */}
                         </tr>
                       );
                     })}

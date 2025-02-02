@@ -122,15 +122,15 @@ const OrdersChart = () => {
         barPercentage: 1,
         categoryPercentage: 0.7,
       },
-      {
-        label: "Closed Orders",
-        data: ordersData.map((data) => data.closedOrders || 0),
-        backgroundColor: colorPalette.orderLine,
-        borderColor: colorPalette.orderLine,
-        borderWidth: 1,
-        barPercentage: 1,
-        categoryPercentage: 0.7,
-      },
+      // {
+      //   label: "Closed Orders",
+      //   data: ordersData.map((data) => data.closedOrders || 0),
+      //   backgroundColor: colorPalette.orderLine,
+      //   borderColor: colorPalette.orderLine,
+      //   borderWidth: 1,
+      //   barPercentage: 1,
+      //   categoryPercentage: 0.7,
+      // },
     ],
   };
 
@@ -321,10 +321,10 @@ const OrdersChart = () => {
                       <th>Month</th>
                       <th>Open Orders</th>
                       <th>Open Orders Sales</th>
-                      <th>Closed Orders</th>
+                      {/* <th>Closed Orders</th>
                       <th>Closed Orders Sales</th>
                       <th>Total Orders</th>
-                      <th>Total Sales</th>
+                      <th>Total Sales</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -336,10 +336,10 @@ const OrdersChart = () => {
                           <td>{formatMonthYear(data.year, data.month)}</td>
                           <td>{data.openOrders || 0}</td>
                           <td>{formatCurrency(data.openSales || 0)}</td>
-                          <td>{data.closedOrders || 0}</td>
+                          {/* <td>{data.closedOrders || 0}</td>
                           <td>{formatCurrency(data.closedSales || 0)}</td>
                           <td>{totalOrders}</td>
-                          <td>{formatCurrency(totalSales)}</td>
+                          <td>{formatCurrency(totalSales)}</td> */}
                         </tr>
                       );
                     })}

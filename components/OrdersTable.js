@@ -59,14 +59,14 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
           >
             {value}
           </Link>
-          &nbsp;
+          {/* &nbsp;
           <Link
             href={`/printOrder?d=${value}&e=${row.DocEntry}`}
             className="text-blue-600 hover:text-blue-800"
             target="_blank"
           >
             <Printer />
-          </Link>
+          </Link> */}
         </>
       ),
     },
@@ -76,10 +76,16 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
       render: (value) => <StatusBadge status={value.toLowerCase()} />,
     },
     {
+      field: "CustomerPONo",
+      label: "Customer PONo",
+      render: (value) => value || "N/A",
+    },
+    {
       field: "CardName",
       label: "Customer",
       render: (value) => truncateText(value, 20),
     },
+    
     {
       field: "DocDate",
       label: "Order Date",
@@ -178,7 +184,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
         searchConfig={{
           enabled: true,
           placeholder: "Search orders...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription"],
+          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","NumAtCard"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}

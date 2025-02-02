@@ -86,6 +86,11 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       render: (value) => formatDate(value),
     },
     {
+      field: "CustomerPONo",
+      label: "Customer PONo",
+      render: (value) => value || "N/A",
+    },
+    {
       field: "CardName",
       label: "Customer",
       render: (value) => value || "N/A",
@@ -94,6 +99,11 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       field: "DocDueDate",
       label: "Due Date",
       render: (value) => formatDate(value),
+    },
+    {
+      field: "PaymentStatus",
+      label: "Payment Status",
+      render: (value) => value || "N/A",
     },
     {
       field: "TradeType",
