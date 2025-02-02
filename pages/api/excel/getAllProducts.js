@@ -30,6 +30,7 @@ export default async function handler(req, res) {
       category,
       sortField,
       sortDir,
+      
     }); // Pass filters to the model
     res.status(200).json(data);
   } catch (error) {

@@ -136,11 +136,21 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
 
   const handleExcelDownload = async () => {
     try {
-      const response = await fetch(
-        `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+       // Get token from localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
+      const url= `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
           fromDate || ""
-        }&toDate=${toDate || ""}`
-      );
+        }&toDate=${toDate || ""}` ;
+     
+
+      const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
       const filteredOrders = await response.json();
 
       if (filteredOrders && filteredOrders.length > 0) {
