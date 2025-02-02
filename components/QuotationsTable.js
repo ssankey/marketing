@@ -93,25 +93,55 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
   ];
  
 
-  const handleExcelDownload = async () => {
-    try {
-      const response = await fetch(
-        `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
-          fromDate || ""
-        }&toDate=${toDate || ""}`
-      );
-      const filteredQuotations = await response.json();
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const response = await fetch(
+  //       `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+  //         fromDate || ""
+  //       }&toDate=${toDate || ""}`
+  //     );
+  //     const filteredQuotations = await response.json();
   
-      if (filteredQuotations && filteredQuotations.length > 0) {
-        downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
-      alert("Failed to export data. Please try again.");
+  //     if (filteredQuotations && filteredQuotations.length > 0) {
+  //       downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
+
+  const handleExcelDownload = async () => {
+  try {
+    // Get token from localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
     }
-  };
+    
+    // Build the URL with query parameters
+    const url = `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+
+    // Make the fetch call with the token in headers
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    
+    const filteredQuotations = await response.json();
+
+    if (filteredQuotations && filteredQuotations.length > 0) {
+      downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
+    } else {
+      alert("No data available to export.");
+    }
+  } catch (error) {
+    console.error("Failed to fetch data for Excel export:", error);
+    alert("Failed to export data. Please try again.");
+  }
+};
 
 
   return (

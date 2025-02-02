@@ -87,12 +87,28 @@ const OpenOrdersTable = ({
 
   const handleExcelDownload = async () => {
     try {
-      const constructedUrl = `/api/excel/getOpenOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+
+       // Get token from localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
+
+      const url = `/api/excel/getOpenOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
         fromDate || ""
       }&toDate=${toDate || ""}`;
-      console.log("Constructed API URL:", constructedUrl);
 
-      const response = await fetch(constructedUrl);
+      // const constructedUrl = `/api/excel/getOpenOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+      //   fromDate || ""
+      // }&toDate=${toDate || ""}`;
+      // console.log("Constructed API URL:", constructedUrl);
+
+      const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+      
 
       if (!response.ok) {
         console.error("API Response Error:", response.statusText);

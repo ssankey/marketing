@@ -138,9 +138,23 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
 
   const handleExcelDownload = async () => {
     try {
-      const response = await fetch(
-        `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
-      );
+
+       // Get token from localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
+
+      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
+      // const response = await fetch(
+      //   `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
+      // );
+
+      const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
       const filteredInvoices = await response.json();
 
       if (filteredInvoices && filteredInvoices.length > 0) {
