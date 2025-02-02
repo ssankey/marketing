@@ -1,5 +1,4 @@
-//components/OrderTable.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
 import TableFilters from './TableFilters';
@@ -12,16 +11,20 @@ import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
+import { Printer } from 'react-bootstrap-icons';
 
-const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
-  console.log(orders);
-  console.log("current page",currentPage);
-
+const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
   const ITEMS_PER_PAGE = 20;
-  const { totalPages, onPageChange } = usePagination(
+  const [displayState, setDisplayState] = useState({
+    hasData: false,
+    showLoading: true
+  });
+
+  const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
+
   const {
     searchTerm,
     statusFilter,
@@ -33,20 +36,38 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
-    handleReset
+    handleReset,
   } = useTableFilters();
+
+  // Update display state based on props
+  useEffect(() => {
+    setDisplayState(prev => ({
+      hasData: orders.length > 0,
+      showLoading: isLoading && !prev.hasData
+    }));
+  }, [isLoading, orders]);
 
   const columns = [
     {
       field: "DocNum",
       label: "Order#",
       render: (value, row) => (
-        <Link
-          href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
-          className="text-blue-600 hover:text-blue-800"
-        >
-          {value}
-        </Link>
+        <>
+          <Link
+            href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            {value}
+          </Link>
+          &nbsp;
+          <Link
+            href={`/printOrder?d=${value}&e=${row.DocEntry}`}
+            className="text-blue-600 hover:text-blue-800"
+            target="_blank"
+          >
+            <Printer />
+          </Link>
+        </>
       ),
     },
     {
@@ -54,22 +75,6 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
       label: "Order Status",
       render: (value) => <StatusBadge status={value.toLowerCase()} />,
     },
-    // {
-    //   field: "InvoiceNum",
-    //   label: "Invoice#",
-    //   render: (value, row) => (
-    //     value ? (
-    //       <Link
-    //         href={`/invoicedetails?d=${row.InvoiceNum}&e=${row.InvoiceDocEntry}`}
-    //         className="text-green-600 hover:text-green-800"
-    //       >
-    //         {value}
-    //       </Link>
-    //     ) : (
-    //       "0"
-    //     )
-    //   ),
-    // },
     {
       field: "CardName",
       label: "Customer",
@@ -83,7 +88,7 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
     {
       field: "ProductCount",
       label: "Product Count",
-      render: (value) => value || "0",
+      render: (value) => value || "N/A",
     },
     {
       field: "DeliveryDate",
@@ -102,54 +107,28 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
     {
       field: "DocCur",
       label: "Currency",
-      render: (value) => value || "0",
+      render: (value) => value || "N/A",
     },
-    // {
-    //   field: "DocStatus",
-    //   label: "Order Status",
-    //   render: (value) => <StatusBadge status={value.toLowerCase()} />,
-    // },
-
-    // {
-    //   field: "InvoiceDate",
-    //   label: "Invoice Date",
-    //   render: (value) => value ? formatDate(value) : "0",
-    // },
-    // {
-    //   field: "InvoiceTotal",
-    //   label: "Invoice Amount",
-    //   render: (value) => formatCurrency(value || 0),
-    // },
-    // {
-    //   field: "InvoiceStatus",
-    //   label: "Invoice Status",
-    //   render: (value) => value ? <StatusBadge status={value.toLowerCase()} /> : "0",
-    // },
     {
       field: "SalesEmployee",
       label: "Sales Employee",
-      render: (value) => value || "0",
+      render: (value) => value || "N/A",
     },
   ];
-  
-  
 
   const handleExcelDownload = async () => {
     try {
-       // Get token from localStorage
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      return;
-    }
-      const url= `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
-          fromDate || ""
-        }&toDate=${toDate || ""}` ;
-     
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
 
+      const url = `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+      
       const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const filteredOrders = await response.json();
 
@@ -164,13 +143,42 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
     }
   };
 
+  const renderContent = () => {
+    if (displayState.showLoading) {
+      return (
+        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
+          <div className="text-center">
+            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Loading orders...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <GenericTable
+          columns={columns}
+          data={orders}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onExcelDownload={handleExcelDownload}
+        />
+        {!isLoading && orders.length === 0 && (
+          <div className="text-center py-4">No orders found.</div>
+        )}
+      </>
+    );
+  };
+
   return (
     <Container fluid>
       <TableFilters
         searchConfig={{
           enabled: true,
           placeholder: "Search orders...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","InvoiceNum"], // Updated field names
+          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
@@ -186,33 +194,13 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
         onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
-        onReset={handleReset}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
+        onReset={handleReset}
         totalItemsLabel="Total Orders"
       />
-      {isLoading ? (
-        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading orders...</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <GenericTable
-            columns={columns}
-            data={orders}
-            onSort={handleSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onExcelDownload={handleExcelDownload}
-          />
-          {orders.length === 0 && (
-            <div className="text-center py-4">No orders found.</div>
-          )}
-        </>
-      )}
+
+      {renderContent()}
 
       <TablePagination
         currentPage={currentPage}
@@ -232,5 +220,3 @@ const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => 
 };
 
 export default OrdersTable;
-
-

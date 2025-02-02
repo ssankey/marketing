@@ -1,5 +1,5 @@
-//components/invoiesTable.js
-import React from 'react';
+// components/InvoicesTable.js
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
 import TableFilters from './TableFilters';
@@ -12,16 +12,19 @@ import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
+
 const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   const ITEMS_PER_PAGE = 20;
-
-
-
+  const [displayState, setDisplayState] = useState({
+    hasData: false,
+    showLoading: true
+  });
 
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
+
   const {
     searchTerm,
     statusFilter,
@@ -35,6 +38,14 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     handleSort,
     handleReset,
   } = useTableFilters();
+
+  // Update display state based on props
+  useEffect(() => {
+    setDisplayState(prev => ({
+      hasData: invoices.length > 0,
+      showLoading: isLoading && !prev.hasData
+    }));
+  }, [isLoading, invoices]);
 
   const columns = [
     {
@@ -116,44 +127,19 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     },
   ];
 
-  // Define handleExcelDownload function
-  // const handleExcelDownload = () => {
-  //   downloadExcel(invoices, "Invoices");
-  // };
-
-  // const handleExcelDownload = async () => {
-  //   try {
-  //     const response = await fetch("api/excel/getAllInvoices");
-  //     const allInvoices = await response.json();
-  //     if (allInvoices && allInvoices.length > 0) {
-  //       downloadExcel(allInvoices, "Invoices");
-  //     } else {
-  //       alert("No data available to export.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to fetch data for Excel export:", error);
-  //     alert("Failed to export data. Please try again.");
-  //   }
-  // };
-
   const handleExcelDownload = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
 
-       // Get token from localStorage
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      return;
-    }
-
-      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
-      // const response = await fetch(
-      //   `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
-      // );
-
+      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+      
       const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const filteredInvoices = await response.json();
 
@@ -166,6 +152,35 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       console.error("Failed to fetch data for Excel export:", error);
       alert("Failed to export data. Please try again.");
     }
+  };
+
+  const renderContent = () => {
+    if (displayState.showLoading) {
+      return (
+        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
+          <div className="text-center">
+            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Loading invoices...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <GenericTable
+          columns={columns}
+          data={invoices}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onExcelDownload={handleExcelDownload}
+        />
+        {!isLoading && invoices.length === 0 && (
+          <div className="text-center py-4">No invoices found.</div>
+        )}
+      </>
+    );
   };
 
   return (
@@ -196,28 +211,8 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
         onReset={handleReset}
         totalItemsLabel="Total Invoices"
       />
-      {isLoading ? (
-        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading invoices...</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <GenericTable
-            columns={columns}
-            data={invoices}
-            onSort={handleSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onExcelDownload={handleExcelDownload} // Passing the function as a prop
-          />
-          {invoices.length === 0 && (
-            <div className="text-center py-4">No invoices found.</div>
-          )}
-        </>
-      )}
+
+      {renderContent()}
 
       <TablePagination
         currentPage={currentPage}
