@@ -1,4 +1,4 @@
-
+//page/customers/[id].js
 
 import { useAuth } from "hooks/useAuth";
 import { useRouter } from "next/router";
@@ -6,6 +6,10 @@ import { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Spinner, Table } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import  PurchasesAmountChart  from "../../components/CustomerCharts/purchasevsamount";
+
+import SalesTable from "../../components/CustomerCharts/salestable";
+import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
+
 
 
 // Utility function to format date
@@ -16,13 +20,18 @@ function formatDate(dateString) {
 }
 
 
-export default function CustomerDetails({ customer, purchaseData,TopQuotationData,TopOrderData,TopInvoiceData }) {
+export default function CustomerDetails({
+  customer,
+  purchaseData,
+  TopQuotationData,
+  TopOrderData,
+  TopInvoiceData,
+  salesByCategoryData,
+}) {
   //export default function CustomerDetails({ customer }) {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-  
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
@@ -107,117 +116,44 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           </Row>
         </Card.Body>
       </Card>
-
       {/*Purchase Analytics Card */}
       {purchaseData && purchaseData.length > 0 && (
         <Card className="mb-4">
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">
               <h3 className="mb-0">Purchase Analytics</h3>
-              <select
-                className="form-select w-auto"
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-              >
-                {[2022, 2023, 2024].map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
             </div>
           </Card.Header>
           <Card.Body>
-            <PurchasesAmountChart data={purchaseData} />
+            {/* <PurchasesAmountChart data={purchaseData} /> */}
+            <PurchasesAmountChart
+              customerId={customer?.CustomerCode}
+            />
           </Card.Body>
         </Card>
       )}
-
-      {/* {Top 10 Quotation  / Orders / Invoices} */}
-
-      {/* <Row className="mb-4">
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-light border-bottom py-3">
-              
-              <h5 className="mb-0 fw-bold">Last 10 Quotations</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-4">
-                {TopQuotationData?.map((quote) => (
-                  <div
-                    key={quote.QuotationNumber}
-                    className="py-2 border-b last:border-b-0"
-                  >
-                    <div>Quotation#: {quote.QuotationNumber}</div>
-                    <div className="text-sm text-slate-600">
-                      <div>
-                        Quotation Date: {formatDate(quote.QuotationDate)}
-                      </div>
-                      <div>Delivery Date: {formatDate(quote.DeliveryDate)}</div>
-                      <div>Status: {quote.QuotationStatus == 'C'? "Closed" : "Open"}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-light border-bottom py-3">
-              
-              <h5 className="mb-0 fw-bold">Last 10 Orders</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-4">
-                {TopOrderData?.map((order) => (
-                  <div
-                    key={order.OrderNumber}
-                    className="py-2 border-b last:border-b-0"
-                  >
-                    <div>Order#: {order.OrderNumber}</div>
-                    <div className="text-sm text-slate-600">
-                      <div>Order Date: {formatDate(order.OrderDate)}</div>
-                      <div>Delivery Date: {formatDate(order.DeliveryDate)}</div>
-                       
-                      <div>
-                        Status: {order.OrderStatus === "C" ? "Closed" : "Open"}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="bg-light border-bottom py-3">
-         
-               
-              <h5 className="mb-0 fw-bold">Last 10 Invoices</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-4">
-                {TopInvoiceData?.map((invoice) => (
-                  <div
-                    key={invoice.InvoiceNumber}
-                    className="py-2 border-b last:border-b-0"
-                  >
-                    <div>Invoice#: {invoice.InvoiceNumber}</div>
-                    <div className="text-sm text-slate-600">
-                      <div>Invoice Date: {formatDate(invoice.InvoiceDate)}</div>
-                      <div>Status: {invoice.InvoiceStatus == "C" ? "Closed" : "Open"}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row> */}
-
+      {/*salesByCategory */}
+      {purchaseData && purchaseData.length > 0 && (
+        <Card className="mb-4">
+          <Card.Header>
+            <div className="d-flex justify-content-between align-items-center">
+              <h3 className="mb-0">Sales by Category</h3>
+            </div>
+          </Card.Header>
+          <Card.Body>
+            <Row>
+              <Col lg={6}>
+                {/* Table for Sales by Category */}
+                <SalesTable data={salesByCategoryData} />
+              </Col>
+              <Col lg={6}>
+                {/* Pie Chart for Sales by Category */}
+                <SalesPieChart data={salesByCategoryData} />
+              </Col>
+            </Row>
+          </Card.Body>
+        </Card>
+      )}
       <Row className="mb-4">
         <Col lg={4}>
           <Card className="shadow-sm border-0 h-100">
@@ -373,7 +309,7 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
                       </div>
                       <div>
                         <i className="bi bi-calendar me-1"></i>
-                        NetAmount : {invoice.NetAmount}
+                        NetAmount : {formatCurrency(invoice.NetAmount)}
                       </div>
                       <div className="fw-bold mt-2">
                         Status:{" "}
@@ -395,7 +331,6 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           </Card>
         </Col>
       </Row>
-
       {/* Addresses Card */}
       <Card className="mb-4">
         <Card.Header>
@@ -438,7 +373,6 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
           )}
         </Card.Body>
       </Card>
-
       {/* Back Button */}
       <div className="mt-3 mb-4">
         <button className="btn btn-secondary" onClick={() => router.back()}>
@@ -450,10 +384,14 @@ export default function CustomerDetails({ customer, purchaseData,TopQuotationDat
 }
 
 
+
+
+
+
 export async function getServerSideProps(context) {
   const { id } = context.params;
   const currentYear = new Date().getFullYear();
-  
+
   try {
     // Ensure customer ID is provided
     if (!id) {
@@ -484,7 +422,13 @@ export async function getServerSideProps(context) {
 
     // Fetch purchase and revenue data
     const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
+    console.log(metricsUrl);
     const metricsRes = await fetch(metricsUrl);
+
+    if (!id) {
+      throw new Error("Customer ID is required");
+    }
+    console.log("Customer ID in getServerSideProps:", id);
 
     if (!metricsRes.ok) {
       throw new Error(
@@ -495,8 +439,6 @@ export async function getServerSideProps(context) {
     const purchaseData = await metricsRes.json();
     console.log(purchaseData);
 
-
-   
     /****Top quotation  */
     const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
     const quotationRes = await fetch(topquotation);
@@ -515,9 +457,7 @@ export async function getServerSideProps(context) {
     const orderRes = await fetch(toporders);
 
     if (!orderRes.ok) {
-      throw new Error(
-        `Failed to fetch top orders: ${orderRes.statusText}`
-      );
+      throw new Error(`Failed to fetch top orders: ${orderRes.statusText}`);
     }
 
     const TopOrderData = await orderRes.json();
@@ -535,6 +475,16 @@ export async function getServerSideProps(context) {
     const TopInvoiceData = await invoiceRes.json();
     console.log(TopInvoiceData);
 
+    const salesByCategoryUrl = `${protocol}://${host}/api/customers/salesbycategory?id=${id}`;
+    const salesByCategoryRes = await fetch(salesByCategoryUrl);
+
+    if (!salesByCategoryRes.ok) {
+      throw new Error(
+        `Failed to fetch sales by category: ${salesByCategoryRes.statusText}`
+      );
+    }
+
+    const salesByCategoryData = await salesByCategoryRes.json();
 
     return {
       props: {
@@ -543,6 +493,7 @@ export async function getServerSideProps(context) {
         TopQuotationData,
         TopOrderData,
         TopInvoiceData,
+        salesByCategoryData,
       },
     };
   } catch (error) {
@@ -552,12 +503,12 @@ export async function getServerSideProps(context) {
       props: {
         customer: null,
         purchaseData: null,
-        TopQuotationData:null,
-        TopOrderData:null,
-        TopInvoiceData:null,
+        TopQuotationData: null,
+        TopOrderData: null,
+        TopInvoiceData: null,
+        salesByCategoryData: null,
         error: error.message,
       },
     };
   }
 } 
-

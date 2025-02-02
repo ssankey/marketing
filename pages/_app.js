@@ -8,9 +8,12 @@ import { SWRConfig } from 'swr';
 import '../components/components.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 // Import layouts
+import "styles/theme.scss";
+
 import DefaultDashboardLayout from 'layouts/DefaultDashboardLayout';
 // Import styles
 import 'styles/theme.scss';
+import { AuthProvider } from 'contexts/AuthContext';
 
 // Default SEO configuration
 const DEFAULT_SEO = {
@@ -67,7 +70,7 @@ function MyApp({ Component, pageProps }) {
     () =>
       router.pathname === '/login' ||
       router.pathname === '/signup' ||
-      router.pathname === '/forgot-password'||
+      router.pathname === '/forgot-password' ||
       router.pathname === '/set-password',
     [router.pathname]
   );
@@ -107,33 +110,36 @@ function MyApp({ Component, pageProps }) {
   MyApp.displayName = 'MyApp';
 
   return (
-    <SWRConfig value={SWR_CONFIG}>
-      <SSRProvider>
-        <Head>
-          <meta charSet="utf-8" />
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1, shrink-to-fit=no"
-          />
-          <meta name="keywords" content={seoData.keywords} />
-          <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossOrigin="anonymous"
-          />
-        </Head>
-        <NextSeo {...seoData} />
-        <Layout>
-          <Component {...pageProps} />
-          <Analytics
-            mode={process.env.NODE_ENV === 'production' ? 'production' : 'development'}
-            debug={process.env.NODE_ENV === 'development'}
-          />
-        </Layout>
-      </SSRProvider>
-    </SWRConfig>
+    <AuthProvider>
+      <SWRConfig value={SWR_CONFIG}>
+        <SSRProvider>
+          <Head>
+            <meta charSet="utf-8" />
+            <meta
+              name="viewport"
+              content="width=device-width, initial-scale=1, shrink-to-fit=no"
+            />
+            <meta name="keywords" content={seoData.keywords} />
+            <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link
+              rel="preconnect"
+              href="https://fonts.gstatic.com"
+              crossOrigin="anonymous"
+            />
+          </Head>
+          <NextSeo {...seoData} />
+          <Layout>
+            <Component {...pageProps} />
+            <Analytics
+              mode={process.env.NODE_ENV === 'production' ? 'production' : 'development'}
+              debug={process.env.NODE_ENV === 'development'}
+            />
+          </Layout>
+        </SSRProvider>
+      </SWRConfig>
+    </AuthProvider>
+
   );
 }
 

@@ -47,8 +47,22 @@ const CustomerTable = ({ customers, totalItems, isLoading = false }) => {
     },
   ];
   // Define handleExcelDownload function
-  const handleExcelDownload = () => {
-    downloadExcel(customers, "Customers");
+  // const handleExcelDownload = () => {
+  //   downloadExcel(customers, "Customers");
+  // };
+  const handleExcelDownload = async () => {
+    try {
+      const response = await fetch("api/excel/getAllCustomers");
+      const allCustomers = await response.json();
+      if (allCustomers && allCustomers.length > 0) {
+        downloadExcel(allCustomers, "Customers");
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
 
   return (

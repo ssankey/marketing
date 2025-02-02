@@ -1,5 +1,5 @@
 // pages/api/quotation/[id].js
-import { getQuotationDetail } from "lib/models/quotations";
+import  {getQuotationDetail}  from "lib/models/quotations";
 
 export default async function handler(req, res) {
   const { id } = req.query;

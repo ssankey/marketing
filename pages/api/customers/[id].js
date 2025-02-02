@@ -1,4 +1,4 @@
-
+//api/customers/[id].js
 
 import { getCustomerDetail } from "lib/models/customers";
 import { getCustomerPurchaseAndRevenue } from "lib/models/specific-customer";
@@ -12,6 +12,7 @@ export default async function handler(req, res) {
   const { id, metrics, year, quotations, orders, invoices } = req.query;
 
   // Validate required parameters
+  console.log("Received ID:", id);
   if (!id) {
     return res.status(400).json({ message: "Customer ID is required" });
   }

@@ -1,18 +1,36 @@
+// pages/open-orders/index.js
+
 import { useState, useEffect } from "react";
-import OpenOrdersTable from "components/OpenOrdersTable";
 import { useRouter } from "next/router";
-import { getOrders } from "lib/models/orders";
+import { Spinner } from "react-bootstrap";
+import { useAuth } from "hooks/useAuth";
+import LoadingSpinner from "components/LoadingSpinner";
+import OpenOrdersTable from "components/OpenOrdersTable";
 
-export default function OpenOrdersPage({
-  orders: initialOrders,
-  totalItems: initialTotalItems,
-}) {
+export default function OpenOrdersPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [orders, setOrders] = useState(initialOrders);
-  const [totalItems, setTotalItems] = useState(initialTotalItems);
 
-  // Handle loading state for client-side transitions
+  // Local states
+  const [orders, setOrders] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Grab query params from URL if you support them: ?page=2, etc.
+  const {
+    page = 1,
+    search = "",
+    status = "all",
+    sortField = "DocNum",
+    sortDir = "asc",
+    fromDate,
+    toDate,
+  } = router.query;
+
+  /**
+   * Optional: show spinner during route transitions (page changes).
+   */
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
@@ -28,166 +46,126 @@ export default function OpenOrdersPage({
     };
   }, [router]);
 
-  // Update local state when props change
+  /**
+   * Fetch open orders from /api/open-orders when user is authenticated.
+   */
   useEffect(() => {
-    setOrders(initialOrders);
-    setTotalItems(initialTotalItems);
-  }, [initialOrders, initialTotalItems]);
+    async function fetchOpenOrders() {
+      if (!isAuthenticated) return;
 
+      try {
+        setIsLoading(true);
+
+        // 1) Get token from localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found in localStorage");
+          return;
+        }
+
+        // 2) Build query string from router.query
+        const queryParams = new URLSearchParams({
+          page,
+          search,
+          status,
+          sortField,
+          sortDir,
+        });
+        if (fromDate) queryParams.append("fromDate", fromDate);
+        if (toDate) queryParams.append("toDate", toDate);
+
+        // 3) Make the request, including Authorization header
+        const response = await fetch(`/api/open-orders?${queryParams}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch open orders from API");
+        }
+
+        // 4) Parse the JSON result
+        const data = await response.json();
+        setOrders(data.orders || []);
+        setTotalItems(data.totalItems || 0);
+        setCurrentPage(data.currentPage || 1);
+      } catch (error) {
+        console.error("Error fetching open orders:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchOpenOrders();
+  }, [
+    isAuthenticated,
+    page,
+    search,
+    status,
+    sortField,
+    sortDir,
+    fromDate,
+    toDate,
+  ]);
+
+  /**
+   * If still checking auth, show spinner
+   */
+  if (authLoading) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
+          <span className="sr-only">Loading...</span>
+        </Spinner>
+        <div className="ms-3">Checking authentication...</div>
+      </div>
+    );
+  }
+
+  /**
+   * If not authenticated, return null or redirect
+   */
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  /**
+   * If route is fallback (unlikely in this scenario, but kept as an example)
+   */
+  if (router.isFallback) {
+    return <LoadingSpinner />;
+  }
+
+  /**
+   * Render OpenOrdersTable with the data
+   */
   return (
     <OpenOrdersTable
       orders={orders}
       totalItems={totalItems}
+      currentPage={currentPage}
       isLoading={isLoading}
     />
   );
 }
 
-// SEO properties for OpenOrdersPage
+// Next.js SEO
 OpenOrdersPage.seo = {
   title: "Open Orders | Density",
   description: "View and manage all your open orders with stock details.",
   keywords: "open orders, sales, stock management",
 };
 
-export async function getServerSideProps(context) {
-  try {
-    const {
-      page = 1,
-      search = "",
-      fromDate,
-      toDate,
-      status, // Extract statusFilter from query
-    } = context.query;
-
-    // Set default sorting parameters
-    const sortField = "DocDate";
-    const sortDir = "desc";
-
-    const ITEMS_PER_PAGE = 20;
-    const offset = (parseInt(page) - 1) * ITEMS_PER_PAGE;
-
-    // Build the WHERE clause for open orders
-    let whereClause = "T0.DocStatus = 'O' AND T1.LineStatus = 'O'"; // Only open orders and lines
-
-    // Apply search filters
-    if (search) {
-      whereClause += ` AND (
-        T0.DocNum LIKE '%${search}%' OR 
-        T0.CardName LIKE '%${search}%' OR 
-        T1.ItemCode LIKE '%${search}%'
-      )`;
-    }
-
-    // Add date filters
-    if (fromDate) {
-      whereClause += ` AND T0.DocDate >= '${fromDate}'`;
-    }
-    if (toDate) {
-      whereClause += ` AND T0.DocDate <= '${toDate}'`;
-    }
-
-    // Apply status filter
-    if (status) {
-      if (status === "open") {
-        whereClause += ` AND T3.OnHand >= T1.OpenQty`;
-      } else if (status === "closed") {
-        whereClause += ` AND T3.OnHand < T1.OpenQty`;
-      }
-    }
-
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(DISTINCT T0.DocEntry) as total
-      FROM ORDR T0
-      INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
-      LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
-      WHERE ${whereClause};
-    `;
-
-    // Get paginated data
-    const dataQuery = `
-      SELECT 
-        T0.DocEntry,
-        T0.DocNum,
-        T0.DocDate,
-        T0.CardName,
-        T1.ItemCode,
-        T1.Dscription AS ItemName,
-        T1.Quantity,
-        T1.OpenQty,
-        T3.OnHand AS Stock,
-        CASE 
-          WHEN T3.OnHand >= T1.OpenQty THEN 'In Stock'
-          ELSE 'Out of Stock'
-        END AS StockStatus,
-        T1.Price,
-        T0.DocTotal,
-        T1.Currency,
-        (T1.OpenQty * T1.Price) AS OpenAmount,
-        T0.DocCur,
-        T0.DocRate,
-        T1.ShipDate AS DeliveryDate,
-        T5.SlpName AS SalesEmployee
-      FROM ORDR T0  
-      INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry 
-      LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
-      INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-      WHERE ${whereClause}
-      ORDER BY ${sortField} ${sortDir}
-      OFFSET ${offset} ROWS
-      FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-    `;
-
-    // Get counts for In Stock and Out of Stock
-    const statusCountQuery = `
-      SELECT 
-        SUM(CASE WHEN T3.OnHand >= T1.OpenQty THEN 1 ELSE 0 END) AS inStockCount,
-        SUM(CASE WHEN T3.OnHand < T1.OpenQty THEN 1 ELSE 0 END) AS outOfStockCount
-      FROM ORDR T0
-      INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
-      LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
-      WHERE ${whereClause};
-    `;
-    console.log('statusCountQuery',statusCountQuery);
-    
-    // Execute all queries in parallel
-    const [totalResult, rawOrders, statusCounts] = await Promise.all([
-      getOrders(countQuery),
-      getOrders(dataQuery),
-      getOrders(statusCountQuery),
-    ]);
-
-    // Process data and return as props
-    const totalItems = totalResult[0]?.total || 0;
-    const inStockCount = statusCounts[0]?.inStockCount || 0;
-    const outOfStockCount = statusCounts[0]?.outOfStockCount || 0;
-    const orders = rawOrders.map((order) => ({
-      ...order,
-      DocDate: order.DocDate ? order.DocDate.toISOString() : null,
-      DeliveryDate: order.DeliveryDate
-        ? order.DeliveryDate.toISOString()
-        : null,
-    }));
-
-    return {
-      props: {
-        orders: Array.isArray(orders) ? orders : [],
-        totalItems,
-        inStockCount,
-        outOfStockCount,
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching open orders:", error);
-    return {
-      props: {
-        orders: [],
-        totalItems: 0,
-        inStockCount: 0,
-        outOfStockCount: 0,
-      },
-    };
-  }
-}
-
+/**
+ * Removed getServerSideProps in favor of client-side fetching with the token.
+ * If you need SSR for SEO or performance, you could adapt a similar token-based
+ * approach on the server, but typically that would require storing tokens
+ * securely (not just in localStorage).
+ */
+// export async function getServerSideProps(context) {
+//   // Not needed anymore if we're fetching data client side with token
+//   

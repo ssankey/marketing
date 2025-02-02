@@ -5,6 +5,7 @@ import { Card, Table, Button, Spinner, Dropdown } from 'react-bootstrap';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, LineElement, PointElement, LineController } from 'chart.js';
 import { formatCurrency } from 'utils/formatCurrency';
 import SearchBar from './SearchBar';
+import { useAuth } from '../contexts/AuthContext';
 
 // Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend, LineController);
@@ -13,6 +14,9 @@ const EnhancedSalesCOGSChart = () => {
     const [salesData, setSalesData] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    const [availableYears, setAvailableYears] = useState([]);
+    const { user, contactCodes } = useAuth(); // Get both user and contactCodes
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [filters, setFilters] = useState({
         customerId: null,
         productId: null,
@@ -24,83 +28,38 @@ const EnhancedSalesCOGSChart = () => {
     const [selectedCategory, setSelectedCategory] = useState('Customer'); // Added state for selected category
 
     const fetchSalesData = async () => {
-        const queryParams = new URLSearchParams();
-        if (filters.customerId) queryParams.append('customerId', filters.customerId);
-        if (filters.productId) queryParams.append('productId', filters.productId);
-        if (filters.salesPersonId) queryParams.append('salesPersonId', filters.salesPersonId);
-        if (filters.categoryId) queryParams.append('categoryId', filters.categoryId);
-
         try {
             setLoading(true);
-            const response = await fetch(`/api/sales-cogs?${queryParams.toString()}`);
-            if (!response.ok) throw new Error('Failed to fetch sales data');
-            const data = await response.json();
-            setSalesData(data.length ? data : []);
+            setError(null);
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/sales-cogs?year=${selectedYear}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const { data, availableYears } = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to fetch data');
+            }
+
+            setSalesData(data);
+            setAvailableYears(availableYears);
         } catch (error) {
-            setError(error.message);
             console.error('Error fetching sales data:', error);
-            setSalesData([]);
+            setError(error.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const fetchCategoryData = async (category) => {
-        try {
-            const response = await fetch(`/api/search?query=${searchQuery}`);
-            if (!response.ok) throw new Error('Failed to fetch category data');
-            const results = await response.json();
-            setSearchResults(results.filter(result => result.type === category));
-        } catch (error) {
-            console.error('Error fetching search results:', error);
-        }
-    };
-
-    const handleSearch = async (query) => {
-        setSearchQuery(query);
-        if (query.length < 3) {
-            setSearchResults([]);
-            return;
-        }
-        fetchCategoryData(selectedCategory);  // Fetch based on selected category
-    };
-
-    const handleSelectResult = (result) => {
-        setSearchQuery(result.name);
-        setSearchResults([]);
-
-        if (result.type === 'Customer') {
-            setFilters((prev) => ({ ...prev, customerId: result.id }));
-        } else if (result.type === 'Product') {
-            setFilters((prev) => ({ ...prev, productId: result.id }));
-        } else if (result.type === 'Employee') {
-            setFilters((prev) => ({ ...prev, salesPersonId: result.id }));
-        } else if (result.type === 'Category') {
-            setFilters((prev) => ({ ...prev, categoryId: result.id }));
-        }
-    };
-
-    const clearFilters = () => {
-        setFilters({
-            customerId: null,
-            productId: null,
-            salesPersonId: null,
-            categoryId: null
-        });
-        setSearchQuery('');
-    };
-
     useEffect(() => {
-        fetchSalesData();
-    }, [filters]);
-
-    useEffect(() => {
-        if (searchQuery.length >= 3) {
-            fetchCategoryData(selectedCategory);  // Re-fetch when search query or category changes
-        } else {
-            setSearchResults([]);
+        if (user?.token) {
+            fetchSalesData();
         }
-    }, [searchQuery, selectedCategory]);
+    }, [user, selectedYear]);
 
     const salesAndCOGSChartData = {
         labels: salesData.map((data) => data.month),
@@ -108,30 +67,35 @@ const EnhancedSalesCOGSChart = () => {
             {
                 label: 'Sales',
                 data: salesData.map((data) => data.sales || 0),
-                backgroundColor: '#0d6efd',
+                backgroundColor: '#124f94', // Primary color
                 borderWidth: 1,
             },
             {
                 label: 'COGS',
                 data: salesData.map((data) => data.cogs || 0),
-                backgroundColor: '#ffc107',
+                backgroundColor: '#3bac4e', // Secondary color
                 borderWidth: 1,
             },
-            {
-                label: 'Gross Margin %',
-                data: salesData.map((data) =>
-                    data.sales ? (data.grossMargin / data.sales) * 100 : 0
-                ),
-                type: 'line',
-                borderColor: '#198754',
-                backgroundColor: '#198754',
-                borderWidth: 2,
-                fill: false,
-                yAxisID: 'y1',
-                tension: 0.4,
-                pointRadius: 4,
-                pointHoverRadius: 6,
-            },
+            // Conditionally add the Gross Margin % dataset if the user is an admin
+            ...(user?.role === 'admin'
+                ? [
+                      {
+                          label: 'Gross Margin %',
+                          data: salesData.map((data) =>
+                              data.sales ? (data.grossMargin / data.sales) * 100 : 0
+                          ),
+                          type: 'line',
+                          borderColor: '#3bac4e', // Secondary color for line
+                          backgroundColor: '#3bac4e', // Same as line color
+                          borderWidth: 2,
+                          fill: false,
+                          yAxisID: 'y1',
+                          tension: 0.4,
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                      },
+                  ]
+                : []),
         ],
     };
 
@@ -139,22 +103,25 @@ const EnhancedSalesCOGSChart = () => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
+            datalabels: {
+                display: false, // Disable datalabels for this chart
+            },
             tooltip: {
                 callbacks: {
                     label: (context) => {
-                        if (context.dataset.label === 'Gross Margin %') {
+                        if (context.dataset.label === "Gross Margin %") {
                             return `${context.raw.toFixed(2)}%`;
                         }
                         return formatCurrency(context.raw);
                     },
                 },
-                backgroundColor: '#212529',
+                backgroundColor: "#212529",
                 titleFont: { size: 14, weight: "bold" },
                 bodyFont: { size: 13 },
                 padding: 12,
             },
             legend: {
-                position: 'top',
+                position: "top",
                 labels: {
                     font: {
                         family: "'Inter', sans-serif",
@@ -172,11 +139,11 @@ const EnhancedSalesCOGSChart = () => {
                     font: { family: "'Inter', sans-serif", size: 12 },
                 },
                 grid: {
-                    color: 'rgba(0, 0, 0, 0.05)',
+                    color: "rgba(0, 0, 0, 0.05)",
                 },
             },
             y1: {
-                position: 'right',
+                position: "right",
                 beginAtZero: true,
                 ticks: {
                     callback: (value) => `${value}%`,
@@ -201,7 +168,17 @@ const EnhancedSalesCOGSChart = () => {
             ['Metric', ...salesData.map((data) => data.month)],
             ['Sales', ...salesData.map((data) => data.sales || 0)],
             ['COGS', ...salesData.map((data) => data.cogs || 0)],
-            ['Gross Margin %', ...salesData.map((data) => (data.sales ? ((data.grossMargin / data.sales) * 100).toFixed(2) : '-'))],
+            // Conditionally include Gross Margin % row for admin users
+            ...(user?.role === 'admin'
+                ? [
+                      [
+                          'Gross Margin %',
+                          ...salesData.map((data) =>
+                              data.sales ? ((data.grossMargin / data.sales) * 100).toFixed(2) : '-'
+                          ),
+                      ],
+                  ]
+                : []),
         ];
 
         const csvContent = csvData.map((row) => row.join(',')).join('\n');
@@ -214,51 +191,35 @@ const EnhancedSalesCOGSChart = () => {
         link.click();
     };
 
+    const YearSelector = () => (
+        <Dropdown>
+            <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
+                {selectedYear}
+            </Dropdown.Toggle>
+            <Dropdown.Menu>
+                {availableYears.map(year => (
+                    <Dropdown.Item
+                        key={year}
+                        onClick={() => setSelectedYear(year)}
+                        active={year === selectedYear}
+                    >
+                        {year}
+                    </Dropdown.Item>
+                ))}
+            </Dropdown.Menu>
+        </Dropdown>
+    );
+
     return (
         <Card className="shadow-sm border-0 mb-4">
             <Card.Header className="bg-white py-3">
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                    <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>Sales, COGS, and Gross Margin %</h4>
-                    <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center  mt-3 mt-md-0">
-                        <Dropdown>
-                            <Dropdown.Toggle
-                                variant="outline-secondary"
-                                id="filter-dropdown"
-                                className="d-flex align-items-center"
-                            >
-                                <i className="bi bi-list-ul me-2" /> {selectedCategory}
-                            </Dropdown.Toggle>
-                            <Dropdown.Menu>
-                                <Dropdown.Item onClick={() => setSelectedCategory('Customer')}>Customer</Dropdown.Item>
-                                <Dropdown.Item onClick={() => setSelectedCategory('Product')}>Product</Dropdown.Item>
-                                <Dropdown.Item onClick={() => setSelectedCategory('Employee')}>Sales Person</Dropdown.Item>
-                                <Dropdown.Item onClick={() => setSelectedCategory('Category')}>Category</Dropdown.Item>
-                            </Dropdown.Menu>
-                        </Dropdown>
-                        <SearchBar
-                            searchQuery={searchQuery}
-                            setSearchQuery={setSearchQuery}
-                            searchResults={searchResults}
-                            handleSelectResult={handleSelectResult}
-                            placeholder={`Search ${selectedCategory}`}
-                            onSearch={handleSearch}
-                        />
+                    <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>
+                        Sales
+                    </h4>
+                    <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
                         <div className="d-flex gap-2">
-                            <Button
-                                variant="outline-secondary"
-                                onClick={clearFilters}
-                                style={{ whiteSpace: 'nowrap' }}
-                            >
-                                Clear Filters
-                            </Button>
-                            <Button
-                                variant="outline-primary"
-                                onClick={exportToCSV}
-                                disabled={!salesData.length}
-                                style={{ whiteSpace: 'nowrap' }}
-                            >
-                                Export CSV
-                            </Button>
+                            <YearSelector />
                         </div>
                     </div>
                 </div>
@@ -302,16 +263,19 @@ const EnhancedSalesCOGSChart = () => {
                                             <td key={index}>{formatCurrency(data.cogs || 0)}</td>
                                         ))}
                                     </tr>
-                                    <tr>
-                                        <td>Gross Margin %</td>
-                                        {salesData.map((data, index) => (
-                                            <td key={index}>
-                                                {data.sales
-                                                    ? `${((data.grossMargin / data.sales) * 100).toFixed(2)}%`
-                                                    : '-'}
-                                            </td>
-                                        ))}
-                                    </tr>
+                                    {/* Conditionally render Gross Margin % row for admin users */}
+                                    {user?.role === 'admin' && (
+                                        <tr>
+                                            <td>Gross Margin %</td>
+                                            {salesData.map((data, index) => (
+                                                <td key={index}>
+                                                    {data.sales
+                                                        ? `${((data.grossMargin / data.sales) * 100).toFixed(2)}%`
+                                                        : '-'}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    )}
                                 </tbody>
                             </Table>
                         </div>
