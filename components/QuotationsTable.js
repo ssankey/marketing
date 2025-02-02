@@ -1,6 +1,5 @@
 // components/QuotationsTable.js
-
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
 import GenericTable from "./GenericTable";
 import TableFilters from "./TableFilters";
@@ -13,13 +12,13 @@ import useTableFilters from "hooks/useFilteredData";
 import StatusBadge from "./StatusBadge";
 import downloadExcel from "utils/exporttoexcel";
 
-
 const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
+
   const {
     searchTerm,
     statusFilter,
@@ -33,6 +32,29 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     handleSort,
     handleReset,
   } = useTableFilters();
+
+  // Track both the initial load and subsequent data fetches
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [dataState, setDataState] = useState({
+    isLoading: true,
+    hasData: false,
+    hasError: false
+  });
+
+  useEffect(() => {
+    // If we're getting new data or loading state changes
+    if (isLoading) {
+      setDataState(prev => ({ ...prev, isLoading: true }));
+    } else {
+      // Data has arrived
+      setDataState({
+        isLoading: false,
+        hasData: quotations.length > 0,
+        hasError: false
+      });
+      setIsInitialLoad(false);
+    }
+  }, [isLoading, quotations]);
 
   const columns = [
     {
@@ -91,59 +113,62 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       render: (value) => value || "N/A",
     },
   ];
- 
-
-  // const handleExcelDownload = async () => {
-  //   try {
-  //     const response = await fetch(
-  //       `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
-  //         fromDate || ""
-  //       }&toDate=${toDate || ""}`
-  //     );
-  //     const filteredQuotations = await response.json();
-  
-  //     if (filteredQuotations && filteredQuotations.length > 0) {
-  //       downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
-  //     } else {
-  //       alert("No data available to export.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to fetch data for Excel export:", error);
-  //     alert("Failed to export data. Please try again.");
-  //   }
-  // };
 
   const handleExcelDownload = async () => {
-  try {
-    // Get token from localStorage
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      return;
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+
+      const url = `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const filteredQuotations = await response.json();
+
+      if (filteredQuotations && filteredQuotations.length > 0) {
+        downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
     }
-    
-    // Build the URL with query parameters
-    const url = `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+  };
 
-    // Make the fetch call with the token in headers
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    
-    const filteredQuotations = await response.json();
-
-    if (filteredQuotations && filteredQuotations.length > 0) {
-      downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
-    } else {
-      alert("No data available to export.");
+  const renderContent = () => {
+    if (isLoading && (!quotations || quotations.length === 0)) {
+      return (
+        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
+          <div className="text-center">
+            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Loading quotations...</p>
+          </div>
+        </div>
+      );
     }
-  } catch (error) {
-    console.error("Failed to fetch data for Excel export:", error);
-    alert("Failed to export data. Please try again.");
-  }
-};
 
-
+    return (
+      <>
+        <GenericTable
+          columns={columns}
+          data={quotations}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onExcelDownload={handleExcelDownload}
+        />
+        {!isLoading && (!quotations || quotations.length === 0) && (
+          <div className="text-center py-4">No quotations found.</div>
+        )}
+      </>
+    );
+  };
   return (
     <Container fluid>
       <TableFilters
@@ -172,28 +197,8 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
         onReset={handleReset}
         totalItemsLabel="Total Quotations"
       />
-      {isLoading ? (
-        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading quotations...</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <GenericTable
-            columns={columns}
-            data={quotations}
-            onSort={handleSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onExcelDownload={handleExcelDownload} // Passing the function as a prop
-          />
-          {quotations.length === 0 && (
-            <div className="text-center py-4">No quotations found.</div>
-          )}
-        </>
-      )}
+
+      {renderContent()}
 
       <TablePagination
         currentPage={currentPage}
