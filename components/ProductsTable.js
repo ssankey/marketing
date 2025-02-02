@@ -1,40 +1,619 @@
 // components/ProductsTable.js
 
-import React from "react";
+
+
+// // components/ProductTable.js
+// import React, { useState, useEffect } from "react";
+// import Link from "next/link";
+// import { useRouter } from "next/router";
+// import { Container, Row, Col } from "react-bootstrap";
+// import downloadExcel from "utils/exporttoexcel";
+// import GenericTable from "./GenericTable";
+// import TableFilters from "./TableFilters";
+// import TablePagination from "./TablePagination";
+
+// export default function ProductsTable({
+//   products: initialProducts = [],
+//   totalItems: initialTotalItems = 0,
+//   isLoading,
+//   status,
+//   onStatusChange,
+// }) {
+//   const ITEMS_PER_PAGE = 20;
+//   const router = useRouter();
+
+//   // ----------- Local State -----------
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [sortField, setSortField] = useState("ItemCode");
+//   const [sortDirection, setSortDirection] = useState("asc");
+
+//   const [searchTerm, setSearchTerm] = useState("");
+//   const [products, setProducts] = useState(initialProducts);
+//   const [totalItems, setTotalItems] = useState(initialTotalItems);
+
+//   const [selectedCategory, setSelectedCategory] = useState("");
+//   const [categories, setCategories] = useState([]);
+
+//   // ----------- 1. Fetch Categories -----------
+//   useEffect(() => {
+//     const fetchCategories = async () => {
+//       try {
+//         const res = await fetch("/api/products/categories");
+//         const data = await res.json();
+//         setCategories(data.categories || []);
+//       } catch (error) {
+//         console.error("Failed to fetch categories:", error);
+//       }
+//     };
+//     fetchCategories();
+//   }, []);
+
+//   // ----------- 2. Client-Side Fetch Products -----------
+//   useEffect(() => {
+//     const fetchProducts = async () => {
+//       try {
+//         const query = new URLSearchParams({
+//           page: currentPage,
+//           search: searchTerm,
+//           status,
+//           category: selectedCategory,
+//           sortField,
+//           sortDir: sortDirection,
+//         });
+
+//         const res = await fetch(`/api/products?${query}`);
+//         if (!res.ok) throw new Error("Failed to fetch products");
+
+//         const data = await res.json();
+//         setProducts(data.products || []);
+//         setTotalItems(data.totalItems || 0);
+//       } catch (error) {
+//         console.error("Error fetching products:", error);
+//         setProducts([]);
+//         setTotalItems(0);
+//       }
+//     };
+
+//     // Fetch whenever any of these values change:
+//     fetchProducts();
+//   }, [
+//     currentPage,
+//     searchTerm,
+//     status,
+//     selectedCategory,
+//     sortField,
+//     sortDirection,
+//   ]);
+
+//   // ----------- 3. Handlers -----------
+//   // a) Status Change
+//   const handleStatusChange = (newStatus) => {
+//     onStatusChange(newStatus); // if your parent handles status
+//     setCurrentPage(1);
+
+//     // Update the URL with shallow routing
+//     router.replace(
+//       {
+//         pathname: "/products",
+//         query: {
+//           ...router.query,
+//           status: newStatus,
+//           page: 1,
+//         },
+//       },
+//       undefined,
+//       { shallow: true }
+//     );
+//   };
+
+//   // b) Sorting
+//   const handleSort = (field) => {
+//     if (sortField === field) {
+//       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+//     } else {
+//       setSortField(field);
+//       setSortDirection("asc");
+//     }
+
+//     // Reset page to 1
+//     setCurrentPage(1);
+
+//     // Update URL
+//     router.replace(
+//       {
+//         pathname: "/products",
+//         query: {
+//           ...router.query,
+//           sortField: field,
+//           sortDir:
+//             sortField === field && sortDirection === "asc" ? "desc" : "asc",
+//           page: 1,
+//         },
+//       },
+//       undefined,
+//       { shallow: true }
+//     );
+//   };
+
+//   // c) Reset
+//   const handleReset = () => {
+//     setSearchTerm("");
+//     setSortField("ItemCode");
+//     setSortDirection("asc");
+//     onStatusChange("all"); // reset to "all"
+//     setSelectedCategory("");
+//     setCurrentPage(1);
+
+//     router.replace(
+//       { pathname: "/products", query: { page: 1 } },
+//       undefined,
+//       { shallow: true }
+//     );
+//   };
+
+//   // d) Category Change
+//   const handleCategoryChange = (category) => {
+//     setSelectedCategory(category);
+//     setCurrentPage(1);
+
+//     router.replace(
+//       {
+//         pathname: "/products",
+//         query: {
+//           ...router.query,
+//           category,
+//           page: 1,
+//         },
+//       },
+//       undefined,
+//       { shallow: true }
+//     );
+//   };
+
+//   // e) Search (local state + shallow update)
+//   const handleSearch = (term) => {
+//     setSearchTerm(term);
+//     setCurrentPage(1);
+
+//     router.replace(
+//       {
+//         pathname: "/products",
+//         query: {
+//           ...router.query,
+//           search: term,
+//           page: 1,
+//         },
+//       },
+//       undefined,
+//       { shallow: true }
+//     );
+//   };
+
+//   // f) Pagination
+//   const handlePageChange = (page) => {
+//     setCurrentPage(page);
+
+//     router.replace(
+//       {
+//         pathname: "/products",
+//         query: {
+//           ...router.query,
+//           page,
+//         },
+//       },
+//       undefined,
+//       { shallow: true }
+//     );
+//   };
+
+//   // ----------- 4. Table Columns -----------
+//   const columns = [
+//     {
+//       label: "CAT No.",
+//       field: "ItemCode",
+//       render: (value, row) => (
+//         <Link href={`/products/${row.ItemCode}`}>{value}</Link>
+//       ),
+//     },
+//     {
+//       label: "Stock Status",
+//       field: "stockStatus",
+//       render: (value) => (
+//         <span
+//           className={`badge ${
+//             value === "In Stock" ? "bg-success" : "bg-danger"
+//           }`}
+//         >
+//           {value}
+//         </span>
+//       ),
+//     },
+//     { label: "Item Name", field: "ItemName" },
+//     { label: "Item Type", field: "ItemType" },
+//     { label: "CAS No", field: "U_CasNo", render: (value) => value || "N/A" },
+//     { label: "Category", field: "Category" },
+//     {
+//       label: "Created Date",
+//       field: "CreateDate",
+//       render: (value) => (value ? value.split("T")[0] : "N/A"),
+//     },
+//     {
+//       label: "Updated Date",
+//       field: "UpdateDate",
+//       render: (value) => (value ? value.split("T")[0] : "N/A"),
+//     },
+//     {
+//       label: "Actions",
+//       field: "actions",
+//       render: (value, row) => (
+//         <Link href={`/products/${row.ItemCode}`}>View Details</Link>
+//       ),
+//     },
+//   ];
+
+//   // ----------- 5. Excel Download -----------
+//   const handleExcelDownload = async () => {
+//     try {
+//       const response = await fetch(
+//         `/api/excel/getAllProducts?status=${status}&search=${searchTerm}&category=${selectedCategory}&sortField=${sortField}&sortDir=${sortDirection}`
+//       );
+//       const filteredProducts = await response.json();
+//       if (filteredProducts && filteredProducts.length > 0) {
+//         downloadExcel(filteredProducts, `Products_${status}`);
+//       } else {
+//         alert("No data available to export.");
+//       }
+//     } catch (error) {
+//       console.error("Failed to fetch data for Excel export:", error);
+//       alert("Failed to export data. Please try again.");
+//     }
+//   };
+
+//   // Optional: show a loading indicator if you have `isLoading`
+//   if (isLoading) {
+//     return <div>Loading products...</div>;
+//   }
+
+//   // Calculate total pages
+//   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+//   return (
+//     <Container fluid>
+//       {/* Filter Bar */}
+//       <TableFilters
+//         searchConfig={{
+//           enabled: true,
+//           placeholder: "Search products...",
+//           fields: ["ItemCode", "ItemName", "ItemType", "U_CasNo"],
+//         }}
+//         statusFilter={{
+//           enabled: true,
+//           options: [
+//             { value: "inStock", label: "In Stock" },
+//             { value: "outOfStock", label: "Out of Stock" },
+//           ],
+//           value: status,
+//         }}
+//         dateFilter={{ enabled: false }}
+//         onStatusChange={handleStatusChange}
+//         onSearch={handleSearch}
+//         onReset={handleReset}
+//         searchTerm={searchTerm}
+//         totalItems={totalItems}
+//         categories={categories}
+//         selectedCategory={selectedCategory}
+//         onCategoryChange={handleCategoryChange}
+//         totalItemsLabel="Total Products"
+//       />
+
+//       {/* Data Table */}
+//       <GenericTable
+//         columns={columns}
+//         data={products}
+//         onSort={handleSort}
+//         sortField={sortField}
+//         sortDirection={sortDirection}
+//         onExcelDownload={handleExcelDownload}
+//       />
+
+//       {/* If empty */}
+//       {products.length === 0 && (
+//         <div className="text-center py-4">No products found.</div>
+//       )}
+
+//       {/* Pagination */}
+//       <TablePagination
+//         currentPage={currentPage}
+//         totalPages={totalPages}
+//         onPageChange={handlePageChange}
+//       />
+
+//       <Row className="mb-2">
+//         <Col className="text-center">
+//           <h5>
+//             Page {currentPage} of {totalPages}
+//           </h5>
+//         </Col>
+//       </Row>
+//     </Container>
+//   );
+// }
+
+
+// components/ProductsTable.js
+
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import { Container, Row, Col, Spinner, Alert } from "react-bootstrap";
+import debounce from "lodash.debounce";
+import downloadExcel from "utils/exporttoexcel";
 import GenericTable from "./GenericTable";
 import TableFilters from "./TableFilters";
 import TablePagination from "./TablePagination";
-import downloadExcel from "utils/exporttoexcel";
-import { useRouter } from "next/router";
-import { Row, Col, Alert, Container } from "react-bootstrap";
-import usePagination from "hooks/usePagination";
-import useTableFilters from "hooks/useFilteredData";
 
+/**
+ * ProductsTable Component
+ * Displays a table of products with filtering, sorting, pagination, and Excel export functionalities.
+ */
 export default function ProductsTable({
-  products,
-  totalItems,
-  sortDir,
-  isLoading,
-  error, // New prop
+  products: initialProducts = [],
+  totalItems: initialTotalItems = 0,
+  isLoading = false,
+  status,
+  onStatusChange,
 }) {
-  const ITEMS_PER_PAGE = 100; // Define items per page
-  const { currentPage, totalPages, onPageChange } = usePagination(
-    totalItems,
-    ITEMS_PER_PAGE
+  // Constants
+  const ITEMS_PER_PAGE = 20;
+  const router = useRouter();
+
+  // ------------------- Local State -------------------
+  const [currentPage, setCurrentPage] = useState(1); // Current page number
+  const [sortField, setSortField] = useState("ItemCode"); // Current sort field
+  const [sortDirection, setSortDirection] = useState("asc"); // Sort direction: 'asc' or 'desc'
+  const [searchTerm, setSearchTerm] = useState(""); // Current search term
+  const [selectedCategory, setSelectedCategory] = useState(""); // Currently selected category
+  const [categories, setCategories] = useState([]); // List of available categories
+  const [products, setProducts] = useState(initialProducts); // List of products to display
+  const [totalItems, setTotalItems] = useState(initialTotalItems); // Total number of products
+
+  // ------------------- Fetch Categories -------------------
+  /**
+   * Fetches the list of product categories from the API.
+   */
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await fetch("/api/products/categories");
+        if (!res.ok) throw new Error("Failed to fetch categories");
+        const data = await res.json();
+        setCategories(data.categories || []);
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        setCategories([]); // Fallback to empty array on error
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // ------------------- Fetch Products -------------------
+  /**
+   * Fetches products based on current filters, sorting, and pagination.
+   */
+  const fetchProducts = useCallback(async () => {
+    try {
+      const query = new URLSearchParams({
+        page: currentPage,
+        search: searchTerm,
+        status,
+        category: selectedCategory,
+        sortField,
+        sortDir: sortDirection,
+      });
+
+      const res = await fetch(`/api/products?${query.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch products");
+
+      const data = await res.json();
+      setProducts(data.products || []);
+      setTotalItems(data.totalItems || 0);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]); // Clear products on error
+      setTotalItems(0); // Reset total items on error
+    }
+  }, [
+    currentPage,
+    searchTerm,
+    status,
+    selectedCategory,
+    sortField,
+    sortDirection,
+  ]);
+
+  // Fetch products whenever dependencies change
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // ------------------- Debounced Search Handler -------------------
+  /**
+   * Handles search input with debouncing to prevent excessive API calls.
+   */
+  const debouncedHandleSearch = useCallback(
+    debounce((term) => {
+      setSearchTerm(term);
+      setCurrentPage(1);
+      // Update URL with shallow routing
+      router.replace(
+        {
+          pathname: "/products",
+          query: {
+            ...router.query,
+            search: term,
+            page: 1,
+          },
+        },
+        undefined,
+        { shallow: true }
+      );
+    }, 300), // 300ms debounce delay
+    [router]
   );
 
-  const {
-    searchTerm,
-    sortField,
-    handleSearch,
-    handleSort,
-    handleReset
-  } = useTableFilters();
+  /**
+   * Called when the search input changes.
+   * @param {string} term - The new search term.
+   */
+  const handleSearch = (term) => {
+    debouncedHandleSearch(term);
+  };
 
+  // ------------------- Status Change Handler -------------------
+  /**
+   * Handles changes to the stock status filter.
+   * @param {string} newStatus - The new status value.
+   */
+  const handleStatusChangeInternal = (newStatus) => {
+    onStatusChange(newStatus); // Notify parent component if needed
+    setCurrentPage(1);
+    // Update URL with shallow routing
+    router.replace(
+      {
+        pathname: "/products",
+        query: {
+          ...router.query,
+          status: newStatus,
+          page: 1,
+        },
+      },
+      undefined,
+      { shallow: true }
+    );
+  };
 
+  // ------------------- Sorting Handler -------------------
+  /**
+   * Handles sorting when a table header is clicked.
+   * @param {string} field - The field to sort by.
+   */
+  const handleSortInternal = (field) => {
+    let direction = "asc";
+    if (sortField === field && sortDirection === "asc") {
+      direction = "desc";
+    }
+    setSortField(field);
+    setSortDirection(direction);
+    setCurrentPage(1);
+    // Update URL with shallow routing
+    router.replace(
+      {
+        pathname: "/products",
+        query: {
+          ...router.query,
+          sortField: field,
+          sortDir: direction,
+          page: 1,
+        },
+      },
+      undefined,
+      { shallow: true }
+    );
+  };
 
-  // Define columns with sorting capabilities
+  // ------------------- Category Change Handler -------------------
+  /**
+   * Handles changes to the category filter.
+   * @param {string} category - The selected category.
+   */
+  const handleCategoryChangeInternal = (category) => {
+    setSelectedCategory(category);
+    setCurrentPage(1);
+    // Update URL with shallow routing
+    router.replace(
+      {
+        pathname: "/products",
+        query: {
+          ...router.query,
+          category: category || "",
+          page: 1,
+        },
+      },
+      undefined,
+      { shallow: true }
+    );
+  };
+
+  // ------------------- Reset Handler -------------------
+  /**
+   * Resets all filters to their default states.
+   */
+  const handleReset = () => {
+    setSearchTerm("");
+    setSelectedCategory("");
+    setSortField("ItemCode");
+    setSortDirection("asc");
+    onStatusChange("all");
+    setCurrentPage(1);
+    // Update URL with shallow routing
+    router.replace(
+      { pathname: "/products", query: { page: 1 } },
+      undefined,
+      { shallow: true }
+    );
+  };
+
+  // ------------------- Pagination Handler -------------------
+  /**
+   * Handles pagination when a new page is selected.
+   * @param {number} page - The new page number.
+   */
+  const handlePageChangeInternal = (page) => {
+    setCurrentPage(page);
+    // Update URL with shallow routing
+    router.replace(
+      {
+        pathname: "/products",
+        query: {
+          ...router.query,
+          page,
+        },
+      },
+      undefined,
+      { shallow: true }
+    );
+  };
+
+  // ------------------- Excel Download Handler -------------------
+  /**
+   * Handles the Excel download functionality.
+   */
+  const handleExcelDownload = async () => {
+    try {
+      const query = new URLSearchParams({
+        status,
+        search: searchTerm,
+        category: selectedCategory,
+        sortField,
+        sortDir: sortDirection,
+      });
+
+      const response = await fetch(`/api/excel/getAllProducts?${query.toString()}`);
+      if (!response.ok) throw new Error("Failed to fetch data for Excel export");
+
+      const filteredProducts = await response.json();
+      if (filteredProducts && filteredProducts.length > 0) {
+        downloadExcel(filteredProducts, `Products_${status}`);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
+  };
+
+  // ------------------- Table Columns Configuration -------------------
   const columns = [
     {
       label: "CAT No.",
@@ -43,188 +622,37 @@ export default function ProductsTable({
       render: (value, row) => (
         <Link href={`/products/${row.Cat_size_main}`}>{value}</Link>
       ),
+      sortable: true, // Enable sorting on this column
     },
     {
-      label: "Item Name",
-      field: "english", // Corresponds to T0.ItemName AS english
+      label: "Stock Status",
+      field: "stockStatus",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "In Stock" ? "bg-success" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
       sortable: true,
     },
-    {
-      label: "Category Name",
-      field: "ItmsGrpNam", // Corresponds to T1.ItmsGrpNam
-      sortable: true,
-    },
-    {
-      label: "Category No.",
-      field: "Cat_No", // Corresponds to T0.U_ALTCAT AS Cat_No
-      sortable: true,
-    },
-    {
-      label: "CAS No",
-      field: "Cas", // Corresponds to T0.U_CasNo AS Cas
-      sortable: false,
-      render: (value) => value || "N/A",
-    },
-    {
-      label: "Molecular Formula",
-      field: "U_MolucularFormula",
-      sortable: true,
-    },
-    {
-      label: "Molecular Weight",
-      field: "U_MolucularWeight",
-      sortable: true,
-    },
-    {
-      label: "MSDS",
-      field: "U_MSDS",
-      sortable: false,
-      render: (value) =>
-        value ? <a href={value} target="_blank" rel="noopener noreferrer">Download</a> : "N/A",
-    },
-    {
-      label: "COA",
-      field: "U_COA", // Corresponds to T5.U_COA
-      sortable: false,
-      render: (value) =>
-        value ? <a href={value} target="_blank" rel="noopener noreferrer">Download</a> : "N/A",
-    },
-    {
-      label: "Purity",
-      field: "U_Purity",
-      sortable: true,
-    },
-    {
-      label: "SMILES",
-      field: "U_Smiles",
-      sortable: false,
-      render: (value) => value || "N/A",
-    },
-    {
-      label: "Website Display",
-      field: "U_WebsiteDisplay",
-      sortable: false,
-      render: (value) => (value ? "Yes" : "No"),
-    },
-    // {
-    //   label: "Category Update Timestamp",
-    //   field: "U_CatUpdateTimeStamp",
-    //   sortable: true,
-    //   render: (value) => (value ? new Date(value).toLocaleString() : "N/A"),
-    // },
-    {
-      label: "Melting Point",
-      field: "U_MeltingPoint",
-      sortable: true,
-    },
-    {
-      label: "Boiling Point",
-      field: "U_BoilingPoint",
-      sortable: true,
-    },
-    {
-      label: "Appearance",
-      field: "U_Appearance",
-      sortable: false,
-      render: (value) => value || "N/A",
-    },
-    {
-      label: "UN Number",
-      field: "U_UNNumber",
-      sortable: false,
-      render: (value) => value || "N/A",
-    },
-    {
-      label: "Stock In India",
-      field: "Stock_In_India", // Corresponds to T2.OnHand AS Stock_In_India
-      sortable: true,
-    },
-    {
-      label: "Stock In China",
-      field: "Stock_In_China", // Corresponds to T0.U_ChinaStock AS Stock_In_China
-      sortable: true,
-    },
-    // Removed pricing-related columns
-    // {
-    //   label: "Quantity",
-    //   field: "U_Quantity",
-    //   sortable: true,
-    // },
-    // {
-    //   label: "Unit of Measure",
-    //   field: "U_UOM",
-    //   sortable: true,
-    // },
-    // {
-    //   label: "Price",
-    //   field: "U_Price",
-    //   sortable: true,
-    //   render: (value) => `$${value.toFixed(2)}`,
-    // },
-    // {
-    //   label: "Price (USD)",
-    //   field: "U_PriceUSD",
-    //   sortable: true,
-    //   render: (value) => `$${value.toFixed(2)}`,
-    // },
-    {
-      label: "Item Type",
-      field: "ItemType",
-      sortable: true,
-    },
-    {
-      label: "Valid For",
-      field: "validFor",
-      sortable: true,
-      render: (value) => (value ? "Yes" : "No"),
-    },
-    {
-      label: "Valid From",
-      field: "validFrom",
-      sortable: true,
-      render: (value) => (value ? value.split("T")[0] : "N/A"),
-    },
-    {
-      label: "Valid To",
-      field: "validTo",
-      sortable: true,
-      render: (value) => (value ? value.split("T")[0] : "N/A"),
-    },
+    { label: "Item Name", field: "ItemName", sortable: true },
+    { label: "Category", field: "Category", sortable: true },
     {
       label: "Created Date",
       field: "CreateDate",
       sortable: true,
       render: (value) => (value ? value.split("T")[0] : "N/A"),
+      sortable: true,
     },
     {
       label: "Updated Date",
       field: "UpdateDate",
       sortable: true,
       render: (value) => (value ? value.split("T")[0] : "N/A"),
-    },
-    {
-      label: "IUPAC Name",
-      field: "U_IUPACName",
-      sortable: false,
-      render: (value) => value || "N/A",
-    },
-    {
-      label: "Synonyms",
-      field: "U_Synonyms",
-      sortable: false,
-      render: (value) => value || "N/A",
-    },
-    {
-      label: "Applications",
-      field: "U_Applications",
-      sortable: false,
-      render: (value) => value || "N/A",
-    },
-    {
-      label: "Structure",
-      field: "U_Structure",
-      sortable: false,
-      render: (value) => value || "N/A",
+      sortable: true,
     },
     {
       label: "Actions",
@@ -233,65 +661,82 @@ export default function ProductsTable({
       render: (value, row) => (
         <Link href={`/products/${row.Cat_size_main}`}>View Details</Link>
       ),
+      sortable: false,
     },
   ];
   
 
-  // Handle Excel download
-  const handleExcelDownload = () => {
-    // Exclude pricing-related columns from the Excel export
-    const exportColumns = columns.filter(col => !["U_Quantity", "U_UOM", "U_Price", "U_PriceUSD"].includes(col.field));
-    downloadExcel(products, "Products", exportColumns);
-  };
-
+  // ------------------- Render Component -------------------
   return (
     <Container fluid>
-      <>
-        {error && (
-          <Alert variant="danger" className="mt-3">
-            {error}
-          </Alert>
-        )}
-        <TableFilters
-          searchConfig={{
-            enabled: true,
-            placeholder: "Search products...",
-            fields: ["ItemCode", "ItemName", "ItemType", "U_CasNo"],
-          }}
-          dateFilter={{ enabled: false }}
-          onSearch={handleSearch}
-          searchTerm={searchTerm}
+      {/* ------------------- Filter Bar ------------------- */}
+      <TableFilters
+        searchConfig={{
+          enabled: true,
+          placeholder: "Search products...",
+          fields: ["ItemCode", "ItemName", "ItemType", "U_CasNo"],
+        }}
+        statusFilter={{
+          enabled: true,
+          options: [
+            { value: "inStock", label: "In Stock" },
+            { value: "outOfStock", label: "Out of Stock" },
+          ],
+          value: status,
+        }}
+        dateFilter={{ enabled: false }}
+        onStatusChange={handleStatusChangeInternal}
+        onSearch={handleSearch}
         onReset={handleReset}
-          totalItems={totalItems}
-          totalItemsLabel="Total Products"
-        />
+        searchTerm={searchTerm}
+        totalItems={totalItems}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryChange={handleCategoryChangeInternal}
+        totalItemsLabel="Total Products"
+      />
+
+      {/* ------------------- Data Table ------------------- */}
+      {isLoading ? (
+        // Loading Indicator
+        <div className="text-center py-4">
+          <Spinner animation="border" variant="primary" />
+          <p className="mt-2">Loading products...</p>
+        </div>
+      ) : products.length > 0 ? (
+        // Products Table
         <GenericTable
           columns={columns}
-          data={products} // Use server-side paginated data directly
-          onSort={handleSort}
+          data={products}
+          onSort={handleSortInternal}
           sortField={sortField}
-          sortDirection={sortDir}
+          sortDirection={sortDirection}
           onExcelDownload={handleExcelDownload}
-          isLoading={isLoading}
         />
-        {products.length === 0 && !isLoading && !error && (
-          <div className="text-center py-4">No products found.</div>
-        )}
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
-        />
+      ) : (
+        // No Products Found Alert
+        <Alert variant="warning" className="text-center">
+          No products found.
+        </Alert>
+      )}
 
-        {/* Display current page and total pages */}
-        <Row className="mb-2">
-          <Col className="text-center">
-            <h5>
-              Page {currentPage} of {totalPages}
-            </h5>
-          </Col>
-        </Row>
-      </>
+      {/* ------------------- Pagination ------------------- */}
+      {totalItems > ITEMS_PER_PAGE && (
+        <>
+          <TablePagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(totalItems / ITEMS_PER_PAGE)}
+            onPageChange={handlePageChangeInternal}
+          />
+          <Row className="mb-2">
+            <Col className="text-center">
+              <h5>
+                Page {currentPage} of {Math.ceil(totalItems / ITEMS_PER_PAGE)}
+              </h5>
+            </Col>
+          </Row>
+        </>
+      )}
     </Container>
   );
 }

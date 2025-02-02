@@ -1,3 +1,4 @@
+//components/OrderTable.js
 import React from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
@@ -12,7 +13,10 @@ import useTableFilters from 'hooks/useFilteredData';
 import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 
-const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
+const OrdersTable = ({ orders, totalItems, currentPage, isLoading = false }) => {
+  console.log(orders);
+  console.log("current page",currentPage);
+
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
@@ -29,6 +33,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
+    handleReset
   } = useTableFilters();
 
   const columns = [
@@ -43,6 +48,11 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
           {value}
         </Link>
       ),
+    },
+    {
+      field: "DocStatus",
+      label: "Order Status",
+      render: (value) => <StatusBadge status={value.toLowerCase()} />,
     },
     // {
     //   field: "InvoiceNum",
@@ -84,7 +94,9 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       field: "DocTotal",
       label: "Total Amount",
       render: (value, row) => {
-        return formatCurrency(value);
+        const amountInINR =
+          row.DocCur === "INR" ? value : value * row.ExchangeRate;
+        return formatCurrency(amountInINR);
       },
     },
     {
@@ -92,11 +104,11 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       label: "Currency",
       render: (value) => value || "0",
     },
-    {
-      field: "DocStatus",
-      label: "Order Status",
-      render: (value) => <StatusBadge status={value.toLowerCase()} />,
-    },
+    // {
+    //   field: "DocStatus",
+    //   label: "Order Status",
+    //   render: (value) => <StatusBadge status={value.toLowerCase()} />,
+    // },
 
     // {
     //   field: "InvoiceDate",
@@ -117,11 +129,39 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
       field: "SalesEmployee",
       label: "Sales Employee",
       render: (value) => value || "0",
-    }
+    },
   ];
   
-  const handleExcelDownload = () => {
-    downloadExcel(orders, "Orders");
+  
+
+  const handleExcelDownload = async () => {
+    try {
+       // Get token from localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
+      const url= `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+          fromDate || ""
+        }&toDate=${toDate || ""}` ;
+     
+
+      const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+      const filteredOrders = await response.json();
+
+      if (filteredOrders && filteredOrders.length > 0) {
+        downloadExcel(filteredOrders, `Orders_${statusFilter}`);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
 
   return (
@@ -146,6 +186,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
         onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
+        onReset={handleReset}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
         totalItemsLabel="Total Orders"
@@ -191,3 +232,5 @@ const OrdersTable = ({ orders, totalItems, isLoading = false }) => {
 };
 
 export default OrdersTable;
+
+

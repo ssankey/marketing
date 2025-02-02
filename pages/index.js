@@ -1,6 +1,6 @@
 // pages/dashboard.js
 
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Container, Spinner } from 'react-bootstrap';
 import DashboardFilters from 'components/DashboardFilters';
@@ -12,6 +12,21 @@ import useDashboardData from 'hooks/useDashboardData';
 const Dashboard = () => {
   const router = useRouter();
   const { isAuthenticated, isLoading, redirecting } = useAuth();
+  // const token = localStorage.getItem('token');
+  const [token, setToken] = useState(null);
+
+  useEffect(() => {
+    // This runs only in the browser, so localStorage is defined
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      setToken(storedToken);
+    }
+  }, []);
+  let user = null;
+  if (token) {
+    user = JSON.parse(atob(token.split('.')[1])) 
+    
+  }
 
   const {
     dateFilter: initialDateFilter = "today",
@@ -64,6 +79,7 @@ const Dashboard = () => {
     customer,
     salesPerson,
     salesCategory,
+    token
   });
 
   if (isLoading || redirecting) {

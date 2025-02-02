@@ -1,235 +1,158 @@
-
-
+// pages/login.js (or wherever your login page component is located)
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { Row, Col, Card, Form, Button, Image, Alert } from "react-bootstrap";
-import { loginUser } from "utils/auth";
+import { Card, Form, Button, Alert } from "react-bootstrap";
+import { useAuth } from "contexts/AuthContext";
 
 export default function LoginPage() {
+  const { setUser } = useAuth();
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: ""
+  });
+  const [loginState, setLoginState] = useState({
+    showPassword: false,
+    error: "",
+    isLoading: false
+  });
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
-      router.push("/"); // Redirect to dashboard if already logged in
+      router.push("/");
     }
   }, [router]);
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-    setError("");
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
-    if (!username || !password) {
-      setError("Please enter both username and password");
-      return;
-    }
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginState(prev => ({ ...prev, isLoading: true, error: "" }));
 
     try {
-      setIsLoading(true);
-      const result = await loginUser(username, password);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        })
+      });
 
-      if (result.success) {
-        localStorage.setItem("token", result.token); // Store token
-        await router.push("/"); // Redirect to the dashboard
+      const data = await response.json();
+
+      if (response.ok) {
+        switch (data.message) {
+          case 'PASSWORD_NOT_SET':
+            localStorage.setItem('token', data.token);
+            router.push(`/set-password?email=${encodeURIComponent(data.email)}`);
+            break;
+          case 'SHOW_PASSWORD_FIELD':
+            setLoginState(prev => ({
+              ...prev,
+              showPassword: true
+            }));
+            break;
+          case 'Login_successful':
+            const userData = {
+              ...data.user,
+              token: data.token
+            };
+            setUser(userData);
+            router.push('/');
+            break;
+          default:
+            throw new Error('Unexpected response');
+        }
       } else {
-        setError(result.message || "Invalid username or password");
+        throw new Error(data.message || 'Login failed');
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      setError("An error occurred during login");
+    } catch (error) {
+      setLoginState(prev => ({
+        ...prev,
+        error: error.message || 'An unexpected error occurred'
+      }));
     } finally {
-      setIsLoading(false);
+      setLoginState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
   return (
-    // <div className="container-fluid p-0 vh-100 d-flex justify-content-center align-items-center">
-    //   <Row
-    //     className="g-0 w-100 h-auto"
-    //     style={{ maxWidth: "1200px", padding: "40px 130px" }}
-    //   >
-    //     {/* Left Side (Form Section) */}
-    //     <Col md={6} className="d-flex align-items-center p-0">
-    //       <Card
-    //         className="shadow-sm w-100 h-100"
-    //         style={{
-    //           borderRadius:"0px",
-    //           height: "auto",
-    //         }}
-    //       >
-    //         <Card.Body className="p-5 d-flex flex-column justify-content-center">
-    //           <div className="mb-4 text-center">
-    //             <Link href="/">
-    //               <img
-    //                 src="/assets/density_logo_new_trans.png"
-    //                 alt="Logo"
-    //                 className="img-fluid mb-3"
-    //                 style={{ height: "70px", width: "auto" }}
-    //               />
-    //             </Link>
-    //             <p className="mb-6">Welcome back!</p>
-    //           </div>
-    //           {error && (
-    //             <Alert variant="danger" className="text-center">
-    //               {error}
-    //             </Alert>
-    //           )}
-    //           <Form onSubmit={handleLogin}>
-    //             <Form.Group className="mb-3" controlId="username">
-    //               <Form.Label>Username or Email</Form.Label>
-    //               <Form.Control
-    //                 type="text"
-    //                 placeholder="Enter your username"
-    //                 value={username}
-    //                 onChange={(e) => setUsername(e.target.value)}
-    //                 required
-    //               />
-    //             </Form.Group>
-    //             <Form.Group className="mb-3" controlId="password">
-    //               <Form.Label>Password</Form.Label>
-    //               <Form.Control
-    //                 type="password"
-    //                 placeholder="Enter your password"
-    //                 value={password}
-    //                 onChange={(e) => setPassword(e.target.value)}
-    //                 required
-    //               />
-    //             </Form.Group>
-    //             <div className="d-grid mb-3">
-    //               <Button variant="primary" type="submit" disabled={isLoading}>
-    //                 {isLoading ? "Signing In..." : "Sign In"}
-    //               </Button>
-    //             </div>
-    //             <div className="d-flex justify-content-between">
-    //               <Link href="/signup" className="text-primary">
-    //                 Create an Account
-    //               </Link>
-    //               <Link href="/forgot-password" className="text-primary">
-    //                 Forgot your password?
-    //               </Link>
-    //             </div>
-    //           </Form>
-    //         </Card.Body>
-    //       </Card>
-    //     </Col>
-
-    //     {/* Right Side (Image Section) */}
-    //     {/* <Col md={6} className="p-0 ">
-    //       <Image
-    //         src="/assets/login-image-square.jpg"
-    //         alt="Right Side Image"
-    //         className="w-100 h-100"
-    //         style={{
-    //           objectFit: "cover"
-    //         }}
-    //       />
-    //     </Col> */}
-
-    //     <Col md={6} className="p-0 d-flex align-items-center">
-    //       <Image
-    //         src="/assets/login-image-square-2.jpg"
-    //         alt="Right Side Image"
-    //         className="w-100"
-    //         style={{
-    //           height: "100%",
-    //           objectFit: "cover",
-
-    //         }}
-    //       />
-    //     </Col>
-    //   </Row>
-    // </div>
     <div className="container-fluid p-0 vh-100 d-flex justify-content-center align-items-center">
-      <Row
-        className="g-0 w-100 h-auto"
-        style={{ maxWidth: "1200px", padding: "25px 150px" }} // Adjust padding for smaller screens
-      >
-        {/* Left Side (Form Section) */}
-        <Col xs={12} md={6} className="d-flex align-items-center p-0">
-          <Card
-            className="shadow-sm w-100"
-            style={{
-              borderRadius: "0px",
-            }}
-          >
-            <Card.Body className="p-4 d-flex flex-column justify-content-center">
-              <div className="mb-4 text-center">
-                <Link href="/">
-                  <img
-                    src="/assets/density_logo_new_trans.png"
-                    alt="Logo"
-                    className="img-fluid mb-3"
-                    style={{ height: "70px", width: "auto" }}
-                  />
-                </Link>
-                {/* <h4 className="mb-4"><strong>Welcome back!</strong></h4> */}
-              </div> 
-              {error && (
-                <Alert variant="danger" className="text-center">
-                  {error}
-                </Alert>
-              )}
-              <Form onSubmit={handleLogin}>
-                <Form.Group className="mb-3" controlId="username">
-                  <Form.Label >Username or Email</Form.Label>
-                  <Form.Control
-                    type="text"
-                    placeholder="Enter your username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3" controlId="password">
-                  <Form.Label>Password</Form.Label>
-                  <Form.Control
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                </Form.Group>
-                <div className="d-grid mb-3">
-                  <Button variant="primary" type="submit" disabled={isLoading}>
-                    {isLoading ? "Signing In..." : "Sign In"}
-                  </Button>
-                </div>
-                <div className="d-flex justify-content-between">
-                  <Link href="/signup" className="text-primary">
-                    Create an Account
-                  </Link>
-                  <Link href="/forgot-password" className="text-primary">
-                    Forgot your password?
-                  </Link>
-                </div>
-              </Form>
-            </Card.Body>
-          </Card>
-        </Col>
+      <Card className="shadow-sm w-100" style={{ maxWidth: "400px" }}>
+        <Card.Body className="p-4">
+          <div className="mb-4 text-center">
+            <Link href="/">
+              <img
+                src="/assets/density_logo_new_trans.png"
+                alt="Logo"
+                className="img-fluid mb-3"
+                style={{ height: "70px" }}
+              />
+            </Link>
+          </div>
 
-        {/* Right Side (Image Section) */}
-        <Col xs={12} md={6} className="p-0 d-flex align-items-center">
-          <Image
-            src="/assets/login-image-square-2.jpg"
-            alt="Right Side Image"
-            className="w-100"
-            style={{
-              height: "100%",
-              objectFit: "cover",
-              borderRadius: "0px", // Optional for rounded corners
-            }}
-          />
-        </Col>
-      </Row>
+          {loginState.error && (
+            <Alert variant="danger" dismissible>
+              {loginState.error}
+            </Alert>
+          )}
+
+          <Form onSubmit={handleLogin}>
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Enter your email"
+                required
+              />
+            </Form.Group>
+
+            {loginState.showPassword && (
+              <Form.Group className="mb-3">
+                <Form.Label>Password</Form.Label>
+                <Form.Control
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Enter your password"
+                  required
+                />
+              </Form.Group>
+            )}
+            
+            <div className="d-grid mb-3">
+              <Button 
+                variant="primary" 
+                type="submit" 
+                disabled={loginState.isLoading}
+              >
+                {loginState.isLoading ? "Signing In..." : "Continue"}
+              </Button>
+            </div>
+
+            <div className="d-flex justify-content-between">
+              <Link href="/signup" className="text-primary">
+                Create an Account
+              </Link>
+              <Link href="/forgot-password" className="text-primary">
+                Forgot password?
+              </Link>
+            </div>
+          </Form>
+        </Card.Body>
+      </Card>
     </div>
   );
 }
-
-
- 

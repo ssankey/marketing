@@ -1,21 +1,39 @@
-// 
+// pages/orders/index.js
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
+import { Spinner } from "react-bootstrap";
+import { useAuth } from "hooks/useAuth";
 import LoadingSpinner from "components/LoadingSpinner";
 import OrdersTable from "components/OrdersTable";
-import { useRouter } from "next/router";
-import { getOrders } from "lib/models/orders";
 
-export default function OrdersPage({
-  orders: initialOrders,
-  totalItems: initialTotalItems,
-}) {
+/**
+ * OrdersPage: Fetches orders client-side from /api/orders with Bearer token.
+ */
+export default function OrdersPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [orders, setOrders] = useState(initialOrders);
-  const [totalItems, setTotalItems] = useState(initialTotalItems);
 
-  // Handle loading state for client-side transitions
+  // Local states
+  const [orders, setOrders] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Grab query params from URL if you support them: ?page=2, etc.
+  const {
+    page = 1,
+    search = "",
+    status = "all",
+    sortField = "DocNum",
+    sortDir = "asc",
+    fromDate,
+    toDate,
+  } = router.query;
+
+  /**
+   * Optional: show spinner during route transitions (page changes).
+   */
   useEffect(() => {
     const handleStart = () => setIsLoading(true);
     const handleComplete = () => setIsLoading(false);
@@ -31,161 +49,120 @@ export default function OrdersPage({
     };
   }, [router]);
 
-  // Update local state when props change
+  /**
+   * Fetch orders from /api/orders when user is authenticated.
+   */
   useEffect(() => {
-    setOrders(initialOrders);
-    setTotalItems(initialTotalItems);
-  }, [initialOrders, initialTotalItems]);
+    async function fetchOrders() {
+      try {
+        setIsLoading(true);
 
+        // 1) Ensure user is authenticated
+        if (!isAuthenticated) {
+          return;
+        }
 
+        // 2) Get token from localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("No token found in localStorage");
+          return;
+        }
 
+        // 3) Build query string from router.query
+        const queryParams = new URLSearchParams({
+          page,
+          search,
+          status,
+          sortField,
+          sortDir,
+        });
+        if (fromDate) queryParams.append("fromDate", fromDate);
+        if (toDate) queryParams.append("toDate", toDate);
+
+        // 4) Make the request, including Authorization header
+        const response = await fetch(`/api/orders?${queryParams.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch orders from API");
+        }
+
+        // 5) Parse the JSON result
+        const data = await response.json();
+        setOrders(data.orders || []);
+        setTotalItems(data.totalItems || 0);
+        setCurrentPage(data.currentPage || 1);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchOrders();
+  }, [
+    isAuthenticated,
+    page,
+    search,
+    status,
+    sortField,
+    sortDir,
+    fromDate,
+    toDate,
+  ]);
+
+  /**
+   * If still checking auth, show spinner
+   */
+  if (authLoading) {
+    return (
+      <div
+        className="d-flex justify-content-center align-items-center"
+        style={{ minHeight: "100vh" }}
+      >
+        <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
+          <span className="sr-only">Loading...</span>
+        </Spinner>
+        <div className="ms-3">Checking authentication...</div>
+      </div>
+    );
+  }
+
+  /**
+   * If not authenticated, return null or redirect
+   */
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  /**
+   * Render OrdersTable with the data
+   */
   return (
     <OrdersTable
       orders={orders}
       totalItems={totalItems}
+      currentPage={currentPage}
       isLoading={isLoading}
     />
   );
 }
 
-// SEO properties for OrdersPage
+// Next.js SEO
 OrdersPage.seo = {
   title: "Orders | Density",
   description: "View and manage all your orders.",
-  keywords: "orders, sales, management",
+  keywords: "orders, density",
 };
 
+// Remove or comment out getServerSideProps if you previously used it
+/*
 export async function getServerSideProps(context) {
-  try {
-    const {
-      page = 1,
-      search = "",
-      status = "all",
-      fromDate,
-      toDate,
-    } = context.query;
-
-    // Set default sorting parameters
-    const sortField = 'DocDate';
-    const sortDir = 'desc';
-
-    const ITEMS_PER_PAGE = 20;
-    const offset = (parseInt(page) - 1) * ITEMS_PER_PAGE;
-
-    // Build the WHERE clause based on filters
-    let whereClause = "1=1"; // Base condition that's always true
-
-    // Apply search filters
-    if (search) {
-      whereClause += ` AND (
-        T0.DocNum LIKE '%${search}%' OR 
-        T0.CardName LIKE '%${search}%' OR
-        T5.SlpName LIKE '%${search}%'
-      )`;
-    }
-
-    // Apply status filter
-    if (status && status !== "all") {
-      whereClause += ` AND (
-        CASE 
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'closed'
-          WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'cancel'
-          WHEN T0.DocStatus='O' THEN 'open'
-          ELSE 'NA'
-        END = '${status}'
-      )`;
-    }
-
-    // Add date filters
-    if (fromDate) {
-      whereClause += ` AND T0.DocDate >= '${fromDate}'`;
-    }
-    if (toDate) {
-      whereClause += ` AND T0.DocDate <= '${toDate}'`;
-    }
-
-    // Get total count
-    const countQuery = `
-      SELECT COUNT(DISTINCT T0.DocEntry) as total
-      FROM ORDR T0
-      INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-      WHERE ${whereClause};
-    `;
-
-    // Get paginated data
-    const dataQuery = `
-  SELECT 
-    CASE 
-      WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
-      WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Cancelled'
-      WHEN T0.DocStatus='O' THEN 'Open' 
-      ELSE 'NA' 
-    END AS DocStatus,
-    T0.DocEntry,
-    T0.DocNum,
-    T0.DocDate,
-    T0.NumAtCard AS CustomerPONo,
-    T0.TaxDate AS PODate,
-    T0.DocDueDate AS DeliveryDate,
-    T0.CardName,
-    T0.DocTotal,
-    T0.DocCur,
-    T0.DocRate,
-    T5.SlpName AS SalesEmployee,
-    COUNT(DISTINCT T1.ItemCode) AS ProductCount -- Count of unique products in the order
-  FROM ORDR T0
-  INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-  INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry -- Join to get product details
-  WHERE ${whereClause}
-  GROUP BY 
-    T0.DocStatus,
-    T0.CANCELED,
-    T0.DocEntry,
-    T0.DocNum,
-    T0.DocDate,
-    T0.NumAtCard,
-    T0.TaxDate,
-    T0.DocDueDate,
-    T0.CardName,
-    T0.DocTotal,
-    T0.DocCur,
-    T0.DocRate,
-    T5.SlpName
-  ORDER BY ${sortField} ${sortDir}
-  OFFSET ${offset} ROWS
-  FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
-`;
-
-
-    const [totalResult, rawOrders] = await Promise.all([
-      getOrders(countQuery),
-      getOrders(dataQuery),
-    ]);
-
-    // Process data and return as props
-    const totalItems = totalResult[0]?.total || 0;
-    const orders = rawOrders.map((order) => ({
-      ...order,
-      DocDate: order.DocDate ? order.DocDate.toISOString() : null,
-      PODate: order.PODate ? order.PODate.toISOString() : null,
-      DeliveryDate: order.DeliveryDate ? order.DeliveryDate.toISOString() : null,
-    }));
-
-    return {
-      props: {
-        orders: Array.isArray(orders) ? orders : [],
-        totalItems,
-        currentPage: parseInt(page, 10),
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching orders:", error);
-    return {
-      props: {
-        orders: [],
-        totalItems: 0,
-      },
-    };
-  }
+  // Not needed anymore if we're fetching token-based data client side
 }
+*/
 

@@ -1,4 +1,5 @@
-import { getTopCategories, getTopCustomers } from "lib/models/dashboard";
+import { getTopCategories } from "lib/models/dashboard/getTopCategories";
+import {getTopCustomers }  from "lib/models/dashboard/getTopCustomers"
 
 export default async function handler(req, res) {
     const { type } = req.query;

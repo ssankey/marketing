@@ -1,4 +1,28 @@
 /* styles/invoice.css */
+.nav-link {
+  color: #000; /* Default text color */
+  transition: background-color 0.3s, color 0.1s; /* Smooth transition */
+}
+
+
+
+.nav-link:hover {
+  background-color: #124f94; /* Dark background color on hover */
+  color: #fff !important;
+
+}
+
+.nav-item.bg-primary .nav-link {
+  background-color: #124f94; /* Active background color */
+  color: #fff !important;
+
+}
+
+.nav-item.bg-primary .nav-link:hover {
+  background-color: #124f94; /* Slightly darker for active link hover */
+  color: #fff !important;
+
+}
 
 .invoice-container {
   background-color: #fff;

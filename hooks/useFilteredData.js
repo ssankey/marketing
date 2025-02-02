@@ -50,6 +50,26 @@ const useTableFilters = (initialSortField = 'DocNum', initialSortDirection = 'as
     });
   };
 
+  const handleReset = () => {
+    // Clear local state
+    setSearchTerm("");
+    setStatusFilter("all");
+    setFromDate("");
+    setToDate("");
+
+    // Remove filter keys from the query
+    const newQuery = { ...query };
+    delete newQuery.search;
+    delete newQuery.status;
+    delete newQuery.fromDate;
+    delete newQuery.toDate;
+    delete newQuery.page;
+
+    // Update the router without filter query params
+    router.push({ pathname: router.pathname, query: newQuery });
+  };
+
+
   return {
     searchTerm,
     statusFilter,
@@ -61,6 +81,7 @@ const useTableFilters = (initialSortField = 'DocNum', initialSortDirection = 'as
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
+    handleReset
   };
 };
 

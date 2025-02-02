@@ -4,7 +4,7 @@ import { queryDatabase } from '../../../lib/db';
 export default async function handler(req, res) {
   try {
     const query = `
-      SELECT 
+      SELECT TOP 10
         t1.cardcode, 
         t1.cardname,
         (SUM(T0.Debit) - SUM(T0.Credit)) AS Balance
@@ -13,6 +13,7 @@ export default async function handler(req, res) {
       WHERE T0.ShortName LIKE 'V%%'
       GROUP BY t1.cardname, t1.cardcode
       HAVING (SUM(T0.Debit) - SUM(T0.Credit)) > 0
+      ORDER BY Balance desc;
     `;
     const data = await queryDatabase(query);
     res.status(200).json(data);
