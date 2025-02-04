@@ -79,21 +79,20 @@ const monthMapping = {
             setLoading(true);
             setError(null);
 
-    //    const queryParams = new URLSearchParams({
-    //   ...(filters.salesPerson && { slpCode: filters.salesPerson }),
-    //   ...(filters.category && { category: filters.category }),
-    //   ...(filters.product && { product: filters.product })
-    // });
+     
             const queryParams = new URLSearchParams();
         
-        // Add filters only if they have a value
-        if (filters.salesPerson) {
+       
+         // Add filters only if they have a value
+        if (filters.salesPerson?.value) {
             queryParams.append('slpCode', filters.salesPerson.value);
         }
-        if (filters.category) {
-            queryParams.append('category', filters.category.value);
+        if (filters.category?.value) {
+            queryParams.append('itmsGrpCod', filters.category.value);
         }
-
+        if (filters.product?.value) {
+            queryParams.append('itemCode', filters.product.value);
+        }
             const token = localStorage.getItem('token');
             // Assuming the API returns data for all years when no "year" query is provided.
             const response = await fetch(`/api/sales-cogs?${queryParams}`, {
@@ -109,12 +108,7 @@ const monthMapping = {
                 throw new Error(data.error || 'Failed to fetch data');
             }
 
-            // Sort the data chronologically using year and month.
-            // const sortedData = data.sort((a, b) => {
-            //     const dateA = new Date(a.year, a.month - 1);
-            //     const dateB = new Date(b.year, b.month - 1);
-            //     return dateA - dateB;
-            // });
+         
             const sortedData = data.sort((a, b) => {
             // First compare years
             if (a.year !== b.year) {
@@ -136,6 +130,7 @@ const monthMapping = {
 
     useEffect(() => {
         // Remove dependency on any year filter; fetch once on component mount.
+          console.log("Filters:", filters);
         if (user?.token) {
             fetchSalesData();
         }
@@ -277,30 +272,7 @@ const monthMapping = {
  
     return (
         <Card className="shadow-sm border-0 mb-4">
-            {/* <Card.Header className="bg-white py-3">
-                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-                    <h4
-                        className="mb-3 mb-md-0"
-                        style={{ fontWeight: 600, color: '#212529', fontSize: '1.25rem' }}
-                    >
-                         
-                        Sales
-                    </h4>
-                   
-                        <div className="d-flex justify-content-center w-100">
-                          
-                            <AllFilter 
-            searchQuery={filters.salesPerson} 
-            setSearchQuery={(value) => 
-              setFilters(prev => ({ 
-                ...prev, 
-                salesPerson: value 
-              }))
-            } 
-          />
-                        </div>
-                </div>
-            </Card.Header> */}
+        
             <Card.Header className="bg-white py-3">
     <div className="d-flex justify-content-between align-items-center">
         {/* Left: Title */}
@@ -313,15 +285,57 @@ const monthMapping = {
 
         {/* Right: AllFilter */}
         <div className="ms-auto">
-            <AllFilter 
-                searchQuery={filters.salesPerson} 
-                setSearchQuery={(value) => 
-                    setFilters(prev => ({ 
-                        ...prev, 
-                        salesPerson: value 
-                    }))
-                } 
-            />
+            
+           
+
+                {/* <AllFilter 
+                        searchQuery={searchQuery}  // Remove dependency on searchType
+                        setSearchQuery={(value) => {
+                            if (value) {
+                                // value will contain {type, value, label} from AllFilter
+                                setFilters(prev => ({
+                                    ...prev,
+                                    [value.type]: {
+                                        value: value.value,
+                                        label: value.label
+                                    }
+                                }));
+                            } else {
+                                // Reset all filters when cleared
+                                setFilters({
+                                    salesPerson: null,
+                                    category: null,
+                                    product: null
+                                });
+                            }
+                        }}
+                    /> */}
+
+
+                    <AllFilter 
+    searchQuery={searchQuery}
+    setSearchQuery={(value) => {
+        if (value) {
+            setFilters(prev => ({
+                ...prev,
+                [value.type === "sales-person" ? "salesPerson" : value.type]: { // Map "sales-person" to "salesPerson"
+                    value: value.value,
+                    label: value.label
+                }
+            }));
+        } else {
+            // Reset all filters when cleared
+            setFilters({
+                salesPerson: null, // Use "salesPerson" consistently
+                category: null,
+                product: null
+            });
+        }
+    }}
+/>
+                  
+    
+ 
         </div>
     </div>
 </Card.Header>

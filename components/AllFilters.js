@@ -1,16 +1,18 @@
 
 
-
-import React, { useState, useRef } from "react";
+import React, { useEffect , useState, useRef, useCallback } from "react";
 import Select from "react-select";
-import { Card, Table, Button, Spinner, Dropdown, Form } from 'react-bootstrap';
+import { Button, Dropdown, Spinner } from 'react-bootstrap';
+import debounce from 'lodash.debounce';
 
 const AllFilter = ({ searchQuery, setSearchQuery }) => {
     const [searchType, setSearchType] = useState(null);
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedValue, setSelectedValue] = useState(null);
+    const [inputValue, setInputValue] = useState(""); // Preserve input
     const selectRef = useRef(null);
+    const page = useRef(1); // For pagination when fetching product data
 
     // API Endpoints
     const API_ENDPOINTS = {
@@ -19,161 +21,114 @@ const AllFilter = ({ searchQuery, setSearchQuery }) => {
         "category": "/api/products/categories",
     };
 
-    // Handle dropdown selection
-    const handleSearchTypeSelect = (type) => {
+    // **Caches API responses to prevent redundant requests**
+    const cache = useRef({});
+
+    // **Handle dropdown selection**
+    const handleSearchTypeSelect = async (type) => {
         setSearchType(type);
         setSearchQuery("");
         setSelectedValue(null);
         setSuggestions([]);
+        setInputValue(""); // Reset input when switching filters
+
+        if (type !== "product") {
+            await fetchSuggestions("", true);
+        }
+        if (type === "sales-person") {
+        await fetchSuggestions("", true);
+    }
     };
 
-
     
-//         const fetchSuggestions = async (query = '') => {
-//     if (!searchType) return;
 
-//     // Ensure products are only fetched when the user types something
-//     if (searchType === "product" && query.length === 0) {
-//         setSuggestions([]); // Keep it empty until input
-//         return;
-//     }
+    // **Debounced function to optimize API calls when typing**
+    const debouncedFetchSuggestions = useCallback(
+        debounce(async (query) => {
+            await fetchSuggestions(query);
+        }, 500),
+        [searchType]
+    );
 
-//     setLoading(true);
-//     try {
-//         const url = `${API_ENDPOINTS[searchType]}${query ? `?search=${encodeURIComponent(query)}` : ''}`;
-//         console.log("Fetching suggestions from:", url);
+    // **Fetch suggestions with pagination and caching**
+    const fetchSuggestions = async (query = '', initialLoad = false) => {
+        if (!searchType) return;
 
-//         const response = await fetch(url);
-//         if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
-//         const data = await response.json();
-//         console.log("API Response:", data);
-
-//         let formattedSuggestions = [];
-//         if (searchType === "sales-person") {
-//             formattedSuggestions = data.salesEmployees?.map(emp => ({
-//                 value: emp.value, // SlpCode
-//                 label: `${emp.value} - ${emp.label}` // SlpCode + SlpName
-//             })) || [];
-//         } else if (searchType === "product") {
-//             // No initial suggestions, only filter based on input
-//             formattedSuggestions = data.products?.map(product => ({
-//                 value: product.value,
-//                 label: product.label
-//             })) || [];
-//         } else if (searchType === "category") {
-//             formattedSuggestions = data.categories?.map(cat => ({
-//                 value: cat,
-//                 label: cat,
-//             })) || [];
-//         }
-
-//         console.log("Formatted Suggestions:", formattedSuggestions);
-//         setSuggestions(formattedSuggestions);
-//     } catch (error) {
-//         console.error(`Error fetching ${searchType} suggestions:`, error);
-//         setSuggestions([]);
-//     } finally {
-//         setLoading(false);
-//     }
-// };
-
-const fetchSuggestions = async (query = '') => {
-    if (!searchType) return;
-
-    // Ensure products are only fetched when the user types something
-    if (searchType === "product" && query.length === 0) {
-        setSuggestions([]); // Keep it empty until input
-        return;
-    }
-
-    setLoading(true);
-    try {
-        const url = `${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(query)}`;
-        console.log("Fetching suggestions from:", url);
-
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
-        const data = await response.json();
-        console.log("API Response:", data);
-
-        let formattedSuggestions = [];
-        if (searchType === "sales-person") {
-            formattedSuggestions = data.salesEmployees?.map(emp => ({
-                value: emp.value, 
-                label: `${emp.value} - ${emp.label}`
-            })) || [];
-        } else if (searchType === "product") {
-            // Use MatchedLabel to show either ItemCode or ItemName dynamically
-            formattedSuggestions = data.products?.map(product => ({
-                value: product.value,  // ItemCode always as value
-                label: product.label   // Dynamic label (ItemCode or ItemName)
-            })) || [];
-        } else if (searchType === "category") {
-            formattedSuggestions = data.categories?.map(cat => ({
-                value: cat,
-                label: cat,
-            })) || [];
+        // Ensure products are fetched on focus and input
+        if (searchType === "product" && !query && !initialLoad) return;
+if (searchType === "sales-person" && !query && !initialLoad) return;
+        // **Check if data is already cached**
+        const cacheKey = `${searchType}_${query}`;
+        if (cache.current[cacheKey]) {
+            setSuggestions(cache.current[cacheKey]);
+            return;
         }
 
-        console.log("Formatted Suggestions:", formattedSuggestions);
-        setSuggestions(formattedSuggestions);
-    } catch (error) {
-        console.error(`Error fetching ${searchType} suggestions:`, error);
-        setSuggestions([]);
-    } finally {
-        setLoading(false);
-    }
-};
+        setLoading(true);
+        try {
+            const url = `${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(query)}&page=1&limit=50`;
+            console.log("Fetching suggestions from:", url);
 
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
+            const data = await response.json();
+            console.log("API Response:", data);
 
+            let formattedSuggestions = [];
+            if (searchType === "sales-person") {
+                formattedSuggestions = data.salesEmployees?.map(emp => ({
+                    value: emp.value, 
+                    label: `${emp.value} - ${emp.label}`
+                })) || [];
+            } else if (searchType === "product") {
+                formattedSuggestions = data.products?.map(product => ({
+                    value: product.value,
+                    label: product.label
+                })) || []; // **No need to slice here; limit is applied in API**
+            } else if (searchType === "category") {
+                formattedSuggestions = data.categories?.map(cat => ({
+                    value: cat,
+                    label: cat,
+                })) || [];
+            }
 
-// Modify handleFocus to do nothing for products
-const handleFocus = () => {
-    // Only fetch all suggestions for non-product search types
-    if (searchType !== "product") {
-        fetchSuggestions();
-    }
-    
-    // Programmatically open the dropdown menu
-    if (selectRef.current) {
-        selectRef.current.focus();
-    }
-};
+            // **Cache results to avoid re-fetching**
+            cache.current[cacheKey] = formattedSuggestions;
 
- 
-const handleInputChange = (inputValue, { action }) => {
-    if (action === "input-change") {
-        if (searchType === "product") {
-            fetchSuggestions(inputValue); // Always fetch when typing for products
-        } else if (inputValue.length > 1) {
-            fetchSuggestions(inputValue);
+            console.log("Formatted Suggestions:", formattedSuggestions);
+            setSuggestions(formattedSuggestions);
+        } catch (error) {
+            console.error(`Error fetching ${searchType} suggestions:`, error);
+            setSuggestions([]);
+        } finally {
+            setLoading(false);
         }
-    }
-};
+    };
 
+    // **Handles input change with debounce**
+    const handleInputChange = (inputValue, { action }) => {
+        setInputValue(inputValue); // Preserve typed value
+        if (action === "input-change") {
+            debouncedFetchSuggestions(inputValue);
+        }
+    };
 
-  
+    // **Handles input focus (fetches initial suggestions)**
+    const handleFocus = () => {
+        if (searchType) {
+            fetchSuggestions(inputValue, true);
+        }
+    };
 
+    // **Handles option selection**
     const handleOptionSelect = (option) => {
-  setSelectedValue(option);
-  
-  // Return more information for filtering
-  setSearchQuery(option ? {
-    value: option.value,     // SlpCode, ItemCode, etc.
-    label: option.label,     // Full label for display
-    type: searchType         // Filter type
-  } : null);
-};
-
-    // Reset everything
-    const handleReset = () => {
-        setSearchType(null);
-        setSearchQuery("");
-        setSelectedValue(null);
-        setSuggestions([]);
+        setSelectedValue(option);
+        setSearchQuery(option ? {
+            value: option.value,     
+            label: option.label,     
+            type: searchType         
+        } : null);
     };
 
     return (
@@ -195,10 +150,11 @@ const handleInputChange = (inputValue, { action }) => {
                 <Select
                     ref={selectRef}
                     value={selectedValue}
+                    inputValue={inputValue} // Keeps input value on blur or tab switch
                     onChange={handleOptionSelect}
                     onInputChange={handleInputChange}
-                    onFocus={handleFocus}
-                    options={suggestions}
+                    onFocus={handleFocus} // Fetch suggestions on focus
+                    options={suggestions} 
                     isLoading={loading}
                     placeholder={searchType ? `Enter ${searchType.replace("-", " ")}` : "Select a search type"}
                     noOptionsMessage={() => (loading ? "Loading..." : "No results found")}
@@ -220,7 +176,7 @@ const handleInputChange = (inputValue, { action }) => {
             </div>
 
             {/* Reset Button */}
-            <Button variant="primary" onClick={handleReset} disabled={!searchType}>
+            <Button variant="primary" onClick={() => handleSearchTypeSelect(null)} disabled={!searchType}>
                 Reset
             </Button>
         </div>
@@ -228,8 +184,3 @@ const handleInputChange = (inputValue, { action }) => {
 };
 
 export default AllFilter;
-
-
-
-
- 

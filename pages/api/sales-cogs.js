@@ -7,7 +7,7 @@ import { queryDatabase } from '../../lib/db';
 
 export default async function handler(req, res) {
     try {
-        const { year, slpCode, itmsGrpCod } = req.query; // Accept SlpCode & ItmsGrpCod as input
+        const { year, slpCode, itmsGrpCod, itemCode } = req.query; // Accept SlpCode & ItmsGrpCod as input
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -76,6 +76,12 @@ export default async function handler(req, res) {
         if (itmsGrpCod) {
             whereClauses.push(`T5.ItmsGrpNam = @itmsGrpCod`);
             params.push({ name: 'itmsGrpCod', type: sql.VarChar, value: itmsGrpCod });
+        }
+
+        // Add product filter
+        if (itemCode) {
+            whereClauses.push(`T3.ItemCode = @itemCode`);
+            params.push({ name: 'itemCode', type: sql.VarChar, value: itemCode });
         }
 
         // Add WHERE clauses if there are conditions
