@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Container, Row, Col, Card, Table, Spinner, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Spinner, Button , Alert} from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 import StatusBadge from "./StatusBadge";
@@ -43,8 +43,16 @@ const OrderDetails = ({ order }) => {
     return (
         <Container className="mt-4">
             <Card>
-                <Card.Header>
-                    <h2 className="mb-0">Order Details #{order.DocNum}</h2>
+                <Card.Header className="p-0">
+                    {/* <h2 className="mb-0">Order Details #{order.DocNum}</h2> */}
+                    {/* <Alert variant="success" className="w-100 text-center mb-0" >Order Details #{order.DocNum}</Alert> */}
+                    <Alert 
+            variant={order.DocStatus === 'C' ? 'success' : 'primary'} 
+            className="w-100  mb-0 fw-bold fs-4"
+            style={{ color: "#000" }} // Ensures black text
+        >
+            Order Details #{order.DocNum} - {order.DocStatus === 'C' ? 'Closed' : 'Open'}
+        </Alert>
                 </Card.Header>
                 <Card.Body>
                     {/* Order Information */}
@@ -131,7 +139,7 @@ const OrderDetails = ({ order }) => {
                     </Card>
 
                     {/* Timeline */}
-          <Card className="mb-4">
+          {/* <Card className="mb-4">
             <Card.Header>
               <h5 className="mb-0">Timeline</h5>
             </Card.Header>
@@ -139,22 +147,22 @@ const OrderDetails = ({ order }) => {
               <Row>
                 <Col md={4}>
                   <p>
-                    {/* <strong>Timeline</strong> { invoice.Timeline||'N/A'} */}
+                    <strong>Timeline</strong> { invoice.Timeline||'N/A'}
                   </p>
                 </Col>
                 <Col md={4}>
                   <p>
-                    {/* <strong>Quote Status</strong> {invoice.QuoteStatus|| 'N/A'} */}
+                    <strong>Quote Status</strong> {invoice.QuoteStatus|| 'N/A'}
                   </p>
                 </Col>
                 <Col md={4}>
                   <p>
-                    {/* <strong>Mkt Feedback</strong> { invoice.Mkt_Feedback||'N/A'} */}
+                    <strong>Mkt Feedback</strong> { invoice.Mkt_Feedback||'N/A'}
                   </p>
                 </Col>
               </Row>
             </Card.Body>
-          </Card>
+          </Card> */}
 
                     {/* Addresses */}
                     <Row className="mb-4">

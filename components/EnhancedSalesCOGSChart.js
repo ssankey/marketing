@@ -1,7 +1,5 @@
 
 
-
-
 // src/components/EnhancedSalesCOGSChart.js
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
@@ -279,24 +277,18 @@ const monthMapping = {
  
     return (
         <Card className="shadow-sm border-0 mb-4">
-            <Card.Header className="bg-white py-3">
+            {/* <Card.Header className="bg-white py-3">
                 <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
                     <h4
                         className="mb-3 mb-md-0"
                         style={{ fontWeight: 600, color: '#212529', fontSize: '1.25rem' }}
                     >
-                        {/* Sales (All Years) */}
+                         
                         Sales
                     </h4>
-                    {/* <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
-                        <div className="d-flex gap-2">
-                            <AllFilter />
-                        </div>
-                    </div> */}
-                    {/* Center: Dropdown */}
+                   
                         <div className="d-flex justify-content-center w-100">
-                            {/* <AllFilter /> */}
-                            {/* <AllFilter searchQuery={searchQuery} setSearchQuery={setSearchQuery} /> */}
+                          
                             <AllFilter 
             searchQuery={filters.salesPerson} 
             setSearchQuery={(value) => 
@@ -308,7 +300,31 @@ const monthMapping = {
           />
                         </div>
                 </div>
-            </Card.Header>
+            </Card.Header> */}
+            <Card.Header className="bg-white py-3">
+    <div className="d-flex justify-content-between align-items-center">
+        {/* Left: Title */}
+        <h4
+            className="mb-3 mb-md-0"
+            style={{ fontWeight: 600, color: '#212529', fontSize: '1.25rem' }}
+        >
+            Sales
+        </h4>
+
+        {/* Right: AllFilter */}
+        <div className="ms-auto">
+            <AllFilter 
+                searchQuery={filters.salesPerson} 
+                setSearchQuery={(value) => 
+                    setFilters(prev => ({ 
+                        ...prev, 
+                        salesPerson: value 
+                    }))
+                } 
+            />
+        </div>
+    </div>
+</Card.Header>
             <Card.Body>
                 {error && <p className="text-center mt-4 text-danger">Error: {error}</p>}
                 {loading ? (

@@ -27,35 +27,7 @@ export default async function handler(req, res) {
             return res.status(401).json({ error: 'Token verification failed' });
         }
 
-        // Construct base query
-        // let baseQuery = `
-        //     SELECT 
-        //         YEAR(T0.DocDate) AS year,
-        //         DATENAME(MONTH, T0.DocDate) AS month,
-        //         MONTH(T0.DocDate) AS monthNumber,
-        //         ROUND(SUM(
-        //             CASE 
-        //                 WHEN T1.InvQty = 0 THEN T1.LineTotal
-        //                 WHEN T4.Quantity IS NULL THEN T1.LineTotal
-        //                 ELSE (T1.LineTotal / T1.InvQty) * ISNULL(T4.Quantity, 0)
-        //             END
-        //         ), 2) AS sales,
-        //         ROUND(SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0)), 2) AS cogs,
-        //         ROUND(SUM(
-        //             CASE 
-        //                 WHEN T1.InvQty = 0 THEN T1.LineTotal
-        //                 WHEN T4.Quantity IS NULL THEN T1.LineTotal
-        //                 ELSE (T1.LineTotal / T1.InvQty) * ISNULL(T4.Quantity, 0)
-        //             END
-        //         ) - SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0)), 2) AS grossMargin
-        //     FROM OINV T0
-        //     INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-        //     INNER JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
-        //     INNER JOIN OITB T5 ON T3.ItmsGrpCod = T5.ItmsGrpCod
-        //     LEFT JOIN IBT1 T4 ON T4.CardCode = T0.CardCode
-        //         AND T4.ItemCode = T1.ItemCode
-        //     WHERE T0.CANCELED = 'N'
-        // `;
+       
 
 
         let baseQuery = `
