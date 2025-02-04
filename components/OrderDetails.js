@@ -139,17 +139,17 @@ const OrderDetails = ({ order }) => {
               <Row>
                 <Col md={4}>
                   <p>
-                    <strong>Timeline</strong> { invoice.Timeline||'N/A'}
+                    {/* <strong>Timeline</strong> { invoice.Timeline||'N/A'} */}
                   </p>
                 </Col>
                 <Col md={4}>
                   <p>
-                    <strong>Quote Status</strong> {invoice.QuoteStatus|| 'N/A'}
+                    {/* <strong>Quote Status</strong> {invoice.QuoteStatus|| 'N/A'} */}
                   </p>
                 </Col>
                 <Col md={4}>
                   <p>
-                    <strong>Mkt Feedback</strong> { invoice.Mkt_Feedback||'N/A'}
+                    {/* <strong>Mkt Feedback</strong> { invoice.Mkt_Feedback||'N/A'} */}
                   </p>
                 </Col>
               </Row>
