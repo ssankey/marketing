@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Container, Row, Col, Card, Table, Spinner, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Spinner, Button ,Alert} from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 
@@ -62,19 +62,38 @@ const InvoiceDetails = ({ invoice }) => {
   return (
     <Container className="mt-4">
       <Card>
-        <Card.Header>
-          <div className="mt-3 d-flex justify-content-between">
-            <h2 className="mb-0">{documentTitle} #{invoice.DocNum}</h2>
-            <Button
-              variant="primary"
-              onClick={() =>
-                router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)
-              }
-            >
-              {printButtonLabel}
-            </Button>
-          </div>
-        </Card.Header>
+        {/* <Card.Header className="p-0">
+          
+          <Alert 
+        variant={invoice.DocStatusDisplay === 'Closed' ? 'success' : 'primary'} 
+        className="w-100 text-center mb-0 fw-bold fs-4"
+        style={{ color: "#000" }} // Ensures black text
+    >
+        {documentTitle} #{invoice.DocNum} - {invoice.DocStatusDisplay}
+    </Alert>
+        </Card.Header> */}
+        <Card.Header className="p-0">
+    <Alert 
+        variant={invoice.DocStatusDisplay === 'Closed' ? 'success' : 'primary'} 
+        className="w-100 mb-0 fw-bold fs-4 d-flex justify-content-between align-items-center"
+        style={{ color: "#000" }} // Ensures black text inside alert
+    >
+        {/* Order Status */}
+        <span>
+            {documentTitle} #{invoice.DocNum} - {invoice.DocStatusDisplay}
+        </span>
+
+        {/* Print Button (Inside Alert, Right-Aligned) */}
+        <Button
+            variant="primary"
+            onClick={() => router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)}
+            className="fw-bold border"
+        >
+            {printButtonLabel}
+        </Button>
+    </Alert>
+</Card.Header>
+
         <Card.Body>
           {/* Invoice Information */}
           <Row className="mb-4">
@@ -160,7 +179,7 @@ const InvoiceDetails = ({ invoice }) => {
           </Card>
 
           {/* Timeline */}
-          <Card className="mb-4">
+          {/* <Card className="mb-4">
             <Card.Header>
               <h5 className="mb-0">Timeline</h5>
             </Card.Header>
@@ -183,7 +202,7 @@ const InvoiceDetails = ({ invoice }) => {
                 </Col>
               </Row>
             </Card.Body>
-          </Card>
+          </Card> */}
 
           {/* Addresses */}
           <Row className="mb-4">

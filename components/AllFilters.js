@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useRef } from "react";
 import Select from "react-select";
 import { Card, Table, Button, Spinner, Dropdown, Form } from 'react-bootstrap';
@@ -27,12 +28,68 @@ const AllFilter = ({ searchQuery, setSearchQuery }) => {
     };
 
 
-    const fetchSuggestions = async (query = '') => {
+    
+//         const fetchSuggestions = async (query = '') => {
+//     if (!searchType) return;
+
+//     // Ensure products are only fetched when the user types something
+//     if (searchType === "product" && query.length === 0) {
+//         setSuggestions([]); // Keep it empty until input
+//         return;
+//     }
+
+//     setLoading(true);
+//     try {
+//         const url = `${API_ENDPOINTS[searchType]}${query ? `?search=${encodeURIComponent(query)}` : ''}`;
+//         console.log("Fetching suggestions from:", url);
+
+//         const response = await fetch(url);
+//         if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+//         const data = await response.json();
+//         console.log("API Response:", data);
+
+//         let formattedSuggestions = [];
+//         if (searchType === "sales-person") {
+//             formattedSuggestions = data.salesEmployees?.map(emp => ({
+//                 value: emp.value, // SlpCode
+//                 label: `${emp.value} - ${emp.label}` // SlpCode + SlpName
+//             })) || [];
+//         } else if (searchType === "product") {
+//             // No initial suggestions, only filter based on input
+//             formattedSuggestions = data.products?.map(product => ({
+//                 value: product.value,
+//                 label: product.label
+//             })) || [];
+//         } else if (searchType === "category") {
+//             formattedSuggestions = data.categories?.map(cat => ({
+//                 value: cat,
+//                 label: cat,
+//             })) || [];
+//         }
+
+//         console.log("Formatted Suggestions:", formattedSuggestions);
+//         setSuggestions(formattedSuggestions);
+//     } catch (error) {
+//         console.error(`Error fetching ${searchType} suggestions:`, error);
+//         setSuggestions([]);
+//     } finally {
+//         setLoading(false);
+//     }
+// };
+
+const fetchSuggestions = async (query = '') => {
     if (!searchType) return;
+
+    // Ensure products are only fetched when the user types something
+    if (searchType === "product" && query.length === 0) {
+        setSuggestions([]); // Keep it empty until input
+        return;
+    }
 
     setLoading(true);
     try {
-        const url = `${API_ENDPOINTS[searchType]}${query ? `?search=${encodeURIComponent(query)}` : ''}`;
+        const url = `${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(query)}`;
         console.log("Fetching suggestions from:", url);
 
         const response = await fetch(url);
@@ -44,15 +101,15 @@ const AllFilter = ({ searchQuery, setSearchQuery }) => {
         let formattedSuggestions = [];
         if (searchType === "sales-person") {
             formattedSuggestions = data.salesEmployees?.map(emp => ({
-                value: emp.value, // SlpCode
-                label: `${emp.value} - ${emp.label}` // SlpCode + SlpName
+                value: emp.value, 
+                label: `${emp.value} - ${emp.label}`
             })) || [];
         } else if (searchType === "product") {
-            formattedSuggestions = data.products
-                .filter(product => 
-                    product.label.toLowerCase().includes(query.toLowerCase()) || 
-                    product.value.toLowerCase().includes(query.toLowerCase())
-                );
+            // Use MatchedLabel to show either ItemCode or ItemName dynamically
+            formattedSuggestions = data.products?.map(product => ({
+                value: product.value,  // ItemCode always as value
+                label: product.label   // Dynamic label (ItemCode or ItemName)
+            })) || [];
         } else if (searchType === "category") {
             formattedSuggestions = data.categories?.map(cat => ({
                 value: cat,
@@ -72,6 +129,7 @@ const AllFilter = ({ searchQuery, setSearchQuery }) => {
 
 
 
+
 // Modify handleFocus to do nothing for products
 const handleFocus = () => {
     // Only fetch all suggestions for non-product search types
@@ -85,19 +143,17 @@ const handleFocus = () => {
     }
 };
 
-// Modify handleInputChange to work with products
+ 
 const handleInputChange = (inputValue, { action }) => {
     if (action === "input-change") {
-        // For products, fetch suggestions with any input length
-        if (searchType === "product" && inputValue.length > 0) {
-            fetchSuggestions(inputValue);
-        } 
-        // For other types, keep existing logic
-        else if (searchType !== "product" && inputValue.length > 1) {
+        if (searchType === "product") {
+            fetchSuggestions(inputValue); // Always fetch when typing for products
+        } else if (inputValue.length > 1) {
             fetchSuggestions(inputValue);
         }
     }
 };
+
 
   
 
@@ -172,6 +228,7 @@ const handleInputChange = (inputValue, { action }) => {
 };
 
 export default AllFilter;
+
 
 
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button , Alert} from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 
@@ -39,9 +39,19 @@ const QuotationDetails = ({ quotation }) => {
   return (
     <Container className="mt-4">
       <Card>
-        <Card.Header>
+        {/* <Card.Header>
           <h2 className="mb-0">Quotation Details #{quotation.DocNum}</h2>
-        </Card.Header>
+        </Card.Header> */}
+         <Card.Header className="p-0">
+                   
+                    <Alert 
+            variant={quotation.DocStatusDisplay === 'Closed' ? 'success' : 'primary'} 
+            className="w-100  mb-0 fw-bold fs-4"
+            style={{ color: "#000" }} // Ensures black text
+        >
+            Quotation Details #{quotation.DocNum} - {quotation.DocStatusDisplay === 'Closed' ? 'Closed' : 'Open'}
+        </Alert>
+                </Card.Header>
         <Card.Body>
           {/* Quotation Information */}
           <Row className="mb-4">
