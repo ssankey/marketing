@@ -1,5 +1,5 @@
 // src/components/DashboardCharts.js
-import React, { useState, useEffect } from 'react';
+import React, { memo , useState, useEffect } from 'react';
 import { Card, Row, Col, Spinner, ListGroup } from 'react-bootstrap';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { formatCurrency } from 'utils/formatCurrency';
@@ -36,7 +36,7 @@ const colorPalette = {
   ]
 };
 
-const DashboardCharts = (userRole) => {
+const DashboardCharts = memo((userRole) => {
   // Existing State Variables
   console.log(userRole);
 
@@ -366,6 +366,6 @@ const DashboardCharts = (userRole) => {
   );
   
 
-};
+});
 
 export default DashboardCharts;
