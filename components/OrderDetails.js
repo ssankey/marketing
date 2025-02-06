@@ -2,10 +2,12 @@
 
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Container, Row, Col, Card, Table, Spinner, Button , Alert} from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Spinner, Button, Alert } from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 import StatusBadge from "./StatusBadge";
+import Link from 'next/link';
+
 
 const OrderDetails = ({ order }) => {
     console.log(order);
@@ -40,19 +42,21 @@ const OrderDetails = ({ order }) => {
         return acc;
     }, {});
 
+
+
     return (
         <Container className="mt-4">
             <Card>
                 <Card.Header className="p-0">
                     {/* <h2 className="mb-0">Order Details #{order.DocNum}</h2> */}
                     {/* <Alert variant="success" className="w-100 text-center mb-0" >Order Details #{order.DocNum}</Alert> */}
-                    <Alert 
-            variant={order.DocStatus === 'C' ? 'success' : 'primary'} 
-            className="w-100  mb-0 fw-bold fs-4"
-            style={{ color: "#000" }} // Ensures black text
-        >
-            Order Details #{order.DocNum} - {order.DocStatus === 'C' ? 'Closed' : 'Open'}
-        </Alert>
+                    <Alert
+                        variant={order.DocStatus === 'C' ? 'success' : 'primary'}
+                        className="w-100  mb-0 fw-bold fs-4"
+                        style={{ color: "#000" }} // Ensures black text
+                    >
+                        Order Details #{order.DocNum} - {order.DocStatus === 'C' ? 'Closed' : 'Open'}
+                    </Alert>
                 </Card.Header>
                 <Card.Body>
                     {/* Order Information */}
@@ -138,32 +142,6 @@ const OrderDetails = ({ order }) => {
                         </Card.Body>
                     </Card>
 
-                    {/* Timeline */}
-          {/* <Card className="mb-4">
-            <Card.Header>
-              <h5 className="mb-0">Timeline</h5>
-            </Card.Header>
-            <Card.Body>
-              <Row>
-                <Col md={4}>
-                  <p>
-                    <strong>Timeline</strong> { invoice.Timeline||'N/A'}
-                  </p>
-                </Col>
-                <Col md={4}>
-                  <p>
-                    <strong>Quote Status</strong> {invoice.QuoteStatus|| 'N/A'}
-                  </p>
-                </Col>
-                <Col md={4}>
-                  <p>
-                    <strong>Mkt Feedback</strong> { invoice.Mkt_Feedback||'N/A'}
-                  </p>
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card> */}
-
                     {/* Addresses */}
                     <Row className="mb-4">
                         <Col md={6}>
@@ -213,6 +191,8 @@ const OrderDetails = ({ order }) => {
                                         <tr>
                                             <th className="text-nowrap">Line #</th>
                                             <th className="text-nowrap">Item Code</th>
+                                            <th className="text-nowrap">Cas No</th>
+                                            <th className="text-nowrap">Invoice No</th>
                                             <th className="text-nowrap">Status</th>
                                             <th className="text-nowrap">Stock</th>
                                             <th className="text-nowrap">Description</th>
@@ -224,24 +204,30 @@ const OrderDetails = ({ order }) => {
                                             <th className="text-nowrap">Tax (%)</th>
                                             <th className="text-nowrap">Line Total</th>
                                             <th className="text-nowrap">Delivery Date</th>
-                                            {/* <th className="text-nowrap">Status</th> */}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {products.map((product, index) => {
                                             const lineTotal = product.LineTotal || product.Quantity * product.Price;
+                                            const invoiceNumber = product.InvoiceLineNumber ?
+                                                order.InvoiceNumber :
+                                                'N/A';
+                                            const invoiceDocentry = product.InvoiceDocEntry ? order.InvoiceDocEntry : 'N/A'
                                             return (
                                                 <tr key={index}>
                                                     <td className="text-nowrap">{product.LineNum + 1}</td>
                                                     <td className="text-nowrap">{product.ItemCode}</td>
-                                                     <td className="text-nowrap">{product.LineStatus}</td>
-                                                     {/* <td className="text-nowrap"><span
-                                                            className={`badge ${
-                                                                product.StockStatus} === "In Stock" ? "bg-success" : "bg-danger"
-                                                            }`}
+                                                    <td className="text-nowrap">{product.U_CasNo}</td>
+                                                    <td className="text-nowrap">
+                                                        {invoiceNumber !== 'N/A' ? (
+                                                            <Link
+                                                                href={`/invoicedetails?d=${invoiceNumber}&e=${invoiceDocentry}`}
                                                             >
-                                                            {product.StockStatus}
-                                                            </span></td> */}
+                                                                {invoiceNumber}
+                                                            </Link>
+                                                        ) : invoiceNumber}
+                                                    </td>
+                                                    <td className="text-nowrap">{product.LineStatus}</td>
                                                     <td className="text-nowrap">{product.StockStatus}</td>
                                                     <td className="text-nowrap">{product.Description}</td>
                                                     <td className="text-nowrap">{product.WhsCode}</td>
@@ -256,7 +242,6 @@ const OrderDetails = ({ order }) => {
                                                         {formatCurrency(lineTotal)}
                                                     </td>
                                                     <td className="text-nowrap">{formatDate(product.ShipDate)}</td>
-                                                    {/* <td className="text-nowrap">{product.LineStatus}</td> */}
                                                 </tr>
                                             );
                                         })}
