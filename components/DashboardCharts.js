@@ -1,19 +1,26 @@
 // src/components/DashboardCharts.js
-import React, { memo , useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { Card, Row, Col, Spinner, ListGroup } from 'react-bootstrap';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { formatCurrency } from 'utils/formatCurrency';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+} from 'chart.js';
 import EnhancedSalesCOGSChart from './EnhancedSalesCOGSChart';
 import OrdersChart from "./OpenClosedOrdersChart";
 import FilterDropdown from './FilterDropdown';
-import CustomerBalancesChart from './CustomerBalancesChart'; // Import the new component
+import CustomerBalancesChart from './CustomerBalancesChart';
 import VendorPaymentsChart from './VendorPaymentsChart';
 
-// Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
-// Define a cohesive color palette
 const colorPalette = {
   primary: '#0d6efd',
   secondary: '#6c757d',
@@ -36,10 +43,8 @@ const colorPalette = {
   ]
 };
 
-const DashboardCharts = memo((userRole) => {
-  // Existing State Variables
-  console.log(userRole);
-
+// 1) Define a named function component
+function DashboardCharts({ userRole }) {
   const [topCustomers, setTopCustomers] = useState([]);
   const [topCategories, setTopCategories] = useState([]);
   const [customersDateFilter, setCustomersDateFilter] = useState('today');
@@ -48,14 +53,10 @@ const DashboardCharts = memo((userRole) => {
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch chart data based on type and filter
   const fetchChartData = async (type, filter) => {
     try {
-      if (type === 'customers') {
-        setLoadingCustomers(true);
-      } else if (type === 'categories') {
-        setLoadingCategories(true);
-      }
+      if (type === 'customers') setLoadingCustomers(true);
+      else if (type === 'categories') setLoadingCategories(true);
 
       const params = new URLSearchParams({ dateFilter: filter });
       const response = await fetch(`/api/dashboard/${type}?${params}`);
@@ -64,22 +65,18 @@ const DashboardCharts = memo((userRole) => {
 
       if (type === 'customers') {
         setTopCustomers(data);
-      } else if (type === 'categories') {
+      } else {
         setTopCategories(data);
       }
-    } catch (error) {
-      setError(error.message);
-      console.error(`Error fetching ${type} data:`, error);
+    } catch (err) {
+      setError(err.message);
+      console.error(`Error fetching ${type} data:`, err);
     } finally {
-      if (type === 'customers') {
-        setLoadingCustomers(false);
-      } else if (type === 'categories') {
-        setLoadingCategories(false);
-      }
+      if (type === 'customers') setLoadingCustomers(false);
+      else if (type === 'categories') setLoadingCategories(false);
     }
   };
 
-  // Fetch data on component mount and when filters change
   useEffect(() => {
     fetchChartData('customers', customersDateFilter);
   }, [customersDateFilter]);
@@ -88,26 +85,16 @@ const DashboardCharts = memo((userRole) => {
     fetchChartData('categories', categoriesDateFilter);
   }, [categoriesDateFilter]);
 
-  // Common chart options for consistency
   const commonChartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      datalabels: {
-        display: false, // Disable datalabels for this chart
-      },
-      legend: {
-        display: false,
-      },
+      datalabels: { display: false },
+      legend: { display: false },
       tooltip: {
         backgroundColor: colorPalette.dark,
-        titleFont: {
-          size: 14,
-          weight: "bold",
-        },
-        bodyFont: {
-          size: 13,
-        },
+        titleFont: { size: 14, weight: 'bold' },
+        bodyFont: { size: 13 },
         padding: 12,
         callbacks: {
           label: (tooltipItem) => `${formatCurrency(tooltipItem.raw)}`,
@@ -116,37 +103,26 @@ const DashboardCharts = memo((userRole) => {
     },
     scales: {
       x: {
-        grid: {
-          display: false,
-        },
+        grid: { display: false },
         ticks: {
-          font: {
-            size: 12,
-            family: "'Inter', sans-serif",
-          },
+          font: { size: 12, family: "'Inter', sans-serif" },
           color: colorPalette.dark,
-          maxRotation: 45, // Rotate labels 45 degrees
-          minRotation: 45, // Keep rotation consistent
-          callback: function (value, index) {
-            // Truncate long names to 15 characters + ellipsis
+          maxRotation: 45,
+          minRotation: 45,
+          callback: function (value) {
             const label = this.getLabelForValue(value);
             if (label.length > 15) {
-              return label.substr(0, 10) + "...";
+              return label.substr(0, 10) + '...';
             }
             return label;
           },
         },
       },
       y: {
-        grid: {
-          color: "rgba(0,0,0,0.05)",
-        },
+        grid: { color: 'rgba(0,0,0,0.05)' },
         ticks: {
           callback: (value) => formatCurrency(value),
-          font: {
-            size: 12,
-            family: "'Inter', sans-serif",
-          },
+          font: { size: 12, family: "'Inter', sans-serif" },
           color: colorPalette.dark,
         },
         beginAtZero: true,
@@ -154,61 +130,51 @@ const DashboardCharts = memo((userRole) => {
     },
   };
 
-  // Data configuration for Top Customers Bar Chart
   const customersChartData = {
-    labels: topCustomers.map(customer => customer.Customer),
+    labels: topCustomers.map((c) => c.Customer),
     datasets: [
       {
         label: 'Sales',
-        data: topCustomers.map(customer => customer.Sales || 0),
+        data: topCustomers.map((c) => c.Sales || 0),
         backgroundColor: colorPalette.primary,
         borderRadius: 6,
-        maxBarThickness: 40
-      }
-    ]
+        maxBarThickness: 40,
+      },
+    ],
   };
 
-  // Data configuration for Sales by Category Doughnut Chart
   const categoriesChartData = {
-    labels: topCategories.map(category => category.Category),
-    datasets: [{
-      data: topCategories.map(category => category.Sales || 0),
-      backgroundColor: colorPalette.gradient.slice(0, topCategories.length),
-      borderWidth: 0,
-    }]
+    labels: topCategories.map((cat) => cat.Category),
+    datasets: [
+      {
+        data: topCategories.map((cat) => cat.Sales || 0),
+        backgroundColor: colorPalette.gradient.slice(0, topCategories.length),
+        borderWidth: 0,
+      },
+    ],
   };
 
-  // Options for Doughnut Chart
   const doughnutOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      datalabels: {
-        display: false, // Disable datalabels for this chart
-      },
-      legend: {
-        display: false,
-      },
+      datalabels: { display: false },
+      legend: { display: false },
       tooltip: {
         backgroundColor: colorPalette.dark,
-        titleFont: {
-          size: 14,
-          weight: "bold",
-        },
-        bodyFont: {
-          size: 13,
-        },
+        titleFont: { size: 14, weight: 'bold' },
+        bodyFont: { size: 13 },
         padding: 12,
         callbacks: {
           label: (context) => {
-            const label = context.label || "";
+            const label = context.label || '';
             const value = formatCurrency(context.raw);
             return `${label}: ${value}`;
           },
         },
       },
     },
-    cutout: "70%",
+    cutout: '70%',
   };
 
   const NoDataDisplay = () => (
@@ -235,7 +201,6 @@ const DashboardCharts = memo((userRole) => {
     </div>
   );
 
-  // Loading and Error States
   if (error) {
     return (
       <div className="d-flex justify-content-center align-items-center vh-100">
@@ -249,31 +214,24 @@ const DashboardCharts = memo((userRole) => {
     );
   }
 
-
-
   return (
     <div className="g-4">
-      {/* Enhanced Sales and COGS Chart */}
       <EnhancedSalesCOGSChart />
-  
-      {/* Orders Chart */}
       <OrdersChart />
-  
-      {/* The content below OrdersChart is hidden */}
+
+      {/* Show admin-only content: */}
       {userRole === 'admin' && (
         <>
-          {userRole === 'admin' && (
-            <Row className="g-4 mt-4">
-              <Col lg={6} md={6}>
-                <CustomerBalancesChart /> {/* Include the new component */}
-              </Col>
-              <Col lg={6} md={6}>
-                <VendorPaymentsChart />
-              </Col>
-            </Row>
-          )}
           <Row className="g-4 mt-4">
-            {/* Top Customers */}
+            <Col lg={6} md={6}>
+              <CustomerBalancesChart />
+            </Col>
+            <Col lg={6} md={6}>
+              <VendorPaymentsChart />
+            </Col>
+          </Row>
+
+          <Row className="g-4 mt-4">
             <Col lg={7} md={12}>
               <Card className="shadow-sm border-0 h-100">
                 <Card.Header className="bg-white border-0 py-3">
@@ -293,15 +251,14 @@ const DashboardCharts = memo((userRole) => {
                   ) : topCustomers.length === 0 ? (
                     <NoDataDisplay />
                   ) : (
-                    <div className="chart-container" style={{ height: "400px" }}>
+                    <div className="chart-container" style={{ height: '400px' }}>
                       <Bar data={customersChartData} options={commonChartOptions} />
                     </div>
                   )}
                 </Card.Body>
               </Card>
             </Col>
-  
-            {/* Sales by Category */}
+
             <Col lg={5} md={12}>
               <Card className="shadow-sm border-0 h-100">
                 <Card.Header className="bg-white border-0 py-3">
@@ -364,8 +321,7 @@ const DashboardCharts = memo((userRole) => {
       )}
     </div>
   );
-  
+}
 
-});
-
-export default DashboardCharts;
+// 2) Wrap in memo and export
+export default memo(DashboardCharts);
