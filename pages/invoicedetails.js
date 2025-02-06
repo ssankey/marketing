@@ -3,52 +3,7 @@ import { getInvoiceDetail, getInvoiceStatusFlow } from 'lib/models/invoices';
 import { useRouter } from 'next/router';
 import mermaid from 'mermaid';
 import { useEffect } from 'react';
-// Create a new component for the status flow diagram
-
-const StatusFlowDiagram = ({ status }) => {
-  useEffect(() => {
-    mermaid.initialize({ startOnLoad: true });
-  }, []);
-  if (!status) return null;
-
-  // Ensure all required values exist with fallbacks
-  const orderNum = status.OrderNum || 'N/A';
-  const deliveryNum = status.DeliveryNum || 'N/A';
-  const invoiceNum = status.InvoiceNum || 'N/A';
-  const paymentStatus = status.PaymentStatus || 'PENDING';
-
-  const mermaidDefinition = `
-  graph LR
-    SO[Order #${orderNum}]
-    DL[Delivery #${deliveryNum}]
-    INV[Invoice #${invoiceNum}]
-    PAY[Payment]
-    
-    SO --> DL
-    DL --> INV
-    INV --> PAY
-    
-    classDef complete fill:#90EE90,stroke:#333,stroke-width:2px
-    classDef inProgress fill:#FFD700,stroke:#333,stroke-width:2px
-    classDef pending fill:#D3D3D3,stroke:#333,stroke-width:2px
-
-    class SO ${status.OrderStatus === 'CLOSED' ? 'complete' : status.OrderStatus === 'OPEN' ? 'inProgress' : 'pending'}
-    class DL ${status.DeliveryStatus === 'CLOSED' ? 'complete' : status.DeliveryStatus === 'OPEN' ? 'inProgress' : 'pending'}
-    class INV ${status.InvoiceStatus === 'CLOSED' ? 'complete' : status.InvoiceStatus === 'OPEN' ? 'inProgress' : 'pending'}
-    class PAY ${paymentStatus === 'PAID' ? 'complete' : paymentStatus === 'PARTIALLY PAID' ? 'inProgress' : 'pending'}
-`;
-
-  return (
-    <div className="mb-6">
-      <h2 className="text-xl font-semibold mb-4">Order Status Flow</h2>
-      <div className="border rounded-lg p-4 bg-white shadow-sm">
-        <div className="mermaid">
-          {mermaidDefinition}
-        </div>
-      </div>
-    </div>
-  );
-};
+import StatusFlowProgress from '../components/StatusFlow';
 
 
 
@@ -78,6 +33,7 @@ export default function InvoiceDetailsPage({ invoice, status, error }) {
   return (
     <div className="p-6">
       {/* <StatusFlowDiagram status={status} /> */}
+      {/* <StatusFlowProgress status={status} /> */}
       <InvoiceDetails invoice={invoice} />
     </div>
   );

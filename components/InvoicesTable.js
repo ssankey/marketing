@@ -111,15 +111,15 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       render: (value) => value || "N/A",
     },
     {
-      field: "LineTotal",
-      label: "Line Total",
-      render: (value) => formatCurrency(value),
+      field: "TransportName",
+      label: "Shipment",
+      render: (value) =>  value || "N/A",
     },
-    {
-      field: "TaxAmount",
-      label: "Tax Amount",
-      render: (value) => formatCurrency(value),
-    },
+    // {
+    //   field: "TaxAmount",
+    //   label: "Tax Amount",
+    //   render: (value) => formatCurrency(value),
+    // },
     {
       field: "InvoiceTotal",
       label: "Invoice Total",
