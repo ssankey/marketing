@@ -1,13 +1,10 @@
-
-
-
 import { verify } from 'jsonwebtoken';
 import sql from 'mssql';
 import { queryDatabase } from '../../lib/db';
 
 export default async function handler(req, res) {
     try {
-        const { year, slpCode, itmsGrpCod, itemCode } = req.query; // Accept SlpCode & ItmsGrpCod as input
+        const { year, slpCode, itmsGrpCod, itemCode } = req.query;
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -26,9 +23,6 @@ export default async function handler(req, res) {
             console.error('Token verification failed:', verifyError);
             return res.status(401).json({ error: 'Token verification failed' });
         }
-
-       
-
 
         let baseQuery = `
             SELECT 
@@ -59,9 +53,16 @@ export default async function handler(req, res) {
             WHERE T0.CANCELED = 'N'
         `;
 
-        // Prepare conditions dynamically based on provided parameters
         let whereClauses = [];
         let params = [];
+
+        // Add CardCode condition if user is not admin
+        if (!decoded.isAdmin && decoded.cardCodes && decoded.cardCodes.length > 0) {
+            whereClauses.push(`T0.CardCode IN (${decoded.cardCodes.map((_, i) => `@cardCode${i}`).join(', ')})`);
+            decoded.cardCodes.forEach((cardCode, i) => {
+                params.push({ name: `cardCode${i}`, type: sql.VarChar, value: cardCode });
+            });
+        }
 
         if (year) {
             whereClauses.push(`YEAR(T0.DocDate) = @year`);
@@ -78,18 +79,15 @@ export default async function handler(req, res) {
             params.push({ name: 'itmsGrpCod', type: sql.VarChar, value: itmsGrpCod });
         }
 
-        // Add product filter
         if (itemCode) {
             whereClauses.push(`T3.ItemCode = @itemCode`);
             params.push({ name: 'itemCode', type: sql.VarChar, value: itemCode });
         }
 
-        // Add WHERE clauses if there are conditions
         if (whereClauses.length > 0) {
             baseQuery += ` AND ` + whereClauses.join(' AND ');
         }
 
-        // Complete the query with GROUP BY and ORDER BY
         const fullQuery = `
             ${baseQuery}
             GROUP BY YEAR(T0.DocDate), DATENAME(MONTH, T0.DocDate), MONTH(T0.DocDate)
@@ -106,7 +104,6 @@ export default async function handler(req, res) {
             grossMargin: parseFloat(row.grossMargin) || 0,
         }));
 
-        // Get available years for filtering
         const yearsQuery = `
             SELECT DISTINCT YEAR(DocDate) as year
             FROM OINV

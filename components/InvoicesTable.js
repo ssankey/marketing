@@ -1,4 +1,3 @@
-// components/InvoicesTable.js
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
@@ -39,7 +38,6 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     handleReset,
   } = useTableFilters();
 
-  // Update display state based on props
   useEffect(() => {
     setDisplayState(prev => ({
       hasData: invoices.length > 0,
@@ -47,6 +45,18 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     }));
   }, [isLoading, invoices]);
 
+  // 1) Flatten data: each line item becomes its own row
+  const flattenedData = invoices.flatMap(inv => {
+    if (!inv.lineItems || inv.lineItems.length === 0) {
+      return [inv];
+    }
+    return inv.lineItems.map(item => ({
+      ...inv,
+      ...item,
+    }));
+  });
+
+  // 2) Define columns for both invoice and line-item data
   const columns = [
     {
       field: "DocNum",
@@ -81,59 +91,42 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       render: (value) => formatDate(value),
     },
     {
-      field: "PODate",
-      label: "PO Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "CustomerPONo",
-      label: "Customer PONo",
-      render: (value) => value || "N/A",
-    },
-    {
       field: "CardName",
       label: "Customer",
       render: (value) => value || "N/A",
     },
+    // ... any other invoice-level columns you want
+
+    // Now item-level columns
     {
-      field: "DocDueDate",
-      label: "Due Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "PaymentStatus",
-      label: "Payment Status",
+      field: "ItemCode",
+      label: "Item Code",
       render: (value) => value || "N/A",
     },
     {
-      field: "TradeType",
-      label: "Trade Type",
+      field: "ItemName",
+      label: "Item Name",
       render: (value) => value || "N/A",
     },
     {
-      field: "TransportName",
-      label: "Shipment",
-      render: (value) =>  value || "N/A",
+      field: "u_Casno",
+      label: "CAS No",
+      render: (value) => value || "N/A",
     },
-    // {
-    //   field: "TaxAmount",
-    //   label: "Tax Amount",
-    //   render: (value) => formatCurrency(value),
-    // },
     {
-      field: "InvoiceTotal",
-      label: "Invoice Total",
+      field: "Quantity",
+      label: "Qty",
+      render: (value) => (value != null ? value : "N/A"),
+    },
+    {
+      field: "Price",
+      label: "Price",
       render: (value) => formatCurrency(value),
     },
     {
-      field: "DocCur",
-      label: "Currency",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "SalesEmployee",
-      label: "Sales Employee",
-      render: (value) => value || "N/A",
+      field: "LineTotal",
+      label: "Line Total",
+      render: (value) => formatCurrency(value),
     },
   ];
 
@@ -180,13 +173,13 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       <>
         <GenericTable
           columns={columns}
-          data={invoices}
+          data={flattenedData}  // <-- flattened data
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
           onExcelDownload={handleExcelDownload}
         />
-        {!isLoading && invoices.length === 0 && (
+        {!isLoading && flattenedData.length === 0 && (
           <div className="text-center py-4">No invoices found.</div>
         )}
       </>
@@ -199,7 +192,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
         searchConfig={{
           enabled: true,
           placeholder: "Search invoices...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemName"],
+          fields: ["DocNum", "CardName", "ItemCode", "ItemName","u_Casno"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
