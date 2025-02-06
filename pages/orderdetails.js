@@ -1,17 +1,14 @@
 // pages/orderdetails.js
-
 import { useRouter } from 'next/router';
 import OrderDetails from 'components/OrderDetails';
 import { getOrderDetails } from 'lib/models/orders';
 
 export default function OrderDetailsPage({ order, error }) {
   const router = useRouter();
-  console.log('order',order);
   
   if (error) {
     return <div>Error loading order details: {error}</div>;
   }
-
   if (!order) {
     return <div>Order not found.</div>;
   }
@@ -34,31 +31,30 @@ export async function getServerSideProps(context) {
     }
 
     // Helper function to safely convert dates
-    const serializeDate = (date) => date ? new Date(date).toISOString() : null;
+    const serializeDate = (date) => (date ? new Date(date).toISOString() : null);
 
-    // Process all date fields including the new invoice-related dates
+    // Convert date fields
     const processedOrder = {
       ...order,
       DocDate: serializeDate(order.DocDate),
       DocDueDate: serializeDate(order.DocDueDate),
       ShipDate: serializeDate(order.ShipDate),
       InvoiceDate: serializeDate(order.InvoiceDate),
-      LineItems: order.LineItems.map(item => ({
+      LineItems: order.LineItems.map((item) => ({
         ...item,
         ShipDate: serializeDate(item.ShipDate),
-        InvoiceDate: serializeDate(item.InvoiceDate)
-      }))
+        // If there's an invoice date in the lines, you can convert similarly:
+        // InvoiceDate: serializeDate(item.InvoiceDate),
+      })),
     };
 
     return {
-      props: { order: processedOrder }
+      props: { order: processedOrder },
     };
   } catch (error) {
-    console.error('Error fetching order details:', error);
+    console.error("Error fetching order details:", error);
     return {
-      props: { error: 'Failed to fetch order details' }
+      props: { error: "Failed to fetch order details" },
     };
   }
 }
-
-
