@@ -70,11 +70,7 @@ export default async function handler(req, res) {
             return res.status(401).json({ message: 'User Not Found' });
         }
 
-        if (!password) {
-            return res.status(200).json({
-                message: 'SHOW_PASSWORD_FIELD'
-            });
-        }
+     
 
         const contactCodes = results.map(user => user.CntctCode.toString().trim());
         const userWithPassword = results.find(user => user.Password && user.Password.trim() !== '');
@@ -95,6 +91,12 @@ export default async function handler(req, res) {
                 message: 'PASSWORD_NOT_SET',
                 token,
                 email
+            });
+        }
+
+        if (!password) {
+            return res.status(200).json({
+                message: 'SHOW_PASSWORD_FIELD'
             });
         }
 

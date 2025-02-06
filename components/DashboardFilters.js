@@ -100,14 +100,14 @@ const DashboardFilters = ({
   };
 
   const handleReset = () => {
-    setDateFilter("today");
+    setDateFilter("thisMonth");
     setStartDate("");
     setEndDate("");
     setRegion("");
     setCustomer("");
 
     const resetFilters = {
-      dateFilter: "today",
+      dateFilter: "thisMonth",
       startDate: "",
       endDate: "",
       region: "",
