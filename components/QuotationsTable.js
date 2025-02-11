@@ -72,7 +72,16 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     {
       field: "DocStatus",
       label: "Status",
-      render: (value) => <StatusBadge status={value} />,
+      // render: (value) => <StatusBadge status={value} />,
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "Closed" ? "bg-success" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
     },
     {
       field: "DocDate",
@@ -128,7 +137,7 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const filteredQuotations = await response.json();
+      const filteredQuotations = await response.json(); 
 
       if (filteredQuotations && filteredQuotations.length > 0) {
         downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);

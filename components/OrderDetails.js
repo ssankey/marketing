@@ -227,14 +227,15 @@ const OrderDetails = ({ order }) => {
                       <th>Stock</th>
                       <th>Status</th>
                       <th>Description</th>
-                      <th>Warehouse</th>
+                      {/* <th>Warehouse</th> */}
+                       <th>Delivery Date</th>
                       <th>Quantity</th>
                       <th>Unit</th>
                       <th>Price</th>
                       <th>Discount (%)</th>
                       <th>Tax Code</th>
                       <th>Line Total</th>
-                      <th>Delivery Date</th>
+                      {/* <th>Delivery Date</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -265,14 +266,16 @@ const OrderDetails = ({ order }) => {
                           <td>{product.StockStatus}</td>
                           <td>{product.LineStatus}</td>
                           <td>{product.Description}</td>
-                          <td>{product.WhsCode}</td>
+                          {/* <td>{product.WhsCode}</td> */}
+                          <td>{formatDate(product.ShipDate)}</td>
+
                           <td>{product.Quantity}</td>
                           <td>{product.UnitMsr}</td>
                           <td>{formatCurrency(product.Price)}</td>
                           <td>{product.DiscountPercent || 0}%</td>
                           <td>{product.TaxCode || "N/A"}</td>
                           <td>{formatCurrency(lineTotal)}</td>
-                          <td>{formatDate(product.ShipDate)}</td>
+                          {/* <td>{formatDate(product.ShipDate)}</td> */}
                         </tr>
                       );
                     })}

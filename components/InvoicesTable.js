@@ -83,7 +83,16 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     {
       field: "DocStatus",
       label: "Status",
-      render: (value) => <StatusBadge status={value} />,
+      // render: (value) => <StatusBadge status={value} />,
+       render: (value) => (
+        <span
+          className={`badge ${
+            value === "Closed" ? "bg-success" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
     },
     {
       field: "DocDate",
