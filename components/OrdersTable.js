@@ -73,7 +73,16 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
     {
       field: "DocStatus",
       label: "Order Status",
-      render: (value) => <StatusBadge status={value.toLowerCase()} />,
+      // render: (value) => <StatusBadge status={value.toLowerCase()} />,
+       render: (value) => (
+        <span
+          className={`badge ${
+            value === "Closed" ? "bg-success" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
     },
     {
       field: "CustomerPONo",
