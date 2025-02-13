@@ -70,12 +70,14 @@ export async function getServerSideProps(context) {
     // Convert Date fields to strings and handle null values
     const processedInvoice = {
       ...invoice,
-      DocDate: invoice.DocDate?.toISOString() || null,
-      DocDueDate: invoice.DocDueDate?.toISOString() || null,
-      ShipDate: invoice.ShipDate?.toISOString() || null,
+      DocDate: invoice.DocDate ? new Date(invoice.DocDate).toISOString() : null,
+      DocDueDate: invoice.DocDueDate ? new Date(invoice.DocDueDate).toISOString() : null,
+      ShipDate: invoice.ShipDate ? new Date(invoice.ShipDate).toISOString() : null,
+      SODate: invoice.SODate ? new Date(invoice.SODate).toISOString() : null,
       LineItems: invoice.LineItems?.map((item) => ({
         ...item,
-        ShipDate: item.ShipDate?.toISOString() || null,
+        ShipDate: item.ShipDate ? new Date(item.ShipDate).toISOString() : null,
+        SODate: item.SODate ? new Date(item.SODate).toISOString() : null,
       })) || [],
     };
 

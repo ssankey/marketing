@@ -30,21 +30,23 @@ export async function getServerSideProps(context) {
       return { notFound: true };
     }
 
-    // Helper function to safely convert dates
+    // Helper function to safely convert dates to ISO strings
     const serializeDate = (date) => (date ? new Date(date).toISOString() : null);
 
-    // Convert date fields
+    // Convert date fields on the order header and line items
     const processedOrder = {
       ...order,
       DocDate: serializeDate(order.DocDate),
       DocDueDate: serializeDate(order.DocDueDate),
       ShipDate: serializeDate(order.ShipDate),
       InvoiceDate: serializeDate(order.InvoiceDate),
+      DeliveryDate: serializeDate(order.DeliveryDate),      // Serialize DeliveryDate
+      DispatchDate: serializeDate(order.DispatchDate),      // Serialize DispatchDate
       LineItems: order.LineItems.map((item) => ({
         ...item,
         ShipDate: serializeDate(item.ShipDate),
-        // If there's an invoice date in the lines, you can convert similarly:
-        // InvoiceDate: serializeDate(item.InvoiceDate),
+        InvoiceDeliveryDate: serializeDate(item.InvoiceDeliveryDate),
+        InvoiceDispatchDate: serializeDate(item.InvoiceDispatchDate),
       })),
     };
 
@@ -58,3 +60,4 @@ export async function getServerSideProps(context) {
     };
   }
 }
+
