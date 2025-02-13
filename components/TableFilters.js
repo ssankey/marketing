@@ -148,7 +148,7 @@ const TableFilters = ({
             placeholder={searchConfig.placeholder}
             value={searchTerm}
             onChange={(e) => onSearch(e.target.value)}
-            size="sm"
+            size="md"
           />
         </Col>
       )}
@@ -156,7 +156,7 @@ const TableFilters = ({
       {/* Status Filter Buttons */}
       {statusFilter.enabled && (
         <Col xs="auto">
-          <ButtonGroup size="sm">
+          <ButtonGroup size="md">
             <Button
               variant={
                 statusFilter.value === "all" ? "primary" : "outline-primary"
@@ -187,7 +187,7 @@ const TableFilters = ({
         <Col xs="auto" ref={categoryContainerRef} className="position-relative">
           <div className="position-relative" style={{ width: "200px" }}>
             <Form.Control
-              size="sm"
+              size="md"
               placeholder="Type or select category..."
               value={categorySearch}
               onChange={(e) => {
@@ -257,7 +257,7 @@ const TableFilters = ({
                 onDateFilterChange({ fromDate: e.target.value, toDate })
               }
               placeholder="From Date"
-              size="sm"
+              size="md"
             />
           </Col>
 
@@ -269,7 +269,7 @@ const TableFilters = ({
                 onDateFilterChange({ fromDate, toDate: e.target.value })
               }
               placeholder="To Date"
-              size="sm"
+              size="md"
             />
           </Col>
         </>
@@ -280,7 +280,7 @@ const TableFilters = ({
 
       {/* Reset Button */}
       <Col xs="auto">
-        <Button variant="outline-secondary" size="sm" onClick={handleResetClick}>
+        <Button variant="outline-secondary" size="md" onClick={handleResetClick}>
           Reset
         </Button>
       </Col>

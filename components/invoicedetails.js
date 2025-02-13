@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Container, Row, Col, Card, Table, Spinner, Button ,Alert} from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Spinner, Button ,Alert, Badge} from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 
@@ -253,6 +253,7 @@ const InvoiceDetails = ({ invoice }) => {
                     <tr>
                       <th className="text-nowrap">Line #</th>
                       <th className="text-nowrap">Item Code</th>
+                      <th className="text-nowrap">SO Number</th>
                        <th className="text-nowrap">Status</th>
                       <th className="text-nowrap">Description</th>
                       
@@ -280,7 +281,12 @@ const InvoiceDetails = ({ invoice }) => {
                         <tr key={index}>
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
-                           <td className="text-nowrap">{product.LineStatus}</td>
+                          <td className="text-nowrap">{product.SONumber ? product.SONumber : '-'}</td>
+                          <td className="text-nowrap">
+                            <Badge bg={product.LineStatus === 'Open' ? 'danger' : 'success'}>
+                              {product.LineStatus}
+                            </Badge>
+                          </td>
                           <td className="text-nowrap">{product.Description}</td>
                           <td className="text-nowrap">{product.WhsCode}</td>
                           <td className="text-nowrap">{quantity}</td>

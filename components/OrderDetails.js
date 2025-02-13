@@ -8,6 +8,8 @@ import {
   Card,
   Table,
   Spinner,
+  OverlayTrigger,
+  Tooltip,
   Button,
   Alert,
 } from "react-bootstrap";
@@ -18,7 +20,7 @@ import Link from "next/link";
 
 const OrderDetails = ({ order }) => {
   const router = useRouter();
-
+  console.log('order', order)
   // Loading fallback (optional for SSR)
   if (router.isFallback) {
     return (
@@ -40,7 +42,7 @@ const OrderDetails = ({ order }) => {
 
   // Example grouping by an 'ItemGroup' if you had it
   const groupedProducts = order.LineItems.reduce((acc, product) => {
-    const groupKey = product.ItemGroup || "General"; 
+    const groupKey = product.ItemGroup || "General";
     if (!acc[groupKey]) {
       acc[groupKey] = [];
     }
@@ -220,22 +222,22 @@ const OrderDetails = ({ order }) => {
                 <Table responsive striped hover>
                   <thead>
                     <tr>
-                      <th>Line #</th>
-                      <th>Item Code</th>
-                      <th>CAS No</th>
-                      <th>Invoice No</th>
-                      <th>Stock</th>
-                      <th>Status</th>
-                      <th>Description</th>
-                      {/* <th>Warehouse</th> */}
-                       <th>Delivery Date</th>
-                      <th>Quantity</th>
-                      <th>Unit</th>
-                      <th>Price</th>
-                      <th>Discount (%)</th>
-                      <th>Tax Code</th>
-                      <th>Line Total</th>
-                      {/* <th>Delivery Date</th> */}
+                      <th className="text-nowrap">Line #</th>
+                      <th className="text-nowrap">Item Code</th>
+                      <th className="text-nowrap">CAS No</th>
+                      <th className="text-nowrap">Invoice No</th>
+                      <th className="text-nowrap">Stock</th>
+                      <th className="text-nowrap">Status</th>
+                      <th className="text-nowrap">Description</th>
+                      {/* <th className="text-nowrap">Warehouse</th> */}
+                      <th className="text-nowrap">Delivery Date</th>
+                      <th className="text-nowrap">Quantity</th>
+                      <th className="text-nowrap">Unit</th>
+                      <th className="text-nowrap">Price</th>
+                      <th className="text-nowrap">Discount (%)</th>
+                      <th className="text-nowrap">Tax Code</th>
+                      <th className="text-nowrap">Line Total</th>
+                      {/* <th className="text-nowrap">Delivery Date</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -249,33 +251,55 @@ const OrderDetails = ({ order }) => {
 
                       return (
                         <tr key={index}>
-                          <td>{product.LineNum + 1}</td>
-                          <td>{product.ItemCode}</td>
-                          <td>{product.U_CasNo}</td>
-                          <td>
+                          <td className="text-nowrap">{product.LineNum + 1}</td>
+                          <td className="text-nowrap">{product.ItemCode}</td>
+                          <td className="text-nowrap">{product.U_CasNo ? product.U_CasNo : '-'}</td>
+                          <td className="text-nowrap">
                             {invoiceNumber !== "N/A" ? (
-                              <Link
-                                href={`/invoicedetails?d=${invoiceNumber}&e=${invoiceDocEntry}`}
+                              <OverlayTrigger
+                                placement="top"
+                                overlay={
+                                  <Tooltip id={`tooltip-invoice-${product.LineNum}`}>
+                                    <div>
+                                      <strong>Track No:</strong> {product.InvoiceTrackingNumber || "N/A"}
+                                    </div>
+                                    <div>
+                                      <strong>Delivery Date:</strong>{" "}
+                                      {product.InvoiceDeliveryDate ? formatDate(product.InvoiceDeliveryDate) : "N/A"}
+                                    </div>
+                                    <div>
+                                      <strong>Dispatch Date:</strong>{" "}
+                                      {product.InvoiceDispatchDate ? formatDate(product.InvoiceDispatchDate) : "N/A"}
+                                    </div>
+                                    <div>
+                                      <strong>Airlinename:</strong>{" "}
+                                      {product.Airlinename ? product.Airlinename : "N/A"}
+                                    </div>
+                                  </Tooltip>
+                                }
                               >
-                                {invoiceNumber}
-                              </Link>
+                                <span className="text-primary" style={{ cursor: 'pointer' }}>
+                                  {invoiceNumber}
+                                </span>
+                              </OverlayTrigger>
                             ) : (
                               "N/A"
                             )}
                           </td>
-                          <td>{product.StockStatus}</td>
-                          <td>{product.LineStatus}</td>
-                          <td>{product.Description}</td>
-                          {/* <td>{product.WhsCode}</td> */}
-                          <td>{formatDate(product.ShipDate)}</td>
 
-                          <td>{product.Quantity}</td>
-                          <td>{product.UnitMsr}</td>
-                          <td>{formatCurrency(product.Price)}</td>
-                          <td>{product.DiscountPercent || 0}%</td>
-                          <td>{product.TaxCode || "N/A"}</td>
-                          <td>{formatCurrency(lineTotal)}</td>
-                          {/* <td>{formatDate(product.ShipDate)}</td> */}
+                          <td className="text-nowrap">{product.StockStatus}</td>
+                          <td className="text-nowrap">{product.LineStatus}</td>
+                          <td className="text-nowrap">{product.Description}</td>
+                          {/* <td className="text-nowrap">{product.WhsCode}</td> */}
+                          <td className="text-nowrap">{formatDate(product.ShipDate)}</td>
+
+                          <td className="text-nowrap">{product.Quantity}</td>
+                          <td className="text-nowrap">{product.UnitMsr}</td>
+                          <td className="text-nowrap">{formatCurrency(product.Price)}</td>
+                          <td className="text-nowrap">{product.DiscountPercent || 0}%</td>
+                          <td className="text-nowrap">{product.TaxCode || "N/A"}</td>
+                          <td className="text-nowrap">{formatCurrency(lineTotal)}</td>
+                          {/* <td className="text-nowrap">{formatDate(product.ShipDate)}</td> */}
                         </tr>
                       );
                     })}
