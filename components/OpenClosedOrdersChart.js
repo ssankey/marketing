@@ -1,10 +1,9 @@
-//components/OpenClosedOrdersChart.js
-import React, { useState, useEffect } from "react";
+// components/OpenClosedOrdersChart.js
+import React, { useState, useEffect, useRef } from "react";
 import { Bar } from "react-chartjs-2";
 import { Card, Button, Spinner, Dropdown, Table } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import { useRouter } from "next/router";
-import { useRef } from "react";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import LoadingSpinner from "../components/LoadingSpinner";
 
@@ -28,15 +27,35 @@ ChartJS.register(
   ChartDataLabels
 );
 
+// Mapping full month names to their corresponding 0-indexed month numbers.
+const monthMapping = {
+  January: 0,
+  February: 1,
+  March: 2,
+  April: 3,
+  May: 4,
+  June: 5,
+  July: 6,
+  August: 7,
+  September: 8,
+  October: 9,
+  November: 10,
+  December: 11,
+};
+
+// Helper function to format month-year labels
+const formatMonthYear = (year, month) => {
+  const monthIndex = monthMapping[month];
+  if (monthIndex === undefined) {
+    return "Invalid Date";
+  }
+  const date = new Date(year, monthIndex);
+  return date.toLocaleDateString("default", { month: "short", year: "numeric" });
+};
+
 const OrdersChart = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [ordersData, setOrdersData] = useState([]);
-  const [availableYears, setAvailableYears] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [filters, setFilters] = useState({
-    customer: null,
-    region: null,
-  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -44,6 +63,7 @@ const OrdersChart = () => {
     primary: "#0d6efd",
     orderLine: "#198754",
   };
+
   const chartRef = useRef(null);
   const router = useRouter();
 
@@ -52,23 +72,31 @@ const OrdersChart = () => {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/monthly-orders?year=${selectedYear}`, {
+      const token = localStorage.getItem("token");
+      // Remove the year query to fetch data for all years.
+      const response = await fetch(`/api/monthly-orders`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch orders data');
+        throw new Error("Failed to fetch orders data");
       }
 
-      const { data, availableYears } = await response.json();
-      setOrdersData(data);
-      setAvailableYears(availableYears);
+      const { data } = await response.json();
+
+      // Sort the data chronologically using year and month.
+      const sortedData = data.sort((a, b) => {
+        const dateA = new Date(a.year, monthMapping[a.month]);
+        const dateB = new Date(b.year, monthMapping[b.month]);
+        return dateA - dateB;
+      });
+
+      setOrdersData(sortedData);
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching orders data:', err);
+      console.error("Error fetching orders data:", err);
       setOrdersData([]);
     } finally {
       setLoading(false);
@@ -77,10 +105,13 @@ const OrdersChart = () => {
 
   useEffect(() => {
     fetchOrdersData();
-  }, [selectedYear]);
+  }, []);
+
+  // Create labels in month-year format.
+  const labels = ordersData.map((data) => formatMonthYear(data.year, data.month));
 
   const ordersChartData = {
-    labels: ordersData.map((data) => data.month),
+    labels,
     datasets: [
       {
         label: "Open Orders",
@@ -91,15 +122,15 @@ const OrdersChart = () => {
         barPercentage: 1,
         categoryPercentage: 0.7,
       },
-      {
-        label: "Closed Orders",
-        data: ordersData.map((data) => data.closedOrders || 0),
-        backgroundColor: colorPalette.orderLine,
-        borderColor: colorPalette.orderLine,
-        borderWidth: 1,
-        barPercentage: 1,
-        categoryPercentage: 0.7,
-      },
+      // {
+      //   label: "Closed Orders",
+      //   data: ordersData.map((data) => data.closedOrders || 0),
+      //   backgroundColor: colorPalette.orderLine,
+      //   borderColor: colorPalette.orderLine,
+      //   borderWidth: 1,
+      //   barPercentage: 1,
+      //   categoryPercentage: 0.7,
+      // },
     ],
   };
 
@@ -178,14 +209,14 @@ const OrdersChart = () => {
       },
     },
     hover: {
-    onHover: (event, elements) => {
-      if (elements.length > 0) {
-        event.native.target.style.cursor = "pointer";
-      } else {
-        event.native.target.style.cursor = "default";
-      }
+      onHover: (event, elements) => {
+        if (elements.length > 0) {
+          event.native.target.style.cursor = "pointer";
+        } else {
+          event.native.target.style.cursor = "default";
+        }
+      },
     },
-  },
     onClick: (event, elements) => {
       if (elements.length > 0) {
         const chart = chartRef.current;
@@ -194,13 +225,16 @@ const OrdersChart = () => {
         const datasetIndex = elements[0].datasetIndex;
         const dataIndex = elements[0].index;
 
-        const selectedMonth = ordersData[dataIndex].month; // e.g., "January"
+        // Use the record's year and month.
+        const { year, month } = ordersData[dataIndex];
         const status = datasetIndex === 0 ? "open" : "closed"; // 0: Open Orders, 1: Closed Orders
 
-        // Convert month name to numeric value
-        const monthIndex = new Date(Date.parse(`${selectedMonth} 1, ${selectedYear}`)).getMonth() + 1;
-        const fromDate = `${selectedYear}-${String(monthIndex).padStart(2, "0")}-01`;
-        const toDate = new Date(selectedYear, monthIndex, 0).toISOString().split("T")[0]; // Last day of month
+        // Convert month name to numeric value using Date.parse.
+        // Alternatively, you can use the mapping: monthMapping[month] + 1
+        const monthIndex = new Date(Date.parse(`${month} 1, ${year}`)).getMonth() + 1;
+        const fromDate = `${year}-${String(monthIndex).padStart(2, "0")}-01`;
+        // Create a date for the last day of the month by using 0 as the day of the next month.
+        const toDate = new Date(year, monthIndex, 0).toISOString().split("T")[0];
 
         // Navigate using router.push
         router.push({
@@ -219,41 +253,22 @@ const OrdersChart = () => {
   const exportToCSV = () => {
     if (!ordersData.length) return;
     const csvData = [
-      ['Month', ...ordersData.map((data) => data.month)],
-      ['Open Orders', ...ordersData.map((data) => data.openOrders || 0)],
-      ['Closed Orders', ...ordersData.map((data) => data.closedOrders || 0)],
-      ['Open Orders (Sales)', ...ordersData.map((data) => formatCurrency(data.openSales || 0))],
-      ['Closed Orders (Sales)', ...ordersData.map((data) => formatCurrency(data.closedSales || 0))],
+      ["Month", ...labels],
+      ["Open Orders", ...ordersData.map((data) => data.openOrders || 0)],
+      ["Closed Orders", ...ordersData.map((data) => data.closedOrders || 0)],
+      ["Open Orders (Sales)", ...ordersData.map((data) => formatCurrency(data.openSales || 0))],
+      ["Closed Orders (Sales)", ...ordersData.map((data) => formatCurrency(data.closedSales || 0))],
     ];
 
-    const csvContent = csvData.map((row) => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = csvData.map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
 
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.setAttribute('download', 'orders_data.csv');
+    link.setAttribute("download", "orders_data.csv");
     link.click();
   };
-
-  const YearSelector = () => (
-    <Dropdown>
-      <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
-        {selectedYear}
-      </Dropdown.Toggle>
-      <Dropdown.Menu>
-        {availableYears.map(year => (
-          <Dropdown.Item 
-            key={year} 
-            onClick={() => setSelectedYear(year)}
-            active={year === selectedYear}
-          >
-            {year}
-          </Dropdown.Item>
-        ))}
-      </Dropdown.Menu>
-    </Dropdown>
-  );
 
   return (
     <>
@@ -269,7 +284,9 @@ const OrdersChart = () => {
             </h4>
             <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
               <div className="d-flex gap-2">
-                <YearSelector />
+                {/* The YearSelector has been removed since we are showing data for all years */}
+                {/* <YearSelector /> */}
+                {/* Uncomment the button below if you want CSV export functionality */}
                 {/* <Button
                   variant="outline-primary"
                   onClick={exportToCSV}
@@ -283,11 +300,9 @@ const OrdersChart = () => {
           </div>
         </Card.Header>
         <Card.Body>
-          {error && (
-            <p className="text-center mt-4 text-danger">Error: {error}</p>
-          )}
+          {error && <p className="text-center mt-4 text-danger">Error: {error}</p>}
           {loading ? (
-            <div className="d-flex justify-content-center align-items-center" style={{ height: '500px' }}>
+            <div className="d-flex justify-content-center align-items-center" style={{ height: "500px" }}>
               <Spinner animation="border" role="status" className="me-2">
                 <span className="visually-hidden">Loading...</span>
               </Spinner>
@@ -295,50 +310,46 @@ const OrdersChart = () => {
             </div>
           ) : ordersData.length ? (
             <>
-              <div className="chart-container" style={{ height: '500px', width: '100%' }}>
+              <div className="chart-container" style={{ height: "500px", width: "100%" }}>
                 <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
               </div>
+
               <div className="mt-4">
                 <Table striped bordered hover responsive>
                   <thead>
                     <tr>
-                      <th>Metric</th>
-                      {ordersData.map((data) => (
-                        <th key={data.month}>{data.month}</th>
-                      ))}
+                      <th>Month</th>
+                      <th>Open Orders</th>
+                      <th>Open Orders Sales</th>
+                      {/* <th>Closed Orders</th>
+                      <th>Closed Orders Sales</th>
+                      <th>Total Orders</th>
+                      <th>Total Sales</th> */}
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td>Open Orders</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>{data.openOrders || 0}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td>Closed Orders</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>{data.closedOrders || 0}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td>Open Orders Sales</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>{formatCurrency(data.openSales || 0)}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td>Closed Orders Sales</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>{formatCurrency(data.closedSales || 0)}</td>
-                      ))}
-                    </tr>
+                    {ordersData.map((data) => {
+                      const totalOrders = (data.openOrders || 0) + (data.closedOrders || 0);
+                      const totalSales = (data.openSales || 0) + (data.closedSales || 0);
+                      return (
+                        <tr key={`${data.year}-${data.month}`}>
+                          <td>{formatMonthYear(data.year, data.month)}</td>
+                          <td>{data.openOrders || 0}</td>
+                          <td>{formatCurrency(data.openSales || 0)}</td>
+                          {/* <td>{data.closedOrders || 0}</td>
+                          <td>{formatCurrency(data.closedSales || 0)}</td>
+                          <td>{totalOrders}</td>
+                          <td>{formatCurrency(totalSales)}</td> */}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </Table>
               </div>
+
             </>
           ) : (
-            <p className="text-center mt-4">No data available for the selected filters.</p>
+            <p className="text-center mt-4">No data available.</p>
           )}
         </Card.Body>
       </Card>

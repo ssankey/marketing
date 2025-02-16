@@ -13,12 +13,11 @@ export default async function handler(req, res) {
     salesPerson,
     salesCategory,
   } = req.query;
-  console.log('Query params:', req.query);
   
   let computedStartDate = startDate;
   let computedEndDate = endDate;
   let previousStartDate, previousEndDate;
-
+  console.log('startenddate',startDate,endDate,dateFilter)
   const authHeader = req.headers.authorization;
   let token;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -49,21 +48,21 @@ export default async function handler(req, res) {
 
       previousStartDate = previousWeekStart.toISOString().split('T')[0];
       previousEndDate = previousWeekEnd.toISOString().split('T')[0];
-    } else if (dateFilter === 'thisMonth') {
+    } if (dateFilter === 'thisMonth') {
+      // Current month (February 2025)
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-      computedStartDate = firstDayOfMonth.toISOString().split('T')[0];
-      computedEndDate = lastDayOfMonth.toISOString().split('T')[0];
-
-      const previousMonthStart = new Date(firstDayOfMonth);
-      previousMonthStart.setMonth(firstDayOfMonth.getMonth() - 1);
-      const previousMonthEnd = new Date(lastDayOfMonth);
-      previousMonthEnd.setMonth(lastDayOfMonth.getMonth() - 1);
-
-      previousStartDate = previousMonthStart.toISOString().split('T')[0];
-      previousEndDate = previousMonthEnd.toISOString().split('T')[0];
-    } else if (dateFilter === 'all') {
+    
+      computedStartDate = firstDayOfMonth.toISOString().split('T')[0];  // Should be 2025-02-01
+      computedEndDate = lastDayOfMonth.toISOString().split('T')[0];     // Should be 2025-02-28
+    
+      // Previous month (January 2025)
+      const previousMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    
+      previousStartDate = previousMonthStart.toISOString().split('T')[0];  // Should be 2025-01-01
+      previousEndDate = previousMonthEnd.toISOString().split('T')[0];      // Should be 2025-01-31
+    }else if (dateFilter === 'all') {
       computedStartDate = '';
       computedEndDate = '';
       previousStartDate = '';

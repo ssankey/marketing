@@ -70,20 +70,16 @@ export default async function handler(req, res) {
             return res.status(401).json({ message: 'User Not Found' });
         }
 
-        if (!password) {
-            return res.status(200).json({
-                message: 'SHOW_PASSWORD_FIELD'
-            });
-        }
-
         const contactCodes = results.map(user => user.CntctCode.toString().trim());
+        const cardCodes = [...new Set(results.map(user => user.CardCode.toString().trim()))]; // Unique card codes
         const userWithPassword = results.find(user => user.Password && user.Password.trim() !== '');
 
         if (!userWithPassword) {
             const token = jwt.sign({
                 email,
                 role: 'contact_person',
-                contactCodes
+                contactCodes,
+                cardCodes, // Store multiple card codes
             }, process.env.JWT_SECRET, {
                 expiresIn: process.env.JWT_EXPIRES_IN || '1h'
             });
@@ -98,6 +94,12 @@ export default async function handler(req, res) {
             });
         }
 
+        if (!password) {
+            return res.status(200).json({
+                message: 'SHOW_PASSWORD_FIELD'
+            });
+        }
+
         const isMatch = await bcrypt.compare(password, userWithPassword.Password);
         if (!isMatch) {
             return res.status(401).json({ message: 'Incorrect Password' });
@@ -106,7 +108,8 @@ export default async function handler(req, res) {
         const token = jwt.sign({
             email,
             role: 'contact_person',
-            contactCodes
+            contactCodes,
+            cardCodes, // Store multiple card codes
         }, process.env.JWT_SECRET, {
             expiresIn: process.env.JWT_EXPIRES_IN || '1h'
         });
@@ -121,7 +124,7 @@ export default async function handler(req, res) {
                 email,
                 role: 'contact_person',
                 name: userWithPassword.Name,
-                cardCode: userWithPassword.CardCode,
+                cardCodes, // Return all card codes
                 contactCodes
             }
         });
