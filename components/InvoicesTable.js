@@ -1,5 +1,4 @@
-//components/invoiesTable.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
 import TableFilters from './TableFilters';
@@ -12,16 +11,19 @@ import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
+
 const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   const ITEMS_PER_PAGE = 20;
-
-
-
+  const [displayState, setDisplayState] = useState({
+    hasData: false,
+    showLoading: true
+  });
 
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
+
   const {
     searchTerm,
     statusFilter,
@@ -36,6 +38,25 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     handleReset,
   } = useTableFilters();
 
+  useEffect(() => {
+    setDisplayState(prev => ({
+      hasData: invoices.length > 0,
+      showLoading: isLoading && !prev.hasData
+    }));
+  }, [isLoading, invoices]);
+
+  // 1) Flatten data: each line item becomes its own row
+  const flattenedData = invoices.flatMap(inv => {
+    if (!inv.lineItems || inv.lineItems.length === 0) {
+      return [inv];
+    }
+    return inv.lineItems.map(item => ({
+      ...inv,
+      ...item,
+    }));
+  });
+
+  // 2) Define columns for both invoice and line-item data
   const columns = [
     {
       field: "DocNum",
@@ -62,7 +83,16 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     {
       field: "DocStatus",
       label: "Status",
-      render: (value) => <StatusBadge status={value} />,
+      // render: (value) => <StatusBadge status={value} />,
+       render: (value) => (
+        <span
+          className={`badge ${
+            value === "Closed" ? "bg-success" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
     },
     {
       field: "DocDate",
@@ -70,90 +100,58 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       render: (value) => formatDate(value),
     },
     {
-      field: "PODate",
-      label: "PO Date",
-      render: (value) => formatDate(value),
-    },
-    {
       field: "CardName",
       label: "Customer",
       render: (value) => value || "N/A",
     },
+    // ... any other invoice-level columns you want
+
+    // Now item-level columns
     {
-      field: "DocDueDate",
-      label: "Due Date",
-      render: (value) => formatDate(value),
+      field: "ItemCode",
+      label: "Item Code",
+      render: (value) => value || "N/A",
     },
     {
-      field: "TradeType",
-      label: "Trade Type",
+      field: "ItemName",
+      label: "Item Name",
       render: (value) => value || "N/A",
+    },
+    {
+      field: "u_Casno",
+      label: "CAS No",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "Quantity",
+      label: "Qty",
+      render: (value) => (value != null ? value : "N/A"),
+    },
+    {
+      field: "Price",
+      label: "Price",
+      render: (value) => formatCurrency(value),
     },
     {
       field: "LineTotal",
       label: "Line Total",
       render: (value) => formatCurrency(value),
     },
-    {
-      field: "TaxAmount",
-      label: "Tax Amount",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      field: "InvoiceTotal",
-      label: "Invoice Total",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      field: "DocCur",
-      label: "Currency",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "SalesEmployee",
-      label: "Sales Employee",
-      render: (value) => value || "N/A",
-    },
   ];
-
-  // Define handleExcelDownload function
-  // const handleExcelDownload = () => {
-  //   downloadExcel(invoices, "Invoices");
-  // };
-
-  // const handleExcelDownload = async () => {
-  //   try {
-  //     const response = await fetch("api/excel/getAllInvoices");
-  //     const allInvoices = await response.json();
-  //     if (allInvoices && allInvoices.length > 0) {
-  //       downloadExcel(allInvoices, "Invoices");
-  //     } else {
-  //       alert("No data available to export.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to fetch data for Excel export:", error);
-  //     alert("Failed to export data. Please try again.");
-  //   }
-  // };
 
   const handleExcelDownload = async () => {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
 
-       // Get token from localStorage
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      return;
-    }
-
-      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
-      // const response = await fetch(
-      //   `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`
-      // );
-
+      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+      
       const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const filteredInvoices = await response.json();
 
@@ -168,13 +166,42 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
     }
   };
 
+  const renderContent = () => {
+    if (displayState.showLoading) {
+      return (
+        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
+          <div className="text-center">
+            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <p className="text-gray-600">Loading invoices...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <GenericTable
+          columns={columns}
+          data={flattenedData}  // <-- flattened data
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onExcelDownload={handleExcelDownload}
+        />
+        {!isLoading && flattenedData.length === 0 && (
+          <div className="text-center py-4">No invoices found.</div>
+        )}
+      </>
+    );
+  };
+
   return (
     <Container fluid>
       <TableFilters
         searchConfig={{
           enabled: true,
           placeholder: "Search invoices...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemName"],
+          fields: ["DocNum", "CardName", "ItemCode", "ItemName","u_Casno"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
@@ -196,28 +223,8 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
         onReset={handleReset}
         totalItemsLabel="Total Invoices"
       />
-      {isLoading ? (
-        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading invoices...</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          <GenericTable
-            columns={columns}
-            data={invoices}
-            onSort={handleSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onExcelDownload={handleExcelDownload} // Passing the function as a prop
-          />
-          {invoices.length === 0 && (
-            <div className="text-center py-4">No invoices found.</div>
-          )}
-        </>
-      )}
+
+      {renderContent()}
 
       <TablePagination
         currentPage={currentPage}

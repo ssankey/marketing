@@ -36,7 +36,7 @@ export default async function handler(req, res) {
     const isAdmin = decodedToken.role === "admin";
     // If your JWT includes an array of contactCodes, extract it:
     const contactCodes = decodedToken.contactCodes || [];
-
+    const cardCodes = decodedToken.cardCodes || [];
     // 3) Parse query params
     const {
       page = 1,
@@ -63,7 +63,7 @@ export default async function handler(req, res) {
       sortDir,
       itemsPerPage,
       isAdmin,
-      contactCodes   // pass this down
+      cardCodes   // pass this down
     });
 
     // 5) Return data

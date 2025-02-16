@@ -1,26 +1,23 @@
 // pages/orders/index.js
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
-import LoadingSpinner from "components/LoadingSpinner";
 import OrdersTable from "components/OrdersTable";
 
-/**
- * OrdersPage: Fetches orders client-side from /api/orders with Bearer token.
- */
 export default function OrdersPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-  // Local states
   const [orders, setOrders] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [fetchState, setFetchState] = useState({
+    isInitialLoad: true,
+    isLoading: false,
+    error: null
+  });
 
-  // Grab query params from URL if you support them: ?page=2, etc.
+  // Extract query params from router
   const {
     page = 1,
     search = "",
@@ -31,138 +28,137 @@ export default function OrdersPage() {
     toDate,
   } = router.query;
 
-  /**
-   * Optional: show spinner during route transitions (page changes).
-   */
-  useEffect(() => {
-    const handleStart = () => setIsLoading(true);
-    const handleComplete = () => setIsLoading(false);
-
-    router.events.on("routeChangeStart", handleStart);
-    router.events.on("routeChangeComplete", handleComplete);
-    router.events.on("routeChangeError", handleComplete);
-
-    return () => {
-      router.events.off("routeChangeStart", handleStart);
-      router.events.off("routeChangeComplete", handleComplete);
-      router.events.off("routeChangeError", handleComplete);
-    };
-  }, [router]);
-
-  /**
-   * Fetch orders from /api/orders when user is authenticated.
-   */
-  useEffect(() => {
-    async function fetchOrders() {
-      try {
-        setIsLoading(true);
-
-        // 1) Ensure user is authenticated
-        if (!isAuthenticated) {
-          return;
-        }
-
-        // 2) Get token from localStorage
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("No token found in localStorage");
-          return;
-        }
-
-        // 3) Build query string from router.query
-        const queryParams = new URLSearchParams({
-          page,
-          search,
-          status,
-          sortField,
-          sortDir,
-        });
-        if (fromDate) queryParams.append("fromDate", fromDate);
-        if (toDate) queryParams.append("toDate", toDate);
-
-        // 4) Make the request, including Authorization header
-        const response = await fetch(`/api/orders?${queryParams.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch orders from API");
-        }
-
-        // 5) Parse the JSON result
-        const data = await response.json();
-        setOrders(data.orders || []);
-        setTotalItems(data.totalItems || 0);
-        setCurrentPage(data.currentPage || 1);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  // Memoize fetchOrders to prevent unnecessary recreations
+  const fetchOrders = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      throw new Error("No token found in localStorage");
     }
 
-    fetchOrders();
-  }, [
-    isAuthenticated,
-    page,
-    search,
-    status,
-    sortField,
-    sortDir,
-    fromDate,
-    toDate,
-  ]);
+    const queryParams = new URLSearchParams({
+      page,
+      search,
+      status,
+      sortField,
+      sortDir,
+    });
+    if (fromDate) queryParams.set("fromDate", fromDate);
+    if (toDate) queryParams.set("toDate", toDate);
 
-  /**
-   * If still checking auth, show spinner
-   */
+    const response = await fetch(`/api/orders?${queryParams}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch orders. Status: ${response.status}`);
+    }
+
+    return response.json();
+  }, [page, search, status, sortField, sortDir, fromDate, toDate]);
+
+  // Handle data fetching
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      // Only show loading on initial load or if we have no data
+      setFetchState(prev => ({
+        ...prev,
+        isLoading: prev.isInitialLoad || orders.length === 0,
+        error: null
+      }));
+
+      try {
+        const { orders: newOrders, totalItems: newTotalItems } = await fetchOrders();
+        
+        if (isMounted) {
+          setOrders(newOrders || []);
+          setTotalItems(newTotalItems || 0);
+          setFetchState({
+            isInitialLoad: false,
+            isLoading: false,
+            error: null
+          });
+        }
+      } catch (error) {
+        if (isMounted) {
+          setFetchState({
+            isInitialLoad: false,
+            isLoading: false,
+            error: error.message
+          });
+        }
+      }
+    };
+
+    if (isAuthenticated) {
+      loadData();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, fetchOrders]);
+
+  // Handle route changes
+  useEffect(() => {
+    const handleRouteStart = () => {
+      // Only show loading if we don't have data
+      if (orders.length === 0) {
+        setFetchState(prev => ({ ...prev, isLoading: true }));
+      }
+    };
+
+    const handleRouteEnd = () => {
+      setFetchState(prev => ({ ...prev, isLoading: false }));
+    };
+
+    router.events.on("routeChangeStart", handleRouteStart);
+    router.events.on("routeChangeComplete", handleRouteEnd);
+    router.events.on("routeChangeError", handleRouteEnd);
+
+    return () => {
+      router.events.off("routeChangeStart", handleRouteStart);
+      router.events.off("routeChangeComplete", handleRouteEnd);
+      router.events.off("routeChangeError", handleRouteEnd);
+    };
+  }, [router, orders.length]);
+
   if (authLoading) {
     return (
-      <div
-        className="d-flex justify-content-center align-items-center"
-        style={{ minHeight: "100vh" }}
-      >
-        <Spinner animation="border" role="status" style={{ color: "#007bff" }}>
-          <span className="sr-only">Loading...</span>
-        </Spinner>
-        <div className="ms-3">Checking authentication...</div>
+      <div className="flex items-center justify-center min-h-screen">
+        <Spinner animation="border" role="status" variant="primary" />
+        <span className="ml-3">Checking authentication...</span>
       </div>
     );
   }
 
-  /**
-   * If not authenticated, return null or redirect
-   */
   if (!isAuthenticated) {
     return null;
   }
 
-  /**
-   * Render OrdersTable with the data
-   */
+  if (fetchState.error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Error loading orders: {fetchState.error}</p>
+      </div>
+    );
+  }
+
   return (
     <OrdersTable
       orders={orders}
       totalItems={totalItems}
-      currentPage={currentPage}
-      isLoading={isLoading}
+      isLoading={fetchState.isInitialLoad || fetchState.isLoading}
+      status={status}
     />
   );
 }
 
-// Next.js SEO
 OrdersPage.seo = {
   title: "Orders | Density",
   description: "View and manage all your orders.",
   keywords: "orders, density",
 };
-
-// Remove or comment out getServerSideProps if you previously used it
-/*
-export async function getServerSideProps(context) {
-  // Not needed anymore if we're fetching token-based data client side
-}
-*/
-

@@ -1,9 +1,37 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import sql from "mssql";
 import { queryDatabase } from "../../../../lib/db";
 
 export default async function handler(req, res) {
   try {
-    const { year, cardCode } = req.query;
+    const { year, cardCode  } = req.query;
 
     if (!cardCode) {
       return res.status(400).json({ error: "Missing CardCode parameter" });

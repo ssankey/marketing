@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Container, Row, Col, Card, Table, Spinner, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Spinner, Button ,Alert, Badge} from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 
@@ -62,19 +62,38 @@ const InvoiceDetails = ({ invoice }) => {
   return (
     <Container className="mt-4">
       <Card>
-        <Card.Header>
-          <div className="mt-3 d-flex justify-content-between">
-            <h2 className="mb-0">{documentTitle} #{invoice.DocNum}</h2>
-            <Button
-              variant="primary"
-              onClick={() =>
-                router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)
-              }
-            >
-              {printButtonLabel}
-            </Button>
-          </div>
-        </Card.Header>
+        {/* <Card.Header className="p-0">
+          
+          <Alert 
+        variant={invoice.DocStatusDisplay === 'Closed' ? 'success' : 'primary'} 
+        className="w-100 text-center mb-0 fw-bold fs-4"
+        style={{ color: "#000" }} // Ensures black text
+    >
+        {documentTitle} #{invoice.DocNum} - {invoice.DocStatusDisplay}
+    </Alert>
+        </Card.Header> */}
+        <Card.Header className="p-0">
+    <Alert 
+        variant={invoice.DocStatusDisplay === 'Closed' ? 'success' : 'primary'} 
+        className="w-100 mb-0 fw-bold fs-4 d-flex justify-content-between align-items-center"
+        style={{ color: "#000" }} // Ensures black text inside alert
+    >
+        {/* Order Status */}
+        <span>
+            {documentTitle} #{invoice.DocNum} - {invoice.DocStatusDisplay}
+        </span>
+
+        {/* Print Button (Inside Alert, Right-Aligned) */}
+        <Button
+            variant="primary"
+            onClick={() => router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)}
+            className="fw-bold border"
+        >
+            {printButtonLabel}
+        </Button>
+    </Alert>
+</Card.Header>
+
         <Card.Body>
           {/* Invoice Information */}
           <Row className="mb-4">
@@ -159,6 +178,32 @@ const InvoiceDetails = ({ invoice }) => {
             </Card.Body>
           </Card>
 
+          {/* Timeline */}
+          {/* <Card className="mb-4">
+            <Card.Header>
+              <h5 className="mb-0">Timeline</h5>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+                <Col md={4}>
+                  <p>
+                    <strong>Timeline</strong> { invoice.Timeline||'N/A'}
+                  </p>
+                </Col>
+                <Col md={4}>
+                  <p>
+                    <strong>Quote Status</strong> {invoice.QuoteStatus|| 'N/A'}
+                  </p>
+                </Col>
+                <Col md={4}>
+                  <p>
+                    <strong>Mkt Feedback</strong> { invoice.Mkt_Feedback||'N/A'}
+                  </p>
+                </Col>
+              </Row>
+            </Card.Body>
+          </Card> */}
+
           {/* Addresses */}
           <Row className="mb-4">
             <Col md={6}>
@@ -208,7 +253,10 @@ const InvoiceDetails = ({ invoice }) => {
                     <tr>
                       <th className="text-nowrap">Line #</th>
                       <th className="text-nowrap">Item Code</th>
+                      <th className="text-nowrap">SO Number</th>
+                       <th className="text-nowrap">Status</th>
                       <th className="text-nowrap">Description</th>
+                      
                       <th className="text-nowrap">Warehouse</th>
                       <th className="text-nowrap">Quantity</th>
                       <th className="text-nowrap">Unit</th>
@@ -217,7 +265,7 @@ const InvoiceDetails = ({ invoice }) => {
                       <th className="text-nowrap">Tax (%)</th>
                       <th className="text-nowrap">Line Total</th>
                       <th className="text-nowrap">Delivery Date</th>
-                      <th className="text-nowrap">Status</th>
+                      {/* <th className="text-nowrap">Status</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -233,6 +281,12 @@ const InvoiceDetails = ({ invoice }) => {
                         <tr key={index}>
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
+                          <td className="text-nowrap">{product.SONumber ? product.SONumber : '-'}</td>
+                          <td className="text-nowrap">
+                            <Badge bg={product.LineStatus === 'Open' ? 'danger' : 'success'}>
+                              {product.LineStatus}
+                            </Badge>
+                          </td>
                           <td className="text-nowrap">{product.Description}</td>
                           <td className="text-nowrap">{product.WhsCode}</td>
                           <td className="text-nowrap">{quantity}</td>
@@ -246,7 +300,7 @@ const InvoiceDetails = ({ invoice }) => {
                             {formatCurrency(lineTotalINR, 'INR')}
                           </td>
                           <td className="text-nowrap">{formatDate(product.ShipDate)}</td>
-                          <td className="text-nowrap">{product.LineStatus}</td>
+                          {/* <td className="text-nowrap">{product.LineStatus}</td> */}
                         </tr>
                       );
                     })}

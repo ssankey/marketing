@@ -1,3 +1,4 @@
+//components/TablePagination
 import { Pagination } from "react-bootstrap";
 
 const TablePagination = ({ currentPage, totalPages, onPageChange }) => {

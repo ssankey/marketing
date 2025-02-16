@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Container, Row, Col, Card, Table, Button } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Button , Alert} from 'react-bootstrap';
 import { formatCurrency } from 'utils/formatCurrency';
 import { formatDate } from 'utils/formatDate';
 
@@ -39,9 +39,19 @@ const QuotationDetails = ({ quotation }) => {
   return (
     <Container className="mt-4">
       <Card>
-        <Card.Header>
+        {/* <Card.Header>
           <h2 className="mb-0">Quotation Details #{quotation.DocNum}</h2>
-        </Card.Header>
+        </Card.Header> */}
+         <Card.Header className="p-0">
+                   
+                    <Alert 
+            variant={quotation.DocStatusDisplay === 'Closed' ? 'success' : 'primary'} 
+            className="w-100  mb-0 fw-bold fs-4"
+            style={{ color: "#000" }} // Ensures black text
+        >
+            Quotation Details #{quotation.DocNum} - {quotation.DocStatusDisplay === 'Closed' ? 'Closed' : 'Open'}
+        </Alert>
+                </Card.Header>
         <Card.Body>
           {/* Quotation Information */}
           <Row className="mb-4">
@@ -147,6 +157,7 @@ const QuotationDetails = ({ quotation }) => {
                     <tr>
                       <th className="text-nowrap">Line #</th>
                       <th className="text-nowrap">Item Code</th>
+                      <th className="text-nowrap">Status</th>
                       <th className="text-nowrap">Description</th>
                       <th className="text-nowrap">Quantity</th>
                       <th className="text-nowrap">Unit</th>
@@ -154,7 +165,7 @@ const QuotationDetails = ({ quotation }) => {
                       <th className="text-nowrap">Discount (%)</th>
                       <th className="text-nowrap">Tax (%)</th>
                       <th className="text-nowrap">Line Total</th>
-                      <th className="text-nowrap">Status</th>
+                      {/* <th className="text-nowrap">Status</th> */}
                     </tr>
                   </thead>
                   <tbody>
@@ -164,6 +175,7 @@ const QuotationDetails = ({ quotation }) => {
                         <tr key={index}>
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
+                          <td className="text-nowrap">{product.LineStatus}</td>
                           <td className="text-nowrap">{product.Description}</td>
                           <td className="text-nowrap">{product.Quantity}</td>
                           <td className="text-nowrap">{product.UnitMsr}</td>
@@ -175,7 +187,7 @@ const QuotationDetails = ({ quotation }) => {
                           <td className="text-nowrap">
                             {formatCurrency(lineTotal)} {product.Currency || quotation.DocCur}
                           </td>
-                          <td className="text-nowrap">{product.LineStatus}</td>
+                          {/* <td className="text-nowrap">{product.LineStatus}</td> */}
                         </tr>
                       );
                     })}
