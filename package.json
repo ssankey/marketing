@@ -60,6 +60,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "eslint-plugin-react-hooks": "^5.1.0",
     "prisma": "^6.1.0"
   }
 }
