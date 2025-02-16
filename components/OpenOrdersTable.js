@@ -32,14 +32,13 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
     statusFilter,
     sortField,
     sortDirection,
-    statusFilter,
     handleSearch,
     handleStatusChange,
     handleDateFilterChange,
-    handleStatusChange,
     handleSort,
     handleReset,
   } = useTableFilters();
+  
 
   // Update display state based on props
   useEffect(() => {

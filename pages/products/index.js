@@ -1,4 +1,3 @@
-
 // pages/products/index.js
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
@@ -6,8 +5,8 @@ import ProductsTable from "components/ProductsTable";
 import { useRouter } from "next/router";
 
 export default function ProductsPage({
-  products,
-  totalItems,
+  products: initialProducts,
+  totalItems: initialTotalItems,
   currentPage,
   search,
   sortField,
@@ -42,9 +41,9 @@ export default function ProductsPage({
       setIsLoading(true);
       try {
         const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc" } = router.query;
-        const protocol = router.basePath.startsWith("http") ? "http" : "https";
+        // Determine protocol: this example assumes HTTPS
         const host = window.location.host;
-        const apiUrl = `${protocol}://${host}/api/products`;
+        const apiUrl = `https://${host}/api/products`;
 
         const res = await fetch(
           `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
@@ -75,10 +74,10 @@ export default function ProductsPage({
   }, [initialProducts, initialTotalItems]);
 
   // Handle status change
-   const handleStatusChange = (newStatus) => {
-     setStatus(newStatus);
-    //  setCurrentPage(1); // Reset pagination when status changes
-   };
+  const handleStatusChange = (newStatus) => {
+    setStatus(newStatus);
+    // setCurrentPage(1); // Reset pagination when status changes, if needed
+  };
 
   if (router.isFallback) {
     return <LoadingSpinner />;
@@ -133,8 +132,8 @@ export async function getServerSideProps(context) {
 
     return {
       props: {
-        products,
-        totalItems,
+        products, // will be renamed to initialProducts in the component
+        totalItems, // will be renamed to initialTotalItems
         currentPage: parseInt(page, 10),
       },
     };
