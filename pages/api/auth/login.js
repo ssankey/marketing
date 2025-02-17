@@ -13,10 +13,18 @@ const COOKIE_OPTIONS = {
   path: '/',
   maxAge: 3600 // 1 hour in seconds
 };
-const ADMIN_CREDENTIALS = {
-    email: 'satish@densitypharmachem.com',
-    password: 'Satish@123'
-};
+
+// Admin credentials array to support multiple admins
+const ADMIN_CREDENTIALS = [
+    {
+        email: 'satish@densitypharmachem.com',
+        password: 'Satish@123'
+    },
+    {
+        email: 'rama@densitypharmachem.com',
+        password: 'rama@123'
+    }
+];
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -26,17 +34,21 @@ export default async function handler(req, res) {
     const { email, password } = req.body;
 
     // Check for admin login
-    if (email.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase()) {
+    const adminUser = ADMIN_CREDENTIALS.find(admin => 
+        admin.email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (adminUser) {
         if (!password) {
             return res.status(200).json({ message: 'SHOW_PASSWORD_FIELD' });
         }
 
-        if (password !== ADMIN_CREDENTIALS.password) {
+        if (password !== adminUser.password) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
         const token = jwt.sign({
-            email: ADMIN_CREDENTIALS.email,
+            email: adminUser.email,
             role: 'admin',
         }, process.env.JWT_SECRET, {
             expiresIn: '1h'
@@ -49,7 +61,7 @@ export default async function handler(req, res) {
             message: 'Login_successful',
             token,
             user: {
-                email: ADMIN_CREDENTIALS.email,
+                email: adminUser.email,
                 role: 'admin',
                 name: 'Admin'
             }
@@ -71,7 +83,7 @@ export default async function handler(req, res) {
         }
 
         const contactCodes = results.map(user => user.CntctCode.toString().trim());
-        const cardCodes = [...new Set(results.map(user => user.CardCode.toString().trim()))]; // Unique card codes
+        const cardCodes = [...new Set(results.map(user => user.CardCode.toString().trim()))];
         const userWithPassword = results.find(user => user.Password && user.Password.trim() !== '');
 
         if (!userWithPassword) {
@@ -79,12 +91,11 @@ export default async function handler(req, res) {
                 email,
                 role: 'contact_person',
                 contactCodes,
-                cardCodes, // Store multiple card codes
+                cardCodes,
             }, process.env.JWT_SECRET, {
                 expiresIn: process.env.JWT_EXPIRES_IN || '1h'
             });
 
-            // Set cookie
             res.setHeader('Set-Cookie', serialize('token', token, COOKIE_OPTIONS));
 
             return res.status(200).json({
@@ -109,12 +120,11 @@ export default async function handler(req, res) {
             email,
             role: 'contact_person',
             contactCodes,
-            cardCodes, // Store multiple card codes
+            cardCodes,
         }, process.env.JWT_SECRET, {
             expiresIn: process.env.JWT_EXPIRES_IN || '1h'
         });
 
-        // Set cookie
         res.setHeader('Set-Cookie', serialize('token', token, COOKIE_OPTIONS));
 
         return res.status(200).json({
@@ -124,7 +134,7 @@ export default async function handler(req, res) {
                 email,
                 role: 'contact_person',
                 name: userWithPassword.Name,
-                cardCodes, // Return all card codes
+                cardCodes,
                 contactCodes
             }
         });
