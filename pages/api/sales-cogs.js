@@ -26,30 +26,61 @@ export default async function handler(req, res) {
 
         let baseQuery = `
             SELECT 
+                DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)),2) AS [Month-Year],
                 YEAR(T0.DocDate) AS year,
-                DATENAME(MONTH, T0.DocDate) AS month,
                 MONTH(T0.DocDate) AS monthNumber,
                 ROUND(SUM(
                     CASE 
                         WHEN T1.InvQty = 0 THEN T1.LineTotal
                         WHEN T4.Quantity IS NULL THEN T1.LineTotal
-                        ELSE (T1.LineTotal / T1.InvQty) * ISNULL(T4.Quantity, 0)
+                        ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
                     END
-                ), 2) AS sales,
-                ROUND(SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0)), 2) AS cogs,
-                ROUND(SUM(
-                    CASE 
-                        WHEN T1.InvQty = 0 THEN T1.LineTotal
-                        WHEN T4.Quantity IS NULL THEN T1.LineTotal
-                        ELSE (T1.LineTotal / T1.InvQty) * ISNULL(T4.Quantity, 0)
-                    END
-                ) - SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0)), 2) AS grossMargin
+                ), 2) AS TotalSales,
+                ROUND(SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0)), 2) AS TotalCOGS,
+                ROUND(CASE 
+                    WHEN SUM(
+                        CASE 
+                            WHEN T1.InvQty = 0 THEN T1.LineTotal
+                            WHEN T4.Quantity IS NULL THEN T1.LineTotal
+                            ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
+                        END
+                    ) = 0 THEN 0
+                    ELSE 
+                        ((SUM(
+                            CASE 
+                                WHEN T1.InvQty = 0 THEN T1.LineTotal
+                                WHEN T4.Quantity IS NULL THEN T1.LineTotal
+                                ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
+                            END
+                        ) - SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0))) * 100.0 
+                        / SUM(
+                            CASE 
+                                WHEN T1.InvQty = 0 THEN T1.LineTotal
+                                WHEN T4.Quantity IS NULL THEN T1.LineTotal
+                                ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
+                            END
+                        ))
+                END, 2) AS GrossMarginPct
             FROM OINV T0
             INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-            INNER JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
-            INNER JOIN OITB T5 ON T3.ItmsGrpCod = T5.ItmsGrpCod
-            LEFT JOIN IBT1 T4 ON T4.CardCode = T0.CardCode
-                AND T4.ItemCode = T1.ItemCode
+            LEFT JOIN DLN1 T2 
+                ON T2.ItemCode = T1.ItemCode 
+                AND T2.DocEntry = T1.BaseEntry 
+                AND T1.BaseType = 15 
+                AND T1.BaseLine = T2.LineNum
+            LEFT JOIN ODLN T3 
+                ON T3.DocEntry = T2.DocEntry
+            LEFT JOIN IBT1 T4 
+                ON T4.BsDocType = 17 
+                AND T4.CardCode = T3.CardCode 
+                AND T4.ItemCode = T2.ItemCode 
+                AND T4.BaseNum = T3.DocNum 
+                AND T4.BaseEntry = T3.DocEntry 
+                AND T4.BaseType = 15 
+                AND T4.BaseLinNum = T2.LineNum 
+                AND T4.Direction = 1
+            INNER JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+            INNER JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
             WHERE T0.CANCELED = 'N'
         `;
 
@@ -75,12 +106,12 @@ export default async function handler(req, res) {
         }
 
         if (itmsGrpCod) {
-            whereClauses.push(`T5.ItmsGrpNam = @itmsGrpCod`);
+            whereClauses.push(`T6.ItmsGrpNam = @itmsGrpCod`);
             params.push({ name: 'itmsGrpCod', type: sql.VarChar, value: itmsGrpCod });
         }
 
         if (itemCode) {
-            whereClauses.push(`T3.ItemCode = @itemCode`);
+            whereClauses.push(`T5.ItemCode = @itemCode`);
             params.push({ name: 'itemCode', type: sql.VarChar, value: itemCode });
         }
 
@@ -90,18 +121,19 @@ export default async function handler(req, res) {
 
         const fullQuery = `
             ${baseQuery}
-            GROUP BY YEAR(T0.DocDate), DATENAME(MONTH, T0.DocDate), MONTH(T0.DocDate)
-            ORDER BY MONTH(T0.DocDate)
+            GROUP BY DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)),2),
+                     YEAR(T0.DocDate), MONTH(T0.DocDate)
+            ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate)
         `;
 
         const results = await queryDatabase(fullQuery, params);
         const data = results.map(row => ({
+            monthYear: row['Month-Year'],
             year: row.year,
-            month: row.month,
             monthNumber: row.monthNumber,
-            sales: parseFloat(row.sales) || 0,
-            cogs: parseFloat(row.cogs) || 0,
-            grossMargin: parseFloat(row.grossMargin) || 0,
+            totalSales: parseFloat(row.TotalSales) || 0,
+            totalCogs: parseFloat(row.TotalCOGS) || 0,
+            grossMarginPct: parseFloat(row.GrossMarginPct) || 0,
         }));
 
         const yearsQuery = `
