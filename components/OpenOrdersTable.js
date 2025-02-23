@@ -29,16 +29,15 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
     searchTerm,
     fromDate,
     toDate,
-    statusFilter,
     sortField,
     sortDirection,
+    statusFilter,
     handleSearch,
     handleStatusChange,
     handleDateFilterChange,
     handleSort,
     handleReset,
   } = useTableFilters();
-  
 
   // Update display state based on props
   useEffect(() => {
@@ -212,19 +211,6 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
 
   return (
     <Container fluid>
-      {/* Display Stock Status Counts */}
-      <Row className="mb-3">
-        <Col className="d-flex justify-content-start align-items-center">
-          <Badge bg="success" className="me-2">
-            In Stock: {inStockCount}
-          </Badge>
-          <Badge bg="danger">
-            Out of Stock: {outOfStockCount}
-          </Badge>
-        </Col>
-      </Row>
-
-      {/* Table Filters */}
       <TableFilters
         searchConfig={{
           enabled: true,
@@ -241,7 +227,6 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
           ],
           value: statusFilter,
         }}
-        onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
         onReset={handleReset}
@@ -253,14 +238,12 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
 
       {renderContent()}
 
-      {/* Pagination Controls */}
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={onPageChange}
       />
 
-      {/* Page Indicator */}
       <Row className="mb-2">
         <Col className="text-center">
           <h5>
