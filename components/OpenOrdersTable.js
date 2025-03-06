@@ -49,7 +49,27 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
 
   const columns = [
     {
-      field: "DocNum",
+      field: "DocumentStatus",
+      label: "Document Status",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "Open" ? "bg-success" : 
+            value === "Closed" ? "bg-secondary" : 
+            value === "Cancel" ? "bg-danger" : "bg-info"
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      field: "DocEntry",
+      label: "Doc Entry",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "DocumentNumber",
       label: "Order#",
       render: (value, row) => (
         <>
@@ -59,16 +79,82 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
           >
             {value}
           </Link>
-          {/* &nbsp;
-          <Link
-            href={`/printOrder?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            target="_blank"
-          >
-            <Printer />
-          </Link> */}
         </>
       ),
+    },
+    {
+      field: "PostingDate",
+      label: "Posting Date",
+      render: (value) => formatDate(value),
+    },
+    {
+      field: "CustomerPONo",
+      label: "Customer PO No",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "PODate",
+      label: "PO Date",
+      render: (value) => formatDate(value),
+    },
+    {
+      field: "CustomerVendorName",
+      label: "Customer/Vendor",
+      render: (value) => truncateText(value, 20),
+    },
+    {
+      field: "ItemGroup",
+      label: "Item Group",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "ItemNo",
+      label: "Item No.",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "MfrCatalogNo",
+      label: "Mfr Catalog No.",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "ItemName",
+      label: "Item Name",
+      render: (value) => truncateText(value, 25),
+    },
+    {
+      field: "CasNo",
+      label: "CAS No",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "LineStatus",
+      label: "Line Status",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "Open" ? "bg-primary" : 
+            value === "Closed" ? "bg-secondary" : "bg-info"
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      field: "Quantity",
+      label: "Quantity",
+      render: (value) => value || "0",
+    },
+    {
+      field: "UOMName",
+      label: "UOM",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "OpenQty",
+      label: "Open Qty",
+      render: (value) => value || "0",
     },
     {
       field: "StockStatus",
@@ -84,20 +170,19 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
       ),
     },
     {
-      field: "CustomerPONo",
-      label: "Customer PONo",
+      field: "Timeline",
+      label: "Timeline",
       render: (value) => value || "N/A",
     },
     {
-      field: "CardName",
-      label: "Customer",
-      render: (value) => truncateText(value, 20),
+      field: "MktFeedback",
+      label: "Mkt Feedback",
+      render: (value) => value || "N/A",
     },
-    
     {
-      field: "DocDate",
-      label: "Order Date",
-      render: (value) => formatDate(value),
+      field: "DeliveredQuantity",
+      label: "Delivered Qty",
+      render: (value) => value || "0",
     },
     {
       field: "DeliveryDate",
@@ -105,32 +190,24 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
       render: (value) => formatDate(value),
     },
     {
-      field: "ItemCode",
-      label: "Item Code",
+      field: "PlantLocation",
+      label: "Plant Location",
       render: (value) => value || "N/A",
     },
     {
-      field: "ItemName",
-      label: "Item Name",
-      render: (value) => truncateText(value, 30),
+      field: "Price",
+      label: "Price",
+      render: (value, row) => formatCurrency(value, row.PriceCurrency),
     },
     {
-      field: "OpenQty",
-      label: "Open Quantity",
-      render: (value) => value || "0",
+      field: "PriceCurrency",
+      label: "Currency",
+      render: (value) => value || "N/A",
     },
     {
-      field: "Stock",
-      label: "In Stock",
-      render: (value) => value || "0",
-    },
-    {
-      field: "TotalAmount",
-      label: "Total Amount",
-      render: (value, row) => {
-        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
-        return formatCurrency(amountInINR);
-      },
+      field: "OpenAmount",
+      label: "Open Amount",
+      render: (value, row) => formatCurrency(value, row.PriceCurrency),
     },
     {
       field: "SalesEmployee",
@@ -215,7 +292,7 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
         searchConfig={{
           enabled: true,
           placeholder: "Search open orders...",
-          fields: ["DocNum", "CardName"],
+          fields: ["DocumentNumber", "CustomerVendorName", "ItemNo", "ItemName", "CasNo", "MfrCatalogNo"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
