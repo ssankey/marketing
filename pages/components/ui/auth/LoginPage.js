@@ -142,14 +142,14 @@ export default function LoginPage() {
               </Button>
             </div>
 
-            <div className="d-flex justify-content-between">
+            {/* <div className="d-flex justify-content-between">
               <Link href="/signup" className="text-primary">
                 Create an Account
               </Link>
               <Link href="/forgot-password" className="text-primary">
                 Forgot password?
               </Link>
-            </div>
+            </div> */}
           </Form>
         </Card.Body>
       </Card>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
-import { Card, Table, Spinner, Dropdown } from "react-bootstrap";
+import { Card, Table, Spinner } from "react-bootstrap";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -30,8 +30,6 @@ ChartJS.register(
 
 const EnhancedSalesCOGSChart = ({ cardCode }) => {
   const [salesData, setSalesData] = useState([]);
-  const [availableYears, setAvailableYears] = useState([]);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -41,16 +39,30 @@ const EnhancedSalesCOGSChart = ({ cardCode }) => {
       setError(null);
 
       const response = await fetch(
-        `/api/dashboard/customer/sales-cogs?year=${selectedYear}&cardCode=${cardCode}`
+        `/api/dashboard/customer/sales-cogs?cardCode=${cardCode}`
       );
-      const { data, availableYears } = await response.json();
+      const { data } = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to fetch data");
       }
 
-      setSalesData(data);
-      setAvailableYears(availableYears);
+      // Define month order for sorting
+      const monthOrder = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+      ];
+
+      // Sort data in ascending order: first by year then by month.
+      const sortedData = data.sort((a, b) => {
+        // Assume a.month is the month abbreviation and a.year holds the year.
+        if (a.year !== b.year) {
+          return parseInt(a.year) - parseInt(b.year);
+        }
+        return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month);
+      });
+
+      setSalesData(sortedData);
     } catch (error) {
       console.error("Error fetching sales data:", error);
       setError(error.message);
@@ -59,13 +71,31 @@ const EnhancedSalesCOGSChart = ({ cardCode }) => {
     }
   };
 
+  useEffect(() => {
+    if (cardCode) fetchSalesData();
+  }, [cardCode]);
 
-useEffect(() => {
-  if (cardCode) fetchSalesData();
-}, [cardCode, selectedYear]);
+  // Construct labels by combining month and year (e.g., "Jan 2024").
+  const labels = salesData.map((data) => `${data.month} ${data.year}`);
+
+  // Calculate totals for each metric.
+  const totalSales = salesData.reduce(
+    (acc, data) => acc + (data.sales || 0),
+    0
+  );
+  const totalCOGS = salesData.reduce(
+    (acc, data) => acc + (data.cogs || 0),
+    0
+  );
+  const totalGrossMargin = salesData.reduce(
+    (acc, data) => acc + (data.grossMargin || 0),
+    0
+  );
+  const overallGrossMarginPct =
+    totalSales > 0 ? (totalGrossMargin / totalSales) * 100 : 0;
 
   const salesAndCOGSChartData = {
-    labels: salesData.map((data) => data.month),
+    labels,
     datasets: [
       {
         label: "Sales",
@@ -128,9 +158,6 @@ useEffect(() => {
         },
       },
     },
-    datalabels: {
-      display: false, // Disable datalabels for this chart
-    },
     scales: {
       y: {
         beginAtZero: true,
@@ -162,37 +189,15 @@ useEffect(() => {
     },
   };
 
-  const YearSelector = () => (
-    <Dropdown>
-      <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
-        {selectedYear}
-      </Dropdown.Toggle>
-      <Dropdown.Menu>
-        {availableYears.map((year) => (
-          <Dropdown.Item
-            key={year}
-            onClick={() => setSelectedYear(year)}
-            active={year === selectedYear}
-          >
-            {year}
-          </Dropdown.Item>
-        ))}
-      </Dropdown.Menu>
-    </Dropdown>
-  );
-
   return (
     <Card className="shadow-sm border-0 mb-4">
       <Card.Header className="bg-white py-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-          <h4
-            className="mb-3 mb-md-0"
-            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
-          >
-            Sales, COGS, and Gross Margin %
-          </h4>
-          <YearSelector />
-        </div>
+        <h4
+          className="mb-0"
+          style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+        >
+          Sales, COGS, and Gross Margin %
+        </h4>
       </Card.Header>
       <Card.Body>
         {error && (
@@ -225,8 +230,11 @@ useEffect(() => {
                   <tr>
                     <th>Metric</th>
                     {salesData.map((data) => (
-                      <th key={data.month}>{data.month}</th>
+                      <th key={`${data.month}-${data.year}`}>
+                        {`${data.month} ${data.year}`}
+                      </th>
                     ))}
+                    <th>Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -235,12 +243,14 @@ useEffect(() => {
                     {salesData.map((data, index) => (
                       <td key={index}>{formatCurrency(data.sales || 0)}</td>
                     ))}
+                    <td>{formatCurrency(totalSales)}</td>
                   </tr>
                   <tr>
                     <td>COGS</td>
                     {salesData.map((data, index) => (
                       <td key={index}>{formatCurrency(data.cogs || 0)}</td>
                     ))}
+                    <td>{formatCurrency(totalCOGS)}</td>
                   </tr>
                   <tr>
                     <td>Gross Margin %</td>
@@ -253,6 +263,11 @@ useEffect(() => {
                           : "-"}
                       </td>
                     ))}
+                    <td>
+                      {totalSales
+                        ? `${overallGrossMarginPct.toFixed(2)}%`
+                        : "-"}
+                    </td>
                   </tr>
                 </tbody>
               </Table>
