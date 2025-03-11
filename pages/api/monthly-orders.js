@@ -3,6 +3,7 @@
 import { verify } from 'jsonwebtoken';
 import sql from 'mssql';
 import { queryDatabase } from '../../lib/db';
+import { getCache, setCache } from '../../lib/redis';
 
 export default async function handler(req, res) {
     try {
@@ -26,6 +27,16 @@ export default async function handler(req, res) {
         }
 
         const isAdmin = decoded.role === 'admin';
+        const contactCodes = decoded.contactCodes || [];
+
+        // Create a cache key based on the request parameters and user access
+        const cacheKey = `monthly-orders:${year || 'all'}:${slpCode || 'all'}:${itmsGrpCod || 'all'}:${itemCode || 'all'}:${isAdmin ? 'admin' : contactCodes.join(',')}`;
+        
+        // Try to get data from cache first
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(cachedData);
+        }
 
         let baseQuery = `
             SELECT 
@@ -75,7 +86,6 @@ export default async function handler(req, res) {
         }
 
         if (!isAdmin) {
-            const contactCodes = decoded.contactCodes || [];
             if (!contactCodes.length) {
                 return res.status(403).json({ error: 'No contact codes available' });
             }
@@ -116,17 +126,35 @@ export default async function handler(req, res) {
             closedSales: parseFloat(row.closedSales) || 0,
         }));
 
-        // Get available years for filtering
-        const yearsQuery = `
-            SELECT DISTINCT YEAR(DocDate) as year
-            FROM ORDR
-            WHERE CANCELED = 'N'
-            ORDER BY year DESC
-        `;
-        const yearsResult = await queryDatabase(yearsQuery);
-        const availableYears = yearsResult.map(row => row.year);
+        // Get available years for filtering - also cache this separately with longer expiration
+        let availableYears;
+        const yearsKey = 'monthly-orders:available-years';
+        const cachedYears = await getCache(yearsKey);
+        
+        if (cachedYears) {
+            availableYears = cachedYears;
+        } else {
+            const yearsQuery = `
+                SELECT DISTINCT YEAR(DocDate) as year
+                FROM ORDR
+                WHERE CANCELED = 'N'
+                ORDER BY year DESC
+            `;
+            const yearsResult = await queryDatabase(yearsQuery);
+            availableYears = yearsResult.map(row => row.year);
+            
+            // Cache available years for 24 hours (86400 seconds)
+            await setCache(yearsKey, availableYears, 86400);
+        }
 
-        return res.status(200).json({ data, availableYears });
+        const responseData = { data, availableYears };
+        
+        // Cache the response - using different TTLs based on query type
+        // Year-specific queries are cached for longer since historical data rarely changes
+        const cacheTTL = year ? 3600 : 1800; // 1 hour for year queries, 30 minutes for current/all data
+        await setCache(cacheKey, responseData, cacheTTL);
+
+        return res.status(200).json(responseData);
     } catch (error) {
         console.error('API handler error:', error);
         return res.status(500).json({

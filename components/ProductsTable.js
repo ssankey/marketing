@@ -617,10 +617,10 @@ export default function ProductsTable({
   const columns = [
     {
       label: "CAT No.",
-      field: "Cat_size_main", // Corresponds to T0.ItemCode AS Cat_size_main
+      field: "ItemCode", // Corresponds to T0.ItemCode AS Cat_size_main
       sortable: true,
       render: (value, row) => (
-        <Link href={`/products/${row.Cat_size_main}`}>{value}</Link>
+        <Link href={`/products/${row.ItemCode}`}>{value}</Link>
       ),
       sortable: true, // Enable sorting on this column
     },
@@ -659,7 +659,7 @@ export default function ProductsTable({
       field: "actions",
       sortable: false,
       render: (value, row) => (
-        <Link href={`/products/${row.Cat_size_main}`}>View Details</Link>
+        <Link href={`/products/${row.ItemCode}`}>View Details</Link>
       ),
       sortable: false,
     },

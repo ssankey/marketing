@@ -1,7 +1,6 @@
-// pages/api/dashboard.js
-
 import { getSalesMetrics } from 'lib/models/dashboard';
 import { formatCurrency } from 'utils/formatCurrency';
+import { getCache, setCache } from 'lib/redis';
 
 export default async function handler(req, res) {
   const {
@@ -17,12 +16,14 @@ export default async function handler(req, res) {
   let computedStartDate = startDate;
   let computedEndDate = endDate;
   let previousStartDate, previousEndDate;
-  console.log('startenddate',startDate,endDate,dateFilter)
+  console.log('startenddate', startDate, endDate, dateFilter);
+  
   const authHeader = req.headers.authorization;
   let token;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.substring(7); // remove "Bearer "
   }
+  
   // Determine date ranges for current and previous periods
   const today = new Date();
 
@@ -48,26 +49,41 @@ export default async function handler(req, res) {
 
       previousStartDate = previousWeekStart.toISOString().split('T')[0];
       previousEndDate = previousWeekEnd.toISOString().split('T')[0];
-    } if (dateFilter === 'thisMonth') {
-      // Current month (February 2025)
+    } else if (dateFilter === 'thisMonth') {
+      // Current month (e.g., February 2025)
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     
-      computedStartDate = firstDayOfMonth.toISOString().split('T')[0];  // Should be 2025-02-01
-      computedEndDate = lastDayOfMonth.toISOString().split('T')[0];     // Should be 2025-02-28
+      computedStartDate = firstDayOfMonth.toISOString().split('T')[0];  // e.g. 2025-02-01
+      computedEndDate = lastDayOfMonth.toISOString().split('T')[0];     // e.g. 2025-02-28
     
-      // Previous month (January 2025)
+      // Previous month (e.g., January 2025)
       const previousMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       const previousMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
     
-      previousStartDate = previousMonthStart.toISOString().split('T')[0];  // Should be 2025-01-01
-      previousEndDate = previousMonthEnd.toISOString().split('T')[0];      // Should be 2025-01-31
-    }else if (dateFilter === 'all') {
+      previousStartDate = previousMonthStart.toISOString().split('T')[0];  // e.g. 2025-01-01
+      previousEndDate = previousMonthEnd.toISOString().split('T')[0];      // e.g. 2025-01-31
+    } else if (dateFilter === 'all') {
       computedStartDate = '';
       computedEndDate = '';
       previousStartDate = '';
       previousEndDate = '';
     }
+  }
+
+  // Build a unique cache key using token and all filter parameters
+  const cacheKey = `dashboard:${token || 'no-token'}:${dateFilter}:${computedStartDate || 'null'}:${computedEndDate || 'null'}:${previousStartDate || 'null'}:${previousEndDate || 'null'}:${region || 'all'}:${customer || 'all'}:${salesPerson || 'all'}:${salesCategory || 'all'}`;
+  
+  // Attempt to fetch from cache first
+  try {
+    const cachedData = await getCache(cacheKey);
+    if (cachedData) {
+      console.log('Cache hit for key:', cacheKey);
+      return res.status(200).json(cachedData);
+    }
+  } catch (cacheError) {
+    console.error('Error fetching cache:', cacheError);
+    // Continue without cache if there's an error
   }
 
   try {
@@ -91,13 +107,13 @@ export default async function handler(req, res) {
       salesCategory,
     };
 
-    // Fetch current and previous period data using consolidated function
+    // Fetch current and previous period data concurrently
     const [currentMetrics, previousMetrics] = await Promise.all([
       getSalesMetrics(currentFilterParams),
       getSalesMetrics(previousFilterParams),
     ]);
 
-    // Improved trend calculation function
+    // Helper to calculate trends
     const calculateTrend = (current, previous) => {
       if (current === null || current === undefined || 
           previous === null || previous === undefined) {
@@ -190,9 +206,16 @@ export default async function handler(req, res) {
       },
     ];
 
-    res.status(200).json({
-      kpiData,
-    });
+    const responseData = { kpiData };
+
+    // Set cache for subsequent requests (TTL set to 300 seconds here)
+    try {
+      await setCache(cacheKey, responseData, 300);
+    } catch (cacheSetError) {
+      console.error('Error setting cache:', cacheSetError);
+    }
+    
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching dashboard data:', error);
     res.status(500).json({

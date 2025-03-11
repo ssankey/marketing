@@ -2,6 +2,8 @@
 import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
 import { getInvoicesList } from "../../../lib/models/invoices";
+// Import Redis caching functions (adjust the path as needed)
+import { getCache, setCache } from "../../../lib/redis";
 
 function isValidDate(date) {
   return date && isValid(parseISO(date));
@@ -31,12 +33,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Token verification failed" });
     }
 
-    
-    // 3) Extract role-based or contactCodes-based logic
+    // 2) Role/contactCodes extraction
     const isAdmin = decodedToken.role === "admin";
-    // If your JWT includes an array of contactCodes, extract it:
     const contactCodes = decodedToken.contactCodes || [];
     const cardCodes = decodedToken.cardCodes || [];
+
     // 3) Parse query params
     const {
       page = 1,
@@ -52,7 +53,18 @@ export default async function handler(req, res) {
     const validFromDate = isValidDate(fromDate) ? fromDate : undefined;
     const validToDate = isValidDate(toDate) ? toDate : undefined;
 
-    // 4) Fetch invoices from the model, passing isAdmin & cardCode
+    // 4) Build a cache key based on query parameters and user-specific info
+    // Using cardCodes as part of the key (if available) to differentiate users
+    const cacheKey = `invoices:api:${cardCodes.join("-")}:${page}:${search}:${status}:${sortField}:${sortDir}:${validFromDate || ''}:${validToDate || ''}`;
+
+    // 5) Check if a cached response exists
+    const cachedResponse = await getCache(cacheKey);
+    if (cachedResponse) {
+      console.log("API cache hit for invoices");
+      return res.status(200).json(cachedResponse);
+    }
+
+    // 6) Fetch invoices from the model
     const { totalItems, invoices } = await getInvoicesList({
       page: parseInt(page, 10),
       search,
@@ -63,15 +75,21 @@ export default async function handler(req, res) {
       sortDir,
       itemsPerPage,
       isAdmin,
-      cardCodes   // pass this down
+      cardCodes, // pass this down
     });
 
-    // 5) Return data
-    return res.status(200).json({
+    // 7) Build the API response
+    const response = {
       invoices,
       totalItems,
       currentPage: parseInt(page, 10),
-    });
+    };
+
+    // 8) Cache the API response for 60 seconds
+    await setCache(cacheKey, response, 60);
+
+    // 9) Return data
+    return res.status(200).json(response);
   } catch (error) {
     console.error("Error fetching invoices:", error);
     return res.status(500).json({ error: "Failed to fetch invoices" });

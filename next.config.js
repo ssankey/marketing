@@ -1,20 +1,14 @@
-// /** @type {import('next').NextConfig} */
-// const nextConfig = {
-//   reactStrictMode: true,
-// };
-
-// module.exports = nextConfig;
-
-
 module.exports = {
-  webpack: (config) => {
-    config.resolve.fallback = {
-      tls: false,
-      net: false,
-      fs: false,
-      crypto: false,
-      ...config.resolve.fallback,
-    };
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        dns: false,
+        net: false,
+        tls: false,
+        fs: false,
+      };
+    }
     return config;
   },
 };

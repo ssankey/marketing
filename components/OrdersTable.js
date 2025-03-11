@@ -56,6 +56,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
           <Link
             href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
             className="text-blue-600 hover:text-blue-800"
+            prefetch
           >
             {value}
           </Link>
