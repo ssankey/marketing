@@ -3,6 +3,7 @@ import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
 import sql from "mssql"; // only if you need it for param handling, else remove
 import { getQuotationsList } from "../../../lib/models/quotations";
+import { getCache, setCache } from "../../../lib/redis"; // Import Redis caching functions
 
 function isValidDate(date) {
   return date && isValid(parseISO(date));
@@ -35,7 +36,6 @@ export default async function handler(req, res) {
 
     // 3) Determine user role and contact codes
     const isAdmin = decodedToken.role === "admin";
-    // You may store contactCodes in your JWT payload
     const contactCodes = decodedToken.contactCodes || []; 
 
     // 4) Parse query parameters
@@ -54,8 +54,20 @@ export default async function handler(req, res) {
     // 5) Validate date filters if needed
     const isFromDateValid = isValidDate(fromDate);
     const isToDateValid = isValidDate(toDate);
+    const validFromDate = isFromDateValid ? fromDate : "";
+    const validToDate = isToDateValid ? toDate : "";
 
-    // 6) Fetch Quotation data with role-based filtering
+    // 6) Build a cache key based on query parameters and user-specific info
+    const cacheKey = `quotations:api:${contactCodes.join("-")}:${page}:${search}:${status}:${sortField}:${sortDir}:${validFromDate}:${validToDate}`;
+
+    // 7) Check if a cached response exists
+    const cachedResponse = await getCache(cacheKey);
+    if (cachedResponse) {
+      console.log("API cache hit for quotations");
+      return res.status(200).json(cachedResponse);
+    }
+
+    // 8) Fetch Quotation data with role-based filtering
     const { totalItems, quotations } = await getQuotationsList({
       page,
       search,
@@ -65,25 +77,29 @@ export default async function handler(req, res) {
       fromDate: isFromDateValid ? fromDate : undefined,
       toDate: isToDateValid ? toDate : undefined,
       itemsPerPage: ITEMS_PER_PAGE,
-      isAdmin,             // <--- pass down
-      contactCodes,        // <--- pass down
+      isAdmin,      // pass down role info
+      contactCodes, // pass down contactCodes
     });
 
-    // 7) Format the results (ISO date strings, etc.)
+    // 9) Format the results (ISO date strings, etc.)
     const formattedQuotations = quotations.map((quotation) => ({
       ...quotation,
       DocDate: quotation.DocDate ? quotation.DocDate.toISOString() : null,
-      DeliveryDate: quotation.DeliveryDate
-        ? quotation.DeliveryDate.toISOString()
-        : null,
+      DeliveryDate: quotation.DeliveryDate ? quotation.DeliveryDate.toISOString() : null,
     }));
 
-    // 8) Return the data
-    return res.status(200).json({
+    // 10) Build the API response
+    const response = {
       quotations: Array.isArray(formattedQuotations) ? formattedQuotations : [],
       totalItems,
       currentPage: parseInt(page, 10),
-    });
+    };
+
+    // 11) Cache the API response for 60 seconds
+    await setCache(cacheKey, response, 60);
+
+    // 12) Return the data
+    return res.status(200).json(response);
   } catch (error) {
     console.error("Error fetching quotations:", error);
     return res.status(500).json({ error: "Failed to fetch quotations" });

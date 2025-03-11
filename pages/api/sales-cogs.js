@@ -1,6 +1,7 @@
 import { verify } from 'jsonwebtoken';
 import sql from 'mssql';
 import { queryDatabase } from '../../lib/db';
+import { getCache, setCache } from '../../lib/redis';
 
 export default async function handler(req, res) {
     try {
@@ -22,6 +23,16 @@ export default async function handler(req, res) {
         } catch (verifyError) {
             console.error('Token verification failed:', verifyError);
             return res.status(401).json({ error: 'Token verification failed' });
+        }
+
+        // Create a unique cache key based on query parameters and user permissions
+        const userIdentifier = decoded.isAdmin ? 'admin' : decoded.cardCodes?.join('-') || 'noCards';
+        const cacheKey = `sales-data:${userIdentifier}:${year || 'all'}:${slpCode || 'all'}:${itmsGrpCod || 'all'}:${itemCode || 'all'}`;
+        
+        // Try to get data from cache first
+        const cachedResult = await getCache(cacheKey);
+        if (cachedResult) {
+            return res.status(200).json(cachedResult);
         }
 
         let baseQuery = `
@@ -136,16 +147,31 @@ export default async function handler(req, res) {
             grossMarginPct: parseFloat(row.GrossMarginPct) || 0,
         }));
 
-        const yearsQuery = `
-            SELECT DISTINCT YEAR(DocDate) as year
-            FROM OINV
-            WHERE CANCELED = 'N'
-            ORDER BY year DESC
-        `;
-        const yearsResult = await queryDatabase(yearsQuery);
-        const availableYears = yearsResult.map(row => row.year);
+        // Use cached years if available, otherwise fetch them
+        const yearsCacheKey = 'sales-data:available-years';
+        let availableYears = await getCache(yearsCacheKey);
+        
+        if (!availableYears) {
+            const yearsQuery = `
+                SELECT DISTINCT YEAR(DocDate) as year
+                FROM OINV
+                WHERE CANCELED = 'N'
+                ORDER BY year DESC
+            `;
+            const yearsResult = await queryDatabase(yearsQuery);
+            availableYears = yearsResult.map(row => row.year);
+            
+            // Cache the years for a longer period (24 hours) as they don't change frequently
+            await setCache(yearsCacheKey, availableYears, 86400);
+        }
 
-        return res.status(200).json({ data, availableYears });
+        const responseData = { data, availableYears };
+        
+        // Cache the response data for 30 minutes
+        // Sales data can change but 30 minutes is typically a good balance
+        await setCache(cacheKey, responseData, 1800);
+
+        return res.status(200).json(responseData);
     } catch (error) {
         console.error('API handler error:', error);
         return res.status(500).json({

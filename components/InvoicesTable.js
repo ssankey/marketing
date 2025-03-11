@@ -67,6 +67,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
           <Link
             href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
             className="text-blue-600 hover:text-blue-800"
+            prefetch
           >
             {value}
           </Link>

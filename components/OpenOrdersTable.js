@@ -48,26 +48,26 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
   }, [isLoading, orders]);
 
   const columns = [
-    {
-      field: "DocumentStatus",
-      label: "Document Status",
-      render: (value) => (
-        <span
-          className={`badge ${
-            value === "Open" ? "bg-success" : 
-            value === "Closed" ? "bg-secondary" : 
-            value === "Cancel" ? "bg-danger" : "bg-info"
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
-    {
-      field: "DocEntry",
-      label: "Doc Entry",
-      render: (value) => value || "N/A",
-    },
+    // {
+    //   field: "DocumentStatus",
+    //   label: "Document Status",
+    //   render: (value) => (
+    //     <span
+    //       className={`badge ${
+    //         value === "Open" ? "bg-success" : 
+    //         value === "Closed" ? "bg-secondary" : 
+    //         value === "Cancel" ? "bg-danger" : "bg-info"
+    //       }`}
+    //     >
+    //       {value}
+    //     </span>
+    //   ),
+    // },
+    // {
+    //   field: "DocEntry",
+    //   label: "Doc Entry",
+    //   render: (value) => value || "N/A",
+    // },
     {
       field: "DocumentNumber",
       label: "Order#",
