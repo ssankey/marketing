@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import { Suspense } from 'react';
 import { getCache, setCache, delCache } from 'lib/redis';
 import OrderDetails from 'components/OrderDetails';
-import { getOrderDetails } from 'lib/models/orders';
+import { getOrderDetails } from '../lib/models/orders';
 
 // Date serialization helper (moved outside for reusability)
 const serializeDates = (obj) => {
