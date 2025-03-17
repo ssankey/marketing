@@ -28,7 +28,7 @@ const VendorPaymentsChart = ({ vendorPayments }) => {
   const { chartData, overdueSummary } = useMemo(() => {
     // No data check
     if (!vendorPayments || vendorPayments.length === 0) {
-      return { 
+      return {
         chartData: { labels: [], values: [] },
         overdueSummary: { total: 0, overdue: 0, current: 0 }
       };
@@ -39,7 +39,7 @@ const VendorPaymentsChart = ({ vendorPayments }) => {
       const term = item['Payment Terms Code'] || 'Unknown';
       // Round to 2 decimal places when storing the values
       const balance = Math.round(parseFloat(item['BalanceDue'] || 0) * 100) / 100;
-      
+
       if (!acc[term]) {
         acc[term] = balance;
       } else {
@@ -49,9 +49,9 @@ const VendorPaymentsChart = ({ vendorPayments }) => {
     }, {});
 
     // Calculate overdue summary with rounded values
-    const totalBalance = Math.round(vendorPayments.reduce((sum, item) => 
+    const totalBalance = Math.round(vendorPayments.reduce((sum, item) =>
       sum + (parseFloat(item['BalanceDue']) || 0), 0) * 100) / 100;
-      
+
     const overdueBalance = Math.round(vendorPayments.reduce((sum, item) => {
       const overdueDays = parseInt(item['Overdue Days']) || 0;
       return sum + (overdueDays > 0 ? parseFloat(item['BalanceDue']) || 0 : 0);
@@ -168,7 +168,7 @@ const VendorPaymentsChart = ({ vendorPayments }) => {
                   ></div>
                 </div>
               </div>
-              
+
               <div className="mb-3">
                 <div className="d-flex justify-content-between mb-1">
                   <span className="text-muted">Current:</span>
@@ -181,7 +181,7 @@ const VendorPaymentsChart = ({ vendorPayments }) => {
                   ></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="d-flex justify-content-between mb-1">
                   <span className="text-muted">Overdue:</span>

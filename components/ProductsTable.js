@@ -641,6 +641,11 @@ export default function ProductsTable({
     { label: "Item Name", field: "ItemName", sortable: true },
     { label: "Category", field: "Category", sortable: true },
     {
+      label:"Stock",
+      field:"OnHand",
+      sortable:true,
+    },
+    {
       label: "Created Date",
       field: "CreateDate",
       sortable: true,
