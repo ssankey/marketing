@@ -32,7 +32,7 @@ export default function VendorPaymentPage() {
   const fetchVendorPayments = async () => {
     try {
       setIsLoading(true);
-      
+
       const params = new URLSearchParams({
         page: currentPage,
         search: searchTerm,
@@ -42,11 +42,11 @@ export default function VendorPaymentPage() {
         sortField,
         sortDir: sortDirection
       });
-      
+
       const response = await fetch(`/api/dashboard/vendors-balances?${params}`);
-      
+
       if (!response.ok) throw new Error("Failed to fetch vendor payments");
-      
+
       const data = await response.json();
       const totalCount = response.headers.get('X-Total-Count');
       setVendorPayments(data || []);
