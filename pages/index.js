@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo ,memo } from 'react';
 import { useRouter } from 'next/router';
 import { Container, Spinner } from 'react-bootstrap';
 import DashboardFilters from 'components/DashboardFilters';
@@ -102,6 +102,8 @@ const Dashboard = () => {
 
   const isPageLoading = authLoading || redirecting || !isAuthenticated;
 
+
+
   if (isPageLoading) {
     return (
       <div className="d-flex justify-content-center my-5">
@@ -109,6 +111,9 @@ const Dashboard = () => {
       </div>
     );
   }
+
+   
+
 
   return (
     <Container
@@ -148,6 +153,8 @@ const Dashboard = () => {
       )}
 
       {!dataLoading && !error && <DashboardCharts />}
+      {/* {!dataLoading && !error && <MemoizedDashboardCharts />} */}
+
     </Container>
   );
 };
