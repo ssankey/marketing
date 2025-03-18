@@ -54,6 +54,11 @@ const formatMonthYear = (year, month) => {
 
 const OrdersChart = () => {
   const [ordersData, setOrdersData] = useState([]);
+
+   const [availableYears, setAvailableYears] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
@@ -62,6 +67,11 @@ const OrdersChart = () => {
     product: null,
   }); // ✅ New state for filters
 
+  const colorPalette = {
+    primary: "#0d6efd",
+    orderLine: "#198754",
+  };
+  
   const chartRef = useRef(null);
   const router = useRouter();
 
@@ -154,11 +164,62 @@ const OrdersChart = () => {
           },
         },
       },
+      
     },
+    //    interaction: {
+    //   mode: 'index',
+    //   intersect: false,
+    // },
+    // onHover: (event, elements) => {
+    //   const chartCanvas = document.getElementById('orders-chart');
+    //   if (chartCanvas) {
+    //     chartCanvas.style.cursor = elements.length ? 'pointer' : 'default';
+    //   }
+    // },
+    hover: {
+    onHover: (event, elements) => {
+      const canvas = event.chart.canvas; // Access the canvas element
+      if (elements.length > 0) {
+        canvas.style.cursor = "pointer"; // Change cursor to pointer
+      } else {
+        canvas.style.cursor = "default"; // Reset cursor to default
+      }
+    },
+  },
+   onClick: (event, elements) => {
+      if (elements.length > 0) {
+        const chart = chartRef.current;
+        if (!chart) return;
+
+        const datasetIndex = elements[0].datasetIndex;
+        const dataIndex = elements[0].index;
+
+        const selectedMonth = ordersData[dataIndex].month; // e.g., "January"
+        const status = datasetIndex === 0 ? "open" : "closed"; // 0: Open Orders, 1: Closed Orders
+
+        // Convert month name to numeric value
+        const monthIndex = new Date(Date.parse(`${selectedMonth} 1, ${selectedYear}`)).getMonth() + 1;
+        const fromDate = `${selectedYear}-${String(monthIndex).padStart(2, "0")}-01`;
+        const toDate = new Date(selectedYear, monthIndex, 0).toISOString().split("T")[0]; // Last day of month
+
+        // Navigate using router.push
+        router.push({
+          pathname: "/orders",
+          query: {
+            status,
+            page: 1,
+            fromDate,
+            toDate,
+          },
+        });
+      }
+    },
+    
     scales: {
       x: { grid: { display: false } },
       y: { beginAtZero: true, grid: { color: "rgba(0, 0, 0, 0.05)" } },
     },
+    
   };
 
   return (

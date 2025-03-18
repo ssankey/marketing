@@ -273,7 +273,7 @@ const OrderDetails = ({ order }) => {
                                       {product.InvoiceDispatchDate ? formatDate(product.InvoiceDispatchDate) : "N/A"}
                                     </div>
                                     <div>
-                                      <strong>Airlinename:</strong>{" "}
+                                      <strong>Airline Name:</strong>{" "}
                                       {product.Airlinename ? product.Airlinename : "N/A"}
                                     </div>
                                   </Tooltip>

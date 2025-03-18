@@ -6,7 +6,6 @@ import { useEffect } from 'react';
 import StatusFlowProgress from '../components/StatusFlow';
 
 
-
 export default function InvoiceDetailsPage({ invoice, status, error }) {
   const router = useRouter();
 
