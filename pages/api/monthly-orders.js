@@ -1,19 +1,19 @@
-//pages/api/monthly-orders.js
 
+
+
+
+//pages/api/monthly-orders.js
 import { verify } from 'jsonwebtoken';
 import sql from 'mssql';
 import { queryDatabase } from '../../lib/db';
 
 export default async function handler(req, res) {
     try {
-        const { year } = req.query;
+        const { year, slpCode, itmsGrpCod, itemCode } = req.query;
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
-                error: 'Missing or malformed Authorization header',
-                received: authHeader
-            });
+            return res.status(401).json({ error: 'Missing or malformed Authorization header' });
         }
 
         const token = authHeader.split(' ')[1];
@@ -27,6 +27,7 @@ export default async function handler(req, res) {
         }
 
         const isAdmin = decoded.role === 'admin';
+
         let baseQuery = `
             SELECT 
                 YEAR(T0.DocDate) AS year,
@@ -37,46 +38,55 @@ export default async function handler(req, res) {
                 SUM(CASE WHEN T0.DocStatus = 'O' THEN T0.DocTotal ELSE 0 END) AS openSales,
                 SUM(CASE WHEN T0.DocStatus = 'C' THEN T0.DocTotal ELSE 0 END) AS closedSales
             FROM ORDR T0
+            INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
+            INNER JOIN OITM T2 ON T1.ItemCode = T2.ItemCode
+            INNER JOIN OITB T3 ON T2.ItmsGrpCod = T3.ItmsGrpCod
             WHERE T0.CANCELED = 'N'
-            ${year ? 'AND YEAR(T0.DocDate) = @year' : ''}
         `;
 
-        let whereClause = '';
-        let params = year ? [{ name: 'year', type: sql.Int, value: parseInt(year) }] : [];
+        let whereClauses = [];
+        let params = [];
 
-        if (!isAdmin) {
-            const contactCodes = decoded.contactCodes || [];
-            if (!contactCodes.length) {
-                return res.status(403).json({ error: 'No contact codes available' });
-            }
+        if (year) {
+            whereClauses.push(`YEAR(T0.DocDate) = @year`);
+            params.push({ name: 'year', type: sql.Int, value: parseInt(year) });
+        }
 
-            const contactParams = contactCodes.map((code, index) => ({
-                name: `contactCode${index}`,
-                type: sql.VarChar(50),
-                value: code
-            }));
+        if (slpCode) {
+            whereClauses.push(`T0.SlpCode = @slpCode`);
+            params.push({ name: 'slpCode', type: sql.Int, value: parseInt(slpCode) });
+        }
 
-            whereClause = `AND T0.CardCode IN (
-                SELECT CardCode FROM OCPR 
-                WHERE CntctCode IN (${contactParams.map((_, i) => `@contactCode${i}`).join(',')})
-            )`;
+        if (itmsGrpCod) {
+            whereClauses.push(`T3.ItmsGrpNam = @itmsGrpCod`);
+            params.push({ name: 'itmsGrpCod', type: sql.VarChar, value: itmsGrpCod });
+        }
 
-            params = [...params, ...contactParams];
+        if (itemCode) {
+            whereClauses.push(`T2.ItemCode = @itemCode`);
+            params.push({ name: 'itemCode', type: sql.VarChar, value: itemCode });
+        }
+
+        // Apply user-based filtering if not admin
+        if (!isAdmin && decoded.cardCodes && decoded.cardCodes.length > 0) {
+            whereClauses.push(`T0.CardCode IN (${decoded.cardCodes.map((_, i) => `@cardCode${i}`).join(', ')})`);
+            decoded.cardCodes.forEach((cardCode, i) => {
+                params.push({ name: `cardCode${i}`, type: sql.VarChar, value: cardCode });
+            });
+        }
+
+        if (whereClauses.length > 0) {
+            baseQuery += ` AND ` + whereClauses.join(' AND ');
         }
 
         const fullQuery = `
             ${baseQuery}
-            ${whereClause}
-            GROUP BY 
-                YEAR(T0.DocDate),
-                DATENAME(MONTH, T0.DocDate),
-                MONTH(T0.DocDate)
-            ORDER BY 
-                MONTH(T0.DocDate)
+            GROUP BY YEAR(T0.DocDate), DATENAME(MONTH, T0.DocDate), MONTH(T0.DocDate)
+            ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate)
         `;
 
         const results = await queryDatabase(fullQuery, params);
-        
+
         const data = results.map(row => ({
             year: row.year,
             month: row.month,
@@ -87,13 +97,13 @@ export default async function handler(req, res) {
             closedSales: parseFloat(row.closedSales) || 0,
         }));
 
-        // Get available years
         const yearsQuery = `
             SELECT DISTINCT YEAR(DocDate) as year
             FROM ORDR
             WHERE CANCELED = 'N'
             ORDER BY year DESC
         `;
+
         const yearsResult = await queryDatabase(yearsQuery);
         const availableYears = yearsResult.map(row => row.year);
 
@@ -104,6 +114,5 @@ export default async function handler(req, res) {
             error: 'Internal server error',
             details: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
-        
     }
 }
