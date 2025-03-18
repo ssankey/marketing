@@ -44,10 +44,10 @@ export default function VendorPaymentPage({ initialVendorPayments = [] }) {
   return (
     
       <Container className="mt-2  ">
-        <Breadcrumb>
+        {/* <Breadcrumb>
           <Breadcrumb.Item href="#">Vendor Payments</Breadcrumb.Item>
           <Breadcrumb.Item active>Details</Breadcrumb.Item>
-        </Breadcrumb>
+        </Breadcrumb> */}
         <Card className="mb-2">
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">

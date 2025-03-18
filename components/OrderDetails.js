@@ -254,6 +254,7 @@ const OrderDetails = ({ order }) => {
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
                           <td className="text-nowrap">{product.U_CasNo ? product.U_CasNo : '-'}</td>
+                          {/* <td className="text-nowrap">{product.U_CasNo }</td> */}
                           <td className="text-nowrap">
                             {invoiceNumber !== "N/A" ? (
                               <OverlayTrigger
@@ -282,6 +283,7 @@ const OrderDetails = ({ order }) => {
                                   {invoiceNumber}
                                 </span>
                               </OverlayTrigger>
+                            
                             ) : (
                               "N/A"
                             )}
