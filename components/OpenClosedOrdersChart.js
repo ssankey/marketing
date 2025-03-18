@@ -280,7 +280,7 @@ const OrdersChart = () => {
               className="mb-3 mb-md-0"
               style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
             >
-              Monthly Open vs Closed Orders
+              Open Orders - Monthly
             </h4>
             <div className="d-flex flex-column flex-md-row gap-2 align-items-md-center mt-3 mt-md-0">
               <div className="d-flex gap-2">
