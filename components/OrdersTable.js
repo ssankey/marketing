@@ -193,7 +193,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
         searchConfig={{
           enabled: true,
           placeholder: "Search orders...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","NumAtCard"],
+          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","NumAtCard","CustomerPONo"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
