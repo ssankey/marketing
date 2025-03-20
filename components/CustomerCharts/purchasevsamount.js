@@ -1,8 +1,8 @@
-// // //components/CustomerCharts/purchasevsamount
 
 
-// import React from "react";
+// import React, { useState, useEffect } from "react";
 // import { Bar } from "react-chartjs-2";
+// import { Dropdown, Spinner } from "react-bootstrap";
 // import { formatCurrency } from "utils/formatCurrency";
 // import ChartDataLabels from "chartjs-plugin-datalabels";
 
@@ -17,9 +17,7 @@
 //   Legend,
 //   LineElement,
 // } from "chart.js";
-// import { callback } from "chart.js/helpers";
 
-// // Register chart.js components
 // ChartJS.register(
 //   CategoryScale,
 //   LinearScale,
@@ -32,7 +30,36 @@
 //   ChartDataLabels
 // );
 
-// const PurchasesAmountChart = ({ data }) => {
+// const PurchasesAmountChart = ({ customerId }) => {
+//   const [data, setData] = useState([]);
+//   const [availableYears, setAvailableYears] = useState([2024, 2025]); // Example initial years
+//   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+//   const [loading, setLoading] = useState(true);
+
+//   const fetchCustomerData = async () => {
+//     try {
+//       setLoading(true);
+//       const response = await fetch(
+//         `/api/customers/${customerId}?metrics=true&year=${selectedYear}`
+//       );
+
+//       if (!response.ok) {
+//         throw new Error("Failed to fetch data");
+//       }
+
+//       const result = await response.json();
+//       setData(result);
+//     } catch (error) {
+//       console.error("Error fetching customer data:", error);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     fetchCustomerData();
+//   }, [selectedYear]);
+
 //   const colorPalette = {
 //     sales: "#198754", // Green for sales
 //   };
@@ -97,7 +124,6 @@
 //           },
 //         },
 //       },
-//       // Add the datalabels plugin configuration
 //       datalabels: {
 //         display: true,
 //         color: "#000",
@@ -120,8 +146,6 @@
 //       },
 //       y: {
 //         beginAtZero: true,
-       
-
 //         grid: { color: "rgba(0, 0, 0, 0.05)" },
 //         ticks: {
 //           callback: (value) => {
@@ -135,7 +159,7 @@
 
 //   return (
 //     <div className="bg-white rounded-lg shadow-sm">
-//       <div className="p-4 border-b">
+//       <div className="p-4 border-b d-flex justify-content-between align-items-center">
 //         <h4 className="text-xl font-semibold text-gray-900">Sales - Monthly</h4>
 //         <Dropdown>
 //           <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
@@ -151,12 +175,18 @@
 //         </Dropdown>
 //       </div>
 //       <div className="p-4 bg-gray-50">
-//         {/* <div className="h-[1000px]">
-//           <Bar data={chartData} options={chartOptions} />
-//         </div> */}
-//         <div style={{ height: "400px" }}>
-//           <Bar data={chartData} options={chartOptions} />
-//         </div>
+//         {loading ? (
+//           <div
+//             className="d-flex justify-content-center align-items-center"
+//             style={{ height: "400px" }}
+//           >
+//             <Spinner animation="border" />
+//           </div>
+//         ) : (
+//           <div style={{ height: "400px" }}>
+//             <Bar data={chartData} options={chartOptions} />
+//           </div>
+//         )}
 //       </div>
 //     </div>
 //   );
@@ -166,7 +196,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Bar } from "react-chartjs-2";
-import { Dropdown, Spinner } from "react-bootstrap";
+import { Spinner } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
@@ -196,16 +226,12 @@ ChartJS.register(
 
 const PurchasesAmountChart = ({ customerId }) => {
   const [data, setData] = useState([]);
-  const [availableYears, setAvailableYears] = useState([2024, 2025]); // Example initial years
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
 
   const fetchCustomerData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(
-        `/api/customers/${customerId}?metrics=true&year=${selectedYear}`
-      );
+      const response = await fetch(`/api/customers/${customerId}/metrics`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch data");
@@ -222,7 +248,7 @@ const PurchasesAmountChart = ({ customerId }) => {
 
   useEffect(() => {
     fetchCustomerData();
-  }, [selectedYear]);
+  }, [customerId]);
 
   const colorPalette = {
     sales: "#198754", // Green for sales
@@ -243,19 +269,23 @@ const PurchasesAmountChart = ({ customerId }) => {
     "Dec",
   ];
 
-  // Filter out months where AmountSpend is zero
-  const filteredData = data.filter((item) => item.AmountSpend !== 0);
+  // Filter out months where AmountSpend is 0
+  const filteredData = data.filter((item) => item.AmountSpend > 0);
 
-  const filteredMonths = filteredData.map(
-    (_, index) => months[data.indexOf(filteredData[index])]
-  );
+  // Format labels and data for the chart
+  const chartLabels = filteredData.map((item) => {
+    const date = new Date(item.Date);
+    return `${months[date.getMonth()]} ${date.getFullYear()}`;
+  });
+
+  const chartDataValues = filteredData.map((item) => item.AmountSpend);
 
   const chartData = {
-    labels: filteredMonths,
+    labels: chartLabels,
     datasets: [
       {
         label: "Sales (₹)",
-        data: filteredData.map((item) => item.AmountSpend),
+        data: chartDataValues,
         backgroundColor: colorPalette.sales,
         borderColor: colorPalette.sales,
         borderWidth: 1,
@@ -323,20 +353,8 @@ const PurchasesAmountChart = ({ customerId }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-4 border-b d-flex justify-content-between align-items-center">
+      <div className="p-4 border-b">
         <h4 className="text-xl font-semibold text-gray-900">Sales - Monthly</h4>
-        <Dropdown>
-          <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
-            {selectedYear}
-          </Dropdown.Toggle>
-          <Dropdown.Menu>
-            {availableYears.map((year) => (
-              <Dropdown.Item key={year} onClick={() => setSelectedYear(year)}>
-                {year}
-              </Dropdown.Item>
-            ))}
-          </Dropdown.Menu>
-        </Dropdown>
       </div>
       <div className="p-4 bg-gray-50">
         {loading ? (
