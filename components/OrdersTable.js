@@ -202,6 +202,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
           options: [
             { value: "open", label: "Open" },
             { value: "closed", label: "Closed" },
+            { value: "partial", label: "Partial" },
           ],
           value: statusFilter,
           label: "Status",
