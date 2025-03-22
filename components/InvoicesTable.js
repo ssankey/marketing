@@ -85,9 +85,14 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       label: "Status",
       // render: (value) => <StatusBadge status={value} />,
        render: (value) => (
-        <span
+        // <span
+        //   className={`badge ${
+        //     value === "Closed" ? "bg-success" : "bg-danger"
+        //   }`}
+        // >
+         <span
           className={`badge ${
-            value === "Closed" ? "bg-success" : "bg-danger"
+            value === "Closed" ? "bg-success" : value === "Open" ? "bg-danger" : "bg-warning"
           }`}
         >
           {value}
@@ -136,6 +141,19 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       field: "LineTotal",
       label: "Line Total",
       render: (value) => formatCurrency(value),
+    },
+    {
+      field: "PaymentStatus",
+      label: "Payment Status",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
     },
     {
     field: "U_DispatchDate", // Add this field

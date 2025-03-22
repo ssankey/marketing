@@ -393,14 +393,15 @@ const NavbarVertical = (props) => {
             </CustomToggle>
             <Accordion.Collapse eventKey="invoices">
               <ul className="nav flex-column ms-3">
+                
                 <li className="nav-item mb-3">
-                  <Link href="/invoices" className={`nav-link d-flex align-items-center ${router === "/invoices" ? "active" : ""}`}>
-                    <Clipboard className="me-2" /> Invoices(Header)
+                  <Link href="/header-invoices" className={`nav-link d-flex align-items-center ${router === "/header-invoices" ? "active" : ""}`}>
+                    <Clipboard className="me-2" /> Invoices (Header)
                   </Link>
                 </li>
                 <li className="nav-item mb-3">
-                  <Link href="/line-invoices" className={`nav-link d-flex align-items-center ${router === "/line-invoices" ? "active" : ""}`}>
-                    <Clipboard className="me-2" /> Invoices (Line)
+                  <Link href="/invoices" className={`nav-link d-flex align-items-center ${router === "/invoices" ? "active" : ""}`}>
+                    <Clipboard className="me-2" /> Invoices(Line)
                   </Link>
                 </li>
                 <li className="nav-item mb-3">

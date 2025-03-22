@@ -9,11 +9,10 @@ import StatusBadge from './StatusBadge';
 import { formatDate } from 'utils/formatDate';
 import usePagination from 'hooks/usePagination';
 import useTableFilters from 'hooks/useFilteredData';
-import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
 
-const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
+const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   const ITEMS_PER_PAGE = 20;
   const [displayState, setDisplayState] = useState({
     hasData: false,
@@ -27,11 +26,11 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
 
   const {
     searchTerm,
+    statusFilter,
     fromDate,
     toDate,
     sortField,
     sortDirection,
-    statusFilter,
     handleSearch,
     handleStatusChange,
     handleDateFilterChange,
@@ -39,44 +38,44 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
     handleReset,
   } = useTableFilters();
 
-  // Update display state based on props
   useEffect(() => {
     setDisplayState(prev => ({
-      hasData: orders.length > 0,
+      hasData: invoices.length > 0,
       showLoading: isLoading && !prev.hasData
     }));
-  }, [isLoading, orders]);
+  }, [isLoading, invoices]);
 
+  // Define columns for invoice-level data
   const columns = [
     {
       field: "DocNum",
-      label: "Order#",
+      label: "Invoice#",
       render: (value, row) => (
         <>
           <Link
-            href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
+            href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
             className="text-blue-600 hover:text-blue-800"
           >
             {value}
           </Link>
-          {/* &nbsp;
+          &nbsp;
           <Link
-            href={`/printOrder?d=${value}&e=${row.DocEntry}`}
+            href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
             className="text-blue-600 hover:text-blue-800"
             target="_blank"
           >
             <Printer />
-          </Link> */}
+          </Link>
         </>
       ),
     },
     {
-      field: "StockStatus",
-      label: "Stock Status",
+      field: "DocStatusDisplay",
+      label: "Status",
       render: (value) => (
         <span
           className={`badge ${
-            value === "In Stock" ? "bg-success" : "bg-danger"
+            value === "Closed" ? "bg-success" : value === "Open" ? "bg-danger" : "bg-warning"
           }`}
         >
           {value}
@@ -84,59 +83,55 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
       ),
     },
     {
-      field: "CustomerPONo",
-      label: "Customer PONo",
-      render: (value) => value || "N/A",
+      field: "DocDate",
+      label: "Invoice Date",
+      render: (value) => formatDate(value),
     },
     {
       field: "CardName",
       label: "Customer",
-      render: (value) => truncateText(value, 20),
-    },
-    
-    {
-      field: "DocDate",
-      label: "Order Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "DeliveryDate",
-      label: "Delivery Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "ItemCode",
-      label: "Item Code",
       render: (value) => value || "N/A",
     },
     {
-      field: "ItemName",
-      label: "Item Name",
-      render: (value) => truncateText(value, 30),
+      field: "CustomerPONo",
+      label: "Customer PO#",
+      render: (value) => value || "N/A",
     },
     {
-      field: "OpenQty",
-      label: "Open Quantity",
-      render: (value) => value || "0",
-    },
-    {
-      field: "Stock",
-      label: "In Stock",
-      render: (value) => value || "0",
-    },
-    {
-      field: "TotalAmount",
+      field: "InvoiceTotal",
       label: "Total Amount",
-      render: (value, row) => {
-        const amountInINR = row.DocCur === "INR" ? value : value * row.DocRate;
-        return formatCurrency(amountInINR);
-      },
+      render: (value) => formatCurrency(value),
+    },
+    {
+      field: "PaymentStatus",
+      label: "Payment Status",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
     },
     {
       field: "SalesEmployee",
       label: "Sales Employee",
       render: (value) => value || "N/A",
     },
+    {
+      field: "TransportName",
+      label: "Transport",
+      render: (value) => value || "N/A",
+    },
+    {
+        field: "U_DispatchDate", // Add this field
+        label: "Dispatch Date",
+        render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
+    },
+    
+    
   ];
 
   const handleExcelDownload = async () => {
@@ -147,35 +142,21 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
         return;
       }
 
-      const url = `/api/excel/getOpenOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
-
+      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+      
       const response = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
+      const filteredInvoices = await response.json();
 
-      const filteredOpenOrders = await response.json();
-
-      if (filteredOpenOrders && filteredOpenOrders.length > 0) {
-        const formatDate = (date) => {
-          if (!date) return "NoDate";
-          const [year, month, day] = date.split("-");
-          return `${day}-${month}-${year}`;
-        };
-
-        const startDate = formatDate(fromDate);
-        const endDate = formatDate(toDate);
-        const fileName = `OpenOrders_${startDate}_to_${endDate}.xlsx`;
-
-        downloadExcel(filteredOpenOrders, fileName);
+      if (filteredInvoices && filteredInvoices.length > 0) {
+        downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
       } else {
         alert("No data available to export.");
       }
     } catch (error) {
-      console.error("Error during Excel export:", error);
+      console.error("Failed to fetch data for Excel export:", error);
       alert("Failed to export data. Please try again.");
     }
   };
@@ -186,7 +167,7 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
         <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
           <div className="text-center">
             <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading open orders...</p>
+            <p className="text-gray-600">Loading invoices...</p>
           </div>
         </div>
       );
@@ -196,14 +177,14 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
       <>
         <GenericTable
           columns={columns}
-          data={orders || []}
+          data={invoices}  // Use invoice-level data directly
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
           onExcelDownload={handleExcelDownload}
         />
-        {!isLoading && orders.length === 0 && (
-          <div className="text-center py-4">No open orders found.</div>
+        {!isLoading && invoices.length === 0 && (
+          <div className="text-center py-4">No invoices found.</div>
         )}
       </>
     );
@@ -214,27 +195,28 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
       <TableFilters
         searchConfig={{
           enabled: true,
-          placeholder: "Search open orders...",
-          fields: ["DocNum", "CardName"],
+          placeholder: "Search invoices...",
+          fields: ["DocNum", "CardName", "CustomerPONo"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         statusFilter={{
           enabled: true,
           options: [
-            { value: "inStock", label: "In Stock" },
-            { value: "outOfStock", label: "Out of Stock" },
-            
+            { value: "Open", label: "Open" },
+            { value: "Closed", label: "Closed" },
+            { value: "Canceled", label: "Canceled" },
           ],
           value: statusFilter,
+          label: "Status",
         }}
+        onStatusChange={handleStatusChange}
         fromDate={fromDate}
         toDate={toDate}
-        onReset={handleReset}
-        onStatusChange={handleStatusChange}
         onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
-        totalItemsLabel="Total Open Orders"
+        onReset={handleReset}
+        totalItemsLabel="Total Invoices"
       />
 
       {renderContent()}
@@ -256,4 +238,4 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
   );
 };
 
-export default OpenOrdersTable;
+export default InvoicesTable;
