@@ -224,6 +224,7 @@ const OpenOrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
           options: [
             { value: "inStock", label: "In Stock" },
             { value: "outOfStock", label: "Out of Stock" },
+            
           ],
           value: statusFilter,
         }}
