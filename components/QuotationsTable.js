@@ -12,7 +12,7 @@ import useTableFilters from "hooks/useFilteredData";
 import StatusBadge from "./StatusBadge";
 import downloadExcel from "utils/exporttoexcel";
 
-const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
+const QuotationTable = ({ quotations, totalItems, isLoading = false, fetchAllQuotations }) => {
   const ITEMS_PER_PAGE = 20;
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
@@ -74,9 +74,14 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
       label: "Status",
       // render: (value) => <StatusBadge status={value} />,
       render: (value) => (
-        <span
+        // <span
+        //   className={`badge ${
+        //     value === "Closed" ? "bg-success" : "bg-danger"
+        //   }`}
+        // >
+         <span
           className={`badge ${
-            value === "Closed" ? "bg-success" : "bg-danger"
+            value === "Closed" ? "bg-success" : value === "Open" ? "bg-danger" : "bg-warning"
           }`}
         >
           {value}
@@ -123,32 +128,65 @@ const QuotationTable = ({ quotations, totalItems, isLoading = false }) => {
     },
   ];
 
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) {
+  //       console.error("No token found");
+  //       return;
+  //     }
+
+  //     const url = `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+
+  //     const response = await fetch(url, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+
+  //     const filteredQuotations = await response.json(); 
+
+  //     if (filteredQuotations && filteredQuotations.length > 0) {
+  //       downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
+
   const handleExcelDownload = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
-
-      const url = `/api/excel/getAllQuotations?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
-
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const filteredQuotations = await response.json(); 
-
-      if (filteredQuotations && filteredQuotations.length > 0) {
-        downloadExcel(filteredQuotations, `Quotations_${statusFilter}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
-      alert("Failed to export data. Please try again.");
+  try {
+    const fullData = await fetchAllQuotations();
+    if (!fullData || fullData.length === 0) {
+      alert("No data available to export.");
+      return;
     }
-  };
+
+    // Format and structure data according to visible columns
+    const formattedData = fullData.map(row => {
+      return {
+        "Quotation#": row.DocNum,
+        "Status": row.DocStatus,
+        "Quotation Date": row.DocDate ? formatDate(row.DocDate) : "",
+        "Customer PO No": row.CustomerPONo || "N/A",
+        "Customer": row.CardName || "N/A",
+        "Delivery Date": row.DeliveryDate ? formatDate(row.DeliveryDate) : "",
+        "Total Amount": formatCurrency(row.DocCur === "INR" ? row.DocTotal : row.DocTotal * row.DocRate),
+        "Currency": row.DocCur || "N/A",
+        "Sales Person": row.SalesEmployee || "N/A"
+      };
+    });
+
+    downloadExcel(formattedData, `Quotations_${statusFilter}`);
+  } catch (error) {
+    console.error("Download failed:", error);
+    alert("Failed to export data. Please try again.");
+  }
+};
+
+
+  
 
   const renderContent = () => {
     if (isLoading && (!quotations || quotations.length === 0)) {

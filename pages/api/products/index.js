@@ -58,6 +58,7 @@ export default async function handler(req, res) {
       sortDir = "asc",
       status = "all",
       category = "", // <-- ADD THIS
+      getAll = false,
     } = req.query;
 
     const ITEMS_PER_PAGE = 20;
@@ -75,6 +76,7 @@ export default async function handler(req, res) {
         offset,
         ITEMS_PER_PAGE,
         status,
+        getAll ,
       });
 
       res.status(200).json(productsData);

@@ -362,6 +362,7 @@ export default function ProductsTable({
   isLoading = false,
   status,
   onStatusChange,
+  fetchAllProducts, 
 }) {
   // Constants
   const ITEMS_PER_PAGE = 20;
@@ -588,30 +589,82 @@ export default function ProductsTable({
   /**
    * Handles the Excel download functionality.
    */
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const query = new URLSearchParams({
+  //       status,
+  //       search: searchTerm,
+  //       category: selectedCategory,
+  //       sortField,
+  //       sortDir: sortDirection,
+  //     });
+
+  //     const response = await fetch(`/api/excel/getAllProducts?${query.toString()}`);
+  //     if (!response.ok) throw new Error("Failed to fetch data for Excel export");
+
+  //     const filteredProducts = await response.json();
+  //     if (filteredProducts && filteredProducts.length > 0) {
+  //       downloadExcel(filteredProducts, `Products_${status}`);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
+
   const handleExcelDownload = async () => {
-    try {
-      const query = new URLSearchParams({
-        status,
-        search: searchTerm,
-        category: selectedCategory,
-        sortField,
-        sortDir: sortDirection,
-      });
-
-      const response = await fetch(`/api/excel/getAllProducts?${query.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch data for Excel export");
-
-      const filteredProducts = await response.json();
-      if (filteredProducts && filteredProducts.length > 0) {
-        downloadExcel(filteredProducts, `Products_${status}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
-      alert("Failed to export data. Please try again.");
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
     }
-  };
+
+    const queryParams = new URLSearchParams({
+      status,
+      search: searchTerm,
+      category: selectedCategory,
+      sortField,
+      sortDir: sortDirection,
+      getAll: true, // <-- fetch all records
+    });
+
+    const response = await fetch(`/api/products?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+
+    const { products: allProducts } = await response.json();
+
+    if (allProducts && allProducts.length > 0) {
+      // Format the data for Excel
+      const formattedData = allProducts.map((row) => ({
+        "CAT No.": row.Cat_size_main,
+        "Stock Status": row.stockStatus,
+        "Item Name": row.ItemName,
+        "Category": row.Category,
+        "Created Date": row.CreateDate ? row.CreateDate.split("T")[0] : "N/A",
+        "Updated Date": row.UpdateDate ? row.UpdateDate.split("T")[0] : "N/A",
+      }));
+
+      // Generate the file name
+      const fileName = `Products_${status}.xlsx`;
+
+      // Download the Excel file
+      downloadExcel(formattedData, fileName);
+    } else {
+      alert("No data available to export.");
+    }
+  } catch (error) {
+    console.error("Failed to fetch data for Excel export:", error);
+    alert("Failed to export data. Please try again.");
+  }
+};
 
   // ------------------- Table Columns Configuration -------------------
   const columns = [
