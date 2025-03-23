@@ -1,6 +1,6 @@
-// src/components/VendorPaymentsChart.js
-import React, { useState, useEffect } from "react";
-import { Card, Spinner, ListGroup, Row, Col } from "react-bootstrap";
+// src/components/page/vendor-payment/chart/VendorPaymentsChart.js
+import React, { useMemo } from "react";
+import { Card, Row, Col } from "react-bootstrap";
 import { Bar } from "react-chartjs-2";
 import { formatCurrency } from "utils/formatCurrency";
 import {
@@ -12,7 +12,6 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import FilterDropdown from "components/filters/FilterDropdown";
 
 // Register ChartJS components
 ChartJS.register(
@@ -24,213 +23,182 @@ ChartJS.register(
   Legend
 );
 
-// Define a cohesive color palette
-const colorPalette = {
-  primary: "#0d6efd",
-  secondary: "#6c757d",
-  success: "#198754",
-  warning: "#ffc107",
-  info: "#0dcaf0",
-  dark: "#212529",
-  light: "#f8f9fa",
-  gradient: [
-    "#0d6efd",
-    "#6610f2",
-    "#6f42c1",
-    "#d63384",
-    "#dc3545",
-    "#fd7e14",
-    "#ffc107",
-    "#198754",
-    "#20c997",
-    "#0dcaf0",
-  ],
-};
-
-const VendorPaymentsChart = () => {
-  // State Variables
-  const [vendorPayments, setVendorPayments] = useState([]);
-  const [dateFilter, setDateFilter] = useState("today");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  // Fetch Vendor Payments Data
-  const fetchVendorPayments = async (filter) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({ dateFilter: filter });
-      const response = await fetch(`/api/dashboard/vendors-balances?${params}`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch vendor payments data");
-      }
-
-      const data = await response.json();
-      setVendorPayments(data);
-    } catch (err) {
-      setError(err.message);
-      console.error("Error fetching vendor payments:", err);
-    } finally {
-      setLoading(false);
+const VendorPaymentsChart = ({ vendorPayments }) => {
+  // Process chart data using useMemo to optimize performance
+  const { chartData, overdueSummary } = useMemo(() => {
+    // No data check
+    if (!vendorPayments || vendorPayments.length === 0) {
+      return {
+        chartData: { labels: [], values: [] },
+        overdueSummary: { total: 0, overdue: 0, current: 0 }
+      };
     }
-  };
 
-  // Fetch data on component mount and when filter changes
-  useEffect(() => {
-    fetchVendorPayments(dateFilter);
-  }, [dateFilter]);
+    // Aggregate data by payment terms
+    const termData = vendorPayments.reduce((acc, item) => {
+      const term = item['Payment Terms Code'] || 'Unknown';
+      // Round to 2 decimal places when storing the values
+      const balance = Math.round(parseFloat(item['BalanceDue'] || 0) * 100) / 100;
 
-  // Chart Configuration
-  const chartData = {
-    labels: vendorPayments.map((vendor) => vendor.cardname),
-    datasets: [
-      {
-        label: "Payment",
-        data: vendorPayments.map((vendor) => vendor.Balance || 0),
-        backgroundColor: colorPalette.warning,
-        borderRadius: 6,
-        maxBarThickness: 40,
+      if (!acc[term]) {
+        acc[term] = balance;
+      } else {
+        acc[term] += balance;
+      }
+      return acc;
+    }, {});
+
+    // Calculate overdue summary with rounded values
+    const totalBalance = Math.round(vendorPayments.reduce((sum, item) =>
+      sum + (parseFloat(item['BalanceDue']) || 0), 0) * 100) / 100;
+
+    const overdueBalance = Math.round(vendorPayments.reduce((sum, item) => {
+      const overdueDays = parseInt(item['Overdue Days']) || 0;
+      return sum + (overdueDays > 0 ? parseFloat(item['BalanceDue']) || 0 : 0);
+    }, 0) * 100) / 100;
+
+    const currentBalance = Math.round((totalBalance - overdueBalance) * 100) / 100;
+
+    return {
+      chartData: {
+        labels: Object.keys(termData),
+        values: Object.values(termData)
       },
-    ],
+      overdueSummary: {
+        total: totalBalance,
+        overdue: overdueBalance,
+        current: currentBalance
+      }
+    };
+  }, [vendorPayments]);
+
+  // Chart configuration
+  const data = {
+    labels: chartData.labels,
+    datasets: [{
+      label: 'Balance Due',
+      data: chartData.values,
+      backgroundColor: [
+        'rgba(54, 162, 235, 0.6)',
+        'rgba(75, 192, 192, 0.6)',
+        'rgba(153, 102, 255, 0.6)',
+        'rgba(255, 159, 64, 0.6)',
+        'rgba(255, 99, 132, 0.6)',
+        'rgba(255, 206, 86, 0.6)'
+      ],
+      borderColor: [
+        'rgba(54, 162, 235, 1)',
+        'rgba(75, 192, 192, 1)',
+        'rgba(153, 102, 255, 1)',
+        'rgba(255, 159, 64, 1)',
+        'rgba(255, 99, 132, 1)',
+        'rgba(255, 206, 86, 1)'
+      ],
+      borderWidth: 1
+    }]
   };
 
-  const chartOptions = {
+  const options = {
     responsive: true,
     maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: (value) => formatCurrency(Math.round(value * 100) / 100)
+        }
+      }
+    },
     plugins: {
-      datalabels: {
-        display: false, // Disable datalabels for this chart
-      },
       legend: {
         display: false,
       },
       tooltip: {
-        backgroundColor: colorPalette.dark,
-        titleFont: {
-          size: 14,
-          weight: "bold",
-        },
-        bodyFont: {
-          size: 13,
-        },
-        padding: 12,
         callbacks: {
-          label: (tooltipItem) => `${formatCurrency(tooltipItem.raw)}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-        ticks: {
-          font: {
-            size: 12,
-            family: "'Inter', sans-serif",
-          },
-          color: colorPalette.dark,
-          maxRotation: 45, // Rotate labels 45 degrees
-          minRotation: 45, // Keep rotation consistent
-          callback: function (value, index) {
-            // Truncate long names to 15 characters + ellipsis
-            const label = this.getLabelForValue(value);
-            if (label.length > 15) {
-              return label.substr(0, 12) + "...";
-            }
-            return label;
-          },
-        },
-      },
-      y: {
-        grid: {
-          color: "rgba(0,0,0,0.05)",
-        },
-        ticks: {
-          callback: (value) => formatCurrency(value),
-          font: {
-            size: 12,
-            family: "'Inter', sans-serif",
-          },
-          color: colorPalette.dark,
-        },
-        beginAtZero: true,
-      },
-    },
+          label: (context) => {
+            return `Balance: ${formatCurrency(Math.round(context.raw * 100) / 100)}`;
+          }
+        }
+      }
+    }
   };
 
-  // No Data Display Component
-  const NoDataDisplay = () => (
-    <div className="d-flex flex-column justify-content-center align-items-center h-100 text-muted">
-      <svg
-        width="64"
-        height="64"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 21H3" />
-        <path d="M21 3v18" />
-        <path d="M3 21V3" />
-        <path d="M3 3h18" />
-        <path d="M10 14.5l3-3" />
-        <path d="M13 11.5l3 3" />
-        <path d="M8 17.5l8-8" />
-      </svg>
-      <p className="mt-3 mb-0">No data available for this time period</p>
-    </div>
-  );
-
-  // Loading and Error States
-  if (error) {
+  // Handle no data case
+  if (vendorPayments.length === 0) {
     return (
-      <Card className="shadow-sm border-0 h-100">
-        <Card.Header className="bg-white border-0 py-3">
-          <div className="d-flex justify-content-between align-items-center">
-            {/* <h5 className="mb-0 fw-bold">Vendor Payments</h5> */}
-            <FilterDropdown
-              currentFilter={dateFilter}
-              setFilter={setDateFilter}
-            />
-          </div>
-        </Card.Header>
-        <Card.Body className="d-flex justify-content-center align-items-center">
-          <p className="text-danger">Error: {error}</p>
+      <Card className="shadow-sm mb-3">
+        <Card.Body className="text-center py-4">
+          <p className="text-muted mb-0">No payment data available</p>
         </Card.Body>
       </Card>
     );
   }
 
   return (
-    <Card className="shadow-sm border-0 h-100">
-      <Card.Header className="bg-white border-0 py-3">
-        <div className="d-flex justify-content-between align-items-center">
-          {/* <h5 className="mb-0 fw-bold">Vendor Payments</h5> */}
-          {/* <FilterDropdown
-            currentFilter={dateFilter}
-            setFilter={setDateFilter}
-          /> */}
-        </div>
-      </Card.Header>
-      <Card.Body className="d-flex flex-column">
-        {loading ? (
-          <div className="d-flex justify-content-center align-items-center flex-grow-1">
-            <Spinner animation="border" variant="primary" />
-          </div>
-        ) : vendorPayments.length === 0 ? (
-          <NoDataDisplay />
-        ) : (
-          <div className="chart-container" style={{ height: "400px" }}>
-            <Bar data={chartData} options={chartOptions} />
-          </div>
-        )}
-      </Card.Body>
-    </Card>
+    <Row className="mb-3">
+      <Col lg={8}>
+        <Card className="shadow-sm h-100">
+          <Card.Header className="bg-white py-2">
+            <h6 className="mb-0">Balance by Payment Terms</h6>
+          </Card.Header>
+          <Card.Body>
+            {/* Increased height from 240px to 400px */}
+            <div style={{ height: "400px" }}>
+              <Bar data={data} options={options} />
+            </div>
+          </Card.Body>
+        </Card>
+      </Col>
+      <Col lg={4}>
+        <Card className="shadow-sm h-100">
+          <Card.Header className="bg-white py-2">
+            <h6 className="mb-0">Payment Summary</h6>
+          </Card.Header>
+          <Card.Body>
+            <div className="d-flex flex-column h-100 justify-content-center">
+              <div className="mb-3">
+                <div className="d-flex justify-content-between mb-1">
+                  <span className="text-muted">Total Balance:</span>
+                  <span className="fw-bold">{formatCurrency(Math.round(overdueSummary.total * 100) / 100)}</span>
+                </div>
+                <div className="progress" style={{ height: "8px" }}>
+                  <div
+                    className="progress-bar bg-primary"
+                    style={{ width: "100%" }}
+                  ></div>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <div className="d-flex justify-content-between mb-1">
+                  <span className="text-muted">Current:</span>
+                  <span className="fw-bold text-success">{formatCurrency(Math.round(overdueSummary.current * 100) / 100)}</span>
+                </div>
+                <div className="progress" style={{ height: "8px" }}>
+                  <div
+                    className="progress-bar bg-success"
+                    style={{ width: `${(overdueSummary.current / overdueSummary.total * 100) || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <div>
+                <div className="d-flex justify-content-between mb-1">
+                  <span className="text-muted">Overdue:</span>
+                  <span className="fw-bold text-danger">{formatCurrency(Math.round(overdueSummary.overdue * 100) / 100)}</span>
+                </div>
+                <div className="progress" style={{ height: "8px" }}>
+                  <div
+                    className="progress-bar bg-danger"
+                    style={{ width: `${(overdueSummary.overdue / overdueSummary.total * 100) || 0}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
   );
 };
 

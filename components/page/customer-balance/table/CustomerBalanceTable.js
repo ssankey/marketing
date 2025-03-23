@@ -1,88 +1,44 @@
-//components/CustomerBalanceTable.js
 import React from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
 import GenericTable from "components/GenericTable";
 import TableFilters from "components/TableFilters";
 import TablePagination from "components/TablePagination";
 import { formatCurrency } from "utils/formatCurrency";
-import Link from "next/link";
 import { formatDate } from "utils/formatDate";
-import usePagination from "hooks/usePagination";
-import useTableFilters from "hooks/useFilteredData";
 
-const CustBalanceTable = ({ balances, totalItems, isLoading = false}) => {
+const CustomerBalanceTable = ({
+  balances,
+  totalItems,
+  isLoading = false,
+  currentPage,
+  searchTerm,
+  status,
+  fromDate,
+  toDate,
+  sortField,
+  sortDirection,
+  onPageChange,
+  onSearch,
+  onStatusChange,
+  onDateFilterChange,
+  onSort,
+  onReset
+}) => {
   const ITEMS_PER_PAGE = 20;
-  console.log("inside table ",balances[0]);
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
-  const { currentPage, totalPages, onPageChange } = usePagination(
-    totalItems,
-    ITEMS_PER_PAGE
-  );
-  const {
-    searchTerm,
-    sortField,
-    sortDirection,
-    handleSearch,
-    handleDateFilterChange,
-    handleSort,
-    handleReset,
-  } = useTableFilters();
-
-  // const columns = [
-  //   {
-  //     field: "cardcode",
-  //     label: " CardCode#",
-  //     render: (value, row) => (
-  //       <>
-  //         <Link
-  //           href={`/customers?d=${value}&e=${row.DocEntry}`}
-  //           className="text-blue-600 hover:text-blue-800"
-  //         >
-  //           {value}
-  //         </Link>
-  //       </>
-  //     ),
-  //   },
-  //   {
-  //     field: "cardname",
-  //     label: "Customer",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "Balance",
-  //     label: "Balance",
-  //     render: (value) => formatCurrency(value),
-  //   },
-
-  //   // {
-  //   //   field: "duedate",
-  //   //   label: "Due Date",
-  //   //   render: (value) => formatDate(value),
-  //   // },
-  // ];
-
-   const columns = [
+  const columns = [
     {
       field: "SO#",
       label: "SO#",
     },
     {
-      field: "CardCode",
-      label: "Card Code",
+      field: "Customer Code",
+      label: "Customer Code",
     },
     {
-      field: "CardName",
-      label: "Customer",
-    },
-    {
-      field: "Invoice Total",
-      label: "Invoice Total",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      field: "BalanceDue",
-      label: "Balance Due",
-      render: (value) => formatCurrency(value),
+      field: "Customer Name",
+      label: "Customer Name",
     },
     {
       field: "SO Date",
@@ -111,92 +67,71 @@ const CustBalanceTable = ({ balances, totalItems, isLoading = false}) => {
       label: "Invoice Date",
       render: (value) => formatDate(value),
     },
-    // {
-    //   field: "Invoice Total",
-    //   label: "Invoice Total",
-    //   render: (value) => formatCurrency(value),
-    // },
-    // {
-    //   field: "BalanceDue",
-    //   label: "Balance Due",
-    //   render: (value) => formatCurrency(value),
-    // },
+    {
+      field: "Invoice Total",
+      label: "Invoice Total",
+      render: (value) => formatCurrency(value),
+    },
+    {
+      field: "Balance Due",
+      label: "Balance Due",
+      render: (value) => formatCurrency(value),
+    },
+    {
+      field: "BP Reference No.",
+      label: "BP Reference",
+    },
     {
       field: "Overdue Days",
       label: "Overdue Days",
     },
     {
-      field: "PymntGroup",
-      label: "Payment Group",
+      field: "Payment Terms",
+      label: "Payment Terms",
     },
   ];
 
-//   const handleExcelDownload = async () => {
-//     try {
-//       const response = await fetch(
-//         `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
-//           fromDate || ""
-//         }&toDate=${toDate || ""}`
-//       );
-//       const filteredInvoices = await response.json();
-
-//       if (filteredInvoices && filteredInvoices.length > 0) {
-//         downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
-//       } else {
-//         alert("No data available to export.");
-//       }
-//     } catch (error) {
-//       console.error("Failed to fetch data for Excel export:", error);
-//       alert("Failed to export data. Please try again.");
-//     }
-//   };
+  const statusOptions = [
+    { value: "all", label: "All" },
+    { value: "30", label: "Overdue 0-30 days" },
+    { value: "60", label: "Overdue 31-60 days" },
+    { value: "90", label: "Overdue 61-90 days" },
+    { value: "90+", label: "Overdue 90+ days" },
+  ];
 
   return (
     <Container fluid>
-      {/* <TableFilters>
-        searchConfig={{
-          enabled: true,
-          placeholder: "Search Customer...",
-          fields: ["cardcode", "cardname"],
-        }}
-        onSearch={handleSearch}
-        searchTerm={searchTerm}
-        statusFilter={{
-          enabled: false,
-        }}
-        fromDate={fromDate}
-        toDate={toDate}
-        onDateFilterChange={handleDateFilterChange}
-        totalItems={totalItems}
-        onReset={handleReset}
-        totalItemsLabel="Total Customer Balances"
-      </TableFilters> */}
       <TableFilters
         searchConfig={{
           enabled: true,
-          placeholder: "Search Customer...",
-          //   fields: ["cardcode", "cardname"],
-          fields: ["CardCode", "CardName"],
+          placeholder: "Search by customer name, code or SO#...",
+          value: searchTerm,
         }}
-        onSearch={handleSearch}
-        searchTerm={searchTerm}
+        onSearch={onSearch}
         statusFilter={{
-          enabled: false,
+          enabled: true,
+          options: statusOptions,
+          value: status,
+          label: "Overdue Status",
         }}
-        // fromDate={fromDate}
-        // toDate={toDate}
-        dateFilter={{ enabled: false }}
-        onDateFilterChange={handleDateFilterChange}
+        onStatusChange={onStatusChange}
+        dateFilter={{
+          enabled: true,
+          fromDate: fromDate,
+          toDate: toDate,
+          label: "SO Date Range",
+        }}
+        onDateFilterChange={onDateFilterChange}
         totalItems={totalItems}
-        onReset={handleReset}
-        totalItemsLabel="Total Customer Balances"
+        onReset={onReset}
+        totalItemsLabel="Total Customer Orders"
       />
 
       {isLoading ? (
         <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
           <div className="text-center">
             <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading ...</p>
+            <p className="text-gray-600">Loading customer data...</p>
           </div>
         </div>
       ) : (
@@ -204,14 +139,13 @@ const CustBalanceTable = ({ balances, totalItems, isLoading = false}) => {
           <GenericTable
             columns={columns}
             data={balances || []}
-            onSort={handleSort}
+            onSort={onSort}
             sortField={sortField}
             sortDirection={sortDirection}
-            // onExcelDownload={handleExcelDownload} // Passing the function as a prop
           />
-          {/* {balances.length === 0 && (
-            <div className="text-center py-4">No Balances found.</div>
-          )} */}
+          {balances.length === 0 && (
+            <div className="text-center py-4">No customer orders found.</div>
+          )}
         </>
       )}
 
@@ -224,7 +158,7 @@ const CustBalanceTable = ({ balances, totalItems, isLoading = false}) => {
       <Row className="mb-2">
         <Col className="text-center">
           <h5>
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages || 1}
           </h5>
         </Col>
       </Row>
@@ -232,4 +166,4 @@ const CustBalanceTable = ({ balances, totalItems, isLoading = false}) => {
   );
 };
 
-export default CustBalanceTable;
+export default CustomerBalanceTable;

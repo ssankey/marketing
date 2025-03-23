@@ -1,10 +1,25 @@
-import InvoiceDetails from 'components/invoicedetails';
-import { getInvoiceDetail, getInvoiceStatusFlow } from 'lib/models/invoices';
+// pages/invoices/[id].js
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
-import mermaid from 'mermaid';
-import { useEffect } from 'react';
-import StatusFlowProgress from '../components/StatusFlow';
+import { getInvoiceDetail, getInvoiceStatusFlow } from 'lib/models/invoices';
 
+// Dynamically load heavy components
+const InvoiceDetails = dynamic(
+  () => import('components/invoicedetails'),
+  { 
+    suspense: true,
+    loading: () => <div className="p-4">Loading invoice details...</div>
+  }
+);
+
+const StatusFlowProgress = dynamic(
+  () => import('../components/StatusFlow'),
+  { 
+    suspense: true,
+    loading: () => <div className="p-4">Loading status flow...</div>
+  }
+);
 
 export default function InvoiceDetailsPage({ invoice, status, error }) {
   const router = useRouter();
@@ -31,9 +46,10 @@ export default function InvoiceDetailsPage({ invoice, status, error }) {
 
   return (
     <div className="p-6">
-      {/* <StatusFlowDiagram status={status} /> */}
-      {/* <StatusFlowProgress status={status} /> */}
-      <InvoiceDetails invoice={invoice} />
+        {/* Invoice Details */}
+        <Suspense fallback={<div className="p-4">Loading invoice details...</div>}>
+          <InvoiceDetails invoice={invoice} />
+        </Suspense>
     </div>
   );
 }

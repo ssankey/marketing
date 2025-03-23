@@ -4,15 +4,21 @@ import { getVendorBalances } from "../../../lib/models/vendor-payment/getVendorB
 export default async function handler(req, res) {
   if (req.method === "GET") {
     try {
-      const data = await getVendorBalances();
-      if (data) {
+      const filters = {
+        overdueDays: req.query.overdueDays || '',
+        paymentTerms: req.query.paymentTerms || ''
+      };
+
+      const data = await getVendorBalances(filters);
+      
+      if (data && data.length > 0) {
         res.status(200).json(data);
       } else {
-        res.status(404).json({ message: "No Vendor Balances Found" });
+        res.status(404).json({ message: "No vendor balances found with these filters" });
       }
     } catch (error) {
       console.error("Error fetching vendor balances:", error);
-      res.status(500).json({ message: "Internal Server Error" });
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
   } else {
     res.status(405).json({ message: "Method Not Allowed" });
