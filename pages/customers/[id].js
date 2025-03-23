@@ -6,11 +6,10 @@ import { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Spinner, Table } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import  PurchasesAmountChart  from "../../components/CustomerCharts/purchasevsamount";
+import CustomerOrdersTable from  "../../components/CustomerCharts/outstandingtable";
 
 import SalesTable from "../../components/CustomerCharts/salestable";
 import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
-
-
 
 // Utility function to format date
 function formatDate(dateString) {
@@ -27,6 +26,7 @@ export default function CustomerDetails({
   TopOrderData,
   TopInvoiceData,
   salesByCategoryData,
+  customerOutstandings, 
 }) {
   //export default function CustomerDetails({ customer }) {
   const router = useRouter();
@@ -331,6 +331,16 @@ export default function CustomerDetails({
           </Card>
         </Col>
       </Row>
+      {/* Customer Orders Table */}
+      <Card className="mb-4">
+        <Card.Header>
+          <h3 className="mb-0">Customer Outstanding (Top 10 )</h3>
+        </Card.Header>
+        <Card.Body>
+         <CustomerOrdersTable customerOutstandings={ customerOutstandings } />
+
+        </Card.Body>
+      </Card>
       {/* Addresses Card */}
       <Card className="mb-4">
         <Card.Header>
@@ -404,6 +414,17 @@ export async function getServerSideProps(context) {
     // Fetch customer details
     const customerUrl = `${protocol}://${host}/api/customers/${id}`;
     const customerRes = await fetch(customerUrl);
+
+    //fetch outstanding
+
+    const outstandingUrl = `${protocol}://${host}/api/customers/${id}/outstanding`;
+    const outstandingRes = await fetch(outstandingUrl);
+
+    if (!outstandingRes.ok) {
+      throw new Error(`Failed to fetch customer outstanding: ${outstandingRes.statusText}`);
+    }
+
+    const customerOutstandings = await outstandingRes.json();
 
     if (!customerRes.ok) {
       throw new Error(
@@ -494,6 +515,7 @@ export async function getServerSideProps(context) {
         TopOrderData,
         TopInvoiceData,
         salesByCategoryData,
+        customerOutstandings
       },
     };
   } catch (error) {
@@ -507,7 +529,9 @@ export async function getServerSideProps(context) {
         TopOrderData: null,
         TopInvoiceData: null,
         salesByCategoryData: null,
+        customerOutstandings:null,
         error: error.message,
+        
       },
     };
   }
