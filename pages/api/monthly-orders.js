@@ -1,11 +1,9 @@
+// pages/api/monthly-orders.js
 
-
-
-
-//pages/api/monthly-orders.js
 import { verify } from 'jsonwebtoken';
 import sql from 'mssql';
 import { queryDatabase } from '../../lib/db';
+import { getCache, setCache } from '../../lib/redis';
 
 export default async function handler(req, res) {
     try {
@@ -18,7 +16,6 @@ export default async function handler(req, res) {
 
         const token = authHeader.split(' ')[1];
         let decoded;
-        
         try {
             decoded = verify(token, process.env.JWT_SECRET);
         } catch (verifyError) {
@@ -27,6 +24,16 @@ export default async function handler(req, res) {
         }
 
         const isAdmin = decoded.role === 'admin';
+        const contactCodes = decoded.contactCodes || [];
+
+        // Create a cache key based on the request parameters and user access
+        const cacheKey = `monthly-orders:${year || 'all'}:${slpCode || 'all'}:${itmsGrpCod || 'all'}:${itemCode || 'all'}:${isAdmin ? 'admin' : contactCodes.join(',')}`;
+        
+        // Try to get data from cache first
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(cachedData);
+        }
 
         let baseQuery = `
             SELECT 
@@ -38,10 +45,6 @@ export default async function handler(req, res) {
                 SUM(CASE WHEN T0.DocStatus = 'O' THEN T0.DocTotal ELSE 0 END) AS openSales,
                 SUM(CASE WHEN T0.DocStatus = 'C' THEN T0.DocTotal ELSE 0 END) AS closedSales
             FROM ORDR T0
-            INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
-            INNER JOIN OITM T2 ON T1.ItemCode = T2.ItemCode
-            INNER JOIN OITB T3 ON T2.ItmsGrpCod = T3.ItmsGrpCod
-            WHERE T0.CANCELED = 'N'
         `;
 
         let whereClauses = [];
@@ -58,31 +61,54 @@ export default async function handler(req, res) {
         }
 
         if (itmsGrpCod) {
-            whereClauses.push(`T3.ItmsGrpNam = @itmsGrpCod`);
+            // Use an EXISTS subquery to filter by item group name
+            whereClauses.push(`EXISTS (
+                SELECT 1 FROM RDR1 T1 
+                INNER JOIN OITM T2 ON T1.ItemCode = T2.ItemCode 
+                INNER JOIN OITB T3 ON T2.ItmsGrpCod = T3.ItmsGrpCod 
+                WHERE T1.DocEntry = T0.DocEntry 
+                AND T3.ItmsGrpNam = @itmsGrpCod
+            )`);
             params.push({ name: 'itmsGrpCod', type: sql.VarChar, value: itmsGrpCod });
         }
 
         if (itemCode) {
-            whereClauses.push(`T2.ItemCode = @itemCode`);
+            // Use an EXISTS subquery to filter by item code
+            whereClauses.push(`EXISTS (
+                SELECT 1 FROM RDR1 T1 
+                WHERE T1.DocEntry = T0.DocEntry 
+                AND T1.ItemCode = @itemCode
+            )`);
             params.push({ name: 'itemCode', type: sql.VarChar, value: itemCode });
         }
 
-        // Apply user-based filtering if not admin
-        if (!isAdmin && decoded.cardCodes && decoded.cardCodes.length > 0) {
-            whereClauses.push(`T0.CardCode IN (${decoded.cardCodes.map((_, i) => `@cardCode${i}`).join(', ')})`);
-            decoded.cardCodes.forEach((cardCode, i) => {
-                params.push({ name: `cardCode${i}`, type: sql.VarChar, value: cardCode });
+        if (!isAdmin) {
+            if (!contactCodes.length) {
+                return res.status(403).json({ error: 'No contact codes available' });
+            }
+            whereClauses.push(`T0.CardCode IN (
+                SELECT CardCode FROM OCPR 
+                WHERE CntctCode IN (${contactCodes.map((_, i) => `@contactCode${i}`).join(',')})
+            )`);
+            contactCodes.forEach((code, i) => {
+                params.push({ name: `contactCode${i}`, type: sql.VarChar(50), value: code });
             });
         }
 
-        if (whereClauses.length > 0) {
-            baseQuery += ` AND ` + whereClauses.join(' AND ');
-        }
+        // Add base WHERE clause
+        whereClauses.push(`T0.CANCELED = 'N'`);
+
+        // Combine all WHERE clauses
+        baseQuery += ` WHERE ${whereClauses.join(' AND ')}`;
 
         const fullQuery = `
             ${baseQuery}
-            GROUP BY YEAR(T0.DocDate), DATENAME(MONTH, T0.DocDate), MONTH(T0.DocDate)
-            ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate)
+            GROUP BY 
+                YEAR(T0.DocDate),
+                DATENAME(MONTH, T0.DocDate),
+                MONTH(T0.DocDate)
+            ORDER BY 
+                YEAR(T0.DocDate), MONTH(T0.DocDate)
         `;
 
         const results = await queryDatabase(fullQuery, params);
@@ -97,17 +123,35 @@ export default async function handler(req, res) {
             closedSales: parseFloat(row.closedSales) || 0,
         }));
 
-        const yearsQuery = `
-            SELECT DISTINCT YEAR(DocDate) as year
-            FROM ORDR
-            WHERE CANCELED = 'N'
-            ORDER BY year DESC
-        `;
+        // Get available years for filtering - also cache this separately with longer expiration
+        let availableYears;
+        const yearsKey = 'monthly-orders:available-years';
+        const cachedYears = await getCache(yearsKey);
+        
+        if (cachedYears) {
+            availableYears = cachedYears;
+        } else {
+            const yearsQuery = `
+                SELECT DISTINCT YEAR(DocDate) as year
+                FROM ORDR
+                WHERE CANCELED = 'N'
+                ORDER BY year DESC
+            `;
+            const yearsResult = await queryDatabase(yearsQuery);
+            availableYears = yearsResult.map(row => row.year);
+            
+            // Cache available years for 24 hours (86400 seconds)
+            await setCache(yearsKey, availableYears, 86400);
+        }
 
-        const yearsResult = await queryDatabase(yearsQuery);
-        const availableYears = yearsResult.map(row => row.year);
+        const responseData = { data, availableYears };
+        
+        // Cache the response - using different TTLs based on query type
+        // Year-specific queries are cached for longer since historical data rarely changes
+        const cacheTTL = year ? 3600 : 1800; // 1 hour for year queries, 30 minutes for current/all data
+        await setCache(cacheKey, responseData, cacheTTL);
 
-        return res.status(200).json({ data, availableYears });
+        return res.status(200).json(responseData);
     } catch (error) {
         console.error('API handler error:', error);
         return res.status(500).json({

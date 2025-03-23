@@ -6,7 +6,8 @@ import { Card, Spinner, Table } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import { useRouter } from "next/router";
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import AllFilter from "components/AllFilters"; // ✅ Import AllFilter component
+import LoadingSpinner from "../components/LoadingSpinner";
+import AllFilter from "components/AllFilters.js";
 
 import {
   Chart as ChartJS,
@@ -61,15 +62,19 @@ const OrdersChart = () => {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Added state for filters and search query similar to EnhancedSalesCOGSChart.
+  const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     salesPerson: null,
     category: null,
-    product: null,
-  }); // ✅ New state for filters
+    product: null
+  });
 
   const colorPalette = {
     primary: "#0d6efd",
     orderLine: "#198754",
+    total: "#dc3545" // Red color for total bar
   };
   
   const chartRef = useRef(null);
@@ -81,17 +86,24 @@ const OrdersChart = () => {
     setLoading(true);
     setError(null);
 
-    const token = localStorage.getItem("token");
-    const queryParams = new URLSearchParams();
-
-    // ✅ Map filters to API query parameters
-    if (filters.salesPerson?.value) queryParams.append("slpCode", filters.salesPerson.value);
-     if (filters.category?.value) queryParams.append("itmsGrpCod", filters.category.value);
-    if (filters.product?.value) queryParams.append("itemCode", filters.product.value);
-
-    const response = await fetch(`/api/monthly-orders?${queryParams}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+      const queryParams = new URLSearchParams();
+      // Append filters to the query parameters if available.
+      if (filters.salesPerson?.value) {
+        queryParams.append('slpCode', filters.salesPerson.value);
+      }
+      if (filters.category?.value) {
+        queryParams.append('itmsGrpCod', filters.category.value);
+      }
+      if (filters.product?.value) {
+        queryParams.append('itemCode', filters.product.value);
+      }
+      const token = localStorage.getItem("token");
+      // Remove the year query to fetch data for all years.
+      const response = await fetch(`/api/monthly-orders?${queryParams}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
     if (!response.ok) throw new Error("Failed to fetch orders data");
 
@@ -117,18 +129,36 @@ const OrdersChart = () => {
   // ✅ Fetch data when filters change
   useEffect(() => {
     fetchOrdersData();
+    // Fetch orders data again whenever filters change.
   }, [filters]);
 
-  const labels = ordersData.map((data) => formatMonthYear(data.year, data.month));
+  // Calculate total open orders and sales
+  const totalOpenOrders = ordersData.reduce((sum, data) => sum + (data.openOrders || 0), 0);
+  const totalOpenSales = ordersData.reduce((sum, data) => sum + (data.openSales || 0), 0);
+
+  // Create labels in month-year format, with an additional "Total" label
+  const labels = [
+    ...ordersData.map((data) => formatMonthYear(data.year, data.month)),
+    "Total"
+  ];
 
   const ordersChartData = {
     labels,
     datasets: [
       {
         label: "Open Orders",
-        data: ordersData.map((data) => data.openOrders || 0),
-        backgroundColor: "#0d6efd",
-        borderColor: "#0d6efd",
+        data: [
+          ...ordersData.map((data) => data.openOrders || 0),
+          totalOpenOrders
+        ],
+        backgroundColor: [
+          ...ordersData.map(() => colorPalette.primary),
+          colorPalette.total
+        ],
+        borderColor: [
+          ...ordersData.map(() => colorPalette.primary),
+          colorPalette.total
+        ],
         borderWidth: 1,
         barPercentage: 1,
         categoryPercentage: 0.7,
@@ -142,10 +172,22 @@ const OrdersChart = () => {
     plugins: {
       datalabels: {
         display: (context) => {
-          return ordersData[context.dataIndex]?.openSales > 0;
+          // For the last bar (total), always show the sales value
+          if (context.dataIndex === labels.length - 1) {
+            return true;
+          }
+
+          const value = ordersData[context.dataIndex]?.openSales;
+          return value > 0;
         },
         formatter: (_, context) => {
-          return formatCurrency(ordersData[context.dataIndex]?.openSales);
+          // For the last bar (total), show total sales
+          if (context.dataIndex === labels.length - 1) {
+            return formatCurrency(totalOpenSales);
+          }
+
+          const salesValue = ordersData[context.dataIndex]?.openSales;
+          return formatCurrency(salesValue);
         },
         anchor: "end",
         align: "end",
@@ -159,8 +201,17 @@ const OrdersChart = () => {
         callbacks: {
           label: (context) => {
             const value = context.raw;
+
+            // For the total bar
+            if (context.dataIndex === labels.length - 1) {
+              return `${datasetLabel} Total: ${value} (Sales: ${formatCurrency(totalOpenSales)})`;
+            }
+
+            // For individual month bars
             const dataPoint = ordersData[context.dataIndex];
-            return `Open Orders: ${value} (Sales: ${formatCurrency(dataPoint.openSales)})`;
+            return `${datasetLabel}: ${value} (Sales: ${formatCurrency(
+              dataPoint.openSales
+            )})`;
           },
         },
       },
@@ -177,30 +228,30 @@ const OrdersChart = () => {
     //   }
     // },
     hover: {
-    onHover: (event, elements) => {
-      const canvas = event.chart.canvas; // Access the canvas element
-      if (elements.length > 0) {
-        canvas.style.cursor = "pointer"; // Change cursor to pointer
-      } else {
-        canvas.style.cursor = "default"; // Reset cursor to default
-      }
+      onHover: (event, elements) => {
+        if (elements.length > 0) {
+          event.native.target.style.cursor = "pointer";
+        } else {
+          event.native.target.style.cursor = "default";
+        }
+      },
     },
-  },
-   onClick: (event, elements) => {
-      if (elements.length > 0) {
+    onClick: (event, elements) => {
+      if (elements.length > 0 && elements[0].datasetIndex === 0 && elements[0].index !== labels.length - 1) {
         const chart = chartRef.current;
         if (!chart) return;
 
-        const datasetIndex = elements[0].datasetIndex;
         const dataIndex = elements[0].index;
 
-        const selectedMonth = ordersData[dataIndex].month; // e.g., "January"
-        const status = datasetIndex === 0 ? "open" : "closed"; // 0: Open Orders, 1: Closed Orders
+        // Use the record's year and month.
+        const { year, month } = ordersData[dataIndex];
+        const status = "open";
 
-        // Convert month name to numeric value
-        const monthIndex = new Date(Date.parse(`${selectedMonth} 1, ${selectedYear}`)).getMonth() + 1;
-        const fromDate = `${selectedYear}-${String(monthIndex).padStart(2, "0")}-01`;
-        const toDate = new Date(selectedYear, monthIndex, 0).toISOString().split("T")[0]; // Last day of month
+        // Convert month name to numeric value using Date.parse.
+        const monthIndex = new Date(Date.parse(`${month} 1, ${year}`)).getMonth() + 1;
+        const fromDate = `${year}-${String(monthIndex).padStart(2, "0")}-01`;
+        // Create a date for the last day of the month.
+        const toDate = new Date(year, monthIndex, 0).toISOString().split("T")[0];
 
         // Navigate using router.push
         router.push({
@@ -214,83 +265,85 @@ const OrdersChart = () => {
         });
       }
     },
-    
-    scales: {
-      x: { grid: { display: false } },
-      y: { beginAtZero: true, grid: { color: "rgba(0, 0, 0, 0.05)" } },
-    },
-    
+  };
+
+  const exportToCSV = () => {
+    if (!ordersData.length) return;
+    const csvData = [
+      ["Month", ...labels],
+      ["Open Orders", ...ordersData.map((data) => data.openOrders || 0), totalOpenOrders],
+      ["Open Orders (Sales)", ...ordersData.map((data) => formatCurrency(data.openSales || 0)), formatCurrency(totalOpenSales)],
+    ];
+
+    const csvContent = csvData.map((row) => row.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "orders_data.csv");
+    link.click();
   };
 
   return (
-    <Card className="shadow-sm border-0 mb-4">
-      <Card.Header className="bg-white py-3">
-        <div className="d-flex justify-content-between align-items-center">
-          <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529" }}>
-            Open Orders - Monthly
-          </h4>
-
-          {/* ✅ Integrate AllFilter Component */}
-          <AllFilter
-            searchQuery={filters}
-            setSearchQuery={(value) => {
-              if (value) {
-                setFilters((prev) => ({
-                  ...prev,
-                  [value.type === "sales-person" ? "salesPerson" : value.type]: {
-                    value: value.value,
-                    label: value.label,
-                  },
-                }));
-              } else {
-                setFilters({ salesPerson: null, category: null, product: null });
-              }
-            }}
-          />
-        </div>
-      </Card.Header>
-
-      <Card.Body>
-        {error && <p className="text-center mt-4 text-danger">Error: {error}</p>}
-
-        {loading ? (
-          <div className="d-flex justify-content-center align-items-center" style={{ height: "500px" }}>
-            <Spinner animation="border" role="status" />
-            <span>Loading chart data...</span>
-          </div>
-        ) : ordersData.length ? (
-          <>
-            <div className="chart-container" style={{ height: "500px", width: "100%" }}>
-              <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
+    <>
+      {isNavigating && <LoadingSpinner />}
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Header className="bg-white py-3">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <h4
+              className="mb-3 mb-md-0"
+              style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+            >
+              Monthly Open Orders
+            </h4>
+            <div className="ms-auto">
+              <AllFilter
+                searchQuery={searchQuery}
+                setSearchQuery={(value) => {
+                  if (value) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      [value.type === "sales-person" ? "salesPerson" : value.type]: {
+                        value: value.value,
+                        label: value.label,
+                      },
+                    }));
+                  } else {
+                    // Reset all filters when cleared
+                    setFilters({
+                      salesPerson: null,
+                      category: null,
+                      product: null,
+                    });
+                  }
+                }}
+              />
             </div>
-
-            <Table striped bordered hover responsive className="mt-4">
-              <thead>
-                <tr>
-                  <th>Month</th>
-                  <th>Open Orders</th>
-                  <th>Open Orders Sales</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ordersData.map((data) => (
-                  <tr key={`${data.year}-${data.month}`}>
-                    <td>{formatMonthYear(data.year, data.month)}</td>
-                    <td>{data.openOrders || 0}</td>
-                    <td>{formatCurrency(data.openSales || 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </>
-        ) : (
-          <p className="text-center mt-4">No data available.</p>
-        )}
-      </Card.Body>
-    </Card>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          {error && <p className="text-center mt-4 text-danger">Error: {error}</p>}
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center" style={{ height: "500px" }}>
+              <Spinner animation="border" role="status" className="me-2">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+              <span>Loading chart data...</span>
+            </div>
+          ) : ordersData.length ? (
+            <>
+              <div className="chart-container" style={{ height: "500px", width: "100%" }}>
+                <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
+              </div>
+            </>
+          ) : (
+            <p className="text-center mt-4">No data available.</p>
+          )}
+        </Card.Body>
+      </Card>
+    </>
   );
 };
 
 export default OrdersChart;
-
-

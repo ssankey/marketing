@@ -5,6 +5,42 @@ import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
 import InvoicesTable from "components/InvoicesTable";
 
+// Client-side caching helpers
+const CLIENT_CACHE_TTL = 300000; // 5 minutes
+
+const getClientCacheKey = (query) => `invoices:${JSON.stringify(query)}`;
+
+const saveToClientCache = (key, data) => {
+  try {
+    const cacheEntry = {
+      timestamp: Date.now(),
+      data
+    };
+    localStorage.setItem(key, JSON.stringify(cacheEntry));
+  } catch (error) {
+    console.error('LocalStorage write error:', error);
+  }
+};
+
+const readFromClientCache = (key) => {
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+
+    const { timestamp, data } = JSON.parse(cached);
+
+    if (Date.now() - timestamp > CLIENT_CACHE_TTL) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('LocalStorage read error:', error);
+    return null;
+  }
+};
+
 export default function InvoicesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -18,44 +54,41 @@ export default function InvoicesPage() {
   });
 
   // Extract query params from router
-  const {
-    page = 1,
-    search = "",
-    status = "all",
-    sortField = "DocDate",
-    sortDir = "desc",
-    fromDate,
-    toDate,
-  } = router.query;
+  const { page = 1, search = "", status = "all", sortField = "DocDate", sortDir = "desc", fromDate, toDate } = router.query;
 
   // Memoize fetchInvoices to prevent unnecessary recreations
   const fetchInvoices = useCallback(async () => {
     const token = localStorage.getItem("token");
-    if (!token) {
-      throw new Error("No token found in localStorage");
-    }
+    if (!token) throw new Error("No token found");
 
-    const queryParams = new URLSearchParams({
+    const queryParams = {
       page,
       search,
       status,
       sortField,
       sortDir,
+      fromDate,
+      toDate,
+    };
+
+    // Check client cache first
+    const cacheKey = getClientCacheKey(queryParams);
+    const cached = readFromClientCache(cacheKey);
+    if (cached) return cached;
+
+    // Use API route that handles Redis on the server side
+    const res = await fetch(`/api/invoices?${new URLSearchParams(queryParams)}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
-    if (fromDate) queryParams.set("fromDate", fromDate);
-    if (toDate) queryParams.set("toDate", toDate);
 
-    const response = await fetch(`/api/invoices?${queryParams}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch invoices. Status: ${response.status}`);
-    }
+    const { invoices: newInvoices, totalItems: newTotalItems } = await res.json();
 
-    return response.json();
+    // Save to client cache
+    saveToClientCache(cacheKey, { invoices: newInvoices, totalItems: newTotalItems });
+
+    return { invoices: newInvoices, totalItems: newTotalItems };
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
 
   // Handle data fetching
@@ -72,7 +105,7 @@ export default function InvoicesPage() {
 
       try {
         const { invoices: newInvoices, totalItems: newTotalItems } = await fetchInvoices();
-        
+
         if (isMounted) {
           setInvoices(newInvoices || []);
           setTotalItems(newTotalItems || 0);

@@ -1,173 +1,210 @@
-  import React, { useState, useEffect, useRef } from "react";
-  import { Bar } from "react-chartjs-2";
-  import { Card, Spinner, Dropdown, Table } from "react-bootstrap";
-  import { useRouter } from "next/router";
-  import { formatCurrency } from "utils/formatCurrency";
-  import ChartDataLabels from "chartjs-plugin-datalabels";
-  import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-  } from "chart.js";
+import React, { useState, useEffect, useRef } from "react";
+import { Bar } from "react-chartjs-2";
+import { Card, Spinner } from "react-bootstrap";
+import { useRouter } from "next/router";
+import { formatCurrency } from "utils/formatCurrency";
+import ChartDataLabels from "chartjs-plugin-datalabels";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 
-  ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-    ChartDataLabels
-  );
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartDataLabels
+);
 
-  const OrdersChart = ({ cardCode }) => {
-    const [ordersData, setOrdersData] = useState([]);
-    const [availableYears, setAvailableYears] = useState([]);
-    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const router = useRouter();
-    const chartRef = useRef(null);
+const monthMapping = {
+  January: 0,
+  February: 1,
+  March: 2,
+  April: 3,
+  May: 4,
+  June: 5,
+  July: 6,
+  August: 7,
+  September: 8,
+  October: 9,
+  November: 10,
+  December: 11,
+};
 
-    const colorPalette = {
-      primary: "#0d6efd",
-      orderLine: "#198754",
-    };
+const formatMonthYear = (year, month) => {
+  const monthIndex = monthMapping[month];
+  if (monthIndex === undefined) {
+    return "Invalid Date";
+  }
+  const date = new Date(year, monthIndex);
+  return date.toLocaleDateString("default", { month: "short", year: "numeric" });
+};
 
-    const fetchOrdersData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+const OrdersChart = ({ cardCode }) => {
+  const [ordersData, setOrdersData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const router = useRouter();
+  const chartRef = useRef(null);
 
-        const response = await fetch(
-          `/api/dashboard/customer/monthly-orders?year=${selectedYear}&cardCode=${cardCode}`
-        );
-        if (!response.ok) {
-          throw new Error("Failed to fetch orders data");
-        }
+  const colorPalette = {
+    primary: "#0d6efd",
+    total: "#dc3545" // Red color for total bar
+  };
 
-        const { data, availableYears } = await response.json();
-        setOrdersData(data);
-        setAvailableYears(availableYears);
-      } catch (err) {
-        setError(err.message);
-        console.error("Error fetching orders data:", err);
-        setOrdersData([]);
-      } finally {
-        setLoading(false);
+  const fetchOrdersData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(
+        `/api/dashboard/customer/monthly-orders?cardCode=${cardCode}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch orders data");
       }
-    };
 
-    // useEffect(() => {
-    //   fetchOrdersData();
-    // }, [selectedYear]);
-    useEffect(() => {
-      if (cardCode) fetchOrdersData();
-    }, [cardCode, selectedYear]);
+      const { data } = await response.json();
+      
+      // Sort the data chronologically
+      const sortedData = data.sort((a, b) => {
+        const dateA = new Date(a.year, monthMapping[a.month]);
+        const dateB = new Date(b.year, monthMapping[b.month]);
+        return dateA - dateB;
+      });
 
-    const ordersChartData = {
-      labels: ordersData.map((data) => data.month),
-      datasets: [
-        {
-          label: "Open Orders",
-          data: ordersData.map((data) => data.openOrders || 0),
-          backgroundColor: colorPalette.primary,
-          borderColor: colorPalette.primary,
-          borderWidth: 1,
-          barPercentage: 1,
-          categoryPercentage: 0.7,
-        },
-        {
-          label: "Closed Orders",
-          data: ordersData.map((data) => data.closedOrders || 0),
-          backgroundColor: colorPalette.orderLine,
-          borderColor: colorPalette.orderLine,
-          borderWidth: 1,
-          barPercentage: 1,
-          categoryPercentage: 0.7,
-        },
-      ],
-    };
+      setOrdersData(sortedData);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching orders data:", err);
+      setOrdersData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const ordersChartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        datalabels: {
-          display: (context) => {
-            const value =
-              context.dataset.label === "Open Orders"
-                ? ordersData[context.dataIndex]?.openSales
-                : ordersData[context.dataIndex]?.closedSales;
-            return value > 0;
-          },
-          formatter: (_, context) => {
-            const salesValue =
-              context.dataset.label === "Open Orders"
-                ? ordersData[context.dataIndex]?.openSales
-                : ordersData[context.dataIndex]?.closedSales;
-            return formatCurrency(salesValue);
-          },
-          anchor: "end",
-          align: "end",
-          offset: 4,
-          color: "#212529",
-          font: {
-            weight: "bold",
-            size: 12,
-          },
+  useEffect(() => {
+    if (cardCode) fetchOrdersData();
+  }, [cardCode]);
+
+  // Calculate total open orders and sales
+  const totalOpenOrders = ordersData.reduce((sum, data) => sum + (data.openOrders || 0), 0);
+  const totalOpenSales = ordersData.reduce((sum, data) => sum + (data.openSales || 0), 0);
+
+  // Create labels in month-year format, with an additional "Total" label
+  const labels = [
+    ...ordersData.map((data) => formatMonthYear(data.year, data.month)),
+    "Total"
+  ];
+
+  const ordersChartData = {
+    labels,
+    datasets: [
+      {
+        label: "Open Orders",
+        data: [
+          ...ordersData.map((data) => data.openOrders || 0),
+          totalOpenOrders
+        ],
+        backgroundColor: [
+          ...ordersData.map(() => colorPalette.primary),
+          colorPalette.total
+        ],
+        borderColor: [
+          ...ordersData.map(() => colorPalette.primary),
+          colorPalette.total
+        ],
+        borderWidth: 1,
+        barPercentage: 1,
+        categoryPercentage: 0.7,
+      },
+    ],
+  };
+
+  const ordersChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      datalabels: {
+        display: (context) => {
+          // For the last bar (total), always show the sales value
+          if (context.dataIndex === labels.length - 1) {
+            return true;
+          }
+          
+          const value = ordersData[context.dataIndex]?.openSales;
+          return value > 0;
         },
-        legend: {
-          position: "top",
-          labels: {
-            font: { family: "'Inter', sans-serif", size: 13 },
-            padding: 20,
-          },
+        formatter: (_, context) => {
+          // For the last bar (total), show total sales
+          if (context.dataIndex === labels.length - 1) {
+            return formatCurrency(totalOpenSales);
+          }
+          
+          const salesValue = ordersData[context.dataIndex]?.openSales;
+          return formatCurrency(salesValue);
         },
-        tooltip: {
-          backgroundColor: "#212529",
-          titleFont: { size: 14, weight: "bold" },
-          bodyFont: { size: 13 },
-          padding: 12,
-          callbacks: {
-            label: (context) => {
-              const datasetLabel = context.dataset.label;
-              const value = context.raw;
-              const dataPoint = ordersData[context.dataIndex];
-  
-              if (datasetLabel === "Open Orders") {
-                return `${datasetLabel}: ${value} (Sales: ${formatCurrency(
-                  dataPoint.openSales
-                )})`;
-              } else {
-                return `${datasetLabel}: ${value} (Sales: ${formatCurrency(
-                  dataPoint.closedSales
-                )})`;
-              }
-            },
+        anchor: "end",
+        align: "end",
+        offset: 4,
+        color: "#212529",
+        font: {
+          weight: "bold",
+          size: 12,
+        },
+      },
+      legend: {
+        position: "top",
+        labels: {
+          font: { family: "'Inter', sans-serif", size: 13 },
+          padding: 20,
+        },
+      },
+      tooltip: {
+        backgroundColor: "#212529",
+        titleFont: { size: 14, weight: "bold" },
+        bodyFont: { size: 13 },
+        padding: 12,
+        callbacks: {
+          label: (context) => {
+            // For the total bar
+            if (context.dataIndex === labels.length - 1) {
+              return `Total Open Orders: ${totalOpenOrders} (Sales: ${formatCurrency(totalOpenSales)})`;
+            }
+
+            // For individual month bars
+            const dataPoint = ordersData[context.dataIndex];
+            return `Open Orders: ${context.raw} (Sales: ${formatCurrency(
+              dataPoint.openSales
+            )})`;
           },
         },
       },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            font: { family: "'Inter', sans-serif", size: 12 },
-          },
-        },
-        y: {
-          beginAtZero: true,
-          grid: { color: "rgba(0, 0, 0, 0.05)" },
-          ticks: {
-            font: { family: "'Inter', sans-serif", size: 12 },
-          },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          font: { family: "'Inter', sans-serif", size: 12 },
         },
       },
-      hover: {
+      y: {
+        beginAtZero: true,
+        grid: { color: "rgba(0, 0, 0, 0.05)" },
+        ticks: {
+          font: { family: "'Inter', sans-serif", size: 12 },
+        },
+      },
+    },
+    hover: {
       onHover: (event, elements) => {
         if (elements.length > 0) {
           event.native.target.style.cursor = "pointer";
@@ -176,144 +213,82 @@
         }
       },
     },
-      onClick: (event, elements) => {
-        if (elements.length > 0) {
-          const chart = chartRef.current;
-          if (!chart) return;
-  
-          const datasetIndex = elements[0].datasetIndex;
-          const dataIndex = elements[0].index;
-  
-          const selectedMonth = ordersData[dataIndex].month; // e.g., "January"
-          const status = datasetIndex === 0 ? "open" : "closed"; // 0: Open Orders, 1: Closed Orders
-  
-          // Convert month name to numeric value
-          const monthIndex = new Date(Date.parse(`${selectedMonth} 1, ${selectedYear}`)).getMonth() + 1;
-          const fromDate = `${selectedYear}-${String(monthIndex).padStart(2, "0")}-01`;
-          const toDate = new Date(selectedYear, monthIndex, 0).toISOString().split("T")[0]; // Last day of month
-  
-          // Navigate using router.push
-          router.push({
-            pathname: "/orders",
-            query: {
-              status,
-              page: 1,
-              fromDate,
-              toDate,
-            },
-          });
-        }
-      },
-    };
-  
+    onClick: (event, elements) => {
+      if (elements.length > 0 && elements[0].index !== labels.length - 1) {
+        const chart = chartRef.current;
+        if (!chart) return;
 
-    const YearSelector = () => (
-      <Dropdown>
-        <Dropdown.Toggle variant="outline-secondary" id="year-dropdown">
-          {selectedYear}
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          {availableYears.map((year) => (
-            <Dropdown.Item
-              key={year}
-              onClick={() => setSelectedYear(year)}
-              active={year === selectedYear}
-            >
-              {year}
-            </Dropdown.Item>
-          ))}
-        </Dropdown.Menu>
-      </Dropdown>
-    );
+        const dataIndex = elements[0].index;
 
-    return (
-      <Card className="shadow-sm border-0 mb-4">
-        <Card.Header className="bg-white py-3">
-          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-            <h4
-              className="mb-3 mb-md-0"
-              style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
-            >
-              Monthly Open vs Closed Orders
-            </h4>
-            <YearSelector />
-          </div>
-        </Card.Header>
-        <Card.Body>
-          {error && (
-            <p className="text-center mt-4 text-danger">Error: {error}</p>
-          )}
-          {loading ? (
-            <div
-              className="d-flex justify-content-center align-items-center"
-              style={{ height: "500px" }}
-            >
-              <Spinner animation="border" role="status" className="me-2">
-                <span className="visually-hidden">Loading...</span>
-              </Spinner>
-              <span>Loading chart data...</span>
-            </div>
-          ) : ordersData.length ? (
-            <>
-              <div
-                className="chart-container"
-                style={{ height: "500px", width: "100%" }}
-              >
-                <Bar
-                  ref={chartRef}
-                  data={ordersChartData}
-                  options={ordersChartOptions}
-                />
-              </div>
-              <div className="mt-4">
-                <Table striped bordered hover responsive>
-                  <thead>
-                    <tr>
-                      <th>Metric</th>
-                      {ordersData.map((data) => (
-                        <th key={data.month}>{data.month}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Open Orders</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>{data.openOrders || 0}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td>Closed Orders</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>{data.closedOrders || 0}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td>Open Orders Sales</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>{formatCurrency(data.openSales || 0)}</td>
-                      ))}
-                    </tr>
-                    <tr>
-                      <td>Closed Orders Sales</td>
-                      {ordersData.map((data, index) => (
-                        <td key={index}>
-                          {formatCurrency(data.closedSales || 0)}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </Table>
-              </div>
-            </>
-          ) : (
-            <p className="text-center mt-4">
-              No data available for the selected year.
-            </p>
-          )}
-        </Card.Body>
-      </Card>
-    );
+        // Use the record's year and month.
+        const { year, month } = ordersData[dataIndex];
+        const status = "open";
+
+        // Convert month name to numeric value using Date.parse.
+        const monthIndex = new Date(Date.parse(`${month} 1, ${year}`)).getMonth() + 1;
+        const fromDate = `${year}-${String(monthIndex).padStart(2, "0")}-01`;
+        // Create a date for the last day of the month.
+        const toDate = new Date(year, monthIndex, 0).toISOString().split("T")[0];
+
+        // Navigate using router.push
+        router.push({
+          pathname: "/orders",
+          query: {
+            status,
+            page: 1,
+            fromDate,
+            toDate,
+          },
+        });
+      }
+    },
   };
 
-  export default OrdersChart;
+  return (
+    <Card className="shadow-sm border-0 mb-4">
+      <Card.Header className="bg-white py-3">
+        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+          <h4
+            className="mb-3 mb-md-0"
+            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+          >
+            Monthly Open Orders
+          </h4>
+        </div>
+      </Card.Header>
+      <Card.Body>
+        {error && (
+          <p className="text-center mt-4 text-danger">Error: {error}</p>
+        )}
+        {loading ? (
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ height: "500px" }}
+          >
+            <Spinner animation="border" role="status" className="me-2">
+              <span className="visually-hidden">Loading...</span>
+            </Spinner>
+            <span>Loading chart data...</span>
+          </div>
+        ) : ordersData.length ? (
+          <div
+            className="chart-container"
+            style={{ height: "500px", width: "100%" }}
+          >
+            <Bar
+              ref={chartRef}
+              data={ordersChartData}
+              options={ordersChartOptions}
+            />
+          </div>
+        ) : (
+          <p className="text-center mt-4">
+            No data available.
+          </p>
+        )}
+      </Card.Body>
+    </Card>
+  );
+};
+
+export default OrdersChart;

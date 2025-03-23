@@ -107,6 +107,13 @@ const EnhancedSalesCOGSChart = () => {
     // Prepare the x-axis labels using month-year format directly from API response
     const labels = salesData.map((data) => data.monthYear);
 
+    // Calculate totals for each row
+    const totalSales = salesData.reduce((acc, curr) => acc + (curr.totalSales || 0), 0);
+    const totalCOGS = salesData.reduce((acc, curr) => acc + (curr.totalCogs || 0), 0);
+    const averageGrossMargin = salesData.length
+        ? salesData.reduce((acc, curr) => acc + (curr.grossMarginPct || 0), 0) / salesData.length
+        : 0;
+
     const salesAndCOGSChartData = {
         labels,
         datasets: [
@@ -209,12 +216,12 @@ const EnhancedSalesCOGSChart = () => {
     const exportToCSV = () => {
         if (!salesData.length) return; // Prevent exporting empty data.
         const csvRows = [
-            ['Metric', ...labels],
-            ['Sales', ...salesData.map((data) => data.totalSales || 0)],
+            ['Metric', ...labels, 'Total'],
+            ['Sales', ...salesData.map((data) => data.totalSales || 0), totalSales],
             ...(user?.role === 'admin'
                 ? [
-                    ['COGS', ...salesData.map((data) => data.totalCogs || 0)],
-                    ['Gross Margin %', ...salesData.map((data) => (data.grossMarginPct || 0).toFixed(2))],
+                    ['COGS', ...salesData.map((data) => data.totalCogs || 0), totalCOGS],
+                    ['Gross Margin %', ...salesData.map((data) => (data.grossMarginPct || 0).toFixed(2)), averageGrossMargin.toFixed(2)],
                 ]
                 : []),
         ];
@@ -249,7 +256,8 @@ const EnhancedSalesCOGSChart = () => {
                                 if (value) {
                                     setFilters(prev => ({
                                         ...prev,
-                                        [value.type === "sales-person" ? "salesPerson" : value.type]: { // Map "sales-person" to "salesPerson"
+                                        [value.type === "sales-person" ? "salesPerson" : value.type]: {
+                                            // Map "sales-person" to "salesPerson"
                                             value: value.value,
                                             label: value.label
                                         }
@@ -257,7 +265,7 @@ const EnhancedSalesCOGSChart = () => {
                                 } else {
                                     // Reset all filters when cleared
                                     setFilters({
-                                        salesPerson: null, // Use "salesPerson" consistently
+                                        salesPerson: null,
                                         category: null,
                                         product: null
                                     });
@@ -289,6 +297,7 @@ const EnhancedSalesCOGSChart = () => {
                                         {labels.map((label, idx) => (
                                             <th key={idx}>{label}</th>
                                         ))}
+                                        <th>Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -297,6 +306,7 @@ const EnhancedSalesCOGSChart = () => {
                                         {salesData.map((data, index) => (
                                             <td key={index}>{formatCurrency(data.totalSales || 0)}</td>
                                         ))}
+                                        <td>{formatCurrency(totalSales)}</td>
                                     </tr>
                                     {user?.role === 'admin' && (
                                         <>
@@ -305,6 +315,7 @@ const EnhancedSalesCOGSChart = () => {
                                                 {salesData.map((data, index) => (
                                                     <td key={index}>{formatCurrency(data.totalCogs || 0)}</td>
                                                 ))}
+                                                <td>{formatCurrency(totalCOGS)}</td>
                                             </tr>
                                             <tr>
                                                 <td>Gross Margin %</td>
@@ -313,6 +324,7 @@ const EnhancedSalesCOGSChart = () => {
                                                         {`${data.grossMarginPct?.toFixed(2) || '0.00'}%`}
                                                     </td>
                                                 ))}
+                                                <td>{`${averageGrossMargin.toFixed(2)}%`}</td>
                                             </tr>
                                         </>
                                     )}
