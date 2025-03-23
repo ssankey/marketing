@@ -74,17 +74,26 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
     {
       field: "DocStatus",
       label: "Order Status",
-      // render: (value) => <StatusBadge status={value.toLowerCase()} />,
-       render: (value) => (
-        <span
-          className={`badge ${
-            value === "Closed" ? "bg-success" : "bg-danger"
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
+      render: (value) => {
+        let badgeClass = "bg-danger"; // default
+    
+        if (value === "Closed") {
+          badgeClass = "bg-success";
+        } else if (value === "Partial") {
+          badgeClass = "bg-warning";
+        } else if (value === "Open") {
+          badgeClass = "bg-primary";
+        } else if (value === "Cancelled") {
+          badgeClass = "bg-secondary";
+        }
+    
+        return (
+          <span className={`badge ${badgeClass}`}>
+            {value}
+          </span>
+        );
+      },
+    },    
     {
       field: "CustomerPONo",
       label: "Customer PONo",
@@ -201,9 +210,9 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
         statusFilter={{
           enabled: true,
           options: [
-            { value: "open", label: "Open" },
-            { value: "closed", label: "Closed" },
-            { value: "partial", label: "Partial" },
+            { value: "Open", label: "Open" },       // Changed to match case in backend
+            { value: "Closed", label: "Closed" },   // Changed to match case in backend
+            { value: "Partial", label: "Partial" }, // Changed to match case in backend
           ],
           value: statusFilter,
           label: "Status",
