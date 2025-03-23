@@ -97,3 +97,45 @@ export const logout = () => {
   }
   window.location.href = '/login';
 };
+
+
+// *******************new function to do automatic logout *******************************//
+
+// utils/auth.js
+export const isTokenExpired = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return true; // No token found
+
+  try {
+    const decoded = jwtDecode(token);
+    return decoded.exp * 1000 < Date.now(); // Check if token is expired
+  } catch (error) {
+    console.error('Error decoding token:', error);
+    return true; // Assume token is invalid if decoding fails
+  }
+};
+
+
+// utils/auth.js
+export const startTokenExpirationCheck = () => {
+  const checkInterval = 10 * 1000; // Check every 1 minute
+
+  const intervalId = setInterval(() => {
+    if (isTokenExpired()) {
+      clearInterval(intervalId); // Stop the interval
+      logout(); // Redirect to login page
+    }
+  }, checkInterval);
+
+  return intervalId;
+};
+
+
+// utils/auth.js
+export const handleTabVisibilityChange = () => {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isTokenExpired()) {
+      logout(); // Redirect to login page
+    }
+  });
+};

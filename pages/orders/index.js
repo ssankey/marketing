@@ -5,6 +5,44 @@ import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
 import OrdersTable from "components/OrdersTable";
 
+// Add these helper functions at the top of the file
+const CLIENT_CACHE_TTL = 300000; // 5 minutes
+
+function getClientCacheKey(query) {
+  return `orders:${JSON.stringify(query)}`;
+}
+
+function saveToClientCache(key, data) {
+  try {
+    const cacheEntry = {
+      timestamp: Date.now(),
+      data
+    };
+    localStorage.setItem(key, JSON.stringify(cacheEntry));
+  } catch (error) {
+    console.error('LocalStorage write error:', error);
+  }
+}
+
+function readFromClientCache(key) {
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
+    
+    const { timestamp, data } = JSON.parse(cached);
+    
+    if (Date.now() - timestamp > CLIENT_CACHE_TTL) {
+      localStorage.removeItem(key);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('LocalStorage read error:', error);
+    return null;
+  }
+}
+
 export default function OrdersPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -35,28 +73,60 @@ export default function OrdersPage() {
       throw new Error("No token found in localStorage");
     }
 
-    const queryParams = new URLSearchParams({
+    const queryParams = {
       page,
       search,
       status,
       sortField,
       sortDir,
-    });
-    if (fromDate) queryParams.set("fromDate", fromDate);
-    if (toDate) queryParams.set("toDate", toDate);
+      fromDate,
+      toDate,
+    };
 
-    const response = await fetch(`/api/orders?${queryParams}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    // Check client cache first
+    const cacheKey = getClientCacheKey(queryParams);
+    const cached = readFromClientCache(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const response = await fetch(`/api/orders?${new URLSearchParams(queryParams)}`, {
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch orders. Status: ${response.status}`);
     }
 
-    return response.json();
+    const { orders: newOrders, totalItems: newTotalItems } = await response.json();
+
+    // Save to client cache
+    saveToClientCache(cacheKey, { orders: newOrders, totalItems: newTotalItems });
+
+    return { orders: newOrders, totalItems: newTotalItems };
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
+
+  const fetchAllOrders = async () => {
+  const token = localStorage.getItem("token");
+  const queryParams = new URLSearchParams({
+    page: 1,
+    search,
+    status,
+    sortField,
+    sortDir,
+    fromDate: fromDate || "",
+    toDate: toDate || "",
+    getAll: true, // NEW: to fetch all filtered data
+  });
+
+  const response = await fetch(`/api/orders?${queryParams.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json();
+  return data.orders || [];
+};
+
 
   // Handle data fetching
   useEffect(() => {
@@ -153,6 +223,7 @@ export default function OrdersPage() {
       totalItems={totalItems}
       isLoading={fetchState.isInitialLoad || fetchState.isLoading}
       status={status}
+      fetchAllOrders={fetchAllOrders}
     />
   );
 }

@@ -28,6 +28,27 @@ export default function InvoicesPage() {
     toDate,
   } = router.query;
 
+   const fetchAllInvoices = async () => {
+    const token = localStorage.getItem("token");
+    const queryParams = new URLSearchParams({
+      page: 1,
+      search,
+      status,
+      sortField,
+      sortDir,
+      fromDate: fromDate || "",
+      toDate: toDate || "",
+      getAll: true  // <-- add this to support full fetch
+    });
+
+    const response = await fetch(`/api/invoices?${queryParams.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await response.json();
+    return data.invoices || [];
+  };
+
   // Memoize fetchInvoices to prevent unnecessary recreations
   const fetchInvoices = useCallback(async () => {
     const token = localStorage.getItem("token");
@@ -153,6 +174,7 @@ export default function InvoicesPage() {
       totalItems={totalItems}
       isLoading={fetchState.isInitialLoad || fetchState.isLoading}
       status={status}
+      fetchAllInvoices={fetchAllInvoices} // pass as prop
     />
   );
 }

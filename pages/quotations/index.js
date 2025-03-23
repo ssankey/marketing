@@ -5,6 +5,9 @@ import { useAuth } from "hooks/useAuth";
 import { Spinner } from "react-bootstrap";
 import QuotationsTable from "components/QuotationsTable";
 
+
+
+
 export default function QuotationsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -28,6 +31,27 @@ export default function QuotationsPage() {
     fromDate,
     toDate,
   } = router.query;
+
+  const fetchAllQuotations = async () => {
+  const token = localStorage.getItem("token");
+  const queryParams = new URLSearchParams({
+    page: 1,
+    search,
+    status,
+    sortField,
+    sortDir,
+    fromDate: fromDate || "",
+    toDate: toDate || "",
+    getAll: true  // <-- add this to support full fetch
+  });
+
+  const response = await fetch(`/api/quotations?${queryParams.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  const data = await response.json();
+  return data.quotations || [];
+};
 
   // Memoize fetchQuotations to prevent unnecessary recreations
   const fetchQuotations = useCallback(async () => {
@@ -160,6 +184,7 @@ export default function QuotationsPage() {
       quotations={quotations}
       totalItems={totalItems}
       isLoading={fetchState.isInitialLoad || fetchState.isLoading}
+      fetchAllQuotations={fetchAllQuotations} // pass as prop
     />
   );
 }

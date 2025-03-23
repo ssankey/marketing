@@ -12,7 +12,7 @@ import useTableFilters from 'hooks/useFilteredData';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
 
-const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
+const InvoicesTable = ({ invoices, totalItems, isLoading = false, status, fetchAllInvoices  }) => {
   const ITEMS_PER_PAGE = 20;
   const [displayState, setDisplayState] = useState({
     hasData: false,
@@ -162,29 +162,61 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   },
   ];
 
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) {
+  //       console.error("No token found");
+  //       return;
+  //     }
+
+  //     const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+      
+  //     const response = await fetch(url, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+
+  //     const filteredInvoices = await response.json();
+
+  //     if (filteredInvoices && filteredInvoices.length > 0) {
+  //       downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
   const handleExcelDownload = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
+      const fullData = await fetchAllInvoices();
+      if (!fullData || fullData.length === 0) {
+        alert("No data available to export.");
         return;
       }
 
-      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
-      
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
+      // Format and structure data according to visible columns
+      const formattedData = fullData.map(row => {
+        return {
+          "Invoice#": row.DocNum,
+          "Status": row.DocStatus,
+          "Invoice Date": row.DocDate ? formatDate(row.DocDate) : "",
+          "Customer": row.CardName || "N/A",
+          "Item Code": row.ItemCode || "N/A",
+          "Item Name": row.ItemName || "N/A",
+          "CAS No": row.u_Casno || "N/A",
+          "Qty": row.Quantity != null ? row.Quantity : "N/A",
+          "Price": formatCurrency(row.Price),
+          "Line Total": formatCurrency(row.LineTotal),
+          "Payment Status": row.PaymentStatus,
+          "Dispatch Date": row.U_DispatchDate ? formatDate(row.U_DispatchDate) : "N/A",
+        };
       });
 
-      const filteredInvoices = await response.json();
-
-      if (filteredInvoices && filteredInvoices.length > 0) {
-        downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
-      } else {
-        alert("No data available to export.");
-      }
+      downloadExcel(formattedData, `Invoices_${statusFilter}`);
     } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
+      console.error("Download failed:", error);
       alert("Failed to export data. Please try again.");
     }
   };
@@ -224,7 +256,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
         searchConfig={{
           enabled: true,
           placeholder: "Search invoices...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemName","u_Casno"],
+          fields: ["DocNum", "CardName", "ItemCode", "ItemName","u_Casno","CustomerPONo"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
