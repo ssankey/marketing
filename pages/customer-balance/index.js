@@ -124,7 +124,7 @@ export default function CustomerBalancePage() {
 
   return (
     <Container className="mt-3">
-      <Breadcrumb>
+      {/* <Breadcrumb>
         <Breadcrumb.Item
           active={router.pathname === "/customer-balance"}
           onClick={() => handleBreadcrumbClick("/customer-balance")}
@@ -137,7 +137,7 @@ export default function CustomerBalancePage() {
         >
           Details
         </Breadcrumb.Item>
-      </Breadcrumb>
+      </Breadcrumb> */}
 
       <Card className="mb-3 shadow-sm">
         <Card.Header className="bg-white">
