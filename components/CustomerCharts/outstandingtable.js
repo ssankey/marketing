@@ -11,10 +11,19 @@ import { formatDate } from "utils/formatDate";
  * Table component to display customer orders, deliveries, and invoices.
  * @param {Array} customerOutstandings - The data to display in the table.
  */
-const CustomerOrdersTable = ({ customerOutstandings }) => {
-  if (!customerOutstandings || customerOutstandings.length === 0) {
-    return <p>No data available.</p>;
-  }
+const CustomerOrdersTable = ({ customerOutstandings, filter  }) => {
+//   if (!customerOutstandings || customerOutstandings.length === 0) {
+//     return <p>No data available.</p>;
+//   }
+
+   const filteredData = customerOutstandings?.filter(item => {
+    if (filter === 'Payment Pending') {
+      return item['Balance Due'] > 0;
+    } else if (filter === 'Payment Done') {
+      return item['Balance Due'] === 0;
+    }
+    return true; // Show all if no filter matches
+  });
 
   return (
     <Table striped bordered hover responsive>
@@ -33,7 +42,7 @@ const CustomerOrdersTable = ({ customerOutstandings }) => {
           <th>Payment Group</th>
         </tr>
       </thead>
-      <tbody>
+      {/* <tbody>
         {customerOutstandings.map((row, index) => (
           <tr key={index}>
             <td>{row["SO#"]}</td>
@@ -49,6 +58,33 @@ const CustomerOrdersTable = ({ customerOutstandings }) => {
             <td>{row["PymntGroup"]}</td>
           </tr>
         ))}
+      </tbody> */}
+       <tbody>
+        {filteredData?.length > 0 ? (
+          filteredData.map((item, index) => (
+            <tr key={index}>
+              <td>{item['SO#']}</td>
+              <td>{formatDate(item['SO Date'])}</td>
+              <td>{item['Delivery#']}</td>
+              <td>{formatDate(item['Delivery Date'])}</td>
+              <td>{item['SO to Delivery Days']}</td>
+              <td>{item['Invoice No.']}</td>
+              <td>{formatDate(item['AR Invoice Date'])}</td>
+              <td>{formatCurrency(item['Invoice Total'])}</td>
+              <td className={item['Balance Due'] > 0 ? 'text-danger fw-bold' : 'text-success'}>
+                {formatCurrency(item['Balance Due'])}
+              </td>
+              <td>{item['Overdue Days']}</td>
+              <td>{item['PymntGroup']}</td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan="11" className="text-center">
+              No {filter === 'Payment Pending' ? 'pending payments' : 'completed payments'} found
+            </td>
+          </tr>
+        )}
       </tbody>
     </Table>
   );

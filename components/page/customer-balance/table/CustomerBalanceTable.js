@@ -1,4 +1,6 @@
-import React from "react";
+
+
+import React, { useState, useRef } from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
 import GenericTable from "components/GenericTable";
 import TableFilters from "components/TableFilters";
@@ -11,12 +13,7 @@ const CustomerBalanceTable = ({
   totalItems,
   isLoading = false,
   currentPage,
-  searchTerm,
-  status,
-  fromDate,
-  toDate,
-  sortField,
-  sortDirection,
+  totalPages,
   onPageChange,
   onSearch,
   onStatusChange,
@@ -25,10 +22,22 @@ const CustomerBalanceTable = ({
   onReset
 }) => {
   const ITEMS_PER_PAGE = 20;
-  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+  
+  // Local state for filter values
+  const [filterValues, setFilterValues] = useState({
+    searchTerm: '',
+    status: 'all',
+    fromDate: '',
+    toDate: '',
+    sortField: 'SO Date',
+    sortDirection: 'desc'
+  });
+  
+  const tableRef = useRef(null);
 
   const columns = [
-    {
+    // ... (keep your existing columns)
+     {
       field: "SO#",
       label: "SO#",
     },
@@ -92,12 +101,55 @@ const CustomerBalanceTable = ({
   ];
 
   const statusOptions = [
-    { value: "all", label: "All" },
     { value: "30", label: "Overdue 0-30 days" },
     { value: "60", label: "Overdue 31-60 days" },
     { value: "90", label: "Overdue 61-90 days" },
     { value: "90+", label: "Overdue 90+ days" },
   ];
+
+  // Handle search with debounce
+  const handleSearch = (term) => {
+    setFilterValues(prev => ({ ...prev, searchTerm: term }));
+    if (onSearch) {
+      onSearch(term);
+    }
+  };
+
+  const handleStatusChange = (status) => {
+    setFilterValues(prev => ({ ...prev, status }));
+    if (onStatusChange) {
+      onStatusChange(status);
+    }
+  };
+
+  const handleDateFilterChange = ({ fromDate, toDate }) => {
+    setFilterValues(prev => ({ ...prev, fromDate, toDate }));
+    if (onDateFilterChange) {
+      onDateFilterChange({ fromDate, toDate });
+    }
+  };
+
+  const handleSort = (field, direction) => {
+    setFilterValues(prev => ({ ...prev, sortField: field, sortDirection: direction }));
+    if (onSort) {
+      onSort(field, direction);
+    }
+  };
+
+  const handleReset = () => {
+    const resetValues = {
+      searchTerm: '',
+      status: 'all',
+      fromDate: '',
+      toDate: '',
+      sortField: 'SO Date',
+      sortDirection: 'desc'
+    };
+    setFilterValues(resetValues);
+    if (onReset) {
+      onReset();
+    }
+  };
 
   return (
     <Container fluid>
@@ -105,49 +157,52 @@ const CustomerBalanceTable = ({
         searchConfig={{
           enabled: true,
           placeholder: "Search by customer name, code or SO#...",
-          value: searchTerm,
+          value: filterValues.searchTerm,
         }}
-        onSearch={onSearch}
+        searchTerm={filterValues.searchTerm} 
+        onSearch={handleSearch}
         statusFilter={{
           enabled: true,
           options: statusOptions,
-          value: status,
+          value: filterValues.status,
           label: "Overdue Status",
         }}
-        onStatusChange={onStatusChange}
+        onStatusChange={handleStatusChange}
         dateFilter={{
           enabled: true,
-          fromDate: fromDate,
-          toDate: toDate,
+          fromDate: filterValues.fromDate,
+          toDate: filterValues.toDate,
           label: "SO Date Range",
         }}
-        onDateFilterChange={onDateFilterChange}
+        onDateFilterChange={handleDateFilterChange}
         totalItems={totalItems}
-        onReset={onReset}
+        onReset={handleReset}
         totalItemsLabel="Total Customer Orders"
       />
 
-      {isLoading ? (
-        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading customer data...</p>
+      <div ref={tableRef}>
+        {isLoading ? (
+          <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+              <p className="text-gray-600">Loading customer data...</p>
+            </div>
           </div>
-        </div>
-      ) : (
-        <>
-          <GenericTable
-            columns={columns}
-            data={balances || []}
-            onSort={onSort}
-            sortField={sortField}
-            sortDirection={sortDirection}
-          />
-          {balances.length === 0 && (
-            <div className="text-center py-4">No customer orders found.</div>
-          )}
-        </>
-      )}
+        ) : (
+          <>
+            <GenericTable
+              columns={columns}
+              data={balances || []}
+              onSort={handleSort}
+              sortField={filterValues.sortField}
+              sortDirection={filterValues.sortDirection}
+            />
+            {balances.length === 0 && (
+              <div className="text-center py-4">No customer orders found.</div>
+            )}
+          </>
+        )}
+      </div>
 
       <TablePagination
         currentPage={currentPage}
