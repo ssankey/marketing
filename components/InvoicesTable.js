@@ -256,6 +256,11 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       label: "GSTIN",
       render: (value) => value || "N/A",
     },
+    {
+    field: "U_DispatchDate", // Add this field
+    label: "Dispatch Date",
+    render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
+  },
   ];
 
   const handleExcelDownload = async () => {
