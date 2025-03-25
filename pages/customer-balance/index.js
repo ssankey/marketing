@@ -14,7 +14,7 @@ export default function CustomerBalancePage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [sortField, setSortField] = useState("SO Date");
+  const [sortField, setSortField] = useState("AR Invoice Date"); // Updated default sort field
   const [sortDirection, setSortDirection] = useState("desc");
   
   // Initial data fetch
@@ -35,8 +35,7 @@ export default function CustomerBalancePage() {
       setIsLoading(true);
 
       const params = new URLSearchParams({
-        queryType: 'deliveries',
-        page: currentPage,
+        page: currentPage.toString(),
         search: searchTerm,
         status: statusFilter,
         fromDate: fromDate || "",
@@ -45,7 +44,8 @@ export default function CustomerBalancePage() {
         sortDir: sortDirection
       });
 
-      const response = await fetch(`/api/dashboard/customers-balances?${params}`);
+      // Updated API endpoint to match the file name
+      const response = await fetch(`/api/dashboard/customer-balances?${params}`);
 
       if (!response.ok) throw new Error("Failed to fetch customer balances");
 
@@ -71,7 +71,8 @@ export default function CustomerBalancePage() {
   const fetchBalanceData = async () => {
     try {
       setIsChartLoading(true);
-      const response = await fetch('/api/dashboard/customers-balances?queryType=balances');
+      // Updated API endpoint and removed queryType since the updated API doesn't use it
+      const response = await fetch('/api/dashboard/customer-balances');
       if (!response.ok) throw new Error("Failed to fetch balance data");
       
       const data = await response.json();
@@ -113,7 +114,7 @@ export default function CustomerBalancePage() {
     setStatusFilter("all");
     setFromDate("");
     setToDate("");
-    setSortField("SO Date");
+    setSortField("AR Invoice Date"); // Updated to match API default
     setSortDirection("desc");
     setCurrentPage(1);
   };

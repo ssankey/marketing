@@ -33,11 +33,11 @@ const CustomerBalanceTable = ({
       label: "SO#",
     },
     {
-      field: "Customer Code",
+      field: "Customer/Vendor Code",
       label: "Customer Code",
     },
     {
-      field: "Customer Name",
+      field: "Customer/Vendor Name",
       label: "Customer Name",
     },
     {
@@ -55,10 +55,6 @@ const CustomerBalanceTable = ({
       render: (value) => formatDate(value),
     },
     {
-      field: "SO to Delivery Days",
-      label: "SO to Delivery Days",
-    },
-    {
       field: "Invoice No.",
       label: "Invoice No.",
     },
@@ -73,7 +69,7 @@ const CustomerBalanceTable = ({
       render: (value) => formatCurrency(value),
     },
     {
-      field: "Balance Due",
+      field: "BalanceDue",
       label: "Balance Due",
       render: (value) => formatCurrency(value),
     },
@@ -86,8 +82,12 @@ const CustomerBalanceTable = ({
       label: "Overdue Days",
     },
     {
-      field: "Payment Terms",
+      field: "Payment Terms Code",
       label: "Payment Terms",
+    },
+    {
+      field: "Remarks",
+      label: "Remarks",
     },
   ];
 
@@ -104,7 +104,7 @@ const CustomerBalanceTable = ({
       <TableFilters
         searchConfig={{
           enabled: true,
-          placeholder: "Search by customer name, code or SO#...",
+          placeholder: "Search by customer name, code or invoice#...",
           value: searchTerm,
         }}
         onSearch={onSearch}
@@ -119,12 +119,12 @@ const CustomerBalanceTable = ({
           enabled: true,
           fromDate: fromDate,
           toDate: toDate,
-          label: "SO Date Range",
+          label: "Invoice Date Range", // Updated to reflect AR Invoice Date
         }}
         onDateFilterChange={onDateFilterChange}
         totalItems={totalItems}
         onReset={onReset}
-        totalItemsLabel="Total Customer Orders"
+        totalItemsLabel="Total Customer Invoices"
       />
 
       {isLoading ? (
@@ -144,7 +144,7 @@ const CustomerBalanceTable = ({
             sortDirection={sortDirection}
           />
           {balances.length === 0 && (
-            <div className="text-center py-4">No customer orders found.</div>
+            <div className="text-center py-4">No customer invoices found.</div>
           )}
         </>
       )}
