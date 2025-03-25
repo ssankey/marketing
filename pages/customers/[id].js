@@ -334,7 +334,7 @@ export default function CustomerDetails({
       {/* Customer Orders Table */}
       <Card className="mb-4">
         <Card.Header>
-          <h3 className="mb-0">Customer Outstanding (Top 10 )</h3>
+          <h3 className="mb-0">Customer Outstanding </h3>
         </Card.Header>
         <Card.Body>
          <CustomerOrdersTable customerOutstandings={ customerOutstandings } />

@@ -114,7 +114,8 @@ const EnhancedSalesCOGSChart = () => {
     salesBarColor: "#124f94",
     cogsBarColor: "#3bac4e",
     finalSalesBarColor: "#ff8000",
-    finalCOGSBarColor: "#f44336",
+    // finalCOGSBarColor: "#f44336",
+     finalCOGSBarColor: "#8A2BE2",  
     gmLineColor: "#3bac4e",
   };
 
