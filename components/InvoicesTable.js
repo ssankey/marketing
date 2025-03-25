@@ -263,32 +263,174 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   },
   ];
 
-  const handleExcelDownload = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) {
+  //       console.error("No token found");
+  //       return;
+  //     }
 
-      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+  //     const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
       
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  //     const response = await fetch(url, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
 
-      const filteredInvoices = await response.json();
+  //     const filteredInvoices = await response.json();
 
-      if (filteredInvoices && filteredInvoices.length > 0) {
-        downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
-      alert("Failed to export data. Please try again.");
+  //     if (filteredInvoices && filteredInvoices.length > 0) {
+  //       downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
+//   const handleExcelDownload = async () => {
+//   try {
+//     const token = localStorage.getItem("token");
+//     if (!token) return;
+
+//     const query = new URLSearchParams({
+//       search: searchTerm,
+//       status: statusFilter,
+//       fromDate: fromDate || "",
+//       toDate: toDate || "",
+//       sortField,
+//       sortDir: sortDirection,
+//       getAll: "true"
+//     });
+
+//     const response = await fetch(`/api/invoices?${query.toString()}`, {
+//       headers: { Authorization: `Bearer ${token}` },
+//     });
+
+//     const { invoices: allInvoices } = await response.json();
+
+//     if (!allInvoices || allInvoices.length === 0) {
+//       alert("No data available to export.");
+//       return;
+//     }
+
+//     // ✅ Match headers to your table component
+//     const excelColumns = columns
+//       .filter(col => col.field && col.field !== 'actions')
+//       .map(col => ({ header: col.label, key: col.field }));
+
+//     const formattedData = allInvoices.map(inv => ({
+//       ...inv,
+//       DocDate: inv.DocDate ? inv.DocDate.split('T')[0] : "",
+//       U_DispatchDate: inv.U_DispatchDate ? inv.U_DispatchDate.split('T')[0] : "",
+//     }));
+
+//     downloadExcel(formattedData, `Invoices_${statusFilter}`, excelColumns);
+//   } catch (err) {
+//     console.error("Excel download failed:", err);
+//     alert("Failed to export invoices. Please try again.");
+//   }
+// };
+
+// const handleExcelDownload = async () => {
+//   try {
+//     const token = localStorage.getItem("token");
+//     if (!token) {
+//       console.error("No token found");
+//       return;
+//     }
+
+//     const url = `/api/header-invoice?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}&getAll=true`;
+
+//     const response = await fetch(url, {
+//       headers: { Authorization: `Bearer ${token}` },
+//     });
+
+//     const result = await response.json();
+//     const data = result.invoices || [];
+
+//     // Define columns using the same order and label as in the table
+//     const excelColumns = [
+//       { header: "Invoice#", key: "DocNum" },
+//       { header: "Status", key: "DocStatusDisplay" },
+//       { header: "Invoice Date", key: "DocDate" },
+//       { header: "Customer", key: "CardName" },
+//       { header: "Customer PO#", key: "CustomerPONo" },
+//       { header: "Total Amount", key: "InvoiceTotal" },
+//       { header: "Payment Status", key: "PaymentStatus" },
+//       { header: "Sales Employee", key: "SalesEmployee" },
+//       { header: "Transport", key: "TransportName" },
+//       { header: "Dispatch Date", key: "U_DispatchDate" },
+//     ];
+
+//     // Format dates
+//     const formattedData = data.map(row => ({
+//       ...row,
+//       DocDate: row.DocDate ? row.DocDate.split("T")[0] : "N/A",
+//       U_DispatchDate: row.U_DispatchDate ? row.U_DispatchDate.split("T")[0] : "N/A"
+//     }));
+
+//     downloadExcel(formattedData, `Invoices_${statusFilter}`, excelColumns);
+//   } catch (error) {
+//     console.error("Failed to fetch data for Excel export:", error);
+//     alert("Failed to export data. Please try again.");
+//   }
+// };
+const handleExcelDownload = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
     }
-  };
+
+    const url = `/api/header-invoice?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}&getAll=true`;
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const result = await response.json();
+    const filteredInvoices = result.invoices || [];
+
+    if (filteredInvoices.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+
+    // 🔥 Use the columns array for header and key mapping
+    const excelColumns = columns
+      .filter(col => col.field !== "actions") // Exclude actions if needed
+      .map(col => ({
+        header: col.label,
+        key: col.field,
+      }));
+
+    // 🧠 Optionally format data as per renderers if needed
+    const formattedData = filteredInvoices.map(row => {
+      const formattedRow = {};
+      excelColumns.forEach(col => {
+        let value = row[col.key];
+
+        // Format date if needed
+        if (col.key === "DocDate" || col.key === "U_DispatchDate") {
+          value = value ? new Date(value).toISOString().split("T")[0] : "N/A";
+        }
+
+        formattedRow[col.header] = value;
+      });
+      return formattedRow;
+    });
+
+    downloadExcel(formattedData, `Invoices_${statusFilter}`);
+  } catch (error) {
+    console.error("Failed to fetch data for Excel export:", error);
+    alert("Failed to export data. Please try again.");
+  }
+};
+
+
 
   const renderContent = () => {
     if (displayState.showLoading) {
