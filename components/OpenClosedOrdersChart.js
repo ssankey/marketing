@@ -151,7 +151,7 @@ const OrdersChart = () => {
   // ----------------------------------
   const colorPalette = {
     primary: "#0d6efd",
-    total: "#dc3545", // Red color for total bar
+    total: "#8A2BE2", // 
   };
 
   const ordersChartData = {
