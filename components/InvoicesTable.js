@@ -86,7 +86,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       field: "Document Status",
       label: "Status",
       render: (value) => (
-        <span className={`badge ${value === "Closed" ? "bg-success" : value === "Open" ? "bg-warning" : "bg-danger"}`}>
+        <span className={`badge ${value === "Closed" ? "bg-success" : value === "Cancelled" ? "bg-warning" : "bg-danger"}`}>
           {value}
         </span>
       ),
@@ -341,7 +341,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
         statusFilter={{
           enabled: true,
           options: [
-            { value: "all", label: "All" },
+          
             { value: "Open", label: "Open" },
             { value: "Closed", label: "Closed" },
             { value: "Canceled", label: "Canceled" },
