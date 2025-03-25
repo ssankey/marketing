@@ -68,20 +68,35 @@ export default function CustomerBalancePage() {
     fetchBalanceData();
   }, []);
 
-  const fetchBalanceData = async () => {
-    try {
-      setIsChartLoading(true);
-      const response = await fetch('/api/dashboard/customers-balances?queryType=balances');
-      if (!response.ok) throw new Error("Failed to fetch balance data");
+  // const fetchBalanceData = async () => {
+  //   try {
+  //     setIsChartLoading(true);
+  //     const response = await fetch('/api/dashboard/customers-balances?queryType=balances');
+  //     if (!response.ok) throw new Error("Failed to fetch balance data");
       
-      const data = await response.json();
-      setBalanceData(data || []);
-    } catch (error) {
-      console.error("Error fetching balance data:", error);
-    } finally {
-      setIsChartLoading(false);
-    }
-  };
+  //     const data = await response.json();
+  //     setBalanceData(data || []);
+  //   } catch (error) {
+  //     console.error("Error fetching balance data:", error);
+  //   } finally {
+  //     setIsChartLoading(false);
+  //   }
+  // };
+
+const fetchBalanceData = async () => {
+  try {
+    setIsChartLoading(true);
+    const response = await fetch('/api/dashboard/customers-balances?queryType=chart');
+    if (!response.ok) throw new Error("Failed to fetch chart data");
+    
+    const data = await response.json();
+    setBalanceData(data || []);
+  } catch (error) {
+    console.error("Error fetching chart data:", error);
+  } finally {
+    setIsChartLoading(false);
+  }
+};
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);

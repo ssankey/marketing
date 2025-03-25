@@ -69,25 +69,56 @@ const CustomerBalanceChart = ({ customerBalances, isLoading }) => {
     };
     
     // Categorize each customer's balance into the appropriate bucket
-    customerBalances.forEach(customer => {
-      const balance = parseFloat(customer.Balance) || 0;
-      const daysOverdue = customer.DaysOverdue || 0; // Assuming this field exists
+    // customerBalances.forEach(customer => {
+    //   const balance = parseFloat(customer.Balance) || 0;
+    //   const daysOverdue = customer.DaysOverdue || 0; // Assuming this field exists
       
-      if (daysOverdue <= 30) {
-        buckets["0-30 Days"] += balance;
-        customerCounts["0-30 Days"]++;
-      } else if (daysOverdue <= 60) {
-        buckets["31-60 Days"] += balance;
-        customerCounts["31-60 Days"]++;
-      } else if (daysOverdue <= 90) {
-        buckets["61-90 Days"] += balance;
-        customerCounts["61-90 Days"]++;
-      } else {
-        buckets["91+ Days"] += balance;
-        customerCounts["91+ Days"]++;
-      }
-    });
+    //   if (daysOverdue <= 30) {
+    //     buckets["0-30 Days"] += balance;
+    //     customerCounts["0-30 Days"]++;
+    //   } else if (daysOverdue <= 60) {
+    //     buckets["31-60 Days"] += balance;
+    //     customerCounts["31-60 Days"]++;
+    //   } else if (daysOverdue <= 90) {
+    //     buckets["61-90 Days"] += balance;
+    //     customerCounts["61-90 Days"]++;
+    //   } else {
+    //     buckets["91+ Days"] += balance;
+    //     customerCounts["91+ Days"]++;
+    //   }
+    // });
 
+  //   customerBalances.forEach(customer => {
+  // const balance = parseFloat(customer.Balance) || 0;
+  // const daysOverdue = parseInt(customer['Overdue Days']) || 0;
+
+  // if (daysOverdue < 0) return; // Ignore not-yet-due invoices
+
+  // if (daysOverdue <= 30) {
+  //   buckets["0-30 Days"] += balance;
+  //   customerCounts["0-30 Days"]++;
+  // } else if (daysOverdue <= 60) {
+  //   buckets["31-60 Days"] += balance;
+  //   customerCounts["31-60 Days"]++;
+  // } else if (daysOverdue <= 90) {
+  //   buckets["61-90 Days"] += balance;
+  //   customerCounts["61-90 Days"]++;
+  // } else {
+  //   buckets["91+ Days"] += balance;
+  //   customerCounts["91+ Days"]++;
+  // }
+  customerBalances.forEach(entry => {
+  const range = entry.OverdueRange;
+  const balance = parseFloat(entry.Balance) || 0;
+  const count = entry.CustomerCount || 0;
+
+  if (range in buckets) {
+    buckets[range] = balance;
+    customerCounts[range] = count;
+  }
+});
+
+    
     // Calculate total and overdue metrics
     const totalBalance = customerBalances.reduce(
       (sum, item) => sum + (parseFloat(item.Balance) || 0),
