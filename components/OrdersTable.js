@@ -13,7 +13,7 @@ import { truncateText } from 'utils/truncateText';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
 
-const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
+const OrdersTable = ({ orders, totalItems, isLoading = false, status ,onExcelDownload}) => {
   const ITEMS_PER_PAGE = 20;
   const [displayState, setDisplayState] = useState({
     hasData: false,
@@ -141,32 +141,32 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
     },
   ];
 
-  const handleExcelDownload = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) {
+  //       console.error("No token found");
+  //       return;
+  //     }
 
-      const url = `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
+  //     const url = `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
       
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  //     const response = await fetch(url, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
 
-      const filteredOrders = await response.json();
+  //     const filteredOrders = await response.json();
 
-      if (filteredOrders && filteredOrders.length > 0) {
-        downloadExcel(filteredOrders, `Orders_${statusFilter}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
-      alert("Failed to export data. Please try again.");
-    }
-  };
+  //     if (filteredOrders && filteredOrders.length > 0) {
+  //       downloadExcel(filteredOrders, `Orders_${statusFilter}`);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
 
   const renderContent = () => {
     if (displayState.showLoading) {
@@ -188,7 +188,7 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status }) => {
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
-          onExcelDownload={handleExcelDownload}
+          onExcelDownload={onExcelDownload}
         />
         {!isLoading && orders.length === 0 && (
           <div className="text-center py-4">No orders found.</div>
