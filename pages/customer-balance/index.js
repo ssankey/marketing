@@ -1,58 +1,65 @@
+
+
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { Breadcrumb, Card, Container } from "react-bootstrap";
 import CustomerBalanceTable from "../../components/page/customer-balance/table/CustomerBalanceTable";
 import CustomerBalanceChart from "../../components/page/customer-balance/chart/CustomerBalanceChart";
+import { debounce } from "lodash";
+
+ 
+
+// ... (previous imports)
 
 export default function CustomerBalancePage() {
   const router = useRouter();
   const [customerData, setCustomerData] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isChartLoading, setIsChartLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [sortField, setSortField] = useState("SO Date");
-  const [sortDirection, setSortDirection] = useState("desc");
-  
-  // Initial data fetch
+  const [totalPages, setTotalPages] = useState(1);
+  const [filters, setFilters] = useState({
+    searchTerm: "",
+    statusFilter: "all",
+    fromDate: "",
+    toDate: "",
+    sortField: "SO Date",
+    sortDirection: "desc"
+  });
+
+  // Combined data fetch effect
   useEffect(() => {
     fetchCustomerData();
-  }, [
-    currentPage,
-    searchTerm,
-    statusFilter,
-    fromDate,
-    toDate,
-    sortField,
-    sortDirection
-  ]);
+    fetchChartData();
+  }, [currentPage, filters]);
 
   const fetchCustomerData = async () => {
     try {
       setIsLoading(true);
-
+      
       const params = new URLSearchParams({
         queryType: 'deliveries',
         page: currentPage,
-        search: searchTerm,
-        status: statusFilter,
-        fromDate: fromDate || "",
-        toDate: toDate || "",
-        sortField,
-        sortDir: sortDirection
+        search: filters.searchTerm,
+        status: filters.statusFilter,
+        fromDate: filters.fromDate || "",
+        toDate: filters.toDate || "",
+        sortField: filters.sortField,
+        sortDir: filters.sortDirection
       });
 
       const response = await fetch(`/api/dashboard/customers-balances?${params}`);
-
       if (!response.ok) throw new Error("Failed to fetch customer balances");
 
       const data = await response.json();
       const totalCount = response.headers.get('X-Total-Count');
+      
       setCustomerData(data || []);
       setTotalItems(totalCount ? parseInt(totalCount) : data.length);
+      setTotalPages(Math.ceil((totalCount ? parseInt(totalCount) : data.length) / 20));
     } catch (error) {
       console.error("Fetch error:", error);
     } finally {
@@ -60,107 +67,75 @@ export default function CustomerBalancePage() {
     }
   };
 
-  // Additional balances fetch (for chart)
-  const [balanceData, setBalanceData] = useState([]);
-  const [isChartLoading, setIsChartLoading] = useState(true);
-
-  useEffect(() => {
-    fetchBalanceData();
-  }, []);
-
-  // const fetchBalanceData = async () => {
-  //   try {
-  //     setIsChartLoading(true);
-  //     const response = await fetch('/api/dashboard/customers-balances?queryType=balances');
-  //     if (!response.ok) throw new Error("Failed to fetch balance data");
+  const fetchChartData = async () => {
+    try {
+      setIsChartLoading(true);
       
-  //     const data = await response.json();
-  //     setBalanceData(data || []);
-  //   } catch (error) {
-  //     console.error("Error fetching balance data:", error);
-  //   } finally {
-  //     setIsChartLoading(false);
-  //   }
-  // };
+      // Include the same filters for chart data
+      const params = new URLSearchParams({
+        queryType: 'chart',
+        search: filters.searchTerm,
+        status: filters.statusFilter,
+        fromDate: filters.fromDate || "",
+        toDate: filters.toDate || ""
+      });
 
-const fetchBalanceData = async () => {
-  try {
-    setIsChartLoading(true);
-    const response = await fetch('/api/dashboard/customers-balances?queryType=chart');
-    if (!response.ok) throw new Error("Failed to fetch chart data");
-    
-    const data = await response.json();
-    setBalanceData(data || []);
-  } catch (error) {
-    console.error("Error fetching chart data:", error);
-  } finally {
-    setIsChartLoading(false);
-  }
-};
+      const response = await fetch(`/api/dashboard/customers-balances?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch chart data");
+      
+      const data = await response.json();
+      setChartData(data || []);
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+    } finally {
+      setIsChartLoading(false);
+    }
+  };
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
   };
 
   const handleSearch = (term) => {
-    setSearchTerm(term);
+    setFilters(prev => ({ ...prev, searchTerm: term }));
     setCurrentPage(1);
   };
 
   const handleStatusChange = (status) => {
-    setStatusFilter(status);
+    setFilters(prev => ({ ...prev, statusFilter: status }));
     setCurrentPage(1);
   };
 
   const handleDateFilterChange = ({ fromDate, toDate }) => {
-    setFromDate(fromDate);
-    setToDate(toDate);
+    setFilters(prev => ({ ...prev, fromDate, toDate }));
     setCurrentPage(1);
   };
 
   const handleSort = (field, direction) => {
-    setSortField(field);
-    setSortDirection(direction);
+    setFilters(prev => ({ ...prev, sortField: field, sortDirection: direction }));
   };
 
   const handleReset = () => {
-    setSearchTerm("");
-    setStatusFilter("all");
-    setFromDate("");
-    setToDate("");
-    setSortField("SO Date");
-    setSortDirection("desc");
+    setFilters({
+      searchTerm: "",
+      statusFilter: "all",
+      fromDate: "",
+      toDate: "",
+      sortField: "SO Date",
+      sortDirection: "desc"
+    });
     setCurrentPage(1);
-  };
-
-  const handleBreadcrumbClick = (path) => {
-    router.push(path);
   };
 
   return (
     <Container className="mt-3">
-      {/* <Breadcrumb>
-        <Breadcrumb.Item
-          active={router.pathname === "/customer-balance"}
-          onClick={() => handleBreadcrumbClick("/customer-balance")}
-        >
-          Customer Balance
-        </Breadcrumb.Item>
-        <Breadcrumb.Item
-          active={router.pathname === "/customer-balance/detail"}
-          onClick={() => handleBreadcrumbClick("/customer-balance/detail")}
-        >
-          Details
-        </Breadcrumb.Item>
-      </Breadcrumb> */}
-
       <Card className="mb-3 shadow-sm">
         <Card.Header className="bg-white">
           <h3 className="mb-0">Customer Balance Overview</h3>
         </Card.Header>
         <Card.Body>
           <CustomerBalanceChart
-            customerBalances={balanceData} 
+            customerBalances={chartData} 
             isLoading={isChartLoading} 
           />
         </Card.Body>
@@ -174,14 +149,9 @@ const fetchBalanceData = async () => {
           <CustomerBalanceTable
             balances={customerData}
             totalItems={totalItems}
+            totalPages={totalPages}
             isLoading={isLoading}
             currentPage={currentPage}
-            searchTerm={searchTerm}
-            status={statusFilter}
-            fromDate={fromDate}
-            toDate={toDate}
-            sortField={sortField}
-            sortDirection={sortDirection}
             onPageChange={handlePageChange}
             onSearch={handleSearch}
             onStatusChange={handleStatusChange}
