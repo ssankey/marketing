@@ -27,7 +27,11 @@ export default function CustomerBalancePage() {
     fromDate: "",
     toDate: "",
     sortField: "SO Date",
-    sortDirection: "desc"
+    sortDirection: "desc",
+    // Add new filter state
+    salesPerson: null,
+    category: null,
+    product: null
   });
 
   // Combined data fetch effect
@@ -67,30 +71,58 @@ export default function CustomerBalancePage() {
     }
   };
 
-  const fetchChartData = async () => {
-    try {
-      setIsChartLoading(true);
+  // const fetchChartData = async () => {
+  //   try {
+  //     setIsChartLoading(true);
       
-      // Include the same filters for chart data
-      const params = new URLSearchParams({
-        queryType: 'chart',
-        search: filters.searchTerm,
-        status: filters.statusFilter,
-        fromDate: filters.fromDate || "",
-        toDate: filters.toDate || ""
-      });
+  //     // Include the same filters for chart data
+  //     const params = new URLSearchParams({
+  //       queryType: 'chart',
+  //       search: filters.searchTerm,
+  //       status: filters.statusFilter,
+  //       fromDate: filters.fromDate || "",
+  //       toDate: filters.toDate || ""
+  //     });
 
-      const response = await fetch(`/api/dashboard/customers-balances?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch chart data");
+  //     const response = await fetch(`/api/dashboard/customers-balances?${params}`);
+  //     if (!response.ok) throw new Error("Failed to fetch chart data");
       
-      const data = await response.json();
-      setChartData(data || []);
-    } catch (error) {
-      console.error("Error fetching chart data:", error);
-    } finally {
-      setIsChartLoading(false);
-    }
-  };
+  //     const data = await response.json();
+  //     setChartData(data || []);
+  //   } catch (error) {
+  //     console.error("Error fetching chart data:", error);
+  //   } finally {
+  //     setIsChartLoading(false);
+  //   }
+  // };
+  const fetchChartData = async () => {
+  try {
+    setIsChartLoading(true);
+    
+    // Include the same filters for chart data
+    const params = new URLSearchParams({
+      queryType: 'chart',
+      search: filters.searchTerm,
+      status: filters.statusFilter,
+      fromDate: filters.fromDate || "",
+      toDate: filters.toDate || "",
+      // Add the new filter params
+      slpCode: filters.salesPerson?.value || "",
+      itmsGrpCod: filters.category?.value || "",
+      itemCode: filters.product?.value || ""
+    });
+
+    const response = await fetch(`/api/dashboard/customers-balances?${params}`);
+    if (!response.ok) throw new Error("Failed to fetch chart data");
+    
+    const data = await response.json();
+    setChartData(data || []);
+  } catch (error) {
+    console.error("Error fetching chart data:", error);
+  } finally {
+    setIsChartLoading(false);
+  }
+};
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
@@ -134,10 +166,37 @@ export default function CustomerBalancePage() {
           <h3 className="mb-0">Customer Balance Overview</h3>
         </Card.Header>
         <Card.Body>
-          <CustomerBalanceChart
+          {/* <CustomerBalanceChart
             customerBalances={chartData} 
             isLoading={isChartLoading} 
-          />
+          /> */}
+          {/* <CustomerBalanceChart
+              customerBalances={chartData}
+              isLoading={isChartLoading}
+              onFilterChange={(filterValues) => {
+                setFilters((prev) => ({
+                  ...prev,
+                  salesPerson: filterValues.salesPerson || null,
+                  category: filterValues.category || null,
+                  product: filterValues.product || null,
+                }));
+                setCurrentPage(1);
+              }}
+            /> */}
+            <CustomerBalanceChart
+  customerBalances={chartData}
+  isLoading={isChartLoading}
+  onFilterChange={(filterValues) => {
+    setFilters((prev) => ({
+      ...prev,
+      salesPerson: filterValues.salesPerson || null,
+      category: filterValues.category || null,
+      product: filterValues.product || null,
+    }));
+    setCurrentPage(1);
+  }}
+/>
+
         </Card.Body>
       </Card>
 

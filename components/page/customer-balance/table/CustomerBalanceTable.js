@@ -42,11 +42,11 @@ const CustomerBalanceTable = ({
       label: "SO#",
     },
     {
-      field: "Customer/Vendor Code",
+      field: "Customer Code",
       label: "Customer Code",
     },
     {
-      field: "Customer/Vendor Name",
+      field: "Customer Name",
       label: "Customer Name",
     },
     {
@@ -78,7 +78,7 @@ const CustomerBalanceTable = ({
       render: (value) => formatCurrency(value),
     },
     {
-      field: "BalanceDue",
+      field: "Balance Due",
       label: "Balance Due",
       render: (value) => formatCurrency(value),
     },
@@ -91,13 +91,13 @@ const CustomerBalanceTable = ({
       label: "Overdue Days",
     },
     {
-      field: "Payment Terms Code",
+      field: "Payment Terms",
       label: "Payment Terms",
     },
-    {
-      field: "Remarks",
-      label: "Remarks",
-    },
+    // {
+    //   field: "Remarks",
+    //   label: "Remarks",
+    // },
   ];
 
   const statusOptions = [
