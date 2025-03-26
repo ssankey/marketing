@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
 import InvoicesTable from "components/InvoicesTable";
+import downloadExcel from "utils/exporttoexcel";
 
 // Client-side caching helpers
 const CLIENT_CACHE_TTL = 300000; // 5 minutes
@@ -57,7 +58,7 @@ export default function InvoicesPage() {
   const { page = 1, search = "", status = "all", sortField = "DocDate", sortDir = "desc", fromDate, toDate } = router.query;
 
   // Memoize fetchInvoices to prevent unnecessary recreations
-  const fetchInvoices = useCallback(async () => {
+  const fetchInvoices = useCallback(async (getAll = false) => {
     const token = localStorage.getItem("token");
     if (!token) throw new Error("No token found");
 
@@ -69,7 +70,19 @@ export default function InvoicesPage() {
       sortDir,
       fromDate,
       toDate,
+      getAll: getAll.toString()
     };
+
+    if (getAll) {
+      const res = await fetch(`/api/invoices?${new URLSearchParams(queryParams)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
+
+      const { invoices: allInvoices } = await res.json();
+      return allInvoices;
+    }
 
     // Check client cache first
     const cacheKey = getClientCacheKey(queryParams);
@@ -90,6 +103,23 @@ export default function InvoicesPage() {
 
     return { invoices: newInvoices, totalItems: newTotalItems };
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
+
+   const handleExcelDownload = useCallback(async () => {
+    try {
+      // Fetch all invoices with the same filters
+      const allInvoices = await fetchInvoices(true);
+
+      if (allInvoices && allInvoices.length > 0) {
+        // Use the existing downloadExcel utility
+        downloadExcel(allInvoices, `Invoices_${status}`);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
+  }, [fetchInvoices, status]);
 
   // Handle data fetching
   useEffect(() => {

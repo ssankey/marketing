@@ -46,6 +46,7 @@ export default async function handler(req, res) {
       sortDir = "desc",
       fromDate,
       toDate,
+      getAll = false
     } = req.query;
 
     const itemsPerPage = 20;
@@ -63,7 +64,8 @@ export default async function handler(req, res) {
       sortDir,
       itemsPerPage,
       isAdmin,
-      cardCodes   // pass this down
+      cardCodes,
+       getAll: getAll === "true" // pass this down
     });
 
     // 5) Return data

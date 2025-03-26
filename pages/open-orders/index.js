@@ -150,6 +150,11 @@ export default function OpenOrdersPage() {
       totalItems={totalItems}
       isLoading={fetchState.isInitialLoad || fetchState.isLoading}
       status={status}
+      searchTerm={search}
+      fromDate={fromDate}
+      toDate={toDate}
+      sortField={sortField}
+      sortDirection={sortDir}
     />
   );
 }

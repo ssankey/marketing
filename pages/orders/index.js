@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
 import OrdersTable from "components/OrdersTable";
+import downloadExcel from "utils/exporttoexcel";
 
 // Add these helper functions at the top of the file
 const CLIENT_CACHE_TTL = 300000; // 5 minutes
@@ -67,7 +68,7 @@ export default function OrdersPage() {
   } = router.query;
 
   // Memoize fetchOrders to prevent unnecessary recreations
-  const fetchOrders = useCallback(async () => {
+  const fetchOrders = useCallback(async (getAllRecords = false) => {
     const token = localStorage.getItem("token");
     if (!token) {
       throw new Error("No token found in localStorage");
@@ -81,13 +82,21 @@ export default function OrdersPage() {
       sortDir,
       fromDate,
       toDate,
+      getAll: getAllRecords.toString() // Convert to string for API
     };
 
     // Check client cache first
-    const cacheKey = getClientCacheKey(queryParams);
-    const cached = readFromClientCache(cacheKey);
-    if (cached) {
-      return cached;
+    // const cacheKey = getClientCacheKey(queryParams);
+    // const cached = readFromClientCache(cacheKey);
+    // if (cached) {
+    //   return cached;
+    // }
+    if (!getAllRecords) {
+      const cacheKey = getClientCacheKey(queryParams);
+      const cached = readFromClientCache(cacheKey);
+      if (cached) {
+        return cached;
+      }
     }
 
     const response = await fetch(`/api/orders?${new URLSearchParams(queryParams)}`, {
@@ -101,10 +110,47 @@ export default function OrdersPage() {
     const { orders: newOrders, totalItems: newTotalItems } = await response.json();
 
     // Save to client cache
-    saveToClientCache(cacheKey, { orders: newOrders, totalItems: newTotalItems });
+    // saveToClientCache(cacheKey, { orders: newOrders, totalItems: newTotalItems });
+
+    if (!getAllRecords) {
+      const cacheKey = getClientCacheKey(queryParams);
+      saveToClientCache(cacheKey, { orders: newOrders, totalItems: newTotalItems });
+    }
+
 
     return { orders: newOrders, totalItems: newTotalItems };
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
+
+  const handleExcelDownload = async () => {
+    try {
+      // Fetch all records with the same filters
+      const { orders: allOrders } = await fetchOrders(true);
+
+      // Prepare data for Excel export
+      if (allOrders && allOrders.length > 0) {
+        // Map the orders to match the table columns exactly
+        const excelData = allOrders.map(order => ({
+          DocNum: order.DocNum,
+          DocStatus: order.DocStatus,
+          CustomerPONo: order.CustomerPONo || 'N/A',
+          CardName: order.CardName,
+          DocDate: order.DocDate,
+          ProductCount: order.ProductCount || 'N/A',
+          DeliveryDate: order.DeliveryDate,
+          DocTotal: order.DocTotal,
+          DocCur: order.DocCur,
+          SalesEmployee: order.SalesEmployee || 'N/A'
+        }));
+
+        downloadExcel(excelData, `Orders_${status}`);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to fetch data for Excel export:", error);
+      alert("Failed to export data. Please try again.");
+    }
+  };
 
   // Handle data fetching
   useEffect(() => {
@@ -201,6 +247,7 @@ export default function OrdersPage() {
       totalItems={totalItems}
       isLoading={fetchState.isInitialLoad || fetchState.isLoading}
       status={status}
+      onExcelDownload={handleExcelDownload} 
     />
   );
 }
