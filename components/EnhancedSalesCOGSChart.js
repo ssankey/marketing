@@ -99,10 +99,11 @@ const EnhancedSalesCOGSChart = () => {
     }
   }, [user, filters]);
 
-  // Prepare x-axis labels
-  const labels = [...salesData.map((d) => d.monthYear), "Total"];
+  // Prepare x-axis labels (Remove "Total" from the labels array)
+  const labels = salesData.map((d) => d.monthYear);
+  // const labels = [...salesData.map((d) => d.monthYear), "Total"]; // <-- commented out
 
-  // Calculate totals
+  // Calculate totals, still used by the table
   const totalSales = salesData.reduce((acc, curr) => acc + (curr.totalSales || 0), 0);
   const totalCOGS = salesData.reduce((acc, curr) => acc + (curr.totalCogs || 0), 0);
   const averageGrossMargin = salesData.length
@@ -113,47 +114,40 @@ const EnhancedSalesCOGSChart = () => {
   const colorPalette = {
     salesBarColor: "#124f94",
     cogsBarColor: "#3bac4e",
-    finalSalesBarColor: "#ff8000",
-    // finalCOGSBarColor: "#f44336",
-     finalCOGSBarColor: "#8A2BE2",  
+    // The final bar colors are no longer used
+    // finalSalesBarColor: "#ff8000",
+    // finalCOGSBarColor: "#8A2BE2",
     gmLineColor: "#3bac4e",
   };
 
-  // Sales dataset
+  // Sales dataset (Remove the final total from the data array)
   const salesDataset = {
     label: 'Sales',
-    data: [
-      ...salesData.map((d) => d.totalSales || 0),
-      totalSales // last data point for "Total" bar
-    ],
-    backgroundColor: [
-      ...salesData.map(() => colorPalette.salesBarColor),
-      colorPalette.finalSalesBarColor // color for final bar
-    ],
+    data: salesData.map((d) => d.totalSales || 0),
+    backgroundColor: colorPalette.salesBarColor,
     borderWidth: 1
+    // data: [
+    //   ...salesData.map((d) => d.totalSales || 0),
+    //   totalSales // last data point for "Total" bar
+    // ],
   };
 
   // COGS dataset (only if admin)
   const cogsDataset = {
     label: 'COGS',
-    data: [
-      ...salesData.map((d) => d.totalCogs || 0),
-      totalCOGS
-    ],
-    backgroundColor: [
-      ...salesData.map(() => colorPalette.cogsBarColor),
-      colorPalette.finalCOGSBarColor
-    ],
+    data: salesData.map((d) => d.totalCogs || 0),
+    backgroundColor: colorPalette.cogsBarColor,
     borderWidth: 1
+    // data: [
+    //   ...salesData.map((d) => d.totalCogs || 0),
+    //   totalCOGS
+    // ],
   };
 
-  // Gross Margin % (line)
+  // Gross Margin % (line) (Remove the final average from the data array)
   const gmPercentDataset = {
     label: 'Gross Margin %',
-    data: [
-      ...salesData.map((d) => d.grossMarginPct || 0),
-      averageGrossMargin
-    ],
+    data: salesData.map((d) => d.grossMarginPct || 0),
     type: 'line',
     borderColor: colorPalette.gmLineColor,
     backgroundColor: colorPalette.gmLineColor,
@@ -163,6 +157,10 @@ const EnhancedSalesCOGSChart = () => {
     tension: 0.4,
     pointRadius: 4,
     pointHoverRadius: 6,
+    // data: [
+    //   ...salesData.map((d) => d.grossMarginPct || 0),
+    //   averageGrossMargin
+    // ],
   };
 
   let finalDatasets = [salesDataset];
@@ -179,9 +177,8 @@ const EnhancedSalesCOGSChart = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      // Completely disable data labels on bars
       datalabels: {
-        display: false, // This disables all data labels for all datasets
+        display: false,
       },
       tooltip: {
         callbacks: {
@@ -189,11 +186,9 @@ const EnhancedSalesCOGSChart = () => {
             const datasetLabel = context.dataset.label;
             const rawValue = context.raw;
 
-            // If GM% line dataset
             if (datasetLabel === 'Gross Margin %') {
               return `GM%: ${rawValue.toFixed(2)}%`;
             }
-            // For Sales or COGS
             return `${datasetLabel}: ${formatCurrency(rawValue)}`;
           },
         },
@@ -242,7 +237,10 @@ const EnhancedSalesCOGSChart = () => {
     <Card className="shadow-sm border-0 mb-4">
       <Card.Header className="bg-white py-3">
         <div className="d-flex justify-content-between align-items-center">
-          <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: '#212529', fontSize: '1.25rem' }}>
+          <h4
+            className="mb-3 mb-md-0"
+            style={{ fontWeight: 600, color: '#212529', fontSize: '1.25rem' }}
+          >
             Sales
           </h4>
           <div className="ms-auto">
@@ -273,7 +271,10 @@ const EnhancedSalesCOGSChart = () => {
       <Card.Body>
         {error && <p className="text-center mt-4 text-danger">Error: {error}</p>}
         {loading ? (
-          <div className="d-flex justify-content-center align-items-center" style={{ height: '500px' }}>
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ height: '500px' }}
+          >
             <Spinner animation="border" role="status" className="me-2">
               <span className="visually-hidden">Loading...</span>
             </Spinner>
@@ -285,7 +286,7 @@ const EnhancedSalesCOGSChart = () => {
               <Bar data={chartData} options={chartOptions} />
             </div>
 
-            {/* Table still shows totals, if desired */}
+            {/* Table still shows totals */}
             <div className="mt-4">
               <Table striped bordered hover responsive>
                 <thead>
@@ -294,6 +295,7 @@ const EnhancedSalesCOGSChart = () => {
                     {labels.map((label, idx) => (
                       <th key={idx}>{label}</th>
                     ))}
+                    <th>Total</th> {/* Additional column to display total */}
                   </tr>
                 </thead>
                 <tbody>
