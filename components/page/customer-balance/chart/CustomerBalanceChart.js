@@ -158,7 +158,12 @@ const CustomerBalanceChart = ({ customerBalances, isLoading }) => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: false },
+       datalabels: {
+        display: false, // This disables all data labels for all datasets
+      },
+      legend: {
+        display: false,
+      },
       tooltip: {
         backgroundColor: "#212529",
         titleFont: { size: 14, weight: "bold" },

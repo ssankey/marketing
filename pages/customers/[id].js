@@ -3,7 +3,7 @@
 import { useAuth } from "hooks/useAuth";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Spinner, Table } from "react-bootstrap";
+import { Container, Row, Col, Card, Spinner, Table , Dropdown } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import  PurchasesAmountChart  from "../../components/CustomerCharts/purchasevsamount";
 import CustomerOrdersTable from  "../../components/CustomerCharts/outstandingtable";
@@ -32,6 +32,7 @@ export default function CustomerDetails({
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [outstandingFilter, setOutstandingFilter] = useState('Payment Pending');
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
@@ -55,6 +56,10 @@ export default function CustomerDetails({
       </Container>
     );
   }
+
+  const handleFilterSelect = (eventKey) => {
+  setOutstandingFilter(eventKey);
+};
 
   // Handle unauthorized access
   if (!isAuthenticated) {
@@ -334,10 +339,35 @@ export default function CustomerDetails({
       {/* Customer Orders Table */}
       <Card className="mb-4">
         <Card.Header>
-          <h3 className="mb-0">Customer Outstanding </h3>
+          <div className="d-flex justify-content-between align-items-center">
+      <h3 className="mb-0">Customer Outstanding</h3>
+      <div className="ms-auto"> {/* ms-auto pushes the dropdown to the right */}
+        <Dropdown onSelect={handleFilterSelect}>
+          <Dropdown.Toggle variant="outline-secondary" id="outstanding-filter-dropdown">
+            {outstandingFilter}
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item eventKey="Payment Pending">Payment Pending</Dropdown.Item>
+            <Dropdown.Item eventKey="Payment Done">Payment Done</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+      </div>
+    </div>
         </Card.Header>
-        <Card.Body>
-         <CustomerOrdersTable customerOutstandings={ customerOutstandings } />
+        {/* <Card.Body> */}
+        <Card.Body 
+          style={{ 
+            maxHeight: "500px",  // Fixed height
+            overflowY: "auto",    // Vertical scroll when needed
+            overflowX: "auto"     // Horizontal scroll when needed
+          }}
+        >
+         {/* <CustomerOrdersTable customerOutstandings={ customerOutstandings } /> */}
+         <CustomerOrdersTable 
+  customerOutstandings={customerOutstandings} 
+  filter={outstandingFilter}
+/>
+
 
         </Card.Body>
       </Card>

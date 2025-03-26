@@ -110,6 +110,9 @@ const VendorPaymentsChart = ({ vendorPayments }) => {
       }
     },
     plugins: {
+       datalabels: {
+        display: false, // This disables all data labels for all datasets
+      },
       legend: {
         display: false,
       },
