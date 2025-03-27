@@ -71,30 +71,7 @@ export default function CustomerBalancePage() {
     }
   };
 
-  // const fetchChartData = async () => {
-  //   try {
-  //     setIsChartLoading(true);
-      
-  //     // Include the same filters for chart data
-  //     const params = new URLSearchParams({
-  //       queryType: 'chart',
-  //       search: filters.searchTerm,
-  //       status: filters.statusFilter,
-  //       fromDate: filters.fromDate || "",
-  //       toDate: filters.toDate || ""
-  //     });
-
-  //     const response = await fetch(`/api/dashboard/customers-balances?${params}`);
-  //     if (!response.ok) throw new Error("Failed to fetch chart data");
-      
-  //     const data = await response.json();
-  //     setChartData(data || []);
-  //   } catch (error) {
-  //     console.error("Error fetching chart data:", error);
-  //   } finally {
-  //     setIsChartLoading(false);
-  //   }
-  // };
+  
   const fetchChartData = async () => {
   try {
     setIsChartLoading(true);
