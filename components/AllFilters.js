@@ -5,7 +5,7 @@ import Select from "react-select";
 import { Button, Dropdown } from "react-bootstrap";
 import debounce from "lodash.debounce";
 
-const AllFilter = ({ setSearchQuery }) => {
+const AllFilter = ({ setSearchQuery ,allowedTypes }) => {
   const [searchType, setSearchType] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -140,6 +140,9 @@ const AllFilter = ({ setSearchQuery }) => {
     setInputValue(""); // Clear input field
   };
 
+  const typesToShow = allowedTypes || ["sales-person", "product", "category"];
+
+
   return (
     <div className="d-flex gap-2 align-items-center">
       {/* Dropdown to Select Filter Type */}
@@ -147,11 +150,23 @@ const AllFilter = ({ setSearchQuery }) => {
         <Dropdown.Toggle variant="outline-secondary" id="search-dropdown">
           {searchType ? searchType.replace("-", " ").toUpperCase() : "Search By"}
         </Dropdown.Toggle>
-        <Dropdown.Menu>
+        {/* <Dropdown.Menu>
           <Dropdown.Item eventKey="sales-person">Sales Person</Dropdown.Item>
           <Dropdown.Item eventKey="product">Product</Dropdown.Item>
           <Dropdown.Item eventKey="category">Category</Dropdown.Item>
-        </Dropdown.Menu>
+        </Dropdown.Menu> */}
+        <Dropdown.Menu>
+  {typesToShow.includes("sales-person") && (
+    <Dropdown.Item eventKey="sales-person">Sales Person</Dropdown.Item>
+  )}
+  {typesToShow.includes("product") && (
+    <Dropdown.Item eventKey="product">Product</Dropdown.Item>
+  )}
+  {typesToShow.includes("category") && (
+    <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+  )}
+</Dropdown.Menu>
+
       </Dropdown>
 
       {/* Search Input with Auto-Suggestions */}
