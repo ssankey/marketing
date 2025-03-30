@@ -139,6 +139,11 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status ,onExcelDow
       label: "Sales Employee",
       render: (value) => value || "N/A",
     },
+     {
+      field: "ContactPerson",
+      label: "Contact Person",
+      render: (value) => value || "N/A",
+    },
   ];
 
   // const handleExcelDownload = async () => {

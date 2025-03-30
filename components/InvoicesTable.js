@@ -222,15 +222,15 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       label: "Payment Terms",
       render: (value) => value || "N/A",
     },
-    {
-      field: "Payment Status",
-      label: "Payment Status",
-      render: (value) => (
-        <span className={`badge ${value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"}`}>
-          {value}
-        </span>
-      ),
-    },
+    // {
+    //   field: "Payment Status",
+    //   label: "Payment Status",
+    //   render: (value) => (
+    //     <span className={`badge ${value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"}`}>
+    //       {value}
+    //     </span>
+    //   ),
+    // },
     {
       field: "Exchange Rate",
       label: "Exch. Rate",
@@ -256,11 +256,11 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       label: "GSTIN",
       render: (value) => value || "N/A",
     },
-    {
-    field: "U_DispatchDate", // Add this field
-    label: "Dispatch Date",
-    render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
-  },
+  //   {
+  //   field: "U_DispatchDate", // Add this field
+  //   label: "Dispatch Date",
+  //   render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
+  // },
   ];
 
   // const handleExcelDownload = async () => {
