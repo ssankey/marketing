@@ -92,29 +92,29 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       label: "Customer",
       render: (value) => value || "N/A",
     },
-    {
-      field: "CustomerPONo",
-      label: "Customer PO#",
-      render: (value) => value || "N/A",
-    },
+    // {
+    //   field: "CustomerPONo",
+    //   label: "Customer PO#",
+    //   render: (value) => value || "N/A",
+    // },
     {
       field: "InvoiceTotal",
       label: "Total Amount",
       render: (value) => formatCurrency(value),
     },
-    {
-      field: "PaymentStatus",
-      label: "Payment Status",
-      render: (value) => (
-        <span
-          className={`badge ${
-            value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
+    // {
+    //   field: "PaymentStatus",
+    //   label: "Payment Status",
+    //   render: (value) => (
+    //     <span
+    //       className={`badge ${
+    //         value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"
+    //       }`}
+    //     >
+    //       {value}
+    //     </span>
+    //   ),
+    // },
     {
       field: "SalesEmployee",
       label: "Sales Employee",
