@@ -11,4 +11,13 @@ module.exports = {
     }
     return config;
   },
+  trailingSlash: false,
+  async rewrites() {
+    return [
+      {
+        source: '/.well-known/pki-validation/:file',
+        destination: '/api/well-known/pki-validation/:file',
+      },
+    ];
+  },
 };
