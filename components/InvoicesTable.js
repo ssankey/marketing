@@ -141,11 +141,11 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       label: "Tracking No.",
       render: (value) => value || "N/A",
     },
-    {
-      field: "Delivery Date",
-      label: "Delivery Date",
-      render: (value) => formatDate(value),
-    },
+    // {
+    //   field: "Delivery Date",
+    //   label: "Delivery Date",
+    //   render: (value) => formatDate(value),
+    // },
     {
       field: "Dispatch Date",
       label: "Dispatch Date",

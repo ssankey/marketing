@@ -1,12 +1,11 @@
 // OrdersChart.js
 import React, { useState, useEffect, useRef } from "react";
 import { Bar } from "react-chartjs-2";
-import { Card, Spinner, Table } from "react-bootstrap";
+import { Card, Spinner } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import { useRouter } from "next/router";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import AllFilter from "components/AllFilters.js";
-import LoadingSpinner from "../components/LoadingSpinner"; // if actually used
 
 import {
   Chart as ChartJS,
@@ -131,6 +130,7 @@ const OrdersChart = () => {
   // ----------------------------------
   // Derived values
   // ----------------------------------
+  // This example no longer uses a "Total" bar
   const totalOpenOrders = ordersData.reduce(
     (sum, data) => sum + (data.openOrders || 0),
     0
@@ -140,18 +140,16 @@ const OrdersChart = () => {
     0
   );
 
-  // Chart labels: monthly + "Total"
-  const labels = [
-    ...ordersData.map((d) => formatMonthYear(d.year, d.month)),
-    "Total",
-  ];
+  // ----------------------------------
+  // Labels: monthly only
+  // ----------------------------------
+  const labels = ordersData.map((d) => formatMonthYear(d.year, d.month));
 
   // ----------------------------------
   // Chart config
   // ----------------------------------
   const colorPalette = {
     primary: "#0d6efd",
-    total: "#8A2BE2", // 
   };
 
   const ordersChartData = {
@@ -159,18 +157,9 @@ const OrdersChart = () => {
     datasets: [
       {
         label: "Open Orders",
-        data: [
-          ...ordersData.map((d) => d.openOrders || 0),
-          totalOpenOrders,
-        ],
-        backgroundColor: [
-          ...ordersData.map(() => colorPalette.primary),
-          colorPalette.total,
-        ],
-        borderColor: [
-          ...ordersData.map(() => colorPalette.primary),
-          colorPalette.total,
-        ],
+        data: ordersData.map((d) => d.openOrders || 0),
+        backgroundColor: ordersData.map(() => colorPalette.primary),
+        borderColor: ordersData.map(() => colorPalette.primary),
         borderWidth: 1,
         barPercentage: 1,
         categoryPercentage: 0.7,
@@ -182,49 +171,22 @@ const OrdersChart = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
+      // Turn off data labels display on the bars
       datalabels: {
-        display: (context) => {
-          // For the last bar (Total), always show the sales value
-          if (context.dataIndex === labels.length - 1) {
-            return true;
-          }
-          // For monthly bars, show label only if openSales > 0
-          const monthlySales = ordersData[context.dataIndex]?.openSales || 0;
-          return monthlySales > 0;
-        },
-        formatter: (_, context) => {
-          // If it's the Total bar
-          if (context.dataIndex === labels.length - 1) {
-            return formatCurrency(totalOpenSales);
-          }
-          // Else monthly bar
-          const salesValue = ordersData[context.dataIndex]?.openSales || 0;
-          return formatCurrency(salesValue);
-        },
-        anchor: "end",
-        align: "end",
-        offset: 4,
-        color: "#212529",
-        font: { weight: "bold", size: 12 },
+        display: false,
       },
       tooltip: {
         backgroundColor: "#212529",
         callbacks: {
           label: (context) => {
-            const datasetLabel = context.dataset.label; // e.g., "Open Orders"
-            const value = context.raw; // raw bar value
+            // We have just one dataset, so context.dataset.label is "Open Orders"
+            const datasetLabel = context.dataset.label;
+            const numOrders = context.raw; // the raw bar value (openOrders)
             const dataIndex = context.dataIndex;
-
-            // For the Total bar
-            if (dataIndex === labels.length - 1) {
-              return `${datasetLabel} Total: ${value} (Sales: ${formatCurrency(
-                totalOpenSales
-              )})`;
-            }
-
-            // For individual month bars
             const dataPoint = ordersData[dataIndex];
-            return `${datasetLabel}: ${value} (Sales: ${formatCurrency(
+
+            // Show openOrders and openSales in the tooltip
+            return `${datasetLabel}: ${numOrders} (Sales: ${formatCurrency(
               dataPoint.openSales
             )})`;
           },
@@ -244,11 +206,7 @@ const OrdersChart = () => {
       },
     },
     onClick: (event, elements) => {
-      if (
-        elements.length > 0 &&
-        elements[0].datasetIndex === 0 &&
-        elements[0].index !== labels.length - 1
-      ) {
+      if (elements.length > 0 && elements[0].datasetIndex === 0) {
         const dataIndex = elements[0].index;
         const { year, month } = ordersData[dataIndex];
         const status = "open";
@@ -273,21 +231,16 @@ const OrdersChart = () => {
   };
 
   // ----------------------------------
-  // CSV Export
+  // CSV Export (unchanged, optional)
   // ----------------------------------
   const exportToCSV = () => {
     if (!ordersData.length) return;
     const csvData = [
       ["Month", ...labels],
-      [
-        "Open Orders",
-        ...ordersData.map((data) => data.openOrders || 0),
-        totalOpenOrders,
-      ],
+      ["Open Orders", ...ordersData.map((data) => data.openOrders || 0)],
       [
         "Open Orders (Sales)",
         ...ordersData.map((data) => formatCurrency(data.openSales || 0)),
-        formatCurrency(totalOpenSales),
       ],
     ];
 
