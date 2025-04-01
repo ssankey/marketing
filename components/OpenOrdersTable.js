@@ -584,9 +584,15 @@ const OpenOrdersTable = ({
       label: "Open Amount",
       render: (value, row) => formatCurrency(value, row.PriceCurrency),
     },
+    
     {
       field: "SalesEmployee",
       label: "Sales Employee",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "ContactPerson",
+      label: "Contact Person",
       render: (value) => value || "N/A",
     },
   ];

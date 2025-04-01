@@ -31,6 +31,7 @@ const CustomerOrdersTable = ({ customerOutstandings, filter  }) => {
         <tr>
           <th>SO#</th>
           <th>SO Date</th>
+          <th>Tracking no</th>
           <th>Delivery#</th>
           <th>Delivery Date</th>
           <th>SO to Delivery Days</th>
@@ -38,6 +39,7 @@ const CustomerOrdersTable = ({ customerOutstandings, filter  }) => {
           <th>AR Invoice Date</th>
           <th>Invoice Total</th>
           <th>Balance Due</th>
+          <th>AirLine Name</th>
           <th>Overdue Days</th>
           <th>Payment Group</th>
         </tr>
@@ -65,6 +67,7 @@ const CustomerOrdersTable = ({ customerOutstandings, filter  }) => {
             <tr key={index}>
               <td>{item['SO#']}</td>
               <td>{formatDate(item['SO Date'])}</td>
+              <td>{item['Tracking No']}</td>
               <td>{item['Delivery#']}</td>
               <td>{formatDate(item['Delivery Date'])}</td>
               <td>{item['SO to Delivery Days']}</td>
@@ -74,6 +77,7 @@ const CustomerOrdersTable = ({ customerOutstandings, filter  }) => {
               <td className={item['Balance Due'] > 0 ? 'text-danger fw-bold' : 'text-success'}>
                 {formatCurrency(item['Balance Due'])}
               </td>
+              <td>{item['AirLine Name']}</td>
               <td>{item['Overdue Days']}</td>
               <td>{item['PymntGroup']}</td>
             </tr>

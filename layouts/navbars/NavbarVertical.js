@@ -357,11 +357,11 @@ const NavbarVertical = (props) => {
             )}
 
             {/* Quotations */}
-            <li className="nav-item mb-3">
+            {/* <li className="nav-item mb-3">
               <Link href="/quotations" className={`nav-link d-flex align-items-center ${router === "/quotations" ? "active" : ""}`}>
                 <CurrencyDollar className="me-2" /> Quotation
               </Link>
-            </li>
+            </li> */}
 
             {/* Orders Accordion */}
             <CustomToggle eventKey="orders" icon={<Clipboard className="me-2" />} href="/orders">
@@ -439,11 +439,11 @@ const NavbarVertical = (props) => {
                   </Link>
                 </li>
 
-                <li className="nav-item mb-3">
+                {/* <li className="nav-item mb-3">
                   <Link href="/vendor-payment" className={`nav-link d-flex align-items-center ${router === "/vendor-payment" ? "active" : ""}`}>
                     <FaMoneyBillWave className="me-2" /> Vendor Payments
                   </Link>
-                </li>
+                </li> */}
               </>
             )}
           </Accordion>
