@@ -7,7 +7,7 @@ import OrdersTable from "components/OrdersTable";
 import downloadExcel from "utils/exporttoexcel";
 
 // Add these helper functions at the top of the file
-const CLIENT_CACHE_TTL = 300000; // 5 minutes
+const CLIENT_CACHE_TTL = 0; // 5 minutes
 
 function getClientCacheKey(query) {
   return `orders:${JSON.stringify(query)}`;
