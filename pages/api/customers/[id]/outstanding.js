@@ -6,14 +6,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  const { id } = req.query; // Customer ID (e.g., C000080)
-
+  // const { id } = req.query; // Customer ID (e.g., C000080)
+  const { id, getAll } = req.query;
+  
+  const all = getAll === "true"; // interpret the flag
   if (!id) {
     return res.status(400).json({ message: "Customer ID is required" });
   }
 
   try {
-    const orders = await getCustomerOutstanding(id);
+    // const orders = await getCustomerOutstanding(id);
+    const orders = await getCustomerOutstanding(id, { getAll: all });
+    
+
     console.log("API Response:", orders);
     res.status(200).json(orders);
   } catch (error) {

@@ -19,7 +19,8 @@ const CustomerBalanceTable = ({
   onStatusChange,
   onDateFilterChange,
   onSort,
-  onReset
+  onReset,
+  onExcelDownload
 }) => {
   const ITEMS_PER_PAGE = 20;
   
@@ -196,6 +197,7 @@ const CustomerBalanceTable = ({
               onSort={handleSort}
               sortField={filterValues.sortField}
               sortDirection={filterValues.sortDirection}
+              onExcelDownload={onExcelDownload}
             />
             {balances.length === 0 && (
               <div className="text-center py-4">No customer orders found.</div>
