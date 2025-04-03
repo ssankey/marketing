@@ -597,54 +597,7 @@ const OpenOrdersTable = ({
     },
   ];
 
-  // const handleExcelDownload = async () => {
-  //   try {
-  //     const token = localStorage.getItem("token");
-  //     if (!token) {
-  //       console.error("No token found");
-  //       return;
-  //     }
-
-  //     const queryParams = new URLSearchParams({
-  //       search: filterSearchTerm,
-  //       status,
-  //       sortField: filterSortField,
-  //       sortDir: filterSortDirection,
-  //       fromDate: filterFromDate || "",
-  //       toDate: filterToDate || "",
-  //       getAll: "true"
-  //     });
-
-  //     const response = await fetch(`/api/open-orders?${queryParams}`, {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error(`API request failed with status ${response.status}`);
-  //     }
-
-  //     const { orders: filteredOrders } = await response.json();
-
-  //     if (filteredOrders && filteredOrders.length > 0) {
-  //       const formatDateLocal = (date) => {
-  //         if (!date) return "NoDate";
-  //         const [year, month, day] = date.split("-");
-  //         return `${day}-${month}-${year}`;
-  //       };
-
-  //       const startDate = formatDateLocal(filterFromDate);
-  //       const endDate = formatDateLocal(filterToDate);
-  //       const fileName = `OpenOrders_${startDate}_to_${endDate}.xlsx`;
-
-  //       downloadExcel(filteredOrders, fileName);
-  //     } else {
-  //       alert("No data available to export.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error during Excel export:", error);
-  //     alert("Failed to export data. Please try again.");
-  //   }
-  // };
+ 
 
   const handleExcelDownload = async () => {
   try {
