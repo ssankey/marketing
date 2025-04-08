@@ -113,6 +113,7 @@ export default async function handler(req, res) {
     // 2) Extract role-based or contactCodes-based logic
     const isAdmin = decodedToken.role === "admin";
     const cardCodes = decodedToken.cardCodes || [];
+     const contactCodes = decodedToken.contactCodes || [];
 
     // 3) Parse query params
     const {
@@ -142,6 +143,7 @@ export default async function handler(req, res) {
       itemsPerPage,
       isAdmin,
       cardCodes,
+      contactCodes,
       getAll: getAll === "true",
       pendingDispatch: true, // Add this flag to filter by U_DispatchDate
     });
