@@ -1,3 +1,6 @@
+
+
+
 // OrdersChart.js
 import React, { useState, useEffect, useRef } from "react";
 import { Bar } from "react-chartjs-2";
@@ -99,7 +102,13 @@ const OrdersChart = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      // if (!response.ok) {
+      //   throw new Error("Failed to fetch orders data");
+      // }
+
       if (!response.ok) {
+        const text = await response.text();
+        console.error("Failed response text:", text); // 🪵 This will show the backend error
         throw new Error("Failed to fetch orders data");
       }
 

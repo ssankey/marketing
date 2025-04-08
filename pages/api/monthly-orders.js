@@ -1,3 +1,4 @@
+
 // pages/api/monthly-orders.js
 
 import { verify } from 'jsonwebtoken';
@@ -25,6 +26,8 @@ export default async function handler(req, res) {
 
         const isAdmin = decoded.role === 'admin';
         const contactCodes = decoded.contactCodes || [];
+        const cardCodes = decoded.cardCodes || [];
+        
 
         // Create a cache key based on the request parameters and user access
         const cacheKey = `monthly-orders:${year || 'all'}:${slpCode || 'all'}:${itmsGrpCod || 'all'}:${itemCode || 'all'}:${isAdmin ? 'admin' : contactCodes.join(',')}`;
@@ -83,17 +86,22 @@ export default async function handler(req, res) {
         }
 
         if (!isAdmin) {
-            if (!contactCodes.length) {
-                return res.status(403).json({ error: 'No contact codes available' });
-            }
-            whereClauses.push(`T0.CardCode IN (
-                SELECT CardCode FROM OCPR 
-                WHERE CntctCode IN (${contactCodes.map((_, i) => `@contactCode${i}`).join(',')})
-            )`);
-            contactCodes.forEach((code, i) => {
-                params.push({ name: `contactCode${i}`, type: sql.VarChar(50), value: code });
-            });
+          if (contactCodes.length > 0) {
+            whereClauses.push(
+              `T0.SlpCode IN (${contactCodes
+                .map((code) => `'${code}'`)
+                .join(",")})`
+            );
+          } else if (cardCodes.length > 0) {
+            whereClauses.push(
+              `T0.CardCode IN (${cardCodes
+                .map((code) => `'${code}'`)
+                .join(",")})`
+            );
+          }
         }
+
+  
 
         // Add base WHERE clause
         whereClauses.push(`T0.CANCELED = 'N'`);

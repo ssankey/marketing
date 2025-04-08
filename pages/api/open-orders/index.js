@@ -149,6 +149,7 @@ export default async function handler(req, res) {
 
     // 4) Extract role-based logic
     const isAdmin = decodedToken.role === "admin";
+     const cardCodes = decodedToken.cardCodes || [];
     const contactCodes = decodedToken.contactCodes || [];
 
     // 5) Fetch open orders from the database
@@ -162,6 +163,7 @@ export default async function handler(req, res) {
       fromDate: validatedFromDate,
       toDate: validatedToDate,
       isAdmin,
+      cardCodes,
       contactCodes,
       getAll: getAll === "true", // Convert string to boolean
     });

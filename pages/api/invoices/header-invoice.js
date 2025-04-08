@@ -65,6 +65,7 @@ export default async function handler(req, res) {
       itemsPerPage,
       isAdmin,
       cardCodes,
+      contactCodes,
        getAll: getAll === "true" // pass this down
     });
 
