@@ -10,6 +10,9 @@ import CustomerOrdersTable from  "../../components/CustomerCharts/outstandingtab
 
 import SalesTable from "../../components/CustomerCharts/salestable";
 import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
+import downloadExcel from "utils/exporttoexcel"; 
+import TablePagination from "components/TablePagination";
+
 
 // Utility function to format date
 function formatDate(dateString) {
@@ -17,6 +20,13 @@ function formatDate(dateString) {
   const date = new Date(dateString);
   return date.toLocaleDateString();
 }
+
+const fetchAllCustomerOutstanding = async () => {
+  const res = await fetch(`/api/customers/${customer.CustomerCode}/outstanding?getAll=true`);
+  const data = await res.json();
+  return data;
+};
+
 
 
 export default function CustomerDetails({
@@ -34,6 +44,9 @@ export default function CustomerDetails({
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [outstandingFilter, setOutstandingFilter] = useState('Payment Pending');
 
+
+
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -44,6 +57,9 @@ export default function CustomerDetails({
       router.push("/login");
     }
   }, [isAuthenticated, authLoading, router]);
+
+
+
 
   // Handle loading states
   if (router.isFallback || authLoading) {
@@ -60,6 +76,45 @@ export default function CustomerDetails({
   const handleFilterSelect = (eventKey) => {
   setOutstandingFilter(eventKey);
 };
+
+const handleDownloadExcel = async () => {
+  try {
+    const res = await fetch(
+      `/api/customers/${customer.CustomerCode}/outstanding?getAll=true`
+    );
+    const allData = await res.json();
+
+    const filteredData = allData?.filter(item => {
+      if (outstandingFilter === 'Payment Pending') return item['Balance Due'] > 0;
+      if (outstandingFilter === 'Payment Done') return item['Balance Due'] === 0;
+      return true;
+    });
+
+    const formattedData = filteredData.map(item => ({
+      "SO#": item["SO#"],
+      "SO Date": formatDate(item["SO Date"]),
+      "Tracking No": item["Tracking No"],
+      "Delivery#": item["Delivery#"],
+      "Delivery Date": formatDate(item["Delivery Date"]),
+      "SO to Delivery Days": item["SO to Delivery Days"],
+      "Invoice No.": item["Invoice No."],
+      "AR Invoice Date": formatDate(item["AR Invoice Date"]),
+      "Invoice Total": item["Invoice Total"],
+      "Balance Due": item["Balance Due"],
+      "AirLine Name": item["AirLine Name"],
+      "Overdue Days": item["Overdue Days"],
+      "Payment Group": item["PymntGroup"]
+    }));
+
+    // Reuse your util
+    const { default: downloadExcel } = await import("utils/exporttoexcel");
+    downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
+  } catch (error) {
+    console.error("Excel export failed:", error);
+    alert("Failed to export Excel. Please try again.");
+  }
+};
+
 
   // Handle unauthorized access
   if (!isAuthenticated) {
@@ -338,22 +393,52 @@ export default function CustomerDetails({
       </Row>
       {/* Customer Orders Table */}
       <Card className="mb-4">
-        <Card.Header>
+        {/* <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
-      <h3 className="mb-0">Customer Outstanding</h3>
-      <div className="ms-auto"> {/* ms-auto pushes the dropdown to the right */}
-        <Dropdown onSelect={handleFilterSelect}>
-          <Dropdown.Toggle variant="outline-secondary" id="outstanding-filter-dropdown">
-            {outstandingFilter}
-          </Dropdown.Toggle>
-          <Dropdown.Menu>
-            <Dropdown.Item eventKey="Payment Pending">Payment Pending</Dropdown.Item>
-            <Dropdown.Item eventKey="Payment Done">Payment Done</Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
-      </div>
+            <h3 className="mb-0">Customer Outstanding</h3>
+            <div className="ms-auto"> 
+              <Dropdown onSelect={handleFilterSelect}>
+                <Dropdown.Toggle variant="outline-secondary" id="outstanding-filter-dropdown">
+                  {outstandingFilter}
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item eventKey="Payment Pending">Payment Pending</Dropdown.Item>
+                  <Dropdown.Item eventKey="Payment Done">Payment Done</Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </div>
+         </div>
+        </Card.Header> */}
+        <Card.Header>
+  <div className="d-flex justify-content-between align-items-center">
+    <h3 className="mb-0">Customer Outstanding</h3>
+
+    <div className="d-flex align-items-center ms-auto gap-2">
+      <Dropdown onSelect={handleFilterSelect}>
+        <Dropdown.Toggle
+          variant="outline-secondary"
+          id="outstanding-filter-dropdown"
+        >
+          {outstandingFilter}
+        </Dropdown.Toggle>
+        <Dropdown.Menu>
+          <Dropdown.Item eventKey="Payment Pending">Payment Pending</Dropdown.Item>
+          <Dropdown.Item eventKey="Payment Done">Payment Done</Dropdown.Item>
+        </Dropdown.Menu>
+      </Dropdown>
+
+      {/* Excel Button */}
+      <button
+        className="btn btn-success"
+        onClick={handleDownloadExcel} // will create this below
+      >
+       
+        Excel
+      </button>
     </div>
-        </Card.Header>
+  </div>
+</Card.Header>
+
         {/* <Card.Body> */}
         <Card.Body 
           style={{ 
@@ -367,6 +452,8 @@ export default function CustomerDetails({
   customerOutstandings={customerOutstandings} 
   filter={outstandingFilter}
 />
+
+
 
 
         </Card.Body>

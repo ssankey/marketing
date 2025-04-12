@@ -1,8 +1,157 @@
+
+
+
+// pages/invoices/pendingDispatch.js
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
-import InvoicesTable from "components/InvoicesTable";
+import InvoicesTable from "components/HeaderInvoiceTable"; // Changed to use HeaderInvoiceTable
+
+
+  import downloadExcel from "utils/exporttoexcel";
+  import { Printer } from "react-bootstrap-icons";
+  import StatusBadge from "components/StatusBadge";
+  import { formatDate } from "utils/formatDate";
+  import Link from "next/link";
+  import { formatCurrency } from "utils/formatCurrency";
+
+  const columns = [
+    {
+      field: "DocNum",
+      label: "Invoice#",
+      render: (value, row) => (
+        <>
+          <Link
+            href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            {value}
+          </Link>
+          &nbsp;
+          <Link
+            href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
+            className="text-blue-600 hover:text-blue-800"
+            target="_blank"
+          >
+            <Printer />
+          </Link>
+        </>
+      ),
+      sortable: true,
+    },
+    {
+      field: "DocStatusDisplay",
+      label: "Status",
+      render: (value) => (
+        <span
+          className={`badge ${
+            value === "Closed"
+              ? "bg-success"
+              : value === "Cancelled"
+              ? "bg-warning"
+              : "bg-danger"
+          }`}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      field: "DocDate",
+      label: "Invoice Date",
+      render: (value) => formatDate(value),
+      sortable: true,
+    },
+    {
+      field: "DocDueDate",
+      label: "Due Date",
+      render: (value) => formatDate(value),
+      sortable: true,
+    },
+    {
+      field: "U_DispatchDate",
+      label: "Dispatch Date",
+      render: (value) => (value ? formatDate(value) : "Pending"),
+    },
+    {
+      field: "CardCode",
+      label: "Customer Code",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "CardName",
+      label: "Customer Name",
+      render: (value) => value || "N/A",
+      sortable: true,
+    },
+    {
+      field: "CustomerGroup",
+      label: "Customer Group",
+      render: (value) => value || "N/A",
+    },
+    //   {
+    //     field: "NumAtCard",
+    //     label: "Customer PO#",
+    //     render: (value) => value || "N/A"
+    //   },
+    {
+      field: "DocTotal",
+      label: "Total Amount",
+      render: (value) => formatCurrency(value),
+      sortable: true,
+    },
+    {
+      field: "DocCur",
+      label: "Currency",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "VatSum",
+      label: "Tax Amount",
+      render: (value) => formatCurrency(value),
+    },
+    {
+      field: "TaxDate",
+      label: "Tax Date",
+      render: (value) => formatDate(value),
+    },
+    //   {
+    //     field: "U_DispatchDate",
+    //     label: "Dispatch Date",
+    //     render: (value) => (value ? formatDate(value) : "Pending")
+    //   },
+    {
+      field: "TrackNo",
+      label: "Tracking #",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "TransportName",
+      label: "Transport",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "PaymentGroup",
+      label: "Payment Terms",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "Country",
+      label: "Country",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "SalesEmployee",
+      label: "Sales Person",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "ContactPerson",
+      label: "Contact Person",
+      render: (value) => value || "N/A",
+    },
+  ];
 
 export default function PendingDispatchInvoicesPage() {
   const router = useRouter();
@@ -41,7 +190,7 @@ export default function PendingDispatchInvoicesPage() {
       sortDir,
       fromDate: fromDate || "",
       toDate: toDate || "",
-      getAll: true, // <-- fetch all records
+      getAll: "true",
     });
 
     const response = await fetch(`/api/invoices/pendingDispatch?${queryParams}`, {
@@ -58,7 +207,6 @@ export default function PendingDispatchInvoicesPage() {
     return data.invoices || [];
   };
 
-  // Memoize fetchInvoices to prevent unnecessary recreations
   const fetchInvoices = useCallback(async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -88,7 +236,62 @@ export default function PendingDispatchInvoicesPage() {
     return response.json();
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
 
-  // Handle data fetching
+  const handleExcelDownload = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+
+      // Build query params with getAll=true
+      const queryParams = {
+        status: router.query.status || "all",
+        search: router.query.search || "",
+        sortField: router.query.sortField || "DocDate",
+        sortDir: router.query.sortDir || "desc",
+        fromDate: router.query.fromDate || "",
+        toDate: router.query.toDate || "",
+        getAll: "true",
+      };
+
+      const url = `/api/invoices/pendingDispatch?${new URLSearchParams(
+        queryParams
+      )}`;
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`);
+      }
+
+      const { invoices: allInvoices } = await response.json();
+
+      if (allInvoices && allInvoices.length > 0) {
+        // Prepare data for Excel export matching the table columns
+        const excelData = allInvoices.map((invoice) => {
+          const row = {};
+
+          columns.forEach((column) => {
+            const value = invoice[column.field];
+            row[column.label] = value || "N/A";
+          });
+
+          return row;
+        });
+
+        downloadExcel(excelData, `Invoices_${queryParams.status}`);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to export to Excel:", error);
+      alert("Failed to export data. Please try again.");
+    }
+  }, [router.query]);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -101,7 +304,7 @@ export default function PendingDispatchInvoicesPage() {
 
       try {
         const { invoices: newInvoices, totalItems: newTotalItems } = await fetchInvoices();
-
+        
         if (isMounted) {
           setInvoices(newInvoices || []);
           setTotalItems(newTotalItems || 0);
@@ -131,7 +334,6 @@ export default function PendingDispatchInvoicesPage() {
     };
   }, [isAuthenticated, fetchInvoices]);
 
-  // Handle route changes
   useEffect(() => {
     const handleRouteStart = () => {
       if (invoices.length === 0) {
@@ -181,7 +383,9 @@ export default function PendingDispatchInvoicesPage() {
       totalItems={totalItems}
       isLoading={fetchState.isInitialLoad || fetchState.isLoading}
       status={status}
-      fetchAllInvoices={fetchAllInvoices} // <-- pass the function
+      fetchAllInvoices={fetchAllInvoices}
+      onExcelDownload={handleExcelDownload}
+      columns={columns}
     />
   );
 }
