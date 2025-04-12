@@ -238,7 +238,7 @@ const columns = [
   // },
 ];
 // Client-side caching helpers
-const CLIENT_CACHE_TTL = 0; // 5 minutes
+// const CLIENT_CACHE_TTL = 0; // 5 minutes
 
   const getClientCacheKey = (query) => `invoices:${JSON.stringify(query)}`;
 
