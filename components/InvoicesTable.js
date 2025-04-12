@@ -12,11 +12,18 @@ import useTableFilters from 'hooks/useFilteredData';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
 
-const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
+const InvoicesTable = ({
+  invoices,
+  totalItems,
+  isLoading = false,
+  status,
+  onExcelDownload,
+  columns,
+}) => {
   const ITEMS_PER_PAGE = 20;
   const [displayState, setDisplayState] = useState({
     hasData: false,
-    showLoading: true
+    showLoading: true,
   });
 
   const { currentPage, totalPages, onPageChange } = usePagination(
@@ -39,229 +46,240 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   } = useTableFilters();
 
   useEffect(() => {
-    setDisplayState(prev => ({
+    setDisplayState((prev) => ({
       hasData: invoices.length > 0,
-      showLoading: isLoading && !prev.hasData
+      showLoading: isLoading && !prev.hasData,
     }));
   }, [isLoading, invoices]);
 
   // 1) Flatten data: each line item becomes its own row
-  const flattenedData = invoices.flatMap(inv => {
+  const flattenedData = invoices.flatMap((inv) => {
     if (!inv.lineItems || inv.lineItems.length === 0) {
       return [inv];
     }
-    return inv.lineItems.map(item => ({
+    return inv.lineItems.map((item) => ({
       ...inv,
       ...item,
     }));
   });
 
-  // 2) Define columns for invoice-level and line-item data,
-  // including all the comprehensive columns from our enhanced query
-  const columns = [
-    {
-      field: "DocNum",
-      label: "Invoice#",
-      render: (value, row) => (
-        <>
-          <Link
-            href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            prefetch
-          >
-            {value}
-          </Link>
-          &nbsp;
-          <Link
-            href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            target="_blank"
-          >
-            <Printer />
-          </Link>
-        </>
-      ),
-    },
-    {
-      field: "Document Status",
-      label: "Status",
-      render: (value) => (
-        <span className={`badge ${value === "Closed" ? "bg-success" : value === "Cancelled" ? "bg-warning" : "bg-danger"}`}>
-          {value}
-        </span>
-      ),
-    },
-    {
-      field: "Invoice Posting Dt.",
-      label: "Invoice Date",
-      render: (value) => formatDate(value),
-    },
-    // {
-    //   field: "Series Name",
-    //   label: "Series",
-    //   render: (value) => value || "N/A",
-    // },
-    {
-      field: "Vendor Catalog No.",
-      label: "Vendor Cat. No.",
-      render: (value) => value || "N/A",
-    },  
-    {
-      field: "Cust Code",
-      label: "Customer Code",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Customer/Vendor Name",
-      label: "Customer Name",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "SO No",
-      label: "Sales Order No.",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "SO Date",
-      label: "SO Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "Customer ref no",
-      label: "Customer Ref",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "SO Customer Ref. No",
-      label: "SO Customer Ref",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Tracking Number",
-      label: "Tracking No.",
-      render: (value) => value || "N/A",
-    },
-    // {
-    //   field: "Delivery Date",
-    //   label: "Delivery Date",
-    //   render: (value) => formatDate(value),
-    // },
-    {
-      field: "Dispatch Date",
-      label: "Dispatch Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "Item No.",
-      label: "Item No.",
-      render: (value) => value || "N/A",
-    },
-   
-    {
-      field: "Item/Service Description",
-      label: "Description",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Group Name",
-      label: "Group",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "BatchNum",
-      label: "Batch No.",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Qty.",
-      label: "Quantity",
-      render: (value) => (value != null ? value : "N/A"),
-    },
-    {
-      field: "Unit",
-      label: "UoM",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Packsize",
-      label: "Pack Size",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Cas No",
-      label: "CAS No.",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Unit Sales Price",
-      label: "Unit Price",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      field: "Total Sales Price",
-      label: "Total",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      field: "Document Currency",
-      label: "Currency",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Country",
-      label: "Country",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "State",
-      label: "State",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Pymnt Group",
-      label: "Payment Terms",
-      render: (value) => value || "N/A",
-    },
-    // {
-    //   field: "Payment Status",
-    //   label: "Payment Status",
-    //   render: (value) => (
-    //     <span className={`badge ${value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"}`}>
-    //       {value}
-    //     </span>
-    //   ),
-    // },
-    {
-      field: "Exchange Rate",
-      label: "Exch. Rate",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Sales Employee",
-      label: "Sales Employee",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Transport Name",
-      label: "Transport",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Tax Amount",
-      label: "Tax Amount",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      field: "GSTIN",
-      label: "GSTIN",
-      render: (value) => value || "N/A",
-    },
+  // const columns = [
   //   {
-  //   field: "U_DispatchDate", // Add this field
-  //   label: "Dispatch Date",
-  //   render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
-  // },
-  ];
+  //     field: "DocNum",
+  //     label: "Invoice#",
+  //     render: (value, row) => (
+  //       <>
+  //         <Link
+  //           href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
+  //           className="text-blue-600 hover:text-blue-800"
+  //           prefetch
+  //         >
+  //           {value}
+  //         </Link>
+  //         &nbsp;
+  //         <Link
+  //           href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
+  //           className="text-blue-600 hover:text-blue-800"
+  //           target="_blank"
+  //         >
+  //           <Printer />
+  //         </Link>
+  //       </>
+  //     ),
+  //   },
+  //   {
+  //     field: "Document Status",
+  //     label: "Status",
+  //     render: (value) => (
+  //       <span
+  //         className={`badge ${
+  //           value === "Closed"
+  //             ? "bg-success"
+  //             : value === "Cancelled"
+  //             ? "bg-warning"
+  //             : "bg-danger"
+  //         }`}
+  //       >
+  //         {value}
+  //       </span>
+  //     ),
+  //   },
+  //   {
+  //     field: "Invoice Posting Dt.",
+  //     label: "Invoice Date",
+  //     render: (value) => formatDate(value),
+  //   },
+  //   // {
+  //   //   field: "Series Name",
+  //   //   label: "Series",
+  //   //   render: (value) => value || "N/A",
+  //   // },
+  //   {
+  //     field: "Vendor Catalog No.",
+  //     label: "Vendor Cat. No.",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Cust Code",
+  //     label: "Customer Code",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Customer/Vendor Name",
+  //     label: "Customer Name",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "SO No",
+  //     label: "Sales Order No.",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "SO Date",
+  //     label: "SO Date",
+  //     render: (value) => formatDate(value),
+  //   },
+  //   {
+  //     field: "Customer ref no",
+  //     label: "Customer Ref",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "SO Customer Ref. No",
+  //     label: "SO Customer Ref",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Tracking Number",
+  //     label: "Tracking No.",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   // {
+  //   //   field: "Delivery Date",
+  //   //   label: "Delivery Date",
+  //   //   render: (value) => formatDate(value),
+  //   // },
+  //   {
+  //     field: "Dispatch Date",
+  //     label: "Dispatch Date",
+  //     render: (value) => formatDate(value),
+  //   },
+  //   {
+  //     field: "Item No.",
+  //     label: "Item No.",
+  //     render: (value) => value || "N/A",
+  //   },
+
+  //   {
+  //     field: "Item/Service Description",
+  //     label: "Description",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Group Name",
+  //     label: "Group",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "BatchNum",
+  //     label: "Batch No.",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Qty.",
+  //     label: "Quantity",
+  //     render: (value) => (value != null ? value : "N/A"),
+  //   },
+  //   {
+  //     field: "Unit",
+  //     label: "UoM",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Packsize",
+  //     label: "Pack Size",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Cas No",
+  //     label: "CAS No.",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Unit Sales Price",
+  //     label: "Unit Price",
+  //     render: (value) => formatCurrency(value),
+  //   },
+  //   {
+  //     field: "Total Sales Price",
+  //     label: "Total",
+  //     render: (value) => formatCurrency(value),
+  //   },
+  //   {
+  //     field: "Document Currency",
+  //     label: "Currency",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Country",
+  //     label: "Country",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "State",
+  //     label: "State",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Pymnt Group",
+  //     label: "Payment Terms",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   // {
+  //   //   field: "Payment Status",
+  //   //   label: "Payment Status",
+  //   //   render: (value) => (
+  //   //     <span className={`badge ${value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"}`}>
+  //   //       {value}
+  //   //     </span>
+  //   //   ),
+  //   // },
+  //   {
+  //     field: "Exchange Rate",
+  //     label: "Exch. Rate",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Sales Employee",
+  //     label: "Sales Employee",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "ContactPerson",
+  //     label: "Contact Person",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Transport Name",
+  //     label: "Transport",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Tax Amount",
+  //     label: "Tax Amount",
+  //     render: (value) => formatCurrency(value),
+  //   },
+  //   {
+  //     field: "GSTIN",
+  //     label: "GSTIN",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   //   {
+  //   //   field: "U_DispatchDate", // Add this field
+  //   //   label: "Dispatch Date",
+  //   //   render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
+  //   // },
+  // ];
 
   // const handleExcelDownload = async () => {
   //   try {
@@ -271,166 +289,52 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   //       return;
   //     }
 
-  //     const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
-      
+  //     const url = `/api/header-invoice?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+  //       fromDate || ""
+  //     }&toDate=${toDate || ""}&getAll=true`;
+
   //     const response = await fetch(url, {
   //       headers: { Authorization: `Bearer ${token}` },
   //     });
 
-  //     const filteredInvoices = await response.json();
+  //     const result = await response.json();
+  //     const filteredInvoices = result.invoices || [];
 
-  //     if (filteredInvoices && filteredInvoices.length > 0) {
-  //       downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
-  //     } else {
+  //     if (filteredInvoices.length === 0) {
   //       alert("No data available to export.");
+  //       return;
   //     }
+
+  //     // 🔥 Use the columns array for header and key mapping
+  //     const excelColumns = columns
+  //       .filter((col) => col.field !== "actions") // Exclude actions if needed
+  //       .map((col) => ({
+  //         header: col.label,
+  //         key: col.field,
+  //       }));
+
+  //     // 🧠 Optionally format data as per renderers if needed
+  //     const formattedData = filteredInvoices.map((row) => {
+  //       const formattedRow = {};
+  //       excelColumns.forEach((col) => {
+  //         let value = row[col.key];
+
+  //         // Format date if needed
+  //         if (col.key === "DocDate" || col.key === "U_DispatchDate") {
+  //           value = value ? new Date(value).toISOString().split("T")[0] : "N/A";
+  //         }
+
+  //         formattedRow[col.header] = value;
+  //       });
+  //       return formattedRow;
+  //     });
+
+  //     downloadExcel(formattedData, `Invoices_${statusFilter}`);
   //   } catch (error) {
   //     console.error("Failed to fetch data for Excel export:", error);
   //     alert("Failed to export data. Please try again.");
   //   }
   // };
-//   const handleExcelDownload = async () => {
-//   try {
-//     const token = localStorage.getItem("token");
-//     if (!token) return;
-
-//     const query = new URLSearchParams({
-//       search: searchTerm,
-//       status: statusFilter,
-//       fromDate: fromDate || "",
-//       toDate: toDate || "",
-//       sortField,
-//       sortDir: sortDirection,
-//       getAll: "true"
-//     });
-
-//     const response = await fetch(`/api/invoices?${query.toString()}`, {
-//       headers: { Authorization: `Bearer ${token}` },
-//     });
-
-//     const { invoices: allInvoices } = await response.json();
-
-//     if (!allInvoices || allInvoices.length === 0) {
-//       alert("No data available to export.");
-//       return;
-//     }
-
-//     // ✅ Match headers to your table component
-//     const excelColumns = columns
-//       .filter(col => col.field && col.field !== 'actions')
-//       .map(col => ({ header: col.label, key: col.field }));
-
-//     const formattedData = allInvoices.map(inv => ({
-//       ...inv,
-//       DocDate: inv.DocDate ? inv.DocDate.split('T')[0] : "",
-//       U_DispatchDate: inv.U_DispatchDate ? inv.U_DispatchDate.split('T')[0] : "",
-//     }));
-
-//     downloadExcel(formattedData, `Invoices_${statusFilter}`, excelColumns);
-//   } catch (err) {
-//     console.error("Excel download failed:", err);
-//     alert("Failed to export invoices. Please try again.");
-//   }
-// };
-
-// const handleExcelDownload = async () => {
-//   try {
-//     const token = localStorage.getItem("token");
-//     if (!token) {
-//       console.error("No token found");
-//       return;
-//     }
-
-//     const url = `/api/header-invoice?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}&getAll=true`;
-
-//     const response = await fetch(url, {
-//       headers: { Authorization: `Bearer ${token}` },
-//     });
-
-//     const result = await response.json();
-//     const data = result.invoices || [];
-
-//     // Define columns using the same order and label as in the table
-//     const excelColumns = [
-//       { header: "Invoice#", key: "DocNum" },
-//       { header: "Status", key: "DocStatusDisplay" },
-//       { header: "Invoice Date", key: "DocDate" },
-//       { header: "Customer", key: "CardName" },
-//       { header: "Customer PO#", key: "CustomerPONo" },
-//       { header: "Total Amount", key: "InvoiceTotal" },
-//       { header: "Payment Status", key: "PaymentStatus" },
-//       { header: "Sales Employee", key: "SalesEmployee" },
-//       { header: "Transport", key: "TransportName" },
-//       { header: "Dispatch Date", key: "U_DispatchDate" },
-//     ];
-
-//     // Format dates
-//     const formattedData = data.map(row => ({
-//       ...row,
-//       DocDate: row.DocDate ? row.DocDate.split("T")[0] : "N/A",
-//       U_DispatchDate: row.U_DispatchDate ? row.U_DispatchDate.split("T")[0] : "N/A"
-//     }));
-
-//     downloadExcel(formattedData, `Invoices_${statusFilter}`, excelColumns);
-//   } catch (error) {
-//     console.error("Failed to fetch data for Excel export:", error);
-//     alert("Failed to export data. Please try again.");
-//   }
-// };
-const handleExcelDownload = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      console.error("No token found");
-      return;
-    }
-
-    const url = `/api/header-invoice?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}&getAll=true`;
-
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    const result = await response.json();
-    const filteredInvoices = result.invoices || [];
-
-    if (filteredInvoices.length === 0) {
-      alert("No data available to export.");
-      return;
-    }
-
-    // 🔥 Use the columns array for header and key mapping
-    const excelColumns = columns
-      .filter(col => col.field !== "actions") // Exclude actions if needed
-      .map(col => ({
-        header: col.label,
-        key: col.field,
-      }));
-
-    // 🧠 Optionally format data as per renderers if needed
-    const formattedData = filteredInvoices.map(row => {
-      const formattedRow = {};
-      excelColumns.forEach(col => {
-        let value = row[col.key];
-
-        // Format date if needed
-        if (col.key === "DocDate" || col.key === "U_DispatchDate") {
-          value = value ? new Date(value).toISOString().split("T")[0] : "N/A";
-        }
-
-        formattedRow[col.header] = value;
-      });
-      return formattedRow;
-    });
-
-    downloadExcel(formattedData, `Invoices_${statusFilter}`);
-  } catch (error) {
-    console.error("Failed to fetch data for Excel export:", error);
-    alert("Failed to export data. Please try again.");
-  }
-};
-
-
 
   const renderContent = () => {
     if (displayState.showLoading) {
@@ -448,11 +352,11 @@ const handleExcelDownload = async () => {
       <>
         <GenericTable
           columns={columns}
-          data={flattenedData}  // flattened data with merged invoice and line-item details
+          data={flattenedData} // flattened data with merged invoice and line-item details
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
-          onExcelDownload={handleExcelDownload}
+          onExcelDownload={onExcelDownload}
         />
         {!isLoading && flattenedData.length === 0 && (
           <div className="text-center py-4">No invoices found.</div>
@@ -469,18 +373,18 @@ const handleExcelDownload = async () => {
           placeholder: "Search invoices...",
           // Expanded search fields to cover comprehensive data points
           fields: [
-            "DocNum", 
-            "Cust Code", 
-            "Customer/Vendor Name", 
-            "SO No", 
-            "Customer ref no", 
-            "Tracking Number", 
-            "Item No.", 
-            "Item/Service Description", 
+            "DocNum",
+            "Cust Code",
+            "Customer/Vendor Name",
+            "SO No",
+            "Customer ref no",
+            "Tracking Number",
+            "Item No.",
+            "Item/Service Description",
             "BatchNum",
             "Cas No",
             "Vendor Catalog No.",
-            "Pymnt Group"
+            "Pymnt Group",
           ],
         }}
         onSearch={handleSearch}
@@ -488,11 +392,10 @@ const handleExcelDownload = async () => {
         statusFilter={{
           enabled: true,
           options: [
-          
             { value: "Open", label: "Open" },
             { value: "Closed", label: "Closed" },
             { value: "Canceled", label: "Canceled" },
-            { value: "Partially Open", label: "Partially Open" }
+            { value: "Partially Open", label: "Partially Open" },
           ],
           value: statusFilter,
           label: "Status",

@@ -18,21 +18,36 @@ export default async function handler(req, res) {
       queryType = 'balances', // Default to balances query
       slpCode = '',          // Sales person filter
       itmsGrpCod = '',       // Category filter
-      itemCode = ''          // Product filter
+      itemCode = ''  ,       // Product filter
+      getAll = 'false'
     } = req.query;
 
+    const isGetAll = getAll === 'true';
+
     // Create a cache key based on all query parameters
-    const cacheKey = `customer-${queryType}:${page}:${search}:${status}:${fromDate}:${toDate}:${sortField}:${sortDir}:${slpCode}:${itmsGrpCod}:${itemCode}`;
+    // const cacheKey = `customer-${queryType}:${page}:${search}:${status}:${fromDate}:${toDate}:${sortField}:${sortDir}:${slpCode}:${itmsGrpCod}:${itemCode}`;
+    const cacheKey = `customer-${queryType}:${isGetAll ? 'all' : page}:${search}:${status}:${fromDate}:${toDate}:${sortField}:${sortDir}:${slpCode}:${itmsGrpCod}:${itemCode}`;
+
     
     // Try to get data from cache first
-    const cachedData = await getCache(cacheKey);
-    if (cachedData) {
-      // If we have cached data, use the cached total count too
-      if (cachedData.totalCount) {
-        res.setHeader('X-Total-Count', cachedData.totalCount);
+    // const cachedData = await getCache(cacheKey);
+    // if (cachedData) {
+    //   // If we have cached data, use the cached total count too
+    //   if (cachedData.totalCount) {
+    //     res.setHeader('X-Total-Count', cachedData.totalCount);
+    //   }
+    //   return res.status(200).json(cachedData.data || []);
+    // }
+    if (!isGetAll) {
+      const cachedData = await getCache(cacheKey);
+      if (cachedData) {
+        if (cachedData.totalCount) {
+          res.setHeader('X-Total-Count', cachedData.totalCount);
+        }
+        return res.status(200).json(cachedData.data || []);
       }
-      return res.status(200).json(cachedData.data || []);
     }
+
 
     // Prepare parameters with types
     const parameters = [
@@ -195,9 +210,12 @@ export default async function handler(req, res) {
           ${categoryFilter}
           ${productFilter}
         ${orderBy}
-        OFFSET ${offset} ROWS
-        FETCH NEXT ${pageSize} ROWS ONLY;
+          ${isGetAll ? '' : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
       `;
+
+      // ${isGetAll ? '' : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
+
+      
       
       // Count query for pagination with new filters
       const countQuery = `
@@ -224,10 +242,24 @@ export default async function handler(req, res) {
       `;
       
       // Execute queries
-      const [queryData, countResult] = await Promise.all([
-        queryDatabase(paginatedQuery, parameters),
-        queryDatabase(countQuery, parameters)
-      ]);
+      // const [queryData, countResult] = await Promise.all([
+      //   queryDatabase(paginatedQuery, parameters),
+      //   queryDatabase(countQuery, parameters)
+      // ]);
+
+      let queryData = [], countResult = [];
+
+if (isGetAll) {
+  queryData = await queryDatabase(paginatedQuery, parameters);
+  totalCount = queryData.length;
+} else {
+  [queryData, countResult] = await Promise.all([
+    queryDatabase(paginatedQuery, parameters),
+    queryDatabase(countQuery, parameters)
+  ]);
+  totalCount = countResult?.[0]?.total || 0;
+}
+
       
       data = queryData;
       totalCount = countResult && countResult.length > 0 ? countResult[0].total : 0;
@@ -323,11 +355,19 @@ export default async function handler(req, res) {
     
     // Cache the results
     // Cache for 15 minutes (900 seconds)
-    await setCache(cacheKey, {
-      data: data || [],
-      totalCount: totalCount
-    }, 900);
+    // await setCache(cacheKey, {
+    //   data: data || [],
+    //   totalCount: totalCount
+    // }, 900);
     
+    if (!isGetAll) {
+  await setCache(cacheKey, {
+    data: data || [],
+    totalCount: totalCount
+  }, 900);
+}
+
+
     res.status(200).json(data || []);
   } catch (error) {
     console.error('Error fetching customer data:', error);

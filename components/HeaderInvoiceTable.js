@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Spinner } from 'react-bootstrap';
 import GenericTable from './GenericTable';
@@ -12,11 +14,18 @@ import useTableFilters from 'hooks/useFilteredData';
 import downloadExcel from "utils/exporttoexcel";
 import { Printer } from 'react-bootstrap-icons';
 
-const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
+const InvoicesTable = ({
+  invoices,
+  totalItems,
+  isLoading = false,
+  status,
+  columns,
+  onExcelDownload,
+}) => {
   const ITEMS_PER_PAGE = 20;
   const [displayState, setDisplayState] = useState({
     hasData: false,
-    showLoading: true
+    showLoading: true,
   });
 
   const { currentPage, totalPages, onPageChange } = usePagination(
@@ -39,127 +48,169 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
   } = useTableFilters();
 
   useEffect(() => {
-    setDisplayState(prev => ({
+    setDisplayState((prev) => ({
       hasData: invoices.length > 0,
-      showLoading: isLoading && !prev.hasData
+      showLoading: isLoading && !prev.hasData,
     }));
   }, [isLoading, invoices]);
 
-  // Define columns for invoice-level data
-  const columns = [
-    {
-      field: "DocNum",
-      label: "Invoice#",
-      render: (value, row) => (
-        <>
-          <Link
-            href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            {value}
-          </Link>
-          &nbsp;
-          <Link
-            href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            target="_blank"
-          >
-            <Printer />
-          </Link>
-        </>
-      ),
-    },
-    {
-      field: "DocStatusDisplay",
-      label: "Status",
-      render: (value) => (
-        <span
-          className={`badge ${
-            value === "Closed" ? "bg-success" : value === "Open" ? "bg-danger" : "bg-warning"
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
-    {
-      field: "DocDate",
-      label: "Invoice Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "CardName",
-      label: "Customer",
-      render: (value) => value || "N/A",
-    },
-    // {
-    //   field: "CustomerPONo",
-    //   label: "Customer PO#",
-    //   render: (value) => value || "N/A",
-    // },
-    {
-      field: "InvoiceTotal",
-      label: "Total Amount",
-      render: (value) => formatCurrency(value),
-    },
-    // {
-    //   field: "PaymentStatus",
-    //   label: "Payment Status",
-    //   render: (value) => (
-    //     <span
-    //       className={`badge ${
-    //         value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"
-    //       }`}
-    //     >
-    //       {value}
-    //     </span>
-    //   ),
-    // },
-    {
-      field: "SalesEmployee",
-      label: "Sales Employee",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "TransportName",
-      label: "Transport",
-      render: (value) => value || "N/A",
-    },
-    {
-        field: "U_DispatchDate", // Add this field
-        label: "Dispatch Date",
-        render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
-    },
-    
-    
-  ];
+  // const columns = [
+  //   {
+  //     field: "DocNum",
+  //     label: "Invoice#",
+  //     render: (value, row) => (
+  //       <>
+  //         <Link
+  //           href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
+  //           className="text-blue-600 hover:text-blue-800"
+  //         >
+  //           {value}
+  //         </Link>
+  //         &nbsp;
+  //         <Link
+  //           href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
+  //           className="text-blue-600 hover:text-blue-800"
+  //           target="_blank"
+  //         >
+  //           <Printer />
+  //         </Link>
+  //       </>
+  //     ),
+  //     sortable: true
+  //   },
+  //   {
+  //     field: "DocStatusDisplay",
+  //     label: "Status",
+  //     render: (value) => (
+  //       <span className={`badge ${value === "Closed" ? "bg-success" : value === "Cancelled" ? "bg-warning" : "bg-danger"}`}>
+  //         {value}
+  //       </span>
+  //     ),
+  //   },
+  //   {
+  //     field: "DocDate",
+  //     label: "Invoice Date",
+  //     render: (value) => formatDate(value),
+  //     sortable: true
+  //   },
+  //   {
+  //     field: "DocDueDate",
+  //     label: "Due Date",
+  //     render: (value) => formatDate(value),
+  //     sortable: true
+  //   },
+  //    {
+  //     field: "U_DispatchDate",
+  //     label: "Dispatch Date",
+  //     render: (value) => (value ? formatDate(value) : "Pending")
+  //   },
+  //   {
+  //     field: "CardCode",
+  //     label: "Customer Code",
+  //     render: (value) => value || "N/A"
+  //   },
+  //   {
+  //     field: "CardName",
+  //     label: "Customer Name",
+  //     render: (value) => value || "N/A",
+  //     sortable: true
+  //   },
+  //   {
+  //     field: "CustomerGroup",
+  //     label: "Customer Group",
+  //     render: (value) => value || "N/A"
+  //   },
+  // //   {
+  // //     field: "NumAtCard",
+  // //     label: "Customer PO#",
+  // //     render: (value) => value || "N/A"
+  // //   },
+  //   {
+  //     field: "DocTotal",
+  //     label: "Total Amount",
+  //     render: (value) => formatCurrency(value),
+  //     sortable: true
+  //   },
+  //   {
+  //     field: "DocCur",
+  //     label: "Currency",
+  //     render: (value) => value || "N/A"
+  //   },
+  //   {
+  //     field: "VatSum",
+  //     label: "Tax Amount",
+  //     render: (value) => formatCurrency(value)
+  //   },
+  //   {
+  //     field: "TaxDate",
+  //     label: "Tax Date",
+  //     render: (value) => formatDate(value)
+  //   },
+  // //   {
+  // //     field: "U_DispatchDate",
+  // //     label: "Dispatch Date",
+  // //     render: (value) => (value ? formatDate(value) : "Pending")
+  // //   },
+  //   {
+  //     field: "TrackNo",
+  //     label: "Tracking #",
+  //     render: (value) => value || "N/A"
+  //   },
+  //   {
+  //     field: "TransportName",
+  //     label: "Transport",
+  //     render: (value) => value || "N/A"
+  //   },
+  //   {
+  //     field: "PaymentGroup",
+  //     label: "Payment Terms",
+  //     render: (value) => value || "N/A"
+  //   },
+  //   {
+  //     field: "Country",
+  //     label: "Country",
+  //     render: (value) => value || "N/A"
+  //   },
+  //    {
+  //     field: "SalesEmployee",
+  //     label: "Sales Person",
+  //     render: (value) => value || "N/A"
+  //   },
+  //   {
+  //       field: "ContactPerson",
+  //       label: "Contact Person",
+  //       render: (value) => value || "N/A",
+  //     },
+  // ];
 
-  const handleExcelDownload = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     if (!token) {
+  //       console.error("No token found");
+  //       return;
+  //     }
 
-      const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
-      
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+  //     const url = `/api/excel/getAllInvoices?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${
+  //       fromDate || ""
+  //     }&toDate=${toDate || ""}`;
 
-      const filteredInvoices = await response.json();
+  //     const response = await fetch(url, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
 
-      if (filteredInvoices && filteredInvoices.length > 0) {
-        downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to fetch data for Excel export:", error);
-      alert("Failed to export data. Please try again.");
-    }
-  };
+  //     const filteredInvoices = await response.json();
+
+  //     if (filteredInvoices && filteredInvoices.length > 0) {
+  //       downloadExcel(filteredInvoices, `Invoices_${statusFilter}`);
+  //     } else {
+  //       alert("No data available to export.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Failed to fetch data for Excel export:", error);
+  //     alert("Failed to export data. Please try again.");
+  //   }
+  // };
 
   const renderContent = () => {
     if (displayState.showLoading) {
@@ -177,11 +228,16 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
       <>
         <GenericTable
           columns={columns}
-          data={invoices}  // Use invoice-level data directly
+          data={invoices}
           onSort={handleSort}
           sortField={sortField}
           sortDirection={sortDirection}
-          onExcelDownload={handleExcelDownload}
+          onExcelDownload={onExcelDownload}
+          defaultSortField="DocDate"
+          defaultSortDirection="desc"
+          responsive={true}
+          striped={true}
+          hover={true}
         />
         {!isLoading && invoices.length === 0 && (
           <div className="text-center py-4">No invoices found.</div>
@@ -196,7 +252,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
         searchConfig={{
           enabled: true,
           placeholder: "Search invoices...",
-          fields: ["DocNum", "CardName", "CustomerPONo"],
+          fields: ["DocNum", "CardName", "NumAtCard", "CardCode", "TrackNo"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
@@ -206,6 +262,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
             { value: "Open", label: "Open" },
             { value: "Closed", label: "Closed" },
             { value: "Canceled", label: "Canceled" },
+            { value: "Partially Open", label: "Partially Open" },
           ],
           value: statusFilter,
           label: "Status",
@@ -217,6 +274,7 @@ const InvoicesTable = ({ invoices, totalItems, isLoading = false, status }) => {
         totalItems={totalItems}
         onReset={handleReset}
         totalItemsLabel="Total Invoices"
+        showDateRange={true}
       />
 
       {renderContent()}

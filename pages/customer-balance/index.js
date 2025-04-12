@@ -7,6 +7,7 @@ import { Breadcrumb, Card, Container } from "react-bootstrap";
 import CustomerBalanceTable from "../../components/page/customer-balance/table/CustomerBalanceTable";
 import CustomerBalanceChart from "../../components/page/customer-balance/chart/CustomerBalanceChart";
 import { debounce } from "lodash";
+import downloadExcel from "utils/exporttoexcel"; 
 
  
 
@@ -70,6 +71,51 @@ export default function CustomerBalancePage() {
       setIsLoading(false);
     }
   };
+  
+  const handleExcelDownload = async () => {
+  try {
+    const params = new URLSearchParams({
+      queryType: 'deliveries',
+      getAll: 'true',
+      search: filters.searchTerm,
+      status: filters.statusFilter,
+      fromDate: filters.fromDate || "",
+      toDate: filters.toDate || "",
+      sortField: filters.sortField,
+      sortDir: filters.sortDirection,
+      slpCode: filters.salesPerson?.value || "",
+      itmsGrpCod: filters.category?.value || "",
+      itemCode: filters.product?.value || "",
+    });
+
+    const response = await fetch(`/api/dashboard/customers-balances?${params}`);
+    const fullData = await response.json();
+
+    const formattedData = fullData.map((item) => ({
+      "SO#": item["SO#"],
+      "Customer Code": item["Customer Code"],
+      "Customer Name": item["Customer Name"],
+      "SO Date": item["SO Date"],
+      "Delivery#": item["Delivery#"],
+      "Delivery Date": item["Delivery Date"],
+      "Invoice No.": item["Invoice No."],
+      "AR Invoice Date": item["AR Invoice Date"],
+      "Invoice Total": item["Invoice Total"],
+      "Balance Due": item["Balance Due"],
+      "BP Reference No.": item["BP Reference No."],
+      "Overdue Days": item["Overdue Days"],
+      "Payment Terms": item["Payment Terms"],
+      "Sales Rep": item["Sales Rep"],
+    }));
+
+    const { default: downloadExcel } = await import("utils/exporttoexcel");
+    downloadExcel(formattedData, "Customer_Balance_Report");
+  } catch (error) {
+    console.error("Excel export failed:", error);
+    alert("Failed to export Excel. Please try again.");
+  }
+};
+
 
   
   const fetchChartData = async () => {
@@ -177,10 +223,12 @@ export default function CustomerBalancePage() {
         </Card.Body>
       </Card>
 
-      <Card className="shadow-sm">
-        <Card.Header className="bg-white">
-          <h3 className="mb-0">Customer Balance Details</h3>
-        </Card.Header>
+       <Card className="shadow-sm"> 
+        
+        <Card.Header className="bg-white d-flex justify-content-between align-items-center">
+  <h3 className="mb-0">Customer Balance Details</h3>
+
+</Card.Header>  
         <Card.Body>
           <CustomerBalanceTable
             balances={customerData}
@@ -194,6 +242,7 @@ export default function CustomerBalancePage() {
             onDateFilterChange={handleDateFilterChange}
             onSort={handleSort}
             onReset={handleReset}
+            onExcelDownload={handleExcelDownload}
           />
         </Card.Body>
       </Card>
