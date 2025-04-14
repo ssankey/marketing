@@ -6,7 +6,6 @@ const PASSWORD_MIN_LENGTH = 8;
 const PASSWORD_MAX_LENGTH = 72; // bcrypt max length
 
 function validatePassword(password) {
-  // Example password complexity requirements
   const complexityRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   return password.length >= PASSWORD_MIN_LENGTH && 
          password.length <= PASSWORD_MAX_LENGTH &&
@@ -38,41 +37,66 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Verify the user exists
-    const query = `
-      SELECT * FROM ocpr 
-      WHERE E_MailL = @E_MailL
-    `;
-    const parameters = [
-      { name: 'E_MailL', type: sql.VarChar, value: email },
-    ];
-    const results = await queryDatabase(query, parameters);
+    // Check OSLP table first (salespersons)
+    let results = await queryDatabase(
+      `SELECT email FROM OSLP WHERE email = @email`,
+      [{ name: 'email', type: sql.VarChar, value: email }]
+    );
+
+    if (results.length > 0) {
+      // Hash the new password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update the salesperson's password
+      const updateQuery = `
+        UPDATE OSLP
+        SET U_Password = @newPassword
+        WHERE email = @email
+      `;
+      const updateParams = [
+        { name: 'newPassword', type: sql.VarChar, value: hashedPassword },
+        { name: 'email', type: sql.VarChar, value: email },
+      ];
+
+      await queryDatabase(updateQuery, updateParams);
+
+      return res.status(200).json({
+        message: 'Password has been set successfully',
+        redirectTo: '/login',
+      });
+    }
+
+    // Check OCPR table (customers)
+    results = await queryDatabase(
+      `SELECT E_MailL FROM OCPR WHERE E_MailL = @email`,
+      [{ name: 'email', type: sql.VarChar, value: email }]
+    );
 
     if (results.length === 0) {
       return res.status(400).json({ message: 'User not found' });
     }
 
     // Hash the new password
-    const saltRounds = 12; // Increased from 10 for stronger hashing
+    const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-    // Update the user's password
+    // Update the customer's password
     const updateQuery = `
-      UPDATE ocpr
-      SET password = @newPassword
-      WHERE E_MailL = @E_MailL
+      UPDATE OCPR
+      SET Password = @newPassword
+      WHERE E_MailL = @email
     `;
     const updateParams = [
-      { name: 'newPassword', type: sql.VarChar, value: hashedPassword },  // Make sure you're using the hashed password here
-      { name: 'E_MailL', type: sql.VarChar, value: email },
+      { name: 'newPassword', type: sql.VarChar, value: hashedPassword },
+      { name: 'email', type: sql.VarChar, value: email },
     ];
 
     await queryDatabase(updateQuery, updateParams);
-    
-    // Send a success response with a redirect URL
+
     return res.status(200).json({
       message: 'Password has been set successfully',
-      redirectTo: '/login',  // Frontend can use this URL to perform the redirect
+      redirectTo: '/login',
     });
   } catch (error) {
     console.error('Error setting password:', error);
