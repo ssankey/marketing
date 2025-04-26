@@ -1,43 +1,30 @@
-
-
-
 import { queryDatabase } from '../../../lib/db';
 import sql from 'mssql';
 import { getCache, setCache, delCache } from '../../../lib/redis';
 
 export default async function handler(req, res) {
   try {
-    const { 
-      page = 1, 
-      search = '', 
-      status = 'all', 
-      fromDate = '', 
+    const {
+      page = 1,
+      search = '',
+      status = 'all',
+      fromDate = '',
       toDate = '',
       sortField = 'SO Date',
       sortDir = 'desc',
-      queryType = 'balances', // Default to balances query
-      slpCode = '',          // Sales person filter
-      itmsGrpCod = '',       // Category filter
-      itemCode = ''  ,       // Product filter
-      getAll = 'false'
+      queryType = 'balances',
+      slpCode = '',
+      itmsGrpCod = '',
+      itemCode = '',
+      getAll = 'false',
     } = req.query;
 
     const isGetAll = getAll === 'true';
 
     // Create a cache key based on all query parameters
-    // const cacheKey = `customer-${queryType}:${page}:${search}:${status}:${fromDate}:${toDate}:${sortField}:${sortDir}:${slpCode}:${itmsGrpCod}:${itemCode}`;
     const cacheKey = `customer-${queryType}:${isGetAll ? 'all' : page}:${search}:${status}:${fromDate}:${toDate}:${sortField}:${sortDir}:${slpCode}:${itmsGrpCod}:${itemCode}`;
 
-    
     // Try to get data from cache first
-    // const cachedData = await getCache(cacheKey);
-    // if (cachedData) {
-    //   // If we have cached data, use the cached total count too
-    //   if (cachedData.totalCount) {
-    //     res.setHeader('X-Total-Count', cachedData.totalCount);
-    //   }
-    //   return res.status(200).json(cachedData.data || []);
-    // }
     if (!isGetAll) {
       const cachedData = await getCache(cacheKey);
       if (cachedData) {
@@ -48,7 +35,6 @@ export default async function handler(req, res) {
       }
     }
 
-
     // Prepare parameters with types
     const parameters = [
       { name: 'search', type: sql.NVarChar, value: search ? `%${search}%` : undefined },
@@ -56,14 +42,14 @@ export default async function handler(req, res) {
       { name: 'toDate', type: sql.Date, value: toDate || undefined },
       { name: 'slpCode', type: sql.Int, value: slpCode || undefined },
       { name: 'itmsGrpCod', type: sql.NVarChar, value: itmsGrpCod || undefined },
-      { name: 'itemCode', type: sql.NVarChar, value: itemCode || undefined }
+      { name: 'itemCode', type: sql.NVarChar, value: itemCode || undefined },
     ].filter(param => param.value !== undefined);
 
     let data, totalCount;
 
     // Determine which query to run based on queryType
     if (queryType === 'balances') {
-      // Updated balances query with DaysOverdue field and new filters
+      // Balances query (unchanged, as it’s not relevant to the table fields)
       const query = `
         SELECT TOP 10
           t1.cardcode, 
@@ -78,7 +64,7 @@ export default async function handler(req, res) {
         HAVING (SUM(T0.Debit) - SUM(T0.Credit)) > 0
         ORDER BY Balance DESC;
       `;
-      
+
       data = await queryDatabase(query, parameters);
       totalCount = data.length;
     } else if (queryType === 'deliveries') {
@@ -86,16 +72,13 @@ export default async function handler(req, res) {
       let searchFilter = '';
       if (search) {
         searchFilter = `AND (
-          T0.[CardCode] LIKE @search OR
-          T0.[CardName] LIKE @search OR
           T0.[DocNum] LIKE @search OR
-          T3.[DocNum] LIKE @search OR
           T13.[DocNum] LIKE @search OR
           T13.[NumAtCard] LIKE @search OR
           T15.[PymntGroup] LIKE @search
         )`;
       }
-      
+
       let dateFilter = '';
       if (fromDate) {
         dateFilter += ' AND T0.[DocDate] >= @fromDate';
@@ -103,7 +86,7 @@ export default async function handler(req, res) {
       if (toDate) {
         dateFilter += ' AND T0.[DocDate] <= @toDate';
       }
-      
+
       let overdueFilter = '';
       if (status !== 'all') {
         if (status === '30') {
@@ -117,79 +100,65 @@ export default async function handler(req, res) {
         }
       }
 
-      // Add new filters
       let salesPersonFilter = '';
       if (slpCode) {
         salesPersonFilter = 'AND T13.[SlpCode] = @slpCode';
       }
 
-     // In the chart query section, replace with this:
-// Replace the category and product filters with:
-         // CORRECTED FILTERS FOR DELIVERIES QUERY:
       let categoryFilter = '';
       if (itmsGrpCod) {
-        categoryFilter = 'AND T10.ItmsGrpCod = @itmsGrpCod'; // Changed to use T10
+        categoryFilter = 'AND T10.ItmsGrpCod = @itmsGrpCod';
       }
 
       let productFilter = '';
       if (itemCode) {
-        productFilter = 'AND T1.ItemCode = @itemCode'; // T1 is RDR1 which contains the item code
+        productFilter = 'AND T1.ItemCode = @itemCode';
       }
-      // let categoryFilter = '';
-      //   if (itmsGrpCod) {
-      //     categoryFilter = 'AND T4.ItmsGrpNam = @itmsGrpCod';
-      //   }
 
-      //   let productFilter = '';
-      //   if (itemCode) {
-      //     productFilter = 'AND T3.ItemCode = @itemCode';
-      //   }
-      
       // Handle sorting
       let orderBy = '';
       const validSortFields = {
-        'Customer Code': 'T0.[CardCode]',
-        'Customer Name': 'T0.[CardName]',
-        'SO#': 'T0.[DocNum]',
-        'SO Date': 'T0.[DocDate]',
-        'Delivery#': 'T3.[DocNum]',
-        'Delivery Date': 'T3.[DocDate]',
-        'Invoice No.': 'T13.[DocNum]',
-        'AR Invoice Date': 'T13.[DocDate]',
+        'Inv No.': 'T13.[DocNum]',
+        'Ar Inv No': 'T13.[DocDate]', // Adjust if using a different field for AR Invoice Number
+        'so#': 'T0.[DocNum]',
+        'so Date': 'T0.[DocDate]',
+        'Customer Ref no': 'T13.[NumAtCard]',
         'Invoice Total': 'T13.[DocTotal]',
         'Balance Due': '(T13.[DocTotal] - T13.[PaidToDate])',
+        'Airline Name': 'T3.[U_AirlineName]', // Adjust if field name differs
+        'Tracking no': 'T3.[U_TrackingNo]', // Adjust if field name differs
+        'Delivery Date': 'T3.[DocDate]',
+        'so to Delivery Days': 'DATEDIFF(DAY, T0.[DocDate], T3.[DocDate])',
         'Overdue Days': 'DATEDIFF(DAY, T13.[DocDueDate], GETDATE())',
-        'Payment Terms': 'T15.[PymntGroup]'
+        'Payment Group': 'T15.[PymntGroup]',
       };
-      
+
       if (sortField && validSortFields[sortField]) {
         orderBy = `ORDER BY ${validSortFields[sortField]} ${sortDir === 'desc' ? 'DESC' : 'ASC'}`;
       } else {
         orderBy = 'ORDER BY T0.[DocDate] DESC';
       }
-      
+
       // Calculate pagination
       const pageSize = 20;
       const offset = (page - 1) * pageSize;
-      
-      // Deliveries query with pagination and new filters
+
+      // Deliveries query with updated fields
       const paginatedQuery = `
         SELECT
-          T0.[DocNum] as 'SO#', 
-          T0.[CardCode] as 'Customer Code',
-          T0.[CardName] as 'Customer Name', 
-          T0.[DocDate] as 'SO Date',  
-          T3.[DocNum] as 'Delivery#',
-          T3.[DocDate] as 'Delivery Date',
-          DATEDIFF(DAY, T0.[DocDate], T3.[DocDate]) as 'SO to Delivery Days',
-          T13.[DocNum] as 'Invoice No.',
-          T13.[DocDate] as 'AR Invoice Date',
-          T13.[DocTotal] as 'Invoice Total',
-          (T13.[DocTotal] - T13.[PaidToDate]) as 'Balance Due', 
-          T13.[NumAtCard] as 'BP Reference No.',
-          DATEDIFF(DAY, T13.[DocDueDate], GETDATE()) as 'Overdue Days',
-          T15.[PymntGroup] as 'Payment Terms',
-          T50.[SlpName] as 'Sales Rep'
+          T13.[DocNum] AS 'Invoice No.',
+          T13.[DocDate] AS 'AR Invoice Date', -- Adjust if AR Invoice Number is needed
+          T0.[DocNum] AS 'SO#',
+          T0.[DocDate] AS 'SO Date',
+          T13.[NumAtCard] AS 'BP Reference No.',
+          T13.[DocTotal] AS 'Invoice Total',
+          (T13.[DocTotal] - T13.[PaidToDate]) AS 'Balance Due',
+          T13.[U_Airlinename] AS 'AirlineName', -- Adjust field name if different
+          T13.[trackNo] AS 'TrackingNo', -- Adjust field name if different
+          T3.[DocDate] AS 'Delivery Date',
+          DATEDIFF(DAY, T0.[DocDate], T3.[DocDate]) AS 'SOToDeliveryDays',
+          DATEDIFF(DAY, T13.[DocDueDate], GETDATE()) AS 'Overdue Days',
+          T15.[PymntGroup] AS 'Payment Terms'
         FROM ORDR T0  
         INNER JOIN RDR1 T1 ON T0.[DocEntry] = T1.[DocEntry] 
         INNER JOIN DLN1 T2 ON T1.[DocEntry] = T2.[BaseEntry] AND T1.[ItemCode] = T2.[ItemCode] AND T2.[BaseLine] = T1.[LineNum]
@@ -210,14 +179,10 @@ export default async function handler(req, res) {
           ${categoryFilter}
           ${productFilter}
         ${orderBy}
-          ${isGetAll ? '' : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
+        ${isGetAll ? '' : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
       `;
 
-      // ${isGetAll ? '' : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
-
-      
-      
-      // Count query for pagination with new filters
+      // Count query for pagination
       const countQuery = `
         SELECT COUNT(*) AS total
         FROM ORDR T0  
@@ -240,31 +205,24 @@ export default async function handler(req, res) {
           ${categoryFilter}
           ${productFilter}
       `;
-      
-      // Execute queries
-      // const [queryData, countResult] = await Promise.all([
-      //   queryDatabase(paginatedQuery, parameters),
-      //   queryDatabase(countQuery, parameters)
-      // ]);
 
+      // Execute queries
       let queryData = [], countResult = [];
 
-if (isGetAll) {
-  queryData = await queryDatabase(paginatedQuery, parameters);
-  totalCount = queryData.length;
-} else {
-  [queryData, countResult] = await Promise.all([
-    queryDatabase(paginatedQuery, parameters),
-    queryDatabase(countQuery, parameters)
-  ]);
-  totalCount = countResult?.[0]?.total || 0;
-}
+      if (isGetAll) {
+        queryData = await queryDatabase(paginatedQuery, parameters);
+        totalCount = queryData.length;
+      } else {
+        [queryData, countResult] = await Promise.all([
+          queryDatabase(paginatedQuery, parameters),
+          queryDatabase(countQuery, parameters),
+        ]);
+        totalCount = countResult?.[0]?.total || 0;
+      }
 
-      
       data = queryData;
-      totalCount = countResult && countResult.length > 0 ? countResult[0].total : 0;
     } else if (queryType === 'chart') {
-      // Enhanced chart query with all filters applied
+      // Chart query (unchanged, as it’s not relevant to the table fields)
       let searchFilter = '';
       if (search) {
         searchFilter = `AND (
@@ -272,7 +230,7 @@ if (isGetAll) {
           T1.CardName LIKE @search
         )`;
       }
-      
+
       let dateFilter = '';
       if (fromDate) {
         dateFilter += ' AND T0.DueDate >= @fromDate';
@@ -280,7 +238,7 @@ if (isGetAll) {
       if (toDate) {
         dateFilter += ' AND T0.DueDate <= @toDate';
       }
-      
+
       let overdueFilter = '';
       if (status !== 'all') {
         if (status === '30') {
@@ -294,14 +252,12 @@ if (isGetAll) {
         }
       }
 
-      // Add new filters for chart data
       let salesPersonFilter = '';
       if (slpCode) {
         salesPersonFilter = 'AND EXISTS (SELECT 1 FROM OSLP WHERE SlpCode = @slpCode AND SlpCode = T1.SlpCode)';
       }
 
-            // Replace the category and product filters with:
-     let categoryFilter = '';
+      let categoryFilter = '';
       if (itmsGrpCod) {
         categoryFilter = 'AND T4.ItmsGrpCod = @itmsGrpCod';
       }
@@ -324,10 +280,10 @@ if (isGetAll) {
         FROM JDT1 T0
         INNER JOIN OINV T2 ON T0.TransId = T2.TransId 
         LEFT OUTER JOIN OCRD T1 ON T0.ShortName = T1.CardCode
-        LEFT JOIN INV1 T12 ON T0.BaseRef = T12.DocEntry -- Link to invoices
+        LEFT JOIN INV1 T12 ON T0.BaseRef = T12.DocEntry
         LEFT JOIN OITM T3 ON T12.ItemCode = T3.ItemCode
         LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-                WHERE 
+        WHERE 
           T0.ShortName LIKE 'C%' AND
           T0.DueDate <= GETDATE() AND
           (T0.Debit - T0.Credit) > 0
@@ -345,35 +301,28 @@ if (isGetAll) {
         END
         ORDER BY OverdueRange;
       `;
-      
+
       data = await queryDatabase(query, parameters);
       totalCount = data.length;
     }
-    
+
     // Add total count in response headers
     res.setHeader('X-Total-Count', totalCount);
-    
-    // Cache the results
-    // Cache for 15 minutes (900 seconds)
-    // await setCache(cacheKey, {
-    //   data: data || [],
-    //   totalCount: totalCount
-    // }, 900);
-    
-    if (!isGetAll) {
-  await setCache(cacheKey, {
-    data: data || [],
-    totalCount: totalCount
-  }, 900);
-}
 
+    // Cache the results for 15 minutes (900 seconds)
+    if (!isGetAll) {
+      await setCache(cacheKey, {
+        data: data || [],
+        totalCount: totalCount,
+      }, 900);
+    }
 
     res.status(200).json(data || []);
   } catch (error) {
     console.error('Error fetching customer data:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal Server Error',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }
 }

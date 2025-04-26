@@ -261,8 +261,6 @@ const InvoicesTable = ({
           options: [
             { value: "Open", label: "Open" },
             { value: "Closed", label: "Closed" },
-            { value: "Canceled", label: "Canceled" },
-            { value: "Partially Open", label: "Partially Open" },
           ],
           value: statusFilter,
           label: "Status",

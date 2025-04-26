@@ -82,11 +82,11 @@ import InvoicesTable from "components/HeaderInvoiceTable";
       render: (value) => value || "N/A",
       sortable: true,
     },
-    {
-      field: "CustomerGroup",
-      label: "Customer Group",
-      render: (value) => value || "N/A",
-    },
+    // {
+    //   field: "CustomerGroup",
+    //   label: "Customer Group",
+    //   render: (value) => value || "N/A",
+    // },
     //   {
     //     field: "NumAtCard",
     //     label: "Customer PO#",

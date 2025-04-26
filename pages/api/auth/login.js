@@ -12,6 +12,9 @@ const COOKIE_OPTIONS = {
   maxAge: 3600,
 };
 
+// Check if we're in development mode
+const isDevelopment = process.env.NODE_ENV === "development";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
@@ -22,6 +25,39 @@ export default async function handler(req, res) {
   // Validate email presence
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
+  }
+
+  // Development mode bypass
+  if (isDevelopment) {
+    console.log("[DEV_MODE] Bypassing authentication for development");
+    // Create a development token with admin privileges
+    const token = jwt.sign(
+      {
+        email: email || "dev@example.com",
+        role: "admin", // Give admin role in development
+        name: "Development User",
+        contactCodes: ["DEV001"],
+        cardCodes: ["DEV001"],
+      },
+      process.env.JWT_SECRET || "dev-secret",
+      { expiresIn: "1h" }
+    );
+    
+    res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+    
+    return res.status(200).json({
+      message: "Dev_Login_successful",
+      token,
+      user: {
+        email: email || "dev@example.com",
+        role: "admin",
+        name: "Development User",
+        contactCodes: ["DEV001"],
+        cardCodes: ["DEV001"],
+      },
+      showPassword: false,
+      devMode: true
+    });
   }
 
   // -------------------- Salesperson and Admin Login --------------------
