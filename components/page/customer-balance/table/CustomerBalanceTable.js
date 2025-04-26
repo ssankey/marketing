@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef } from "react";
 import { Container, Row, Col, Spinner } from "react-bootstrap";
 import GenericTable from "components/GenericTable";
@@ -20,35 +18,35 @@ const CustomerBalanceTable = ({
   onDateFilterChange,
   onSort,
   onReset,
-  onExcelDownload
+  onExcelDownload,
 }) => {
   const ITEMS_PER_PAGE = 20;
-  
+
   // Local state for filter values
   const [filterValues, setFilterValues] = useState({
-    searchTerm: '',
-    status: 'all',
-    fromDate: '',
-    toDate: '',
-    sortField: 'SO Date',
-    sortDirection: 'desc'
+    searchTerm: "",
+    status: "all",
+    fromDate: "",
+    toDate: "",
+    sortField: "SO Date",
+    sortDirection: "desc",
   });
-  
+
   const tableRef = useRef(null);
 
   const columns = [
-    // ... (keep your existing columns)
-     {
+    {
+      field: "Invoice No.",
+      label: "Inv No.",
+    },
+    {
+      field: "AR Invoice Date", // Assuming this is the AR Invoice Number; adjust if you have a specific field
+      label: "AR Invoice Date",
+      render: (value) => formatDate(value), // Adjust if this is a number, not a date
+    },
+    {
       field: "SO#",
       label: "SO#",
-    },
-    {
-      field: "Customer Code",
-      label: "Customer Code",
-    },
-    {
-      field: "Customer Name",
-      label: "Customer Name",
     },
     {
       field: "SO Date",
@@ -56,22 +54,8 @@ const CustomerBalanceTable = ({
       render: (value) => formatDate(value),
     },
     {
-      field: "Delivery#",
-      label: "Delivery#",
-    },
-    {
-      field: "Delivery Date",
-      label: "Delivery Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "Invoice No.",
-      label: "Invoice No.",
-    },
-    {
-      field: "AR Invoice Date",
-      label: "Invoice Date",
-      render: (value) => formatDate(value),
+      field: "BP Reference No.",
+      label: "Customer Ref no",
     },
     {
       field: "Invoice Total",
@@ -84,8 +68,24 @@ const CustomerBalanceTable = ({
       render: (value) => formatCurrency(value),
     },
     {
-      field: "BP Reference No.",
-      label: "BP Reference",
+      field: "AirlineName", // New field; ensure it exists in data
+      label: "Airline Name",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "TrackingNo", // New field; ensure it exists in data
+      label: "Tracking no",
+      render: (value) => value || "N/A",
+    },
+    {
+      field: "Delivery Date",
+      label: "Delivery Date",
+      render: (value) => formatDate(value),
+    },
+    {
+      field: "SOToDeliveryDays", // New field; ensure it exists in data
+      label: "so to Delivery Days",
+      render: (value) => value || "N/A",
     },
     {
       field: "Overdue Days",
@@ -93,12 +93,8 @@ const CustomerBalanceTable = ({
     },
     {
       field: "Payment Terms",
-      label: "Payment Terms",
+      label: "Payment Group",
     },
-    // {
-    //   field: "Remarks",
-    //   label: "Remarks",
-    // },
   ];
 
   const statusOptions = [
@@ -110,28 +106,28 @@ const CustomerBalanceTable = ({
 
   // Handle search with debounce
   const handleSearch = (term) => {
-    setFilterValues(prev => ({ ...prev, searchTerm: term }));
+    setFilterValues((prev) => ({ ...prev, searchTerm: term }));
     if (onSearch) {
       onSearch(term);
     }
   };
 
   const handleStatusChange = (status) => {
-    setFilterValues(prev => ({ ...prev, status }));
+    setFilterValues((prev) => ({ ...prev, status }));
     if (onStatusChange) {
       onStatusChange(status);
     }
   };
 
   const handleDateFilterChange = ({ fromDate, toDate }) => {
-    setFilterValues(prev => ({ ...prev, fromDate, toDate }));
+    setFilterValues((prev) => ({ ...prev, fromDate, toDate }));
     if (onDateFilterChange) {
       onDateFilterChange({ fromDate, toDate });
     }
   };
 
   const handleSort = (field, direction) => {
-    setFilterValues(prev => ({ ...prev, sortField: field, sortDirection: direction }));
+    setFilterValues((prev) => ({ ...prev, sortField: field, sortDirection: direction }));
     if (onSort) {
       onSort(field, direction);
     }
@@ -139,12 +135,12 @@ const CustomerBalanceTable = ({
 
   const handleReset = () => {
     const resetValues = {
-      searchTerm: '',
-      status: 'all',
-      fromDate: '',
-      toDate: '',
-      sortField: 'SO Date',
-      sortDirection: 'desc'
+      searchTerm: "",
+      status: "all",
+      fromDate: "",
+      toDate: "",
+      sortField: "SO Date",
+      sortDirection: "desc",
     };
     setFilterValues(resetValues);
     if (onReset) {
@@ -160,7 +156,7 @@ const CustomerBalanceTable = ({
           placeholder: "Search by customer name, code or SO#...",
           value: filterValues.searchTerm,
         }}
-        searchTerm={filterValues.searchTerm} 
+        searchTerm={filterValues.searchTerm}
         onSearch={handleSearch}
         statusFilter={{
           enabled: true,

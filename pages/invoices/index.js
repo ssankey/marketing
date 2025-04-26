@@ -1,19 +1,19 @@
-  // pages/invoices/index.js
-  import { useState, useEffect, useCallback } from "react";
-  import { useRouter } from "next/router";
-  import { Spinner } from "react-bootstrap";
-  import { useAuth } from "hooks/useAuth";
-  import InvoicesTable from "components/InvoicesTable";
-  import downloadExcel from "utils/exporttoexcel";
+// pages/invoices/index.js
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
+import { Spinner } from "react-bootstrap";
+import { useAuth } from "hooks/useAuth";
+import InvoicesTable from "components/InvoicesTable";
+import downloadExcel from "utils/exporttoexcel";
 import { Printer } from "react-bootstrap-icons";
-  import StatusBadge from "components/StatusBadge";
-  import { formatDate } from "utils/formatDate";
-  import Link from "next/link";
-  import { formatCurrency } from "utils/formatCurrency";
+import StatusBadge from "components/StatusBadge";
+import { formatDate } from "utils/formatDate";
+import Link from "next/link";
+import { formatCurrency } from "utils/formatCurrency";
 
 
-  // Client-side caching helpers
-  const CLIENT_CACHE_TTL = 300000; // 5 minutes
+// Client-side caching helpers
+const CLIENT_CACHE_TTL = 300000; // 5 minutes
 
 const columns = [
   {
@@ -44,13 +44,12 @@ const columns = [
     label: "Status",
     render: (value) => (
       <span
-        className={`badge ${
-          value === "Closed"
+        className={`badge ${value === "Closed"
             ? "bg-success"
             : value === "Cancelled"
-            ? "bg-warning"
-            : "bg-danger"
-        }`}
+              ? "bg-warning"
+              : "bg-danger"
+          }`}
       >
         {value}
       </span>
@@ -91,26 +90,18 @@ const columns = [
     label: "Sales Order No.",
     render: (value) => value || "N/A",
   },
-  {
-    field: "SO Date",
-    label: "SO Date",
-    render: (value) => formatDate(value),
-  },
-  {
-    field: "Customer ref no",
-    label: "Customer Ref",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "SO Customer Ref. No",
-    label: "SO Customer Ref",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Tracking Number",
-    label: "Tracking No.",
-    render: (value) => value || "N/A",
-  },
+
+  // {
+  //   field: "Customer ref no",
+  //   label: "Customer Ref",
+  //   render: (value) => value || "N/A",
+  // },
+  // {
+  //   field: "SO Customer Ref. No",
+  //   label: "SO Customer Ref",
+  //   render: (value) => value || "N/A",
+  // },
+
   // {
   //   field: "Delivery Date",
   //   label: "Delivery Date",
@@ -236,302 +227,312 @@ const columns = [
   //   label: "Dispatch Date",
   //   render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
   // },
+  {
+    field: "Tracking Number",
+    label: "Tracking No.",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "SO Date",
+    label: "SO Date",
+    render: (value) => formatDate(value),
+  },
 ];
 // Client-side caching helpers
 // const CLIENT_CACHE_TTL = 0; // 5 minutes
 
-  const getClientCacheKey = (query) => `invoices:${JSON.stringify(query)}`;
+const getClientCacheKey = (query) => `invoices:${JSON.stringify(query)}`;
 
-  const saveToClientCache = (key, data) => {
-    try {
-      const cacheEntry = {
-        timestamp: Date.now(),
-        data
-      };
-      localStorage.setItem(key, JSON.stringify(cacheEntry));
-    } catch (error) {
-      console.error('LocalStorage write error:', error);
-    }
-  };
+const saveToClientCache = (key, data) => {
+  try {
+    const cacheEntry = {
+      timestamp: Date.now(),
+      data
+    };
+    localStorage.setItem(key, JSON.stringify(cacheEntry));
+  } catch (error) {
+    console.error('LocalStorage write error:', error);
+  }
+};
 
-  const readFromClientCache = (key) => {
-    try {
-      const cached = localStorage.getItem(key);
-      if (!cached) return null;
+const readFromClientCache = (key) => {
+  try {
+    const cached = localStorage.getItem(key);
+    if (!cached) return null;
 
-      const { timestamp, data } = JSON.parse(cached);
+    const { timestamp, data } = JSON.parse(cached);
 
-      if (Date.now() - timestamp > CLIENT_CACHE_TTL) {
-        localStorage.removeItem(key);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('LocalStorage read error:', error);
+    if (Date.now() - timestamp > CLIENT_CACHE_TTL) {
+      localStorage.removeItem(key);
       return null;
     }
-  };
 
-  export default function InvoicesPage() {
-    const router = useRouter();
-    const { isAuthenticated, isLoading: authLoading } = useAuth();
+    return data;
+  } catch (error) {
+    console.error('LocalStorage read error:', error);
+    return null;
+  }
+};
 
-    const [invoices, setInvoices] = useState([]);
-    const [totalItems, setTotalItems] = useState(0);
-    const [fetchState, setFetchState] = useState({
-      isInitialLoad: true,
-      isLoading: false,
-      error: null
-    });
+export default function InvoicesPage() {
+  const router = useRouter();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
 
-    // Extract query params from router
-    const { page = 1, search = "", status = "all", sortField = "DocDate", sortDir = "desc", fromDate, toDate } = router.query;
+  const [invoices, setInvoices] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [fetchState, setFetchState] = useState({
+    isInitialLoad: true,
+    isLoading: false,
+    error: null
+  });
 
-    // Memoize fetchInvoices to prevent unnecessary recreations
-    const fetchInvoices = useCallback(async (getAll = false) => {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("No token found");
+  // Extract query params from router
+  const { page = 1, search = "", status = "all", sortField = "DocDate", sortDir = "desc", fromDate, toDate } = router.query;
 
-      const queryParams = {
-        page,
-        search,
-        status,
-        sortField,
-        sortDir,
-        fromDate,
-        toDate,
-        getAll: getAll.toString()
-      };
+  // Memoize fetchInvoices to prevent unnecessary recreations
+  const fetchInvoices = useCallback(async (getAll = false) => {
+    const token = localStorage.getItem("token");
+    if (!token) throw new Error("No token found");
 
-       const queryStr = new URLSearchParams(queryParams).toString();
-       const cacheKey = getClientCacheKey(queryParams);
+    const queryParams = {
+      page,
+      search,
+      status,
+      sortField,
+      sortDir,
+      fromDate,
+      toDate,
+      getAll: getAll.toString()
+    };
 
-      if (getAll) {
-        const res = await fetch(`/api/invoices?${new URLSearchParams(queryParams)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    const queryStr = new URLSearchParams(queryParams).toString();
+    const cacheKey = getClientCacheKey(queryParams);
 
-        if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
-
-        const { invoices: allInvoices } = await res.json();
-        return allInvoices;
-      }
-
-      // Check client cache first
-      // const cacheKey = getClientCacheKey(queryParams);
-      // const cached = readFromClientCache(cacheKey);
-      // if (cached) return cached;
-      if (!getAll) {
-        const cacheKey = getClientCacheKey(queryParams);
-
-        const cached = readFromClientCache(cacheKey);
-
-        // ✅ Now cached is declared before using it
-        const maxPages = Math.ceil((cached?.totalItems || 0) / 20); // assuming 20 items per page
-        if (page > maxPages) {
-          localStorage.removeItem(cacheKey);
-        }
-
-        if (cached) return cached;
-      }
-
-
-      // Use API route that handles Redis on the server side
+    if (getAll) {
       const res = await fetch(`/api/invoices?${new URLSearchParams(queryParams)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
 
-      const { invoices: newInvoices, totalItems: newTotalItems } = await res.json();
+      const { invoices: allInvoices } = await res.json();
+      return allInvoices;
+    }
 
-      // Save to client cache
-      saveToClientCache(cacheKey, { invoices: newInvoices, totalItems: newTotalItems });
+    // Check client cache first
+    // const cacheKey = getClientCacheKey(queryParams);
+    // const cached = readFromClientCache(cacheKey);
+    // if (cached) return cached;
+    if (!getAll) {
+      const cacheKey = getClientCacheKey(queryParams);
 
-      return { invoices: newInvoices, totalItems: newTotalItems };
-    }, [page, search, status, sortField, sortDir, fromDate, toDate]);
+      const cached = readFromClientCache(cacheKey);
 
- 
-    
-     const handleExcelDownload = useCallback(async () => {
-       try {
-         const token = localStorage.getItem("token");
-         if (!token) {
-           console.error("No token found");
-           return;
-         }
-
-         // Build query params with getAll=true
-         const queryParams = {
-           status: router.query.status || "all",
-           search: router.query.search || "",
-           sortField: router.query.sortField || "DocDate",
-           sortDir: router.query.sortDir || "desc",
-           fromDate: router.query.fromDate || "",
-           toDate: router.query.toDate || "",
-           getAll: "true",
-         };
-
-         const url = `/api/invoices?${new URLSearchParams(queryParams)}`;
-
-         const response = await fetch(url, {
-           headers: { Authorization: `Bearer ${token}` },
-         });
-
-         if (!response.ok) {
-           throw new Error(`Failed to fetch: ${response.status}`);
-         }
-
-         const { invoices: allInvoices } = await response.json();
-
-         if (allInvoices && allInvoices.length > 0) {
-           // Prepare data for Excel export matching the table columns
-           const excelData = allInvoices.map((invoice) => {
-             const row = {};
-
-             // Map each column from the table to the Excel data
-            //  columns.forEach((column) => {
-            //    const value = invoice[column.field];
-
-            //    // Apply formatting similar to the table renderers
-            //    if (
-            //      column.field.includes("Date") ||
-            //      column.field === "Invoice Posting Dt."
-            //    ) {
-            //      row[column.label] = value ? formatDate(value) : "N/A";
-            //    } else if (column.field === "Document Status") {
-            //      row[column.label] = value || "N/A";
-            //    } else if (
-            //      column.field === "Total Sales Price" ||
-            //      column.field === "Unit Sales Price"
-            //    ) {
-            //      row[column.label] = value ? formatCurrency(value) : "N/A";
-            //    } else {
-            //      row[column.label] = value || "N/A";
-            //    }
-            //  });
-            columns.forEach((column) => {
-              const value = invoice[column.field];
-              row[column.label] = value || "N/A";
-            });
-
-
-             return row;
-           });
-
-           downloadExcel(excelData, `Invoices_${queryParams.status}`);
-         } else {
-           alert("No data available to export.");
-         }
-       } catch (error) {
-         console.error("Failed to export to Excel:", error);
-         alert("Failed to export data. Please try again.");
-       }
-     }, [router.query]);
-    
-    useEffect(() => {
-      let isMounted = true;
-
-      const loadData = async () => {
-        // Only show loading on initial load or if we have no data
-        setFetchState(prev => ({
-          ...prev,
-          isLoading: prev.isInitialLoad || invoices.length === 0,
-          error: null
-        }));
-
-        try {
-          const { invoices: newInvoices, totalItems: newTotalItems } = await fetchInvoices();
-
-          if (isMounted) {
-            setInvoices(newInvoices || []);
-            setTotalItems(newTotalItems || 0);
-            setFetchState({
-              isInitialLoad: false,
-              isLoading: false,
-              error: null
-            });
-          }
-        } catch (error) {
-          if (isMounted) {
-            setFetchState({
-              isInitialLoad: false,
-              isLoading: false,
-              error: error.message
-            });
-          }
-        }
-      };
-
-      if (isAuthenticated) {
-        loadData();
+      // ✅ Now cached is declared before using it
+      const maxPages = Math.ceil((cached?.totalItems || 0) / 20); // assuming 20 items per page
+      if (page > maxPages) {
+        localStorage.removeItem(cacheKey);
       }
 
-      return () => {
-        isMounted = false;
-      };
-    }, [isAuthenticated, fetchInvoices]);
+      if (cached) return cached;
+    }
 
-    // Handle route changes
-    useEffect(() => {
-      const handleRouteStart = () => {
-        // Only show loading if we don't have data
-        if (invoices.length === 0) {
-          setFetchState(prev => ({ ...prev, isLoading: true }));
+
+    // Use API route that handles Redis on the server side
+    const res = await fetch(`/api/invoices?${new URLSearchParams(queryParams)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
+
+    const { invoices: newInvoices, totalItems: newTotalItems } = await res.json();
+
+    // Save to client cache
+    saveToClientCache(cacheKey, { invoices: newInvoices, totalItems: newTotalItems });
+
+    return { invoices: newInvoices, totalItems: newTotalItems };
+  }, [page, search, status, sortField, sortDir, fromDate, toDate]);
+
+
+
+  const handleExcelDownload = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found");
+        return;
+      }
+
+      // Build query params with getAll=true
+      const queryParams = {
+        status: router.query.status || "all",
+        search: router.query.search || "",
+        sortField: router.query.sortField || "DocDate",
+        sortDir: router.query.sortDir || "desc",
+        fromDate: router.query.fromDate || "",
+        toDate: router.query.toDate || "",
+        getAll: "true",
+      };
+
+      const url = `/api/invoices?${new URLSearchParams(queryParams)}`;
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`);
+      }
+
+      const { invoices: allInvoices } = await response.json();
+
+      if (allInvoices && allInvoices.length > 0) {
+        // Prepare data for Excel export matching the table columns
+        const excelData = allInvoices.map((invoice) => {
+          const row = {};
+
+          // Map each column from the table to the Excel data
+          //  columns.forEach((column) => {
+          //    const value = invoice[column.field];
+
+          //    // Apply formatting similar to the table renderers
+          //    if (
+          //      column.field.includes("Date") ||
+          //      column.field === "Invoice Posting Dt."
+          //    ) {
+          //      row[column.label] = value ? formatDate(value) : "N/A";
+          //    } else if (column.field === "Document Status") {
+          //      row[column.label] = value || "N/A";
+          //    } else if (
+          //      column.field === "Total Sales Price" ||
+          //      column.field === "Unit Sales Price"
+          //    ) {
+          //      row[column.label] = value ? formatCurrency(value) : "N/A";
+          //    } else {
+          //      row[column.label] = value || "N/A";
+          //    }
+          //  });
+          columns.forEach((column) => {
+            const value = invoice[column.field];
+            row[column.label] = value || "N/A";
+          });
+
+
+          return row;
+        });
+
+        downloadExcel(excelData, `Invoices_${queryParams.status}`);
+      } else {
+        alert("No data available to export.");
+      }
+    } catch (error) {
+      console.error("Failed to export to Excel:", error);
+      alert("Failed to export data. Please try again.");
+    }
+  }, [router.query]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      // Only show loading on initial load or if we have no data
+      setFetchState(prev => ({
+        ...prev,
+        isLoading: prev.isInitialLoad || invoices.length === 0,
+        error: null
+      }));
+
+      try {
+        const { invoices: newInvoices, totalItems: newTotalItems } = await fetchInvoices();
+
+        if (isMounted) {
+          setInvoices(newInvoices || []);
+          setTotalItems(newTotalItems || 0);
+          setFetchState({
+            isInitialLoad: false,
+            isLoading: false,
+            error: null
+          });
         }
-      };
+      } catch (error) {
+        if (isMounted) {
+          setFetchState({
+            isInitialLoad: false,
+            isLoading: false,
+            error: error.message
+          });
+        }
+      }
+    };
 
-      const handleRouteEnd = () => {
-        setFetchState(prev => ({ ...prev, isLoading: false }));
-      };
-
-      router.events.on("routeChangeStart", handleRouteStart);
-      router.events.on("routeChangeComplete", handleRouteEnd);
-      router.events.on("routeChangeError", handleRouteEnd);
-
-      return () => {
-        router.events.off("routeChangeStart", handleRouteStart);
-        router.events.off("routeChangeComplete", handleRouteEnd);
-        router.events.off("routeChangeError", handleRouteEnd);
-      };
-    }, [router, invoices.length]);
-
-    if (authLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <Spinner animation="border" role="status" variant="primary" />
-          <span className="ml-3">Checking authentication...</span>
-        </div>
-      );
+    if (isAuthenticated) {
+      loadData();
     }
 
-    if (!isAuthenticated) {
-      return null;
-    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, fetchInvoices]);
 
-    if (fetchState.error) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-red-600">Error loading invoices: {fetchState.error}</p>
-        </div>
-      );
-    }
+  // Handle route changes
+  useEffect(() => {
+    const handleRouteStart = () => {
+      // Only show loading if we don't have data
+      if (invoices.length === 0) {
+        setFetchState(prev => ({ ...prev, isLoading: true }));
+      }
+    };
 
+    const handleRouteEnd = () => {
+      setFetchState(prev => ({ ...prev, isLoading: false }));
+    };
+
+    router.events.on("routeChangeStart", handleRouteStart);
+    router.events.on("routeChangeComplete", handleRouteEnd);
+    router.events.on("routeChangeError", handleRouteEnd);
+
+    return () => {
+      router.events.off("routeChangeStart", handleRouteStart);
+      router.events.off("routeChangeComplete", handleRouteEnd);
+      router.events.off("routeChangeError", handleRouteEnd);
+    };
+  }, [router, invoices.length]);
+
+  if (authLoading) {
     return (
-      <InvoicesTable
-        invoices={invoices}
-        totalItems={totalItems}
-        isLoading={fetchState.isInitialLoad || fetchState.isLoading}
-        status={status}
-        onExcelDownload={handleExcelDownload}
-        columns={columns}
-      />
+      <div className="flex items-center justify-center min-h-screen">
+        <Spinner animation="border" role="status" variant="primary" />
+        <span className="ml-3">Checking authentication...</span>
+      </div>
     );
   }
 
-  InvoicesPage.seo = {
-    title: "Invoices | Density",
-    description: "View and manage all your invoices.",
-    keywords: "invoices, billing, management, density",
-  };
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (fetchState.error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Error loading invoices: {fetchState.error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <InvoicesTable
+      invoices={invoices}
+      totalItems={totalItems}
+      isLoading={fetchState.isInitialLoad || fetchState.isLoading}
+      status={status}
+      onExcelDownload={handleExcelDownload}
+      columns={columns}
+    />
+  );
+}
+
+InvoicesPage.seo = {
+  title: "Invoices | Density",
+  description: "View and manage all your invoices.",
+  keywords: "invoices, billing, management, density",
+};
