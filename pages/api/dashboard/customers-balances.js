@@ -151,6 +151,10 @@ export default async function handler(req, res) {
           T0.[DocNum] AS 'SO#',
           T0.[DocDate] AS 'SO Date',
           T13.[NumAtCard] AS 'BP Reference No.',
+          T14.[CardName] As 'Customer Name',
+          T16.[Name] AS 'Contact Person',
+          T14.[Country] AS 'Country',
+          T17.[State] As 'State',
           T13.[DocTotal] AS 'Invoice Total',
           (T13.[DocTotal] - T13.[PaidToDate]) AS 'Balance Due',
           T13.[U_Airlinename] AS 'AirlineName', -- Adjust field name if different
@@ -168,6 +172,8 @@ export default async function handler(req, res) {
         INNER JOIN OITM T10 ON T10.[ItemCode] = T1.[ItemCode]
         INNER JOIN OITB T11 ON T11.[ItmsGrpCod] = T10.[ItmsGrpCod] 
         INNER JOIN OCRD T14 ON T13.[CardCode] = T14.[CardCode] 
+        INNER JOIN CRD1 T17 ON T14.[CardCode] = T17.[CardCode]
+        INNER JOIN OCPR T16 ON T14.[Cardcode] = T16.[CardCode]
         INNER JOIN OCTG T15 ON T14.[GroupNum] = T15.[GroupNum]
         LEFT JOIN OSLP T50 ON T50.[SlpCode] = T13.[SlpCode]
         WHERE
@@ -179,7 +185,11 @@ export default async function handler(req, res) {
           ${categoryFilter}
           ${productFilter}
         ${orderBy}
-        ${isGetAll ? '' : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
+        ${
+          isGetAll
+            ? ""
+            : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`
+        }
       `;
 
       // Count query for pagination
