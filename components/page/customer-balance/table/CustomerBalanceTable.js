@@ -54,6 +54,14 @@ const CustomerBalanceTable = ({
       render: (value) => formatDate(value),
     },
     {
+      field: "Customer Name",
+      label: "Customer/Vendor Name",
+    },
+    {
+      field: "Contact Person",
+      label: "Contact Person",
+    },
+    {
       field: "BP Reference No.",
       label: "Customer Ref no",
     },
@@ -62,10 +70,19 @@ const CustomerBalanceTable = ({
       label: "Invoice Total",
       render: (value) => formatCurrency(value),
     },
+
     {
       field: "Balance Due",
       label: "Balance Due",
       render: (value) => formatCurrency(value),
+    },
+    {
+      field: "Country",
+      label: "Country",
+    },
+    {
+      field: "State",
+      label: "State",
     },
     {
       field: "AirlineName", // New field; ensure it exists in data

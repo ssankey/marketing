@@ -6,12 +6,13 @@ import { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Spinner, Table , Dropdown } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import  PurchasesAmountChart  from "../../components/CustomerCharts/purchasevsamount";
-import CustomerOrdersTable from  "../../components/CustomerCharts/outstandingtable";
-
+// import CustomerOrdersTable from  "../../components/CustomerCharts/outstandingtable";
+import CustomerOutstandingTable from "../../components/CustomerCharts/outstandingtable";
 import SalesTable from "../../components/CustomerCharts/salestable";
 import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
 import downloadExcel from "utils/exporttoexcel"; 
 import TablePagination from "components/TablePagination";
+
 
 
 // Utility function to format date
@@ -36,16 +37,193 @@ export default function CustomerDetails({
   TopOrderData,
   TopInvoiceData,
   salesByCategoryData,
-  customerOutstandings, 
+  initialOutstandings,
+  initialTotalOutstandings
 }) {
-  //export default function CustomerDetails({ customer }) {
+  const ITEMS_PER_PAGE = 5; // Set this at the top of your component
+  const [currentPage, setCurrentPage] = useState(1);
+
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [outstandingFilter, setOutstandingFilter] = useState('Payment Pending');
+  const [outstandingFilter, setOutstandingFilter] = useState("Payment Pending");
 
+  const [outstandings, setOutstandings] = useState(initialOutstandings || []);
+  const [totalOutstandings, setTotalOutstandings] = useState(
+    initialTotalOutstandings || 0
+  );
+  const [isLoadingOutstandings, setIsLoadingOutstandings] = useState(false);
+  const [filters, setFilters] = useState({
+    fromDate: "",
+    toDate: "",
+  });
 
+  const fetchOutstandings = async (page = 1, filters = {}) => {
+    setIsLoadingOutstandings(true);
+    try {
+      const queryParams = new URLSearchParams({
+        page,
+        itemsPerPage: ITEMS_PER_PAGE, // Add this
+        fromDate: filters.fromDate || "",
+        toDate: filters.toDate || "",
+      });
 
+      const res = await fetch(
+        `/api/customers/${
+          customer.CustomerCode
+        }/outstanding?${queryParams.toString()}`
+      );
+      const data = await res.json();
+
+      setOutstandings(data.customerOutstandings);
+      setTotalOutstandings(data.totalItems);
+    } catch (error) {
+      console.error("Error fetching outstandings:", error);
+    } finally {
+      setIsLoadingOutstandings(false);
+    }
+  };
+  // Add this handler
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    fetchOutstandings(newPage, filters);
+  };
+
+  // const fetchAllOutstandings = async () => {
+  //   try {
+  //     const queryParams = new URLSearchParams({
+  //       getAll: "true",
+  //       fromDate: filters.fromDate || "",
+  //       toDate: filters.toDate || "",
+  //     });
+
+  //     const res = await fetch(
+  //       `/api/customers/${
+  //         customer.CustomerCode
+  //       }/outstanding?${queryParams.toString()}`
+  //     );
+  //     return await res.json();
+  //   } catch (error) {
+  //     console.error("Error fetching all outstandings:", error);
+  //     return { customerOutstandings: [] };
+  //   }
+  // };
+
+  const handleFilterChange = (newFilters) => {
+    setFilters(newFilters);
+    fetchOutstandings(1, newFilters);
+  };
+  // Updated Excel Export Function
+  const handleExcelDownload = async (e) => {
+     e?.preventDefault?.();
+    try {
+      // Show a loading indicator or message (optional)
+      setIsLoadingOutstandings(true);
+
+      // Fetch ALL records without pagination
+      const { customerOutstandings } = await fetchAllOutstandings();
+
+      // Apply the same filter that's used in the UI
+      const filteredData = customerOutstandings?.filter((item) => {
+        if (outstandingFilter === "Payment Pending")
+          return item["Balance Due"] > 0;
+        if (outstandingFilter === "Payment Done")
+          return item["Balance Due"] <= 0;
+        return true;
+      });
+
+      // Format data for Excel
+      const formattedData = filteredData.map((item) => ({
+        "SO#": item["SO#"],
+        "Customer Code": item["Customer Code"],
+        "Customer Name": item["Customer Name"],
+        "Contact Person": item["Contact Person"],
+        "SO Date": formatDate(item["SO Date"]),
+        "Delivery#": item["Delivery#"],
+        "Delivery Date": formatDate(item["Delivery Date"]),
+        "Invoice No.": item["Invoice No."],
+        "Invoice Date": formatDate(item["AR Invoice Date"]),
+        "Invoice Total": formatCurrency(item["Invoice Total"]),
+        "Balance Due": formatCurrency(item["Balance Due"]),
+        "Country": item["Country"],
+        "State": item["State"],
+        "BP Reference": item["BP Reference No."],
+        "Overdue Days": item["Overdue Days"],
+        "Payment Terms": item["Payment Terms"],
+      }));
+
+      // Download the Excel file with filtered data
+      downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
+
+      // Hide loading indicator
+      setIsLoadingOutstandings(false);
+    } catch (error) {
+      console.error("Excel export failed:", error);
+      alert("Failed to export Excel. Please try again.");
+      setIsLoadingOutstandings(false);
+    }
+  };
+
+  // Improved function to fetch all outstandings
+  const fetchAllOutstandings = async () => {
+    try {
+      // No need for date filters if you want to remove them
+      const queryParams = new URLSearchParams({
+        getAll: "true",
+        // Removed date filters
+      });
+
+      const res = await fetch(
+        `/api/customers/${
+          customer.CustomerCode
+        }/outstanding?${queryParams.toString()}`
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch data: ${res.statusText}`);
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error("Error fetching all outstandings:", error);
+      return { customerOutstandings: [] };
+    }
+  };
+
+  // const handleExcelDownload = async () => {
+  //   try {
+  //     const { customerOutstandings } = await fetchAllOutstandings();
+
+  //     const filteredData = customerOutstandings?.filter((item) => {
+  //       if (outstandingFilter === "Payment Pending")
+  //         return item["Balance Due"] > 0;
+  //       if (outstandingFilter === "Payment Done")
+  //         return item["Balance Due"] === 0;
+  //       return true;
+  //     });
+
+  //     const formattedData = filteredData.map((item) => ({
+  //       "SO#": item["SO#"],
+  //       "Customer Code": item["Customer Code"],
+  //       "Customer Name": item["Customer Name"],
+  //       "SO Date": formatDate(item["SO Date"]),
+  //       "Delivery#": item["Delivery#"],
+  //       "Delivery Date": formatDate(item["Delivery Date"]),
+  //       "Invoice No.": item["Invoice No."],
+  //       "Invoice Date": formatDate(item["AR Invoice Date"]),
+  //       "Invoice Total": formatCurrency(item["Invoice Total"]),
+  //       "Balance Due": formatCurrency(item["Balance Due"]),
+  //       "BP Reference": item["BP Reference No."],
+  //       "Overdue Days": item["Overdue Days"],
+  //       "Payment Terms": item["Payment Terms"],
+  //     }));
+
+  //     downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
+  //   } catch (error) {
+  //     console.error("Excel export failed:", error);
+  //     alert("Failed to export Excel. Please try again.");
+  //   }
+  // };
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
@@ -57,9 +235,6 @@ export default function CustomerDetails({
       router.push("/login");
     }
   }, [isAuthenticated, authLoading, router]);
-
-
-
 
   // Handle loading states
   if (router.isFallback || authLoading) {
@@ -74,47 +249,54 @@ export default function CustomerDetails({
   }
 
   const handleFilterSelect = (eventKey) => {
-  setOutstandingFilter(eventKey);
-};
+    setOutstandingFilter(eventKey);
+    fetchOutstandings(1, filters); // Reset to page 1 when filter changes
+  };
 
-const handleDownloadExcel = async () => {
-  try {
-    const res = await fetch(
-      `/api/customers/${customer.CustomerCode}/outstanding?getAll=true`
-    );
-    const allData = await res.json();
+  // const handleDownloadExcel = async () => {
+  //   try {
+  //     const res = await fetch(
+  //       `/api/customers/${customer.CustomerCode}/outstanding?getAll=true`
+  //     );
+  //     const allData = await res.json();
 
-    const filteredData = allData?.filter(item => {
-      if (outstandingFilter === 'Payment Pending') return item['Balance Due'] > 0;
-      if (outstandingFilter === 'Payment Done') return item['Balance Due'] === 0;
-      return true;
-    });
+  //     const filteredData = allData?.filter((item) => {
+  //       if (outstandingFilter === "Payment Pending")
+  //         return item["Balance Due"] > 0;
+  //       if (outstandingFilter === "Payment Done")
+  //         return item["Balance Due"] === 0;
+  //       return true;
+  //     });
 
-    const formattedData = filteredData.map(item => ({
-      "SO#": item["SO#"],
-      "SO Date": formatDate(item["SO Date"]),
-      "Tracking No": item["Tracking No"],
-      "Delivery#": item["Delivery#"],
-      "Delivery Date": formatDate(item["Delivery Date"]),
-      "SO to Delivery Days": item["SO to Delivery Days"],
-      "Invoice No.": item["Invoice No."],
-      "AR Invoice Date": formatDate(item["AR Invoice Date"]),
-      "Invoice Total": item["Invoice Total"],
-      "Balance Due": item["Balance Due"],
-      "AirLine Name": item["AirLine Name"],
-      "Overdue Days": item["Overdue Days"],
-      "Payment Group": item["PymntGroup"]
-    }));
+  //     const formattedData = filteredData.map((item) => ({
+  //       "SO#": item["SO#"],
+  //       "Customer Code": item["Customer Code"],
+  //       "Customer Name": item["Customer Name"],
+  //       "SO Date": formatDate(item["SO Date"]),
+  //       // "Tracking No": item["Tracking No"],
+  //       "Delivery#": item["Delivery#"],
+  //       "Delivery Date": formatDate(item["Delivery Date"]),
+  //       "Invoice No.": item["Invoice No."],
+  //       // "SO to Delivery Days": item["SO to Delivery Days"],
+  //       // "Invoice No.": item["Invoice No."],
+  //       // "AR Invoice Date": formatDate(item["AR Invoice Date"]),
+  //       "Invoice Date": formatDate(item["AR Invoice Date"]),
+  //       "Invoice Total": item["Invoice Total"],
+  //       "Balance Due": item["Balance Due"],
+  //       "BP Reference": item["Balance Due"],
+  //       // "AirLine Name": item["AirLine Name"],
+  //       "Overdue Days": item["Overdue Days"],
+  //       "Payment Group": item["PymntGroup"],
+  //     }));
 
-    // Reuse your util
-    const { default: downloadExcel } = await import("utils/exporttoexcel");
-    downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
-  } catch (error) {
-    console.error("Excel export failed:", error);
-    alert("Failed to export Excel. Please try again.");
-  }
-};
-
+  //     // Reuse your util
+  //     const { default: downloadExcel } = await import("utils/exporttoexcel");
+  //     downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
+  //   } catch (error) {
+  //     console.error("Excel export failed:", error);
+  //     alert("Failed to export Excel. Please try again.");
+  //   }
+  // };
 
   // Handle unauthorized access
   if (!isAuthenticated) {
@@ -186,9 +368,7 @@ const handleDownloadExcel = async () => {
           </Card.Header>
           <Card.Body>
             {/* <PurchasesAmountChart data={purchaseData} /> */}
-            <PurchasesAmountChart
-              customerId={customer?.CustomerCode}
-            />
+            <PurchasesAmountChart customerId={customer?.CustomerCode} />
           </Card.Body>
         </Card>
       )}
@@ -391,73 +571,116 @@ const handleDownloadExcel = async () => {
           </Card>
         </Col>
       </Row>
-      {/* Customer Orders Table */}
-      <Card className="mb-4">
-        {/* <Card.Header>
+
+      {/* <Card className="mb-4">
+        <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
             <h3 className="mb-0">Customer Outstanding</h3>
-            <div className="ms-auto"> 
+
+            <div className="d-flex align-items-center ms-auto gap-2">
               <Dropdown onSelect={handleFilterSelect}>
-                <Dropdown.Toggle variant="outline-secondary" id="outstanding-filter-dropdown">
+                <Dropdown.Toggle
+                  variant="outline-secondary"
+                  id="outstanding-filter-dropdown"
+                >
                   {outstandingFilter}
                 </Dropdown.Toggle>
                 <Dropdown.Menu>
-                  <Dropdown.Item eventKey="Payment Pending">Payment Pending</Dropdown.Item>
-                  <Dropdown.Item eventKey="Payment Done">Payment Done</Dropdown.Item>
+                  <Dropdown.Item eventKey="Payment Pending">
+                    Payment Pending
+                  </Dropdown.Item>
+                  <Dropdown.Item eventKey="Payment Done">
+                    Payment Done
+                  </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
+
+              <button className="btn btn-success" onClick={handleExcelDownload}>
+                Excel
+              </button>
             </div>
-         </div>
-        </Card.Header> */}
-        <Card.Header>
-  <div className="d-flex justify-content-between align-items-center">
-    <h3 className="mb-0">Customer Outstanding</h3>
+          </div>
+        </Card.Header>
 
-    <div className="d-flex align-items-center ms-auto gap-2">
-      <Dropdown onSelect={handleFilterSelect}>
-        <Dropdown.Toggle
-          variant="outline-secondary"
-          id="outstanding-filter-dropdown"
-        >
-          {outstandingFilter}
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          <Dropdown.Item eventKey="Payment Pending">Payment Pending</Dropdown.Item>
-          <Dropdown.Item eventKey="Payment Done">Payment Done</Dropdown.Item>
-        </Dropdown.Menu>
-      </Dropdown>
-
-      {/* Excel Button */}
-      <button
-        className="btn btn-success"
-        onClick={handleDownloadExcel} // will create this below
-      >
-       
-        Excel
-      </button>
-    </div>
-  </div>
-</Card.Header>
-
-        {/* <Card.Body> */}
-        <Card.Body 
-          style={{ 
-            maxHeight: "500px",  // Fixed height
-            overflowY: "auto",    // Vertical scroll when needed
-            overflowX: "auto"     // Horizontal scroll when needed
+        <Card.Body
+          style={{
+            // maxHeight: "500px", // fixed height
+            overflowY: "auto", // vertical scroll
+            overflowX: "auto", // horizontal scroll
           }}
         >
-         {/* <CustomerOrdersTable customerOutstandings={ customerOutstandings } /> */}
-         <CustomerOrdersTable 
-  customerOutstandings={customerOutstandings} 
-  filter={outstandingFilter}
-/>
+          <CustomerOutstandingTable
+            customerOutstandings={outstandings}
+            totalItems={totalOutstandings}
+            isLoading={isLoadingOutstandings}
+            customerCode={customer?.CustomerCode}
+            onFilterChange={handleFilterChange}
+            onExcelDownload={handleExcelDownload}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            itemsPerPage={ITEMS_PER_PAGE}
+          />
+        </Card.Body>
+      </Card> */}
+      <Card className="mb-4">
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="mb-0">Customer Outstanding</h3>
 
+            <div className="d-flex align-items-center ms-auto gap-2">
+              {/* <Dropdown
+                onSelect={(eventKey) => {
+                  setOutstandingFilter(eventKey);
+                  // Reset to page 1 when filter changes
+                  setCurrentPage(1);
+                  // No need to refetch data when changing filter type since we'll filter client-side
+                }}
+              >
+                <Dropdown.Toggle
+                  variant="outline-secondary"
+                  id="outstanding-filter-dropdown"
+                >
+                  {outstandingFilter}
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item eventKey="Payment Pending">
+                    Payment Pending
+                  </Dropdown.Item>
+                  <Dropdown.Item eventKey="Payment Done">
+                    Payment Done
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown> */}
 
+              <button className="btn btn-success" onClick={handleExcelDownload}>
+                Excel
+              </button>
+            </div>
+          </div>
+        </Card.Header>
 
-
+        <Card.Body
+          style={{
+            overflowY: "auto", // vertical scroll
+            overflowX: "auto", // horizontal scroll
+          }}
+        >
+          <CustomerOutstandingTable
+            customerOutstandings={outstandings}
+            totalItems={totalOutstandings}
+            isLoading={isLoadingOutstandings}
+            customerCode={customer?.CustomerCode}
+            onFilterChange={handleFilterChange}
+            onExcelDownload={handleExcelDownload}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            itemsPerPage={ITEMS_PER_PAGE}
+            filterType={outstandingFilter} // Pass current filter type
+            onFilterTypeChange={setOutstandingFilter} // Pass filter change handler
+          />
         </Card.Body>
       </Card>
+
       {/* Addresses Card */}
       <Card className="mb-4">
         <Card.Header>
@@ -541,7 +764,12 @@ export async function getServerSideProps(context) {
       throw new Error(`Failed to fetch customer outstanding: ${outstandingRes.statusText}`);
     }
 
-    const customerOutstandings = await outstandingRes.json();
+    // const customerOutstandings = await outstandingRes.json();
+    const {
+      customerOutstandings: initialOutstandings,
+      totalItems: initialTotalOutstandings,
+    } = await outstandingRes.json();
+
 
     if (!customerRes.ok) {
       throw new Error(
@@ -632,7 +860,8 @@ export async function getServerSideProps(context) {
         TopOrderData,
         TopInvoiceData,
         salesByCategoryData,
-        customerOutstandings
+        initialOutstandings,
+        initialTotalOutstandings
       },
     };
   } catch (error) {
@@ -648,7 +877,8 @@ export async function getServerSideProps(context) {
         salesByCategoryData: null,
         customerOutstandings:null,
         error: error.message,
-        
+         initialOutstandings: [],
+        initialTotalOutstandings: 0
       },
     };
   }

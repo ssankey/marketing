@@ -91,10 +91,15 @@ export default function CustomerBalancePage() {
         "Inv No.": item["Invoice No."],
         "AR Invoice Date": formatDate(item["AR Invoice Date"]), // Format to date only
         "SO#": item["SO#"],
-        "SO Date": formatDate(item["SO Date"]), // Format to date only
+        "SO Date": formatDate(item["SO Date"]),
+        "Customer/Vendor Name": item["Customer Name"],
+        "Contact Person": item["Contact Person"],
+        // Format to date only
         "Customer Ref no": item["BP Reference No."],
         "Invoice Total": item["Invoice Total"],
         "Balance Due": item["Balance Due"],
+        Country: item["Country"],
+        State: item["State"],
         "Airline Name": item["AirlineName"] || "N/A",
         "Tracking no": item["TrackingNo"] || "N/A",
         "Delivery Date": formatDate(item["Delivery Date"]), // Format to date only
