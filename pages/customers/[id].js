@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Spinner, Table , Dropdown } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import  PurchasesAmountChart  from "../../components/CustomerCharts/purchasevsamount";
-// import CustomerOrdersTable from  "../../components/CustomerCharts/outstandingtable";
+ 
 import CustomerOutstandingTable from "../../components/CustomerCharts/outstandingtable";
 import SalesTable from "../../components/CustomerCharts/salestable";
 import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
@@ -40,6 +40,12 @@ export default function CustomerDetails({
   initialOutstandings,
   initialTotalOutstandings
 }) {
+
+
+  const [selectedRows, setSelectedRows] = useState([]);
+const [isAllSelected, setIsAllSelected] = useState(false);
+
+
   const ITEMS_PER_PAGE = 5; // Set this at the top of your component
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -57,6 +63,46 @@ export default function CustomerDetails({
     fromDate: "",
     toDate: "",
   });
+
+//   const handleSelectAll = async () => {
+//   if (!isAllSelected) {
+//     const { customerOutstandings } = await fetchAllOutstandings();
+//     const allIds = customerOutstandings.map((row) => row["Invoice No."]);
+//     setSelectedRows(allIds);
+//   } else {
+//     setSelectedRows([]);
+//   }
+//   setIsAllSelected(!isAllSelected);
+// };
+// const handleSelectAll = () => {
+//   if (!isAllSelected) {
+//     const visibleInvoiceNos = outstandings.map((item) => item["Invoice No."]);
+//     setSelectedRows(visibleInvoiceNos);
+//   } else {
+//     setSelectedRows([]);
+//   }
+//   setIsAllSelected(!isAllSelected);
+// };
+const handleSelectAll = async () => {
+  if (!isAllSelected) {
+    try {
+      const queryParams = new URLSearchParams({ getAll: "true" });
+      const res = await fetch(`/api/customers/${customer.CustomerCode}/outstanding?${queryParams.toString()}`);
+      const { customerOutstandings } = await res.json();
+
+      const allInvoiceNos = customerOutstandings.map((item) => item["Invoice No."]);
+      setSelectedRows(allInvoiceNos);
+      setIsAllSelected(true);
+    } catch (error) {
+      console.error("Failed to fetch all rows for select all", error);
+    }
+  } else {
+    setSelectedRows([]);
+    setIsAllSelected(false);
+  }
+};
+
+
 
   const fetchOutstandings = async (page = 1, filters = {}) => {
     setIsLoadingOutstandings(true);
@@ -89,25 +135,7 @@ export default function CustomerDetails({
     fetchOutstandings(newPage, filters);
   };
 
-  // const fetchAllOutstandings = async () => {
-  //   try {
-  //     const queryParams = new URLSearchParams({
-  //       getAll: "true",
-  //       fromDate: filters.fromDate || "",
-  //       toDate: filters.toDate || "",
-  //     });
-
-  //     const res = await fetch(
-  //       `/api/customers/${
-  //         customer.CustomerCode
-  //       }/outstanding?${queryParams.toString()}`
-  //     );
-  //     return await res.json();
-  //   } catch (error) {
-  //     console.error("Error fetching all outstandings:", error);
-  //     return { customerOutstandings: [] };
-  //   }
-  // };
+  
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
@@ -163,6 +191,97 @@ export default function CustomerDetails({
       setIsLoadingOutstandings(false);
     }
   };
+    const handleSendMail = async () => {
+  if (selectedRows.length === 0) {
+    alert("Please click on the checkbox first");
+    return;
+  }
+
+  // Fetch all outstandings
+  const allDataRes = await fetch(
+    `/api/customers/${customer.CustomerCode}/outstanding?getAll=true`
+  );
+  const { customerOutstandings } = await allDataRes.json();
+
+  // Filter to selected invoice numbers
+  const selectedData = customerOutstandings.filter(item =>
+    selectedRows.includes(item["Invoice No."])
+  );
+
+  // Get customer email
+  const emailRes = await fetch(`/api/customers/${customer.CustomerCode}/email`);
+  const { email } = await emailRes.json();
+
+  if (!email) {
+    alert("Mail ID of customer is not present");
+    return;
+  }
+
+  // Send mail
+  const mailRes = await fetch('/api/sendOutstandingMail', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      toEmail: email,
+      outstandingRows: selectedData
+    }),
+  });
+
+  if (mailRes.ok) {
+    alert("Mail sent successfully!");
+  } else {
+    alert("Failed to send mail. Please try again.");
+  }
+};
+
+
+
+const handleMailSend = async () => {
+  if (selectedRows.length === 0) {
+    alert("Please select at least one invoice to mail");
+    return;
+  }
+
+  try {
+    // Fetch customer email
+    const emailRes = await fetch(`/api/customers/${customer.CustomerCode}/email`);
+    const { email } = await emailRes.json();
+
+    if (!email) {
+      alert("Customer email address not found");
+      return;
+    }
+
+    // Fetch all data for selected invoice numbers
+    const { customerOutstandings } = await fetchAllOutstandings();
+    const selectedData = customerOutstandings.filter(item => 
+      selectedRows.includes(item["Invoice No."])
+    );
+
+    // Send mail
+    const response = await fetch("/api/sendOutstandingMail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: email,
+        customerName: customer.CustomerName,
+        data: selectedData,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      alert("Email sent successfully");
+    } else {
+      alert(`Failed to send email: ${result.error || 'Unknown error'}`);
+    }
+  } catch (error) {
+    console.error("Error sending email:", error);
+    alert("Error sending email. Please check console for details.");
+  }
+};
+
 
   // Improved function to fetch all outstandings
   const fetchAllOutstandings = async () => {
@@ -190,44 +309,26 @@ export default function CustomerDetails({
     }
   };
 
-  // const handleExcelDownload = async () => {
-  //   try {
-  //     const { customerOutstandings } = await fetchAllOutstandings();
-
-  //     const filteredData = customerOutstandings?.filter((item) => {
-  //       if (outstandingFilter === "Payment Pending")
-  //         return item["Balance Due"] > 0;
-  //       if (outstandingFilter === "Payment Done")
-  //         return item["Balance Due"] === 0;
-  //       return true;
-  //     });
-
-  //     const formattedData = filteredData.map((item) => ({
-  //       "SO#": item["SO#"],
-  //       "Customer Code": item["Customer Code"],
-  //       "Customer Name": item["Customer Name"],
-  //       "SO Date": formatDate(item["SO Date"]),
-  //       "Delivery#": item["Delivery#"],
-  //       "Delivery Date": formatDate(item["Delivery Date"]),
-  //       "Invoice No.": item["Invoice No."],
-  //       "Invoice Date": formatDate(item["AR Invoice Date"]),
-  //       "Invoice Total": formatCurrency(item["Invoice Total"]),
-  //       "Balance Due": formatCurrency(item["Balance Due"]),
-  //       "BP Reference": item["BP Reference No."],
-  //       "Overdue Days": item["Overdue Days"],
-  //       "Payment Terms": item["Payment Terms"],
-  //     }));
-
-  //     downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
-  //   } catch (error) {
-  //     console.error("Excel export failed:", error);
-  //     alert("Failed to export Excel. Please try again.");
-  //   }
-  // };
-
+ 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
+//   useEffect(() => {
+//   const visibleInvoiceNos = outstandings.map((item) => item["Invoice No."]);
+//   const allSelected = visibleInvoiceNos.every((invNo) =>
+//     selectedRows.includes(invNo)
+//   );
+//   setIsAllSelected(allSelected);
+// }, [selectedRows, outstandings]);
+useEffect(() => {
+  const visibleInvoiceNos = outstandings.map((item) => item["Invoice No."]);
+  const allVisibleSelected = visibleInvoiceNos.every((invNo) =>
+    selectedRows.includes(invNo)
+  );
+  setIsAllSelected(allVisibleSelected);
+}, [selectedRows, outstandings]);
+
+
 
   // Handle client-side auth redirect
   useEffect(() => {
@@ -253,50 +354,7 @@ export default function CustomerDetails({
     fetchOutstandings(1, filters); // Reset to page 1 when filter changes
   };
 
-  // const handleDownloadExcel = async () => {
-  //   try {
-  //     const res = await fetch(
-  //       `/api/customers/${customer.CustomerCode}/outstanding?getAll=true`
-  //     );
-  //     const allData = await res.json();
-
-  //     const filteredData = allData?.filter((item) => {
-  //       if (outstandingFilter === "Payment Pending")
-  //         return item["Balance Due"] > 0;
-  //       if (outstandingFilter === "Payment Done")
-  //         return item["Balance Due"] === 0;
-  //       return true;
-  //     });
-
-  //     const formattedData = filteredData.map((item) => ({
-  //       "SO#": item["SO#"],
-  //       "Customer Code": item["Customer Code"],
-  //       "Customer Name": item["Customer Name"],
-  //       "SO Date": formatDate(item["SO Date"]),
-  //       // "Tracking No": item["Tracking No"],
-  //       "Delivery#": item["Delivery#"],
-  //       "Delivery Date": formatDate(item["Delivery Date"]),
-  //       "Invoice No.": item["Invoice No."],
-  //       // "SO to Delivery Days": item["SO to Delivery Days"],
-  //       // "Invoice No.": item["Invoice No."],
-  //       // "AR Invoice Date": formatDate(item["AR Invoice Date"]),
-  //       "Invoice Date": formatDate(item["AR Invoice Date"]),
-  //       "Invoice Total": item["Invoice Total"],
-  //       "Balance Due": item["Balance Due"],
-  //       "BP Reference": item["Balance Due"],
-  //       // "AirLine Name": item["AirLine Name"],
-  //       "Overdue Days": item["Overdue Days"],
-  //       "Payment Group": item["PymntGroup"],
-  //     }));
-
-  //     // Reuse your util
-  //     const { default: downloadExcel } = await import("utils/exporttoexcel");
-  //     downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
-  //   } catch (error) {
-  //     console.error("Excel export failed:", error);
-  //     alert("Failed to export Excel. Please try again.");
-  //   }
-  // };
+  
 
   // Handle unauthorized access
   if (!isAuthenticated) {
@@ -572,85 +630,16 @@ export default function CustomerDetails({
         </Col>
       </Row>
 
-      {/* <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Customer Outstanding</h3>
-
-            <div className="d-flex align-items-center ms-auto gap-2">
-              <Dropdown onSelect={handleFilterSelect}>
-                <Dropdown.Toggle
-                  variant="outline-secondary"
-                  id="outstanding-filter-dropdown"
-                >
-                  {outstandingFilter}
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item eventKey="Payment Pending">
-                    Payment Pending
-                  </Dropdown.Item>
-                  <Dropdown.Item eventKey="Payment Done">
-                    Payment Done
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-
-              <button className="btn btn-success" onClick={handleExcelDownload}>
-                Excel
-              </button>
-            </div>
-          </div>
-        </Card.Header>
-
-        <Card.Body
-          style={{
-            // maxHeight: "500px", // fixed height
-            overflowY: "auto", // vertical scroll
-            overflowX: "auto", // horizontal scroll
-          }}
-        >
-          <CustomerOutstandingTable
-            customerOutstandings={outstandings}
-            totalItems={totalOutstandings}
-            isLoading={isLoadingOutstandings}
-            customerCode={customer?.CustomerCode}
-            onFilterChange={handleFilterChange}
-            onExcelDownload={handleExcelDownload}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            itemsPerPage={ITEMS_PER_PAGE}
-          />
-        </Card.Body>
-      </Card> */}
+    
       <Card className="mb-4">
         <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
             <h3 className="mb-0">Customer Outstanding</h3>
 
             <div className="d-flex align-items-center ms-auto gap-2">
-              {/* <Dropdown
-                onSelect={(eventKey) => {
-                  setOutstandingFilter(eventKey);
-                  // Reset to page 1 when filter changes
-                  setCurrentPage(1);
-                  // No need to refetch data when changing filter type since we'll filter client-side
-                }}
-              >
-                <Dropdown.Toggle
-                  variant="outline-secondary"
-                  id="outstanding-filter-dropdown"
-                >
-                  {outstandingFilter}
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item eventKey="Payment Pending">
-                    Payment Pending
-                  </Dropdown.Item>
-                  <Dropdown.Item eventKey="Payment Done">
-                    Payment Done
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown> */}
+            <button className="btn btn-primary" onClick={handleMailSend}>
+    Mail
+  </button>
 
               <button className="btn btn-success" onClick={handleExcelDownload}>
                 Excel
@@ -677,6 +666,11 @@ export default function CustomerDetails({
             itemsPerPage={ITEMS_PER_PAGE}
             filterType={outstandingFilter} // Pass current filter type
             onFilterTypeChange={setOutstandingFilter} // Pass filter change handler
+            selectedRows={selectedRows}
+  setSelectedRows={setSelectedRows}
+  isAllSelected={isAllSelected}
+  onSelectAll={handleSelectAll}
+
           />
         </Card.Body>
       </Card>
