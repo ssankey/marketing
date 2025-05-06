@@ -131,6 +131,7 @@ export default async function handler(req, res) {
         'so to Delivery Days': 'DATEDIFF(DAY, T0.[DocDate], T3.[DocDate])',
         'Overdue Days': 'DATEDIFF(DAY, T13.[DocDueDate], GETDATE())',
         'Payment Group': 'T15.[PymntGroup]',
+        'Sales Person' : 'T50.[SlpName]',
       };
 
       if (sortField && validSortFields[sortField]) {
@@ -162,7 +163,9 @@ export default async function handler(req, res) {
           T3.[DocDate] AS 'Delivery Date',
           DATEDIFF(DAY, T0.[DocDate], T3.[DocDate]) AS 'SOToDeliveryDays',
           DATEDIFF(DAY, T13.[DocDueDate], GETDATE()) AS 'Overdue Days',
-          T15.[PymntGroup] AS 'Payment Terms'
+          T15.[PymntGroup] AS 'Payment Terms',
+          T50.[SlpName] AS 'Sales Person',
+          T13.[TaxDate] AS 'Dispatch Date'
         FROM ORDR T0  
         INNER JOIN RDR1 T1 ON T0.[DocEntry] = T1.[DocEntry] 
         INNER JOIN DLN1 T2 ON T1.[DocEntry] = T2.[BaseEntry] AND T1.[ItemCode] = T2.[ItemCode] AND T2.[BaseLine] = T1.[LineNum]

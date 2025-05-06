@@ -50,6 +50,7 @@ export default async function handler(req, res) {
       sortDir = "desc",
       fromDate,
       toDate,
+      getAll = "false",
     } = req.query;
 
     const itemsPerPage = 20;
@@ -66,7 +67,7 @@ export default async function handler(req, res) {
       "-"
     )}|p:${page}|s:${search}|st:${status}|sf:${sortField}|sd:${sortDir}|fd:${
       validFromDate || ""
-    }|td:${validToDate || ""}`;
+    }|td:${validToDate || ""}|ga:${getAll}`;
 
     // 5) Check if a cached response exists
     const cachedResponse = await getCache(cacheKey);
@@ -88,6 +89,7 @@ export default async function handler(req, res) {
       isAdmin,
       cardCodes, // pass this down
       contactCodes,
+      getAll: getAll === "true",
     });
 
     // 7) Build the API response
