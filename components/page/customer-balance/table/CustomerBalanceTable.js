@@ -58,13 +58,17 @@ const CustomerBalanceTable = ({
       label: "Customer/Vendor Name",
     },
     {
-      field: "Contact Person",
-      label: "Contact Person",
-    },
-    {
       field: "BP Reference No.",
       label: "Customer Ref no",
     },
+    {
+      field: "Contact Person",
+      label: "Contact Person",
+    },
+    // {
+    //   field: "BP Reference No.",
+    //   label: "Customer Ref no",
+    // },
     {
       field: "Invoice Total",
       label: "Invoice Total",
@@ -94,11 +98,12 @@ const CustomerBalanceTable = ({
       label: "Tracking no",
       render: (value) => value || "N/A",
     },
-    {
-      field: "Delivery Date",
-      label: "Delivery Date",
-      render: (value) => formatDate(value),
-    },
+    // {
+    //   field: "Delivery Date",
+    //   label: "Delivery Date",
+    //   render: (value) => formatDate(value),
+    // },
+
     {
       field: "SOToDeliveryDays", // New field; ensure it exists in data
       label: "so to Delivery Days",
@@ -109,8 +114,17 @@ const CustomerBalanceTable = ({
       label: "Overdue Days",
     },
     {
+      field: "Dispatch Date",
+      label: "Dispatch Date",
+      render: (value) => formatDate(value),
+    },
+    {
       field: "Payment Terms",
       label: "Payment Group",
+    },
+    {
+      field: "Sales Person",
+      label: "Sales Person",
     },
   ];
 
