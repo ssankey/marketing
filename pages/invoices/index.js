@@ -391,27 +391,7 @@ export default function InvoicesPage() {
         const excelData = allInvoices.map((invoice) => {
           const row = {};
 
-          // Map each column from the table to the Excel data
-          //  columns.forEach((column) => {
-          //    const value = invoice[column.field];
-
-          //    // Apply formatting similar to the table renderers
-          //    if (
-          //      column.field.includes("Date") ||
-          //      column.field === "Invoice Posting Dt."
-          //    ) {
-          //      row[column.label] = value ? formatDate(value) : "N/A";
-          //    } else if (column.field === "Document Status") {
-          //      row[column.label] = value || "N/A";
-          //    } else if (
-          //      column.field === "Total Sales Price" ||
-          //      column.field === "Unit Sales Price"
-          //    ) {
-          //      row[column.label] = value ? formatCurrency(value) : "N/A";
-          //    } else {
-          //      row[column.label] = value || "N/A";
-          //    }
-          //  });
+          
           columns.forEach((column) => {
             const value = invoice[column.field];
             row[column.label] = value || "N/A";

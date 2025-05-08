@@ -12,15 +12,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    // const result = await queryDatabase(
-    //   `SELECT TOP 1 E_Mail as email FROM OCRD WHERE CardCode = @cardCode`,
-    //   [{ name: "cardCode", type: sql.NVarChar, value: id }]
-    // );
+    const result = await queryDatabase(
+      `SELECT TOP 1 E_Mail as email FROM OCRD WHERE CardCode = @cardCode`,
+      [{ name: "cardCode", type: sql.NVarChar, value: id }]
+    );
     
-    // if (!result || result.length === 0) {
-    //   return res.status(404).json({ error: 'Customer not found' });
-    // }
-    const result = [{ email: "chandraprakashyadav1110@gmail.com" }];
+    if (!result || result.length === 0) {
+      return res.status(404).json({ error: 'Customer not found' });
+    }
+   
 
     return res.status(200).json({ email: result[0].email });
   } catch (error) {
