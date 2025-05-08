@@ -85,32 +85,7 @@ export default function CustomerDetails({
     }
   };
 
-  // const fetchOutstandings = async (page = 1, filters = {}) => {
-  //   setIsLoadingOutstandings(true);
-  //   try {
-  //     const queryParams = new URLSearchParams({
-  //       page,
-  //       itemsPerPage: ITEMS_PER_PAGE, // Add this
-  //       fromDate: filters.fromDate || "",
-  //       toDate: filters.toDate || "",
-  //     });
 
-  //     const res = await fetch(
-  //       `/api/customers/${
-  //         customer.CustomerCode
-  //       }/outstanding?${queryParams.toString()}`
-  //     );
-  //     const data = await res.json();
-
-  //     setOutstandings(data.customerOutstandings);
-  //     setTotalOutstandings(data.totalItems);
-  //   } catch (error) {
-  //     console.error("Error fetching outstandings:", error);
-  //   } finally {
-  //     setIsLoadingOutstandings(false);
-  //   }
-  // };
-  // Add this handler
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
     fetchOutstandings(newPage, filters);
@@ -120,60 +95,11 @@ export default function CustomerDetails({
     setFilters(newFilters);
     fetchOutstandings(1, newFilters);
   };
-  // Updated Excel Export Function
-  // const handleExcelDownload = async (e) => {
-  //   e?.preventDefault?.();
-  //   try {
-  //     // Show a loading indicator or message (optional)
-  //     setIsLoadingOutstandings(true);
-
-  //     // Fetch ALL records without pagination
-  //     const { customerOutstandings } = await fetchAllOutstandings();
-
-  //     // Apply the same filter that's used in the UI
-  //     const filteredData = customerOutstandings?.filter((item) => {
-  //       if (outstandingFilter === "Payment Pending")
-  //         return item["Balance Due"] > 0;
-  //       if (outstandingFilter === "Payment Done")
-  //         return item["Balance Due"] <= 0;
-  //       return true;
-  //     });
-
-  //     // Format data for Excel
-  //     const formattedData = filteredData.map((item) => ({
-  //       "SO#": item["SO#"],
-  //       "Customer Code": item["Customer Code"],
-  //       "Customer Name": item["Customer Name"],
-  //       "Contact Person": item["Contact Person"],
-  //       "SO Date": formatDate(item["SO Date"]),
-  //       "Delivery#": item["Delivery#"],
-  //       "Delivery Date": formatDate(item["Delivery Date"]),
-  //       "Invoice No.": item["Invoice No."],
-  //       "Invoice Date": formatDate(item["AR Invoice Date"]),
-  //       "Invoice Total": formatCurrency(item["Invoice Total"]),
-  //       "Balance Due": formatCurrency(item["Balance Due"]),
-  //       Country: item["Country"],
-  //       State: item["State"],
-  //       "BP Reference": item["BP Reference No."],
-  //       "Overdue Days": item["Overdue Days"],
-  //       "Payment Terms": item["Payment Terms"],
-  //     }));
-
-  //     // Download the Excel file with filtered data
-  //     downloadExcel(formattedData, `Customer_Outstanding_${outstandingFilter}`);
-
-  //     // Hide loading indicator
-  //     setIsLoadingOutstandings(false);
-  //   } catch (error) {
-  //     console.error("Excel export failed:", error);
-  //     alert("Failed to export Excel. Please try again.");
-  //     setIsLoadingOutstandings(false);
-  //   }
-  // };
+ 
   const handleExcelDownload = async (e) => {
     e?.preventDefault?.();
     try {
-       setIsExcelLoading(true);
+      setIsExcelLoading(true);
 
       // Fetch ALL records without pagination with the current filter
       const queryParams = new URLSearchParams({
@@ -219,51 +145,11 @@ export default function CustomerDetails({
       setIsExcelLoading(false);
     }
   };
-  const handleSendMail = async () => {
-    if (selectedRows.length === 0) {
-      alert("Please click on the checkbox first");
-      return;
-    }
+ 
 
-    // Fetch all outstandings
-    const allDataRes = await fetch(
-      `/api/customers/${customer.CustomerCode}/outstanding?getAll=true`
-    );
-    const { customerOutstandings } = await allDataRes.json();
 
-    // Filter to selected invoice numbers
-    const selectedData = customerOutstandings.filter((item) =>
-      selectedRows.includes(item["Invoice No."])
-    );
 
-    // Get customer email
-    const emailRes = await fetch(
-      `/api/customers/${customer.CustomerCode}/email`
-    );
-    const { email } = await emailRes.json();
-
-    if (!email) {
-      alert("Mail ID of customer is not present");
-      return;
-    }
-
-    // Send mail
-    const mailRes = await fetch("/api/sendOutstandingMail", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        toEmail: email,
-        outstandingRows: selectedData,
-      }),
-    });
-
-    if (mailRes.ok) {
-      alert("Mail sent successfully!");
-    } else {
-      alert("Failed to send mail. Please try again.");
-    }
-  };
-
+  // Updated handleMailSend function
   const handleMailSend = async () => {
     if (selectedRows.length === 0) {
       alert("Please select at least one invoice to mail");
@@ -288,30 +174,153 @@ export default function CustomerDetails({
         selectedRows.includes(item["Invoice No."])
       );
 
-      // Send mail
-      const response = await fetch("/api/sendOutstandingMail", {
+      // Format currency
+      function formatCurrency(amount) {
+        if (amount === undefined || amount === null) return "N/A";
+        return new Intl.NumberFormat("en-IN", {
+          style: "currency",
+          currency: "INR",
+          maximumFractionDigits: 0, // no decimals
+        }).format(Math.round(amount));
+      }
+
+      // Sort selectedData in decreasing order of Overdue Days
+      selectedData.sort((a, b) => {
+        const aOverdue = parseInt(a["Overdue Days"]);
+        const bOverdue = parseInt(b["Overdue Days"]);
+        return (
+          (isNaN(bOverdue) ? -Infinity : bOverdue) -
+          (isNaN(aOverdue) ? -Infinity : aOverdue)
+        );
+      });
+
+      const tableRows = selectedData
+        .map((row) => {
+          const overdueDays = parseInt(row["Overdue Days"]);
+          return `
+      <tr>
+        <td style="text-align: center;">${row["Customer Name"] || "N/A"}</td>
+        <td style="text-align: center;">${formatDate(row["Delivery Date"])}</td>
+        <td style="text-align: center;">${row["Invoice No."] || "N/A"}</td>
+        <td style="text-align: center;">${formatDate(row["AR Invoice Date"])}</td>
+        <td style="text-align: center;">${formatCurrency(row["Invoice Total"])}</td>
+        <td style="text-align: center;">${formatCurrency(row["Balance Due"])}</td>
+        <td style="text-align: center;">${overdueDays >= 0 ? overdueDays : ""}</td>
+        <td style="text-align: center;">${row["Payment Terms"] || "N/A"}</td>
+      </tr>
+    `;
+        })
+        .join("");
+
+
+
+
+      const totalInvoiceAmount = selectedData.reduce(
+        (sum, row) => sum + Math.round(row["Invoice Total"] || 0),
+        0
+      );
+      // const totalBalanceDue = selectedData.reduce(
+      //   (sum, row) => sum + Math.round(row["Balance Due"] || 0),
+      //   0
+      // );
+
+      const totalBalanceDue = selectedData.reduce((sum, row) => {
+        const overdue = parseInt(row["Overdue Days"]);
+        if (!isNaN(overdue) && overdue > 0) {
+          return sum + Math.round(row["Balance Due"] || 0);
+        }
+        return sum;
+      }, 0);
+
+
+      const summaryLine = `
+      <p>
+        The <strong>total outstanding amount</strong> is <strong>₹${totalInvoiceAmount.toLocaleString("en-IN")}</strong>,
+        out of which <strong>₹${totalBalanceDue.toLocaleString("en-IN")}</strong> is <strong>overdue for payment.</strong>
+      </p>
+    `;
+
+      const body = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <p>Dear Sir / Madam,</p>
+        <p>Greetings of the day!</p>
+        <p>
+          Kindly find below the list of outstanding invoices currently showing as unpaid in our accounts.<br/>
+          We request you to please verify whether all these invoices have been recorded in your books, 
+          and arrange to make the payment for the due bills as per the agreed credit terms.
+          Kindly also share the payment details once processed.
+        </p>
+        ${summaryLine}
+        <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%;">
+          <thead style="background-color: #007bff; color: white;">
+            <tr>
+              <th>Customer/Vendor Name</th>
+              <th>Delivery Date</th>
+              <th>Invoice No</th>
+              <th>AR Invoice Date</th>
+              <th>Invoice Total</th>
+              <th>Balance Due</th>
+              <th>Overdue Days</th>
+              <th>Payment Terms Code</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        <p>Looking forward to your confirmation.</p>
+        <p>Regards,<br/>
+           Shafique Khan<br/>
+
+           Manager - Accounts<br/><br/>
+           <img
+      src="https://tinypic.host/images/2025/05/05/Density_LOGO.jpg"
+      alt="Logo"
+      style="height: 70px; width: auto; max-width: 200px; display: block; margin-bottom: 10px;"
+    /><br/>
+           <strong>Website:www.densitypharmachem.com</strong><br/><br/>
+           DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
+           Sy No 615/A & 624/2/1, Pudur Village<br/>
+           Medchal-Malkajgiri District,<br/>
+           Hyderabad, Telangana, India-501401<br/>
+           Mobile : +91-9029298654<br/><br/>
+           <strong>Bank Details</strong><br/>
+           Name: Density Pharmachem Private Limited<br/>
+           Bank Name: HDFC Bank Ltd<br/>
+           Branch: Hyderguda<br/>
+           Account Number: 99999989991174<br/>
+           IFSC Code: HDFC0001996
+        </p>
+      </div>
+    `;
+
+      // Send to new mail endpoint
+      const mailRes = await fetch("/api/email/base_mail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to: email,
-          customerName: customer.CustomerName,
-          data: selectedData,
+          from: "prakash@densitypharmachem.com",
+          // Set to real email in production:
+          // to: email,
+          // For testing:
+          to: "chandraprakashyadav1110@gmail.com",
+          subject: `Request for Confirmation and Payment of Outstanding Invoices`,
+          body,
         }),
       });
 
-      const result = await response.json();
+      const result = await mailRes.json();
 
-      if (response.ok) {
+      if (mailRes.ok) {
         alert("Email sent successfully");
       } else {
-        alert(`Failed to send email: ${result.error || "Unknown error"}`);
+        alert(`Failed to send email: ${result.message || "Unknown error"}`);
       }
     } catch (error) {
       console.error("Error sending email:", error);
-      alert("Error sending email. Please check console for details.");
+      alert("Error sending email. Please check console.");
     }
   };
-
   // Improved function to fetch all outstandings
   const fetchAllOutstandings = async () => {
     try {
@@ -341,13 +350,7 @@ export default function CustomerDetails({
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
-  //   useEffect(() => {
-  //   const visibleInvoiceNos = outstandings.map((item) => item["Invoice No."]);
-  //   const allSelected = visibleInvoiceNos.every((invNo) =>
-  //     selectedRows.includes(invNo)
-  //   );
-  //   setIsAllSelected(allSelected);
-  // }, [selectedRows, outstandings]);
+ 
   useEffect(() => {
     const visibleInvoiceNos = outstandings.map((item) => item["Invoice No."]);
     const allVisibleSelected = visibleInvoiceNos.every((invNo) =>
@@ -375,13 +378,14 @@ export default function CustomerDetails({
     );
   }
 
-  // const handleFilterSelect = (eventKey) => {
-  //   setOutstandingFilter(eventKey);
-  //   fetchOutstandings(1, filters); // Reset to page 1 when filter changes
-  // };
+ 
 
   // Modify the fetchOutstandings function to pass filterType
-  const fetchOutstandings = async (page = 1, filters = {}, filterType = outstandingFilter) => {
+  const fetchOutstandings = async (
+    page = 1,
+    filters = {},
+    filterType = outstandingFilter
+  ) => {
     setIsLoadingOutstandings(true);
     try {
       const queryParams = new URLSearchParams({
@@ -420,7 +424,6 @@ export default function CustomerDetails({
     // Pass eventKey directly (not stale outstandingFilter)
     fetchOutstandings(1, filters, eventKey);
   };
-
 
   // Handle unauthorized access
   if (!isAuthenticated) {
