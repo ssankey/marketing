@@ -151,6 +151,12 @@ export default function CustomerDetails({
 
   // Updated handleMailSend function
   const handleMailSend = async () => {
+
+    if (outstandingFilter === "Payment Done") {
+      alert("Cannot send mail for 'Payment Done' records.");
+      return;
+    }
+    
     if (selectedRows.length === 0) {
       alert("Please select at least one invoice to mail");
       return;
