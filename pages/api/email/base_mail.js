@@ -1,4 +1,4 @@
-
+//pages/api/email/base_mail
 import nodemailer from "nodemailer";
 
 export default async function handler(req, res) {

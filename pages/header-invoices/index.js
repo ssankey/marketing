@@ -202,62 +202,103 @@ export default function InvoicesPage() {
     return response.json();
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
 
+  
+
   const handleExcelDownload = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
 
-      // Build query params with getAll=true
-      const queryParams = {
-        status: router.query.status || "all",
-        search: router.query.search || "",
-        sortField: router.query.sortField || "DocDate",
-        sortDir: router.query.sortDir || "desc",
-        fromDate: router.query.fromDate || "",
-        toDate: router.query.toDate || "",
-        getAll: "true",
-      };
+    const queryParams = {
+      status: router.query.status || "all",
+      search: router.query.search || "",
+      sortField: router.query.sortField || "DocDate",
+      sortDir: router.query.sortDir || "desc",
+      fromDate: router.query.fromDate || "",
+      toDate: router.query.toDate || "",
+      getAll: "true",
+    };
 
-      const url = `/api/invoices/header-invoice?${new URLSearchParams(
-        queryParams
-      )}`;
+    const url = `/api/invoices/header-invoice?${new URLSearchParams(queryParams)}`;
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`);
+    }
 
-      const { invoices: allInvoices } = await response.json();
+    const { invoices: allInvoices } = await response.json();
 
-      if (allInvoices && allInvoices.length > 0) {
-        // Prepare data for Excel export matching the table columns
-        const excelData = allInvoices.map((invoice) => {
-          const row = {};
+    if (allInvoices && allInvoices.length > 0) {
+      // Define sets for special formatting
+      const dateFields = new Set([
+        "DocDate",
+        "DocDueDate",
+        "U_DispatchDate",
+        "TaxDate",
+      ]);
+      const currencyFields = new Set(["DocTotal", "VatSum"]);
 
-          columns.forEach((column) => {
-            const value = invoice[column.field];
-            row[column.label] = value || "N/A";
-          });
+      // Create worksheet data with proper formatting
+      const excelData = allInvoices.map((invoice) => {
+        const row = {};
 
-          return row;
+        columns.forEach((column) => {
+          const field = column.field;
+          const label = column.label;
+          const value = invoice[field];
+
+          if (dateFields.has(field)) {
+            // For dates, we want to keep the raw date value but format it in Excel
+            row[label] = value ? new Date(value) : null;
+          } else if (currencyFields.has(field)) {
+            // For currency, we want to keep the raw number value
+            row[label] = value ? Number(value) : 0;
+          } else {
+            row[label] = value != null ? value : "N/A";
+          }
         });
 
-        downloadExcel(excelData, `Invoices_${queryParams.status}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to export to Excel:", error);
-      alert("Failed to export data. Please try again.");
-    }
-  }, [router.query]);
+        return row;
+      });
 
+      // Define column styles for Excel
+      const columnStyles = columns.map(column => {
+        const style = {};
+        
+        if (dateFields.has(column.field)) {
+          style.cellFormat = 'dd/mm/yyyy'; // Excel date format
+        } else if (currencyFields.has(column.field)) {
+          style.cellFormat = '#,##0.00;[Red]-#,##0.00'; // Excel currency format
+        }
+        
+        return style;
+      });
+
+      // Download with formatting
+      downloadExcel(
+        excelData, 
+        `Invoices_${queryParams.status}`,
+        columnStyles
+      );
+    } else {
+      alert("No data available to export.");
+    }
+  } catch (error) {
+    console.error("Failed to export to Excel:", error);
+    alert("Failed to export data. Please try again.");
+  }
+}, [router.query]);
+
+
+
+
+ 
   // Handle data fetching
   useEffect(() => {
     let isMounted = true;
@@ -361,6 +402,8 @@ export default function InvoicesPage() {
 
 InvoicesPage.seo = {
   title: "Invoices | Density",
+  description: "View and manage all your invoices.",
+  keywords: "invoices, billing, management, density",
   description: "View and manage all your invoices.",
   keywords: "invoices, billing, management, density",
 };

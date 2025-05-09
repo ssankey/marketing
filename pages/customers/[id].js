@@ -43,6 +43,8 @@ export default function CustomerDetails({
   const [selectedRows, setSelectedRows] = useState([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [isExcelLoading, setIsExcelLoading] = useState(false);
+  const [isMailSending, setIsMailSending] = useState(false);
+
 
   const ITEMS_PER_PAGE = 5; // Set this at the top of your component
   const [currentPage, setCurrentPage] = useState(1);
@@ -156,7 +158,7 @@ export default function CustomerDetails({
       alert("Cannot send mail for 'Payment Done' records.");
       return;
     }
-    
+
     if (selectedRows.length === 0) {
       alert("Please select at least one invoice to mail");
       return;
@@ -300,8 +302,10 @@ export default function CustomerDetails({
       </div>
     `;
 
+    const baseUrl = window.location.origin;
+
       // Send to new mail endpoint
-      const mailRes = await fetch("/api/email/base_mail", {
+      const mailRes = await fetch(`${baseUrl}/api/email/base_mail`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -727,8 +731,29 @@ export default function CustomerDetails({
                   </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
-              <button className="btn btn-primary" onClick={handleMailSend}>
+              {/* <button className="btn btn-primary" onClick={handleMailSend}>
                 Mail
+              </button> */}
+              <button
+                className="btn btn-primary"
+                onClick={handleMailSend}
+                disabled={isMailSending}
+              >
+                {isMailSending ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Sending...
+                  </>
+                ) : (
+                  "Mail"
+                )}
               </button>
 
               <button

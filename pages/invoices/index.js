@@ -44,12 +44,13 @@ const columns = [
     label: "Status",
     render: (value) => (
       <span
-        className={`badge ${value === "Closed"
+        className={`badge ${
+          value === "Closed"
             ? "bg-success"
             : value === "Cancelled"
               ? "bg-warning"
               : "bg-danger"
-          }`}
+        }`}
       >
         {value}
       </span>
@@ -283,78 +284,99 @@ export default function InvoicesPage() {
   const [fetchState, setFetchState] = useState({
     isInitialLoad: true,
     isLoading: false,
-    error: null
+    error: null,
   });
 
   // Extract query params from router
-  const { page = 1, search = "", status = "all", sortField = "DocDate", sortDir = "desc", fromDate, toDate } = router.query;
+  const {
+    page = 1,
+    search = "",
+    status = "all",
+    sortField = "DocDate",
+    sortDir = "desc",
+    fromDate,
+    toDate,
+  } = router.query;
 
   // Memoize fetchInvoices to prevent unnecessary recreations
-  const fetchInvoices = useCallback(async (getAll = false) => {
-    const token = localStorage.getItem("token");
-    if (!token) throw new Error("No token found");
+  const fetchInvoices = useCallback(
+    async (getAll = false) => {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
 
-    const queryParams = {
-      page,
-      search,
-      status,
-      sortField,
-      sortDir,
-      fromDate,
-      toDate,
-      getAll: getAll.toString()
-    };
+      const queryParams = {
+        page,
+        search,
+        status,
+        sortField,
+        sortDir,
+        fromDate,
+        toDate,
+        getAll: getAll.toString(),
+      };
 
-    const queryStr = new URLSearchParams(queryParams).toString();
-    const cacheKey = getClientCacheKey(queryParams);
+      const queryStr = new URLSearchParams(queryParams).toString();
+      const cacheKey = getClientCacheKey(queryParams);
 
-    if (getAll) {
-      const res = await fetch(`/api/invoices?${new URLSearchParams(queryParams)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      if (getAll) {
+        const res = await fetch(
+          `/api/invoices?${new URLSearchParams(queryParams)}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
+
+        const { invoices: allInvoices } = await res.json();
+        return allInvoices;
+      }
+
+      // Check client cache first
+      // const cacheKey = getClientCacheKey(queryParams);
+      // const cached = readFromClientCache(cacheKey);
+      // if (cached) return cached;
+      if (!getAll) {
+        const cacheKey = getClientCacheKey(queryParams);
+
+        const cached = readFromClientCache(cacheKey);
+
+        // ✅ Now cached is declared before using it
+        const maxPages = Math.ceil((cached?.totalItems || 0) / 20); // assuming 20 items per page
+        if (page > maxPages) {
+          localStorage.removeItem(cacheKey);
+        }
+
+        if (cached) return cached;
+      }
+
+      // Use API route that handles Redis on the server side
+      const res = await fetch(
+        `/api/invoices?${new URLSearchParams(queryParams)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
 
-      const { invoices: allInvoices } = await res.json();
-      return allInvoices;
-    }
+      const { invoices: newInvoices, totalItems: newTotalItems } =
+        await res.json();
 
-    // Check client cache first
-    // const cacheKey = getClientCacheKey(queryParams);
-    // const cached = readFromClientCache(cacheKey);
-    // if (cached) return cached;
-    if (!getAll) {
-      const cacheKey = getClientCacheKey(queryParams);
+      // Save to client cache
+      saveToClientCache(cacheKey, {
+        invoices: newInvoices,
+        totalItems: newTotalItems,
+      });
 
-      const cached = readFromClientCache(cacheKey);
+      return { invoices: newInvoices, totalItems: newTotalItems };
+    },
+    [page, search, status, sortField, sortDir, fromDate, toDate]
+  );
 
-      // ✅ Now cached is declared before using it
-      const maxPages = Math.ceil((cached?.totalItems || 0) / 20); // assuming 20 items per page
-      if (page > maxPages) {
-        localStorage.removeItem(cacheKey);
-      }
+ 
 
-      if (cached) return cached;
-    }
-
-
-    // Use API route that handles Redis on the server side
-    const res = await fetch(`/api/invoices?${new URLSearchParams(queryParams)}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    if (!res.ok) throw new Error(`Failed to fetch. Status: ${res.status}`);
-
-    const { invoices: newInvoices, totalItems: newTotalItems } = await res.json();
-
-    // Save to client cache
-    saveToClientCache(cacheKey, { invoices: newInvoices, totalItems: newTotalItems });
-
-    return { invoices: newInvoices, totalItems: newTotalItems };
-  }, [page, search, status, sortField, sortDir, fromDate, toDate]);
-
-
-
+  // Updated handleExcelDownload function with proper formatting
   const handleExcelDownload = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
@@ -363,7 +385,6 @@ export default function InvoicesPage() {
         return;
       }
 
-      // Build query params with getAll=true
       const queryParams = {
         status: router.query.status || "all",
         search: router.query.search || "",
@@ -374,29 +395,48 @@ export default function InvoicesPage() {
         getAll: "true",
       };
 
-      const url = `/api/invoices?${new URLSearchParams(queryParams)}`;
+      const response = await fetch(
+        `/api/invoices?${new URLSearchParams(queryParams)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
 
       const { invoices: allInvoices } = await response.json();
 
-      if (allInvoices && allInvoices.length > 0) {
-        // Prepare data for Excel export matching the table columns
+      if (allInvoices?.length > 0) {
         const excelData = allInvoices.map((invoice) => {
           const row = {};
 
-          
           columns.forEach((column) => {
-            const value = invoice[column.field];
-            row[column.label] = value || "N/A";
-          });
+            // Get the column field and value
+            const fieldName = column.field;
+            const value = invoice[fieldName];
 
+            // Special handling for different field types
+            if (fieldName === "Invoice Posting Dt.") {
+              // Format date properly for Excel
+              row[column.label] = formatDate(value);
+            } else if (fieldName === "SO Date") {
+              row[column.label] = formatDate(value);
+            } else if (fieldName === "Dispatch Date") {
+              row[column.label] = formatDate(value);
+            }
+            // Currency fields need explicit handling
+            else if (fieldName === "Unit Sales Price") {
+              row[column.label] = formatCurrency(value);
+            } else if (fieldName === "Total Sales Price") {
+              row[column.label] = formatCurrency(value);
+            } else if (fieldName === "Tax Amount") {
+              row[column.label] = formatCurrency(value);
+            }
+            // Default case
+            else {
+              row[column.label] = value != null ? value : "N/A";
+            }
+          });
 
           return row;
         });
@@ -410,20 +450,20 @@ export default function InvoicesPage() {
       alert("Failed to export data. Please try again.");
     }
   }, [router.query]);
-
   useEffect(() => {
     let isMounted = true;
 
     const loadData = async () => {
       // Only show loading on initial load or if we have no data
-      setFetchState(prev => ({
+      setFetchState((prev) => ({
         ...prev,
         isLoading: prev.isInitialLoad || invoices.length === 0,
-        error: null
+        error: null,
       }));
 
       try {
-        const { invoices: newInvoices, totalItems: newTotalItems } = await fetchInvoices();
+        const { invoices: newInvoices, totalItems: newTotalItems } =
+          await fetchInvoices();
 
         if (isMounted) {
           setInvoices(newInvoices || []);
@@ -431,7 +471,7 @@ export default function InvoicesPage() {
           setFetchState({
             isInitialLoad: false,
             isLoading: false,
-            error: null
+            error: null,
           });
         }
       } catch (error) {
@@ -439,7 +479,7 @@ export default function InvoicesPage() {
           setFetchState({
             isInitialLoad: false,
             isLoading: false,
-            error: error.message
+            error: error.message,
           });
         }
       }
@@ -459,12 +499,12 @@ export default function InvoicesPage() {
     const handleRouteStart = () => {
       // Only show loading if we don't have data
       if (invoices.length === 0) {
-        setFetchState(prev => ({ ...prev, isLoading: true }));
+        setFetchState((prev) => ({ ...prev, isLoading: true }));
       }
     };
 
     const handleRouteEnd = () => {
-      setFetchState(prev => ({ ...prev, isLoading: false }));
+      setFetchState((prev) => ({ ...prev, isLoading: false }));
     };
 
     router.events.on("routeChangeStart", handleRouteStart);
@@ -494,7 +534,9 @@ export default function InvoicesPage() {
   if (fetchState.error) {
     return (
       <div className="text-center py-8">
-        <p className="text-red-600">Error loading invoices: {fetchState.error}</p>
+        <p className="text-red-600">
+          Error loading invoices: {fetchState.error}
+        </p>
       </div>
     );
   }
