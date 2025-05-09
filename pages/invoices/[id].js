@@ -6,7 +6,9 @@ import { Container, Row, Col, Card, Table, Spinner } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 import { queryDatabase } from "lib/db"; // Adjust the path based on your project structure
-import { useAuth } from "../../utils/useAuth";
+// import { useAuth } from "../../utils/useAuth";
+import { useAuth } from "hooks/useAuth";
+
 import sql from "mssql";
 
 export default function InvoiceDetails({ invoices }) {
