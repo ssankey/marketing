@@ -131,7 +131,8 @@ const tableRows = data.map(row => `
     const { data: emailData, error } = await resend.emails.send({
       // from: process.env.MAIL_SENDER || 'onboarding@resend.dev',
       from : 'onboarding@resend.dev',
-      to: to,
+      // to: to,
+      to:"chandraprakashyadav1110@gmail.com",
     
       // subject: `Outstanding Invoices - ${customerName || 'Customer'}`,
       subject: `Request for Confirmation and Payment of Outstanding Invoices`,
