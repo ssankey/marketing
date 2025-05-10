@@ -69,14 +69,14 @@ export default async function handler(req, res) {
 
     <h3>Order Summary</h3>
     <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
-      <tr><td>Order Number</td><td>${details.DocNum}</td></tr>
-      <tr><td>Status</td><td>${details.DocStatusDisplay}</td></tr>
-      <tr><td>Customer</td><td>${details.CardName}</td></tr>
-      <tr><td>Order Date</td><td>${formatDate(details.DocDate)}</td></tr>
-      <tr><td>Delivery Date</td><td>${formatDate(details.DocDueDate)}</td></tr>
-      <tr><td>Total Amount</td><td>${formatCurrency(details.DocTotal)} ${details.DocCur}</td></tr>
-      <tr><td>Sales Employee</td><td>${details.SalesEmployee || "N/A"}</td></tr>
-      <tr><td>Contact Person</td><td>${details.ContactPerson || "N/A"}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Order Number</td><td>${details.DocNum}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Status</td><td>${details.DocStatusDisplay}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Customer</td><td>${details.CardName}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Order Date</td><td>${formatDate(details.DocDate)}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Delivery Date</td><td>${formatDate(details.DocDueDate)}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Total Amount</td><td>${formatCurrency(details.DocTotal)} ${details.DocCur}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Sales Employee</td><td>${details.SalesEmployee || "N/A"}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Contact Person</td><td>${details.ContactPerson || "N/A"}</td></tr>
     </table>
 
     <h3>Line Item Details</h3>
@@ -105,12 +105,6 @@ export default async function handler(req, res) {
     Medchal-Malkajgiri District,<br/>
     Hyderabad, Telangana, India-501401<br/>
     Mobile : +91-9029298654<br/><br/>
-    <strong>Bank Details</strong><br/>
-    Name: Density Pharmachem Private Limited<br/>
-    Bank Name: HDFC Bank Ltd<br/>
-    Branch: Hyderguda<br/>
-    Account Number: 99999989991174<br/>
-    IFSC Code: HDFC0001996
   </div>
 `;
 
