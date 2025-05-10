@@ -302,10 +302,10 @@ export default function CustomerDetails({
       </div>
     `;
 
-    const baseUrl = window.location.origin;
+   
 
       // Send to new mail endpoint
-      const mailRes = await fetch(`${baseUrl}/api/email/base_mail`, {
+      const mailRes = await fetch(`/api/email/base_mail`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -313,7 +313,7 @@ export default function CustomerDetails({
           // Set to real email in production:
           // to: email,
           // For testing:
-          to: "chandraprakashyadav1110@gmail.com",
+          to: ["chandraprakashyadav1110@gmail.com","shafique@densitypharmachem.com","satish@densitypharmachem.com"],
           subject: `Request for Confirmation and Payment of Outstanding Invoices`,
           body,
         }),
