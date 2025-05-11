@@ -200,8 +200,8 @@ const COOKIE_OPTIONS = {
 
 // Hardcoded test admin credentials
 const TEST_ADMIN = {
-  email: "admin@test.com",
-  password: "admin123",
+  email: "testing@gmail.com",
+  password: "12Qwerty",
   name: "Test Admin",
   role: "admin",
   contactCodes: ["ADMIN001"],
