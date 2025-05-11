@@ -21,7 +21,7 @@ export default async function handler(req, res) {
         'HYD' AS [VendorLocation],
         T4.[U_Quantity] AS [Packsize],
         T4.[U_Price] AS [Unit Price],
-        CASE WHEN T2.[OnHand] > 0 THEN 'Yes' ELSE 'No' END AS [InStock],
+        CASE WHEN T2.[OnHand] > 0 OR T0.[U_ChinaStock] > 0 THEN 'Yes' ELSE 'No' END AS [InStock],
         T0.[ItemName],
         T4.[U_UOM],
         T0.[U_CasNo] AS Cas,
