@@ -159,6 +159,19 @@ const EnhancedSalesCOGSChart = () => {
     // ],
   };
 
+  const invoiceCountDataset = {
+    label: "No. of Invoices",
+    data: salesData.map((d) => d.invoiceCount || 0),
+    type: "line",
+    borderColor: "#219cba", // ✅ Purple border
+    backgroundColor: "#219cba", // ✅ Purple fill
+    yAxisID: "y2",
+    tension: 0.4,
+    pointRadius: 4,
+    pointHoverRadius: 6,
+  };
+
+
   // Gross Margin % (line) (Remove the final average from the data array)
   const gmPercentDataset = {
     label: 'Gross Margin %',
@@ -180,7 +193,12 @@ const EnhancedSalesCOGSChart = () => {
 
   let finalDatasets = [salesDataset];
   if (user?.role === 'admin') {
-    finalDatasets = [salesDataset, cogsDataset, gmPercentDataset];
+    finalDatasets = [
+      salesDataset,
+      cogsDataset,
+      gmPercentDataset,
+      invoiceCountDataset,
+    ];
   }
 
   const chartData = {
@@ -201,15 +219,18 @@ const EnhancedSalesCOGSChart = () => {
             const datasetLabel = context.dataset.label;
             const rawValue = context.raw;
 
-            if (datasetLabel === 'Gross Margin %') {
+            if (datasetLabel === "Gross Margin %") {
               return `GM%: ${rawValue.toFixed(2)}%`;
+            }
+            if (datasetLabel === "No. of Invoices") {
+              return `Invoices: ${rawValue}`; // Just show the number
             }
             return `${datasetLabel}: ${formatCurrency(rawValue)}`;
           },
         },
       },
       legend: {
-        position: 'top',
+        position: "top",
         labels: {
           font: {
             family: "'Inter', sans-serif",
@@ -226,10 +247,10 @@ const EnhancedSalesCOGSChart = () => {
           callback: (value) => formatCurrency(value),
           font: { family: "'Inter', sans-serif", size: 12 },
         },
-        grid: { color: 'rgba(0, 0, 0, 0.05)' },
+        grid: { color: "rgba(0, 0, 0, 0.05)" },
       },
       y1: {
-        position: 'right',
+        position: "right",
         beginAtZero: true,
         ticks: {
           callback: (value) => `${value}%`,
@@ -238,6 +259,14 @@ const EnhancedSalesCOGSChart = () => {
         grid: {
           drawOnChartArea: false,
         },
+      },
+      y2: {
+        // invoice count
+        position: "right",
+        beginAtZero: true,
+        offset: true, // pushes labels a little further right
+        ticks: { callback: (v) => v },
+        grid: { drawOnChartArea: false },
       },
       x: {
         grid: { display: false },
@@ -254,7 +283,7 @@ const EnhancedSalesCOGSChart = () => {
         <div className="d-flex justify-content-between align-items-center">
           <h4
             className="mb-3 mb-md-0"
-            style={{ fontWeight: 600, color: '#212529', fontSize: '1.25rem' }}
+            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
           >
             Sales
           </h4>
@@ -263,18 +292,20 @@ const EnhancedSalesCOGSChart = () => {
               searchQuery={searchQuery}
               setSearchQuery={(value) => {
                 if (value) {
-                  setFilters(prev => ({
+                  setFilters((prev) => ({
                     ...prev,
-                    [value.type === "sales-person" ? "salesPerson" : value.type]: {
+                    [value.type === "sales-person"
+                      ? "salesPerson"
+                      : value.type]: {
                       value: value.value,
-                      label: value.label
-                    }
+                      label: value.label,
+                    },
                   }));
                 } else {
                   setFilters({
                     salesPerson: null,
                     category: null,
-                    product: null
+                    product: null,
                   });
                 }
               }}
@@ -284,11 +315,13 @@ const EnhancedSalesCOGSChart = () => {
       </Card.Header>
 
       <Card.Body>
-        {error && <p className="text-center mt-4 text-danger">Error: {error}</p>}
+        {error && (
+          <p className="text-center mt-4 text-danger">Error: {error}</p>
+        )}
         {loading ? (
           <div
             className="d-flex justify-content-center align-items-center"
-            style={{ height: '500px' }}
+            style={{ height: "500px" }}
           >
             <Spinner animation="border" role="status" className="me-2">
               <span className="visually-hidden">Loading...</span>
@@ -297,7 +330,10 @@ const EnhancedSalesCOGSChart = () => {
           </div>
         ) : salesData.length ? (
           <>
-            <div className="chart-container" style={{ height: '500px', width: '100%' }}>
+            <div
+              className="chart-container"
+              style={{ height: "500px", width: "100%" }}
+            >
               <Bar data={chartData} options={chartOptions} />
             </div>
 
@@ -317,16 +353,20 @@ const EnhancedSalesCOGSChart = () => {
                   <tr>
                     <td>Sales</td>
                     {salesData.map((data, index) => (
-                      <td key={index}>{formatCurrency(data.totalSales || 0)}</td>
+                      <td key={index}>
+                        {formatCurrency(data.totalSales || 0)}
+                      </td>
                     ))}
                     <td>{formatCurrency(totalSales)}</td>
                   </tr>
-                  {user?.role === 'admin' && (
+                  {user?.role === "admin" && (
                     <>
                       <tr>
                         <td>COGS</td>
                         {salesData.map((data, index) => (
-                          <td key={index}>{formatCurrency(data.totalCogs || 0)}</td>
+                          <td key={index}>
+                            {formatCurrency(data.totalCogs || 0)}
+                          </td>
                         ))}
                         <td>{formatCurrency(totalCOGS)}</td>
                       </tr>
@@ -338,6 +378,18 @@ const EnhancedSalesCOGSChart = () => {
                           </td>
                         ))}
                         <td>{`${averageGrossMargin.toFixed(2)}%`}</td>
+                      </tr>
+                      <tr>
+                        <td>No. of Invoices</td>
+                        {salesData.map((data, index) => (
+                          <td key={index}>{data.invoiceCount || 0}</td>
+                        ))}
+                        <td>
+                          {salesData.reduce(
+                            (sum, d) => sum + (d.invoiceCount || 0),
+                            0
+                          )}
+                        </td>
                       </tr>
                     </>
                   )}
