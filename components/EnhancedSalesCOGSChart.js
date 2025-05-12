@@ -1,6 +1,5 @@
 
 
-
 // src/components/EnhancedSalesCOGSChart.js
 import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
@@ -18,7 +17,7 @@ import {
   PointElement,
   LineController
 } from 'chart.js';
-import ChartDataLabels from 'chartjs-plugin-datalabels'; // <- Only if using data labels
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { formatCurrency } from 'utils/formatCurrency';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -33,7 +32,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   LineController,
-  ChartDataLabels // <--- if you use the data labels plugin
+  ChartDataLabels
 );
 
 const EnhancedSalesCOGSChart = () => {
@@ -96,11 +95,6 @@ const EnhancedSalesCOGSChart = () => {
     }
   };
 
-  // useEffect(() => {
-  //   if (user?.token) {
-  //     fetchSalesData();
-  //   }
-  // }, [user, filters]);
   useEffect(() => {
     if (!user) return;
 
@@ -110,41 +104,28 @@ const EnhancedSalesCOGSChart = () => {
     }
   }, [user, filters]);
 
-
-  // Prepare x-axis labels (Remove "Total" from the labels array)
+  // Prepare x-axis labels
   const labels = salesData.map((d) => d.monthYear);
-  // const labels = [...salesData.map((d) => d.monthYear), "Total"]; // <-- commented out
 
   // Calculate totals, still used by the table
   const totalSales = salesData.reduce((acc, curr) => acc + (curr.totalSales || 0), 0);
   const totalCOGS = salesData.reduce((acc, curr) => acc + (curr.totalCogs || 0), 0);
-  // const averageGrossMargin = salesData.length
-  //   ? salesData.reduce((acc, curr) => acc + (curr.grossMarginPct || 0), 0) / salesData.length
-  //   : 0;
   const averageGrossMargin =
-  totalSales > 0 ? ((totalSales - totalCOGS) / totalSales) * 100 : 0;
-
+    totalSales > 0 ? ((totalSales - totalCOGS) / totalSales) * 100 : 0;
 
   // Distinct bar colors
   const colorPalette = {
     salesBarColor: "#124f94",
     cogsBarColor: "#3bac4e",
-    // The final bar colors are no longer used
-    // finalSalesBarColor: "#ff8000",
-    // finalCOGSBarColor: "#8A2BE2",
     gmLineColor: "#3bac4e",
   };
 
-  // Sales dataset (Remove the final total from the data array)
+  // Sales dataset
   const salesDataset = {
     label: 'Sales',
     data: salesData.map((d) => d.totalSales || 0),
     backgroundColor: colorPalette.salesBarColor,
     borderWidth: 1
-    // data: [
-    //   ...salesData.map((d) => d.totalSales || 0),
-    //   totalSales // last data point for "Total" bar
-    // ],
   };
 
   // COGS dataset (only if admin)
@@ -153,28 +134,19 @@ const EnhancedSalesCOGSChart = () => {
     data: salesData.map((d) => d.totalCogs || 0),
     backgroundColor: colorPalette.cogsBarColor,
     borderWidth: 1
-    // data: [
-    //   ...salesData.map((d) => d.totalCogs || 0),
-    //   totalCOGS
-    // ],
   };
 
   const invoiceCountDataset = {
-    label: "No. of Lines",
+    label: "Lines",
     data: salesData.map((d) => d.invoiceCount || 0),
-    type: "line",
-    borderColor: "#219cba", // ✅ Purple border
-    backgroundColor: "#219cba", // ✅ Purple fill
+    borderWidth: 1,
+    backgroundColor: "#219cba",
     yAxisID: "y2",
-    tension: 0.4,
-    pointRadius: 4,
-    pointHoverRadius: 6,
   };
 
-
-  // Gross Margin % (line) (Remove the final average from the data array)
+  // Gross Margin % (line)
   const gmPercentDataset = {
-    label: 'Gross Margin %',
+    label: 'GM%',
     data: salesData.map((d) => d.grossMarginPct || 0),
     type: 'line',
     borderColor: colorPalette.gmLineColor,
@@ -185,19 +157,15 @@ const EnhancedSalesCOGSChart = () => {
     tension: 0.4,
     pointRadius: 4,
     pointHoverRadius: 6,
-    // data: [
-    //   ...salesData.map((d) => d.grossMarginPct || 0),
-    //   averageGrossMargin
-    // ],
   };
 
   let finalDatasets = [salesDataset];
   if (user?.role === 'admin') {
     finalDatasets = [
+      invoiceCountDataset,
       salesDataset,
       cogsDataset,
       gmPercentDataset,
-      invoiceCountDataset,
     ];
   }
 
@@ -209,6 +177,12 @@ const EnhancedSalesCOGSChart = () => {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    layout: {
+      padding: {
+        left: 20,  // Add left padding
+        right: 20, // Add right padding
+      }
+    },
     plugins: {
       datalabels: {
         display: false,
@@ -219,10 +193,11 @@ const EnhancedSalesCOGSChart = () => {
             const datasetLabel = context.dataset.label;
             const rawValue = context.raw;
 
-            if (datasetLabel === "Gross Margin %") {
+            if (datasetLabel === "GM %") {
               return `GM%: ${rawValue.toFixed(2)}%`;
             }
-            if (datasetLabel === "No. of Lines") {
+            if (datasetLabel === "Lines") {
+
               return `Lines: ${rawValue}`; // Just show the number
             }
             return `${datasetLabel}: ${formatCurrency(rawValue)}`;
@@ -243,6 +218,7 @@ const EnhancedSalesCOGSChart = () => {
     scales: {
       y: {
         beginAtZero: true,
+        min: 0,
         ticks: {
           callback: (value) => formatCurrency(value),
           font: { family: "'Inter', sans-serif", size: 12 },
@@ -252,6 +228,7 @@ const EnhancedSalesCOGSChart = () => {
       y1: {
         position: "right",
         beginAtZero: true,
+        min: 0,
         ticks: {
           callback: (value) => `${value}%`,
           font: { family: "'Inter', sans-serif", size: 12 },
@@ -264,7 +241,8 @@ const EnhancedSalesCOGSChart = () => {
         // invoice count
         position: "right",
         beginAtZero: true,
-        offset: true, // pushes labels a little further right
+        min: 0,
+        offset: false, // pushes labels a little further right
         ticks: { callback: (v) => v },
         grid: { drawOnChartArea: false },
       },
@@ -273,6 +251,9 @@ const EnhancedSalesCOGSChart = () => {
         ticks: {
           font: { family: "'Inter', sans-serif", size: 12 },
         },
+        // Add these options to improve bar width and spacing
+        barPercentage: 0.8,  // Controls the width of the bars
+        categoryPercentage: 0.9, // Controls the spacing between bars
       },
     },
   };
@@ -332,7 +313,7 @@ const EnhancedSalesCOGSChart = () => {
           <>
             <div
               className="chart-container"
-              style={{ height: "500px", width: "100%" }}
+              style={{ height: "500px", width: "100%", overflow: "visible" }}
             >
               <Bar data={chartData} options={chartOptions} />
             </div>
@@ -371,7 +352,7 @@ const EnhancedSalesCOGSChart = () => {
                         <td>{formatCurrency(totalCOGS)}</td>
                       </tr>
                       <tr>
-                        <td>Gross Margin %</td>
+                        <td>GM %</td>
                         {salesData.map((data, index) => (
                           <td key={index}>
                             {`${(data.grossMarginPct || 0).toFixed(2)}%`}
@@ -380,7 +361,7 @@ const EnhancedSalesCOGSChart = () => {
                         <td>{`${averageGrossMargin.toFixed(2)}%`}</td>
                       </tr>
                       <tr>
-                        <td>No. of Lines</td>
+                        <td>Lines</td>
                         {salesData.map((data, index) => (
                           <td key={index}>{data.invoiceCount || 0}</td>
                         ))}
