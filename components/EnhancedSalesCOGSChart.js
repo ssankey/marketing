@@ -160,7 +160,7 @@ const EnhancedSalesCOGSChart = () => {
   };
 
   const invoiceCountDataset = {
-    label: "No. of Invoices",
+    label: "No. of Lines",
     data: salesData.map((d) => d.invoiceCount || 0),
     type: "line",
     borderColor: "#219cba", // ✅ Purple border
@@ -222,8 +222,8 @@ const EnhancedSalesCOGSChart = () => {
             if (datasetLabel === "Gross Margin %") {
               return `GM%: ${rawValue.toFixed(2)}%`;
             }
-            if (datasetLabel === "No. of Invoices") {
-              return `Invoices: ${rawValue}`; // Just show the number
+            if (datasetLabel === "No. of Lines") {
+              return `Lines: ${rawValue}`; // Just show the number
             }
             return `${datasetLabel}: ${formatCurrency(rawValue)}`;
           },
@@ -380,7 +380,7 @@ const EnhancedSalesCOGSChart = () => {
                         <td>{`${averageGrossMargin.toFixed(2)}%`}</td>
                       </tr>
                       <tr>
-                        <td>No. of Invoices</td>
+                        <td>No. of Lines</td>
                         {salesData.map((data, index) => (
                           <td key={index}>{data.invoiceCount || 0}</td>
                         ))}
