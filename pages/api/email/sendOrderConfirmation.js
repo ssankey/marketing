@@ -93,7 +93,7 @@ export default async function handler(req, res) {
 
     <p>Regards,<br/>
     <img
-      src="https://tinypic.host/images/2025/05/05/Density_LOGO.jpg"
+      src="https://cdn.jsdelivr.net/gh/prakash-434/Density-Logo/Density_LOGO.png"
       alt="Logo"
       style="height: 50px; width: auto; max-width: 200px; display: block; margin-bottom: 10px;"
     /><br/>

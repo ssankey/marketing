@@ -144,7 +144,7 @@ export default async function handler(req, res) {
             </table>
 
             <p>Regards,<br/>
-            <img src="https://tinypic.host/images/2025/05/05/Density_LOGO.jpg" alt="Logo" style="height: 70px;"/><br/>
+            <img src="https://cdn.jsdelivr.net/gh/prakash-434/Density-Logo/Density_LOGO.png" alt="Logo" style="height: 70px;"/><br/>
             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
             DENSITY PHARMACHEM PRIVATE LIMITED<br/>
             Sy No 615/A & 624/2/1, Pudur Village<br/>
