@@ -1,5 +1,3 @@
-
-
 // pages/api/email/sendOrderConfirmation.js
 import { getOrderDetails } from "../../../lib/models/orders";
 import { queryDatabase } from "../../../lib/db";
@@ -16,7 +14,7 @@ export default async function handler(req, res) {
   try {
     const now = new Date();
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const fiveMinutesAgo = nowMinutes - 240;
+    const fiveMinutesAgo = nowMinutes - 2400;
 
     const today = now.toISOString().split("T")[0];
 
