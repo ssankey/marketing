@@ -40,7 +40,8 @@ const CustomerBalanceTable = ({
       label: "Inv No.",
     },
     {
-      field: "AR Invoice Date", // Assuming this is the AR Invoice Number; adjust if you have a specific field
+      field: "AR Invoice Date", // Assuming this is the AR Invoice Number
+      // ; adjust if you have a specific field
       label: "AR Invoice Date",
       render: (value) => formatDate(value), // Adjust if this is a number, not a date
     },
@@ -58,13 +59,14 @@ const CustomerBalanceTable = ({
       label: "Customer/Vendor Name",
     },
     {
-      field: "BP Reference No.",
-      label: "Customer Ref no",
-    },
-    {
       field: "Contact Person",
       label: "Contact Person",
     },
+    {
+      field: "BP Reference No.",
+      label: "Customer Ref no",
+    },
+
     // {
     //   field: "BP Reference No.",
     //   label: "Customer Ref no",
@@ -89,29 +91,17 @@ const CustomerBalanceTable = ({
       label: "State",
     },
     {
-      field: "AirlineName", // New field; ensure it exists in data
-      label: "Airline Name",
-      render: (value) => value || "N/A",
+      field: "Overdue Days",
+      label: "Overdue Days",
+    },
+    {
+      field: "Payment Terms",
+      label: "Payment Group",
     },
     {
       field: "TrackingNo", // New field; ensure it exists in data
       label: "Tracking no",
       render: (value) => value || "N/A",
-    },
-    // {
-    //   field: "Delivery Date",
-    //   label: "Delivery Date",
-    //   render: (value) => formatDate(value),
-    // },
-
-    {
-      field: "SOToDeliveryDays", // New field; ensure it exists in data
-      label: "so to Delivery Days",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Overdue Days",
-      label: "Overdue Days",
     },
     {
       field: "Dispatch Date",
@@ -119,9 +109,23 @@ const CustomerBalanceTable = ({
       render: (value) => formatDate(value),
     },
     {
-      field: "Payment Terms",
-      label: "Payment Group",
+      field: "AirlineName", // New field; ensure it exists in data
+      label: "Airline Name",
+      render: (value) => value || "N/A",
     },
+
+    // {
+    //   field: "Delivery Date",
+    //   label: "Delivery Date",
+    //   render: (value) => formatDate(value),
+    // },
+
+    // {
+    //   field: "SOToDeliveryDays", // New field; ensure it exists in data
+    //   label: "so to Delivery Days",
+    //   render: (value) => value || "N/A",
+    // },
+
     {
       field: "Sales Person",
       label: "Sales Person",

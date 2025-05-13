@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   }
 
   // Destructure all required fields from request body
-  const { from, to, subject, body } = req.body;
+  const { from, to, cc,subject, body } = req.body;
 
   // Validate all required fields
   if (!from || !to || !subject || !body) {
@@ -40,6 +40,7 @@ export default async function handler(req, res) {
     const info = await transporter.sendMail({
       from: `"${process.env.EMAIL_FROM_NAME}" <${from}>`, // Use the 'from' address from request
       to: to, // Can be comma-separated string or array
+      cc : cc,
       subject: subject,
       html: body, // Use the HTML body from request
     });

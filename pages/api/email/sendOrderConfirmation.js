@@ -12,25 +12,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    const now = new Date();
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const fiveMinutesAgo = nowMinutes - 2400;
 
-    const today = now.toISOString().split("T")[0];
-
-    const ordersQuery = `
-      SELECT DocEntry, DocNum, CntctCode
-      FROM ORDR
-      WHERE CONVERT(date, CreateDate) = @today
-        AND DocTime BETWEEN @startTime AND @endTime
-        AND CANCELED = 'N'
+        const ordersQuery = `
+       SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime
+  FROM ORDR o
+  WHERE o.CANCELED = 'N'
+  AND DATEADD(MINUTE, -5, GETDATE()) <= 
+      DATEADD(MINUTE, o.DocTime % 100, 
+          DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
     `;
 
-    const orders = await queryDatabase(ordersQuery, [
-      { name: "today", type: sql.Date, value: today },
-      { name: "startTime", type: sql.Int, value: fiveMinutesAgo },
-      { name: "endTime", type: sql.Int, value: nowMinutes }
-    ]);
+   
+    const orders = await queryDatabase(ordersQuery);
+
 
     if (!orders.length) {
       return res.status(200).json({ message: "No new orders in the last 5 minutes." });
@@ -41,6 +35,7 @@ export default async function handler(req, res) {
       if (!details) continue;
 
       const toEmail = details.Email;
+      const SalesPerson_Email = details.SalesPerson_Email
       if (!toEmail) {
         console.warn(`⚠️ No email found for contact: DocEntry=${order.DocEntry}`);
         continue;
@@ -109,17 +104,24 @@ export default async function handler(req, res) {
       const protocol = req.headers["x-forwarded-proto"] || "http";
       const host = req.headers.host;
 
-      const emailRes = await fetch(`${protocol}://${host}/api/email/base_mail`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "prakash@densitypharmachem.com",
-        //   to: toEmail,
-        to:"chandraprakashyadav1110@gmail.com",
-          subject: `Order Confirmation - Order #${details.DocNum}`,
-          body: html
-        })
-      });
+      const emailRes = await fetch(
+        `${protocol}://${host}/api/email/base_mail`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "prakash@densitypharmachem.com",
+            // //   to: toEmail,
+            // to:"chandraprakashyadav1110@gmail.com",
+            to: SalesPerson_Email,
+            cc: ["rama@densitypharmachem.com", "satish@densitypharmachem.com"],
+            subject: `Order Confirmation - Order #${details.DocNum}`,
+            body: html,
+          }),
+        }
+      );
+
+      console.log(SalesPerson_Email);
 
       const result = await emailRes.json();
       if (!emailRes.ok) throw new Error(result.message || "Failed to send email");
