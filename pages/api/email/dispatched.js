@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       WHERE T0.TrackNo IS NOT NULL
         AND T0.TrackNo <> ''
         AND T0.TrackNo <> 'N/A'
-        AND T0.UpdateDate >= DATEADD(MINUTE, -5, GETDATE())
+        AND T0.UpdateDate >= DATEADD(MINUTE, -900, GETDATE())
       ORDER BY T0.UpdateDate DESC
     `;
 
@@ -117,15 +117,15 @@ export default async function handler(req, res) {
             <p>Greetings of the day!</p>
             <p>Thank you for choosing us as your preferred partner. We would like to notify you that the following item(s) have been dispatched.</p>
 
-            <h2>Order Details</h2>
+            <h3>Order Details</h3>
             <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-              <thead style="background-color: #f2f2f2;"><tr><th>Order#</th><th>Order Date</th></tr></thead>
+              <thead style="background-color: #007BFF; color: white;"><tr><th>Order#</th><th>Order Date</th></tr></thead>
               <tbody><tr><td style="text-align: center;">${invoiceDetails["Order No"] || "N/A"}</td><td style="text-align: center;">${formatDate(invoiceDetails["Order Date"])}</td></tr></tbody>
             </table>
 
-            <h2>Track your Shipment</h2>
+            <h3>Track your Shipment</h3>
             <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-              <thead style="background-color: #f2f2f2;"><tr><th>Tracking No</th><th>Dispatch Date</th><th>Delivery Date</th><th>Airline Name</th></tr></thead>
+              <thead style="background-color: #007BFF; color: white;"><tr><th>Tracking No</th><th>Dispatch Date</th><th>Expected Delivery Date</th><th>Carrier Name</th></tr></thead>
               <tbody>
                 <tr>
                   <td style="text-align: center;">${invoiceDetails["Tracking Number"] || "N/A"}</td>
@@ -136,20 +136,21 @@ export default async function handler(req, res) {
               </tbody>
             </table>
 
-            <h2>Shipped Items</h2>
+            <h3>Shipped Items</h3>
             <p>Invoice# <strong>${invoiceNo}</strong> dated <strong>${invoiceDate}</strong></p>
             <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-              <thead style="background-color: #f2f2f2;"><tr><th>Sr No</th><th>Item Code</th><th>Description</th><th>Quantity</th><th>Unit</th></tr></thead>
+              <thead style="background-color: #007BFF; color: white;"><tr><th>Sr No</th><th>Item Code</th><th>Description</th><th>Quantity</th><th>Unit</th></tr></thead>
               <tbody>${items}</tbody>
             </table>
 
             <p>Regards,<br/>
             <img src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg" alt="Logo" style="height: 70px;"/><br/>
-            <strong>Website: www.densitypharmachem.com</strong><br/><br/>
-            DENSITY PHARMACHEM PRIVATE LIMITED<br/>
-            Sy No 615/A & 624/2/1, Pudur Village<br/>
-            Medchal-Malkajgiri District, Hyderabad, Telangana, India-501401
-            </p>
+             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
+                DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
+                Sy No 615/A & 624/2/1, Pudur Village<br/>
+                Medchal-Malkajgiri District,<br/>
+                Hyderabad, Telangana, India-501401<br/>
+                Mobile : +91-9029298654<br/><br/>
           </div>
         `;
 
@@ -176,7 +177,13 @@ export default async function handler(req, res) {
         console.log(`✅ Dispatch notification sent for invoice: ${DocNum}, tracking: ${TrackNo}`);
         successCount++;
       } catch (invoiceError) {
-        console.error(`Error processing invoice ${invoice.DocNum}:`, invoiceError);
+        // console.error(`Error processing invoice ${invoice.DocNum}:`, invoiceError);
+        console.error(`❌ Failure reason for invoice ${invoice.DocNum}:`, {
+          error: invoiceError.message,
+          docEntry: invoice.DocEntry,
+          email: to || "Missing email",
+        });
+
         failureCount++;
       }
     }

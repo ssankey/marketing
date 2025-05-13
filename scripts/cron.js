@@ -21,13 +21,13 @@ cron.schedule("*/5 * * * *", async () => {
       throw new Error(orderConfResult.message || "Order API error");
     console.log("✅ Order Confirmation:", orderConfResult.message);
 
-    // const dispatchRes = await fetch(`${API_BASE_URL}/api/email/dispatched`, {
-    //   method: "POST",
-    // });
-    // const dispatchResult = await dispatchRes.json();
-    // if (!dispatchRes.ok)
-    //   throw new Error(dispatchResult.message || "Dispatch API error");
-    // console.log("✅ Dispatch Notification:", dispatchResult.message);
+    const dispatchRes = await fetch(`${API_BASE_URL}/api/email/dispatched`, {
+      method: "POST",
+    });
+    const dispatchResult = await dispatchRes.json();
+    if (!dispatchRes.ok)
+      throw new Error(dispatchResult.message || "Dispatch API error");
+    console.log("✅ Dispatch Notification:", dispatchResult.message);
   } catch (error) {
     console.error("❌ Cron Job Error:", error.message);
   }
