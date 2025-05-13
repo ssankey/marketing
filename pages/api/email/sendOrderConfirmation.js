@@ -17,7 +17,7 @@ export default async function handler(req, res) {
        SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime
   FROM ORDR o
   WHERE o.CANCELED = 'N'
-  AND DATEADD(MINUTE, -250, GETDATE()) <= 
+  AND DATEADD(MINUTE, -5, GETDATE()) <= 
       DATEADD(MINUTE, o.DocTime % 100, 
           DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
     `;
