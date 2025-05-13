@@ -17,7 +17,7 @@ export default async function handler(req, res) {
        SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime
   FROM ORDR o
   WHERE o.CANCELED = 'N'
-  AND DATEADD(MINUTE, -5, GETDATE()) <= 
+  AND DATEADD(MINUTE, -250, GETDATE()) <= 
       DATEADD(MINUTE, o.DocTime % 100, 
           DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
     `;
@@ -41,7 +41,8 @@ export default async function handler(req, res) {
         continue;
       }
 
-      const lineItems = details.LineItems.map(item => `
+      const lineItems = details.LineItems.map(
+        (item) => `
         <tr>
           <td>${item.ItemCode}</td>
           <td>${item.Description}</td>
@@ -49,44 +50,42 @@ export default async function handler(req, res) {
           <td>${item.Quantity}</td>
           <td>${item.UnitMsr}</td>
           <td>${formatCurrency(item.Price)}</td>
-          <td>${item.DiscountPercent || 0}%</td>
-          <td>${item.TaxCode || "N/A"}</td>
           <td>${formatCurrency(item.LineTotal)}</td>
+          <td>${item.StockStatus}</td>
+          <td>${formatDate(item.ShipDate)}</td>
+
         </tr>
-      `).join("");
+      `
+      ).join("");
 
       const html = `
   <div style="font-family: Arial, sans-serif;">
-    <p>Dear Sir / Madam,</p>
-    <p>Thank you for shopping with us!<br/>We have received your order and it is currently being processed. Please find the order details below:</p>
+    <p>Dear ${details.CardName},</p>
+    <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong></p>
 
-    <h3>Order Summary</h3>
-    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
-      <tr><td style="background-color:#007BFF; color:white;">Order Number</td><td>${details.DocNum}</td></tr>
-      <tr><td style="background-color:#007BFF; color:white;">Status</td><td>${details.DocStatusDisplay}</td></tr>
-      <tr><td style="background-color:#007BFF; color:white;">Customer</td><td>${details.CardName}</td></tr>
-      <tr><td style="background-color:#007BFF; color:white;">Order Date</td><td>${formatDate(details.DocDate)}</td></tr>
-      <tr><td style="background-color:#007BFF; color:white;">Delivery Date</td><td>${formatDate(details.DocDueDate)}</td></tr>
-      <tr><td style="background-color:#007BFF; color:white;">Total Amount</td><td>${formatCurrency(details.DocTotal)} ${details.DocCur}</td></tr>
-      <tr><td style="background-color:#007BFF; color:white;">Sales Employee</td><td>${details.SalesEmployee || "N/A"}</td></tr>
-      <tr><td style="background-color:#007BFF; color:white;">Contact Person</td><td>${details.ContactPerson || "N/A"}</td></tr>
-    </table>
+   
 
-    <h3>Line Item Details</h3>
+    <p><strong>Order Summary:</strong></p>
     <table border="1" cellpadding="6" cellspacing="0"  style="border-collapse: collapse;">
       <thead style="background-color: #007BFF; color: white;">
         <tr>
           <th>Item Code</th><th>Description</th><th>CAS No.</th><th>Qty</th><th>Unit</th>
-          <th>Price</th><th>Discount</th><th>Tax Code</th><th>Line Total</th>
+          <th>Price</th><th>Line Total</th><th>Stock</th><th>Delivery Date</th>
         </tr>
       </thead>
       <tbody>${lineItems}</tbody>
     </table>
+      <br/>
+    <p><strong>Billing Address:</strong> ${details.BillToAddress || "N/A"}</p>
 
-    <h3>Billing Address</h3>
-    <p>${details.BillToAddress || "N/A"}</p>
+<p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
 
-    <p>Regards,<br/>
+    <p>Should you have any inquiries or require further assistance, please do not hesitate to contact our customer service team at sales@densitypharmachem.com<br/><br>
+
+Thank you for your patronage. We greatly appreciate your business and look forward to serving you again.</p><br/>
+
+    <p><Strong>Yours Sincerely,<br/></Strong></p>
+    <p>${details.SalesEmployee}</p>
     <img
       src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg"
       alt="Logo"
@@ -112,17 +111,16 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             from: "prakash@densitypharmachem.com",
             // //   to: toEmail,
-            // to:"chandraprakashyadav1110@gmail.com",
+            // to: "chandraprakashyadav1110@gmail.com",
             to: SalesPerson_Email,
             cc: ["rama@densitypharmachem.com", "satish@densitypharmachem.com"],
-            subject: `Order Confirmation - Order #${details.DocNum}`,
+            subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
             body: html,
           }),
         }
       );
 
-      console.log(SalesPerson_Email);
-
+     
       const result = await emailRes.json();
       if (!emailRes.ok) throw new Error(result.message || "Failed to send email");
 
@@ -135,3 +133,18 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: error.message });
   }
 }
+
+
+
+
+{/* <h3>Order Summary</h3>
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
+      <tr><td style="background-color:#007BFF; color:white;">Order Number</td><td>${details.DocNum}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Status</td><td>${details.DocStatusDisplay}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Customer</td><td>${details.CardName}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Order Date</td><td>${formatDate(details.DocDate)}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Delivery Date</td><td>${formatDate(details.DocDueDate)}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Total Amount</td><td>${formatCurrency(details.DocTotal)} ${details.DocCur}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Sales Employee</td><td>${details.SalesEmployee || "N/A"}</td></tr>
+      <tr><td style="background-color:#007BFF; color:white;">Contact Person</td><td>${details.ContactPerson || "N/A"}</td></tr>
+    </table> */}

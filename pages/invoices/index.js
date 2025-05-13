@@ -86,22 +86,22 @@ const columns = [
     label: "Customer Name",
     render: (value) => value || "N/A",
   },
+  // {
+  //   field: "SO Customer Ref. No",
+  //   label: "SO Customer Ref",
+  //   render: (value) => value || "N/A",
+  // },
   {
     field: "SO No",
     label: "Sales Order No.",
     render: (value) => value || "N/A",
   },
 
-  // {
-  //   field: "Customer ref no",
-  //   label: "Customer Ref",
-  //   render: (value) => value || "N/A",
-  // },
-  // {
-  //   field: "SO Customer Ref. No",
-  //   label: "SO Customer Ref",
-  //   render: (value) => value || "N/A",
-  // },
+  {
+    field: "Customer ref no",
+    label: "Customer Ref",
+    render: (value) => value || "N/A",
+  },
 
   // {
   //   field: "Delivery Date",
