@@ -64,6 +64,7 @@ const InvoicesTable = ({
   });
 
 
+
   const renderContent = () => {
     if (displayState.showLoading) {
       return (
