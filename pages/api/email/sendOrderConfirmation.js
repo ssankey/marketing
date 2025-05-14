@@ -96,7 +96,7 @@ Thank you for your patronage. We greatly appreciate your business and look forwa
     Sy No 615/A & 624/2/1, Pudur Village<br/>
     Medchal-Malkajgiri District,<br/>
     Hyderabad, Telangana, India-501401<br/>
-    Mobile : +91-9029298654<br/><br/>
+    
   </div>
 `;
 
