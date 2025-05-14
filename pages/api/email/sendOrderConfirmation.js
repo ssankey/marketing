@@ -17,7 +17,7 @@ export default async function handler(req, res) {
        SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime
   FROM ORDR o
   WHERE o.CANCELED = 'N'
-  AND DATEADD(MINUTE, -5, GETDATE()) <= 
+  AND DATEADD(MINUTE, -100, GETDATE()) <= 
       DATEADD(MINUTE, o.DocTime % 100, 
           DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
     `;
@@ -60,8 +60,8 @@ export default async function handler(req, res) {
 
       const html = `
   <div style="font-family: Arial, sans-serif;">
-    <p>Dear ${details.CardName},</p>
-    <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong></p>
+    <p>Dear ${details.ContactPerson},</p>
+    <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong> our order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
 
    
 
