@@ -111,9 +111,9 @@ Thank you for your patronage. We greatly appreciate your business and look forwa
           body: JSON.stringify({
             from: "prakash@densitypharmachem.com",
             // //   to: toEmail,
-            // to: "chandraprakashyadav1110@gmail.com",
-            to: SalesPerson_Email,
-            cc: ["rama@densitypharmachem.com", "satish@densitypharmachem.com"],
+            to: "chandraprakashyadav1110@gmail.com",
+            // to: SalesPerson_Email,
+            // cc: ["rama@densitypharmachem.com", "satish@densitypharmachem.com"],
             subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
             body: html,
           }),
