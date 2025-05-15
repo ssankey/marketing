@@ -1,89 +1,83 @@
 
-
 // pages/api/customers/[customerId]/delivery-performance.js
 import { queryDatabase } from "../../../../lib/db";
+import sql from 'mssql';
 
 export default async function handler(req, res) {
-  const { customerId } = req.query;
+  const { id, salesPerson } = req.query;
+  console.log("customer code", id);
+  
+  if (!id) {
+    return res.status(400).json({ error: "Customer ID is required" });
+  }
 
   try {
-    // Query to get delivery performance data with proper date range 
     const query = `
-      WITH DateRange AS (
-        SELECT 
-          MIN(DATEFROMPARTS(YEAR(T0.DocDate), MONTH(T0.DocDate), 1)) AS MinDate,
-          MAX(DATEFROMPARTS(YEAR(T0.DocDate), MONTH(T0.DocDate), 1)) AS MaxDate
-        FROM ORDR T0
-        WHERE T0.CANCELED = 'N' 
-        ${customerId && customerId !== "undefined" ? `AND T0.CardCode = '${customerId}'` : ''}
-      ),
-      Months AS (
-        SELECT 
-          DATEADD(MONTH, number, (SELECT MinDate FROM DateRange)) AS MonthDate
-        FROM master.dbo.spt_values
-        WHERE type = 'P' 
-          AND number <= DATEDIFF(MONTH, (SELECT MinDate FROM DateRange), (SELECT MaxDate FROM DateRange))
-      ),
-      MonthlyData AS (
-        SELECT 
-          YEAR(m.MonthDate) AS Year,
-          MONTH(m.MonthDate) AS Month,
-          DATENAME(MONTH, m.MonthDate) + ' ' + CAST(YEAR(m.MonthDate) AS VARCHAR) AS MonthName,
-          COUNT(T0.DocEntry) AS TotalOrders,
-          SUM(CASE WHEN DATEDIFF(DAY, T0.DocDate, ISNULL(OINV.U_DeliveryDate, T0.DocDueDate)) <= 3 THEN 1 ELSE 0 END) AS GreenCount,
-          SUM(CASE WHEN DATEDIFF(DAY, T0.DocDate, ISNULL(OINV.U_DeliveryDate, T0.DocDueDate)) BETWEEN 4 AND 5 THEN 1 ELSE 0 END) AS OrangeCount,
-          SUM(CASE WHEN DATEDIFF(DAY, T0.DocDate, ISNULL(OINV.U_DeliveryDate, T0.DocDueDate)) BETWEEN 6 AND 8 THEN 1 ELSE 0 END) AS BlueCount,
-          SUM(CASE WHEN DATEDIFF(DAY, T0.DocDate, ISNULL(OINV.U_DeliveryDate, T0.DocDueDate)) BETWEEN 9 AND 10 THEN 1 ELSE 0 END) AS PurpleCount,
-          SUM(CASE WHEN DATEDIFF(DAY, T0.DocDate, ISNULL(OINV.U_DeliveryDate, T0.DocDueDate)) > 10 THEN 1 ELSE 0 END) AS RedCount,
-          SUM(CASE 
-              WHEN DATEDIFF(DAY, T0.DocDate, ISNULL(OINV.U_DeliveryDate, T0.DocDueDate)) 
-                  <= DATEDIFF(DAY, T0.DocDate, T0.DocDueDate) 
-              THEN 1 ELSE 0 END) AS SLAAchievedCount
-        FROM Months m
-        LEFT JOIN ORDR T0 
-          ON DATEFROMPARTS(YEAR(T0.DocDate), MONTH(T0.DocDate), 1) = m.MonthDate
-          AND T0.CANCELED = 'N'
-          ${customerId && customerId !== "undefined" ? `AND T0.CardCode = '${customerId}'` : ''}
-        LEFT JOIN DLN1 ON T0.DocEntry = DLN1.BaseEntry AND DLN1.BaseType = 17
-        LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry AND INV1.BaseType = 15
-        LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED = 'N'
-        GROUP BY 
-          YEAR(m.MonthDate),
-          MONTH(m.MonthDate),
-          DATENAME(MONTH, m.MonthDate) + ' ' + CAST(YEAR(m.MonthDate) AS VARCHAR)
-      )
       SELECT 
-        Year,
-        Month,
-        MonthName,
-        TotalOrders,
-        GreenCount,
-        OrangeCount,
-        BlueCount,
-        PurpleCount,
-        RedCount,
+        FORMAT(OINV.DocDate, 'MMM-yyyy') AS [Month],
+        COUNT(CASE WHEN DATEDIFF(DAY, T0.DocDate, OINV.DocDate) BETWEEN 0 AND 3 THEN 1 END) AS Green,
+        COUNT(CASE WHEN DATEDIFF(DAY, T0.DocDate, OINV.DocDate) BETWEEN 4 AND 5 THEN 1 END) AS Orange,
+        COUNT(CASE WHEN DATEDIFF(DAY, T0.DocDate, OINV.DocDate) BETWEEN 6 AND 8 THEN 1 END) AS Blue,
+        COUNT(CASE WHEN DATEDIFF(DAY, T0.DocDate, OINV.DocDate) BETWEEN 9 AND 10 THEN 1 END) AS Purple,
+        COUNT(CASE WHEN DATEDIFF(DAY, T0.DocDate, OINV.DocDate) > 10 THEN 1 END) AS Red,
+        COUNT(*) AS TotalOrders,
+        COUNT(CASE WHEN DATEDIFF(DAY, T0.DocDate, OINV.DocDate) <= 8 THEN 1 END) AS SLAAchieved,
         ROUND(
-          CASE 
-            WHEN TotalOrders > 0 THEN (SLAAchievedCount * 100.0 / TotalOrders) 
-            ELSE 0 
-          END, 2
+          100.0 * COUNT(CASE WHEN DATEDIFF(DAY, T0.DocDate, OINV.DocDate) <= 8 THEN 1 END) / NULLIF(COUNT(*), 0),
+          2
         ) AS SLAAchievedPercentage
-      FROM MonthlyData
-      ORDER BY Year, Month;
+      FROM ORDR T0
+      INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
+      LEFT JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry AND T1.LineNum = DLN1.BaseLine AND DLN1.BaseType = 17
+      LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry AND DLN1.LineNum = INV1.BaseLine AND INV1.BaseType = 15
+      LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED = 'N'
+      LEFT JOIN OITM T2 ON T1.ItemCode = T2.ItemCode
+      LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
+      WHERE
+        OINV.DocDate IS NOT NULL
+        AND T0.CardCode = @customerCode
+        ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
+      GROUP BY FORMAT(OINV.DocDate, 'MMM-yyyy')
+      ORDER BY MIN(OINV.DocDate);
     `;
 
-    const rawData = await queryDatabase(query);
+    const params = [
+      { 
+        name: 'customerCode',
+        type: sql.NVarChar, 
+        value: id
+      }
+    ];
+
+    if (salesPerson) {
+      params.push({
+        name: 'salesPersonCode',
+        type: sql.Int,
+        value: parseInt(salesPerson, 10)
+      });
+    }
+
+    console.log("With parameters:", params);
+    const rawData = await queryDatabase(query, params);
     console.log("Raw SQL query results:", rawData);
 
-    // Format the data to match what the frontend component expects
+    // if (!rawData || rawData.length === 0) {
+    //   return res.status(404).json({ error: "No data found for this customer" });
+    // }
+    if (!rawData || rawData.length === 0) {
+      // no matches → return an empty array
+      return res.status(200).json([]);
+    }
+
+
     const formattedData = rawData.map(item => ({
-      month: item.MonthName,
+      month: item.Month,
+      green: item.Green || 0,
+      orange: item.Orange || 0,
+      blue: item.Blue || 0,
+      purple: item.Purple || 0,
+      red: item.Red || 0,
       totalOrders: item.TotalOrders || 0,
-      green: item.GreenCount || 0,
-      orange: item.OrangeCount || 0,
-      blue: item.BlueCount || 0,
-      purple: item.PurpleCount || 0,
-      red: item.RedCount || 0,
       slaPercentage: item.SLAAchievedPercentage || 0
     }));
 
