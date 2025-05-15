@@ -466,6 +466,11 @@ export default function CustomerDetails({
 
   return (
     <Container className="mt-4">
+      <div className="mt-3 mb-4">
+        <button className="btn btn-secondary" onClick={() => router.back()}>
+          Back to Customers
+        </button>
+      </div>
       {/* First Card - Customer Details */}
       <Card className="mb-4">
         <Card.Header>
@@ -497,7 +502,6 @@ export default function CustomerDetails({
         </Card.Body>
       </Card>
       {/*Purchase Analytics Card */}
-      {purchaseData && purchaseData.length > 0 && (
         <Card className="mb-4">
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">
@@ -509,7 +513,7 @@ export default function CustomerDetails({
             <PurchasesAmountChart customerId={customer?.CustomerCode} />
           </Card.Body>
         </Card>
-      )}
+      
 
       {/* {purchaseData && purchaseData.length > 0 && (
         <Card className="mb-4">
@@ -535,16 +539,96 @@ export default function CustomerDetails({
       <Card className="mb-4">
         <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Order to Delivery</h3>
+            <h3 className="mb-0">Order to Invoice</h3>
           </div>
         </Card.Header>
         <Card.Body>
           <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
-        
+        </Card.Body>
+      </Card>
+      <Card className="mb-4">
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="mb-0">Customer Outstanding</h3>
+
+            <div className="d-flex align-items-center ms-auto gap-2">
+              <Dropdown onSelect={handleFilterSelect}>
+                <Dropdown.Toggle
+                  variant="outline-secondary"
+                  id="outstanding-filter-dropdown"
+                >
+                  {outstandingFilter}
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item eventKey="Payment Pending">
+                    Payment Pending
+                  </Dropdown.Item>
+                  <Dropdown.Item eventKey="Payment Done">
+                    Payment Done
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+
+              <button
+                className="btn btn-primary"
+                onClick={handleMailSend}
+                disabled={isMailSending}
+              >
+                {isMailSending ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Sending...
+                  </>
+                ) : (
+                  "Mail"
+                )}
+              </button>
+
+              <button
+                className="btn btn-success"
+                onClick={handleExcelDownload}
+                disabled={isExcelLoading}
+              >
+                Excel
+              </button>
+            </div>
+          </div>
+        </Card.Header>
+
+        <Card.Body
+          style={{
+            overflowY: "auto",
+            overflowX: "auto",
+          }}
+        >
+          <CustomerOutstandingTable
+            customerOutstandings={outstandings}
+            totalItems={totalOutstandings}
+            isLoading={isLoadingOutstandings}
+            customerCode={customer?.CustomerCode}
+            onFilterChange={handleFilterChange}
+            onExcelDownload={handleExcelDownload}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            itemsPerPage={ITEMS_PER_PAGE}
+            filterType={outstandingFilter}
+            onFilterTypeChange={setOutstandingFilter}
+            selectedRows={selectedRows}
+            setSelectedRows={setSelectedRows}
+            isAllSelected={isAllSelected}
+            onSelectAll={handleSelectAll}
+          />
         </Card.Body>
       </Card>
 
-      <Row className="mb-4">
+      {/* <Row className="mb-4">
         <Col lg={4}>
           <Card className="shadow-sm border-0 h-100">
             <Card.Header className="d-flex justify-content-between align-items-center">
@@ -557,15 +641,13 @@ export default function CustomerDetails({
                     key={quote.QuotationNumber}
                     className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
                   >
-                    {/* <div className="fw-bold">
-                      Quotation#: {quote.QuotationNumber}
-                    </div> */}
+                    
                     <div className="fw-bold">
                       Quotation#:{" "}
                       <span
                         style={{ cursor: "pointer", color: "blue" }}
                         onClick={() =>
-                          // router.push(`/quotationdetails?/${quote.QuotationNumber}`)
+                          
                           router.push(
                             `/quotationdetails?d=${quote.QuotationNumber}&e=${quote.DocEntry}`
                           )
@@ -615,13 +697,13 @@ export default function CustomerDetails({
                     key={order.OrderNumber}
                     className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
                   >
-                    {/* <div className="fw-bold">Order#: {order.OrderNumber}</div> */}
+                   
                     <div className="fw-bold">
                       Order#:{" "}
                       <span
                         style={{ cursor: "pointer", color: "blue" }}
                         onClick={() =>
-                          // router.push(`/orders/${order.OrderNumber}`)
+                          
                           router.push(
                             `/orderdetails?d=${order.OrderNumber}&e=${order.DocEntry}`
                           )
@@ -671,15 +753,13 @@ export default function CustomerDetails({
                     key={invoice.InvoiceNumber}
                     className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
                   >
-                    {/* <div className="fw-bold">
-                      Invoice#: {invoice.InvoiceNumber}
-                    </div> */}
+                   
                     <div className="fw-bold">
                       Invoice#:{" "}
                       <span
                         style={{ cursor: "pointer", color: "blue" }}
                         onClick={() =>
-                          // router.push(`/invoices/${invoice.InvoiceNumber}`)
+                          
                           router.push(
                             `/invoicedetails?d=${invoice.InvoiceNumber}&e=${invoice.DocEntry}`
                           )
@@ -720,9 +800,9 @@ export default function CustomerDetails({
             </Card.Body>
           </Card>
         </Col>
-      </Row>
+      </Row> */}
 
-      <Card className="mb-4">
+      {/* <Card className="mb-4">
         <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
             <h3 className="mb-0">Customer Outstanding</h3>
@@ -744,9 +824,7 @@ export default function CustomerDetails({
                   </Dropdown.Item>
                 </Dropdown.Menu>
               </Dropdown>
-              {/* <button className="btn btn-primary" onClick={handleMailSend}>
-                Mail
-              </button> */}
+              
               <button
                 className="btn btn-primary"
                 onClick={handleMailSend}
@@ -782,8 +860,8 @@ export default function CustomerDetails({
 
         <Card.Body
           style={{
-            overflowY: "auto", // vertical scroll
-            overflowX: "auto", // horizontal scroll
+            overflowY: "auto",  
+            overflowX: "auto", 
           }}
         >
           <CustomerOutstandingTable
@@ -796,15 +874,15 @@ export default function CustomerDetails({
             currentPage={currentPage}
             onPageChange={handlePageChange}
             itemsPerPage={ITEMS_PER_PAGE}
-            filterType={outstandingFilter} // Pass current filter type
-            onFilterTypeChange={setOutstandingFilter} // Pass filter change handler
+            filterType={outstandingFilter}  
+            onFilterTypeChange={setOutstandingFilter}  
             selectedRows={selectedRows}
             setSelectedRows={setSelectedRows}
             isAllSelected={isAllSelected}
             onSelectAll={handleSelectAll}
           />
         </Card.Body>
-      </Card>
+      </Card> */}
       {purchaseData && purchaseData.length > 0 && (
         <Card className="mb-4">
           <Card.Header>
@@ -825,7 +903,6 @@ export default function CustomerDetails({
         </Card>
       )}
 
-      {/* Addresses Card */}
       <Card className="mb-4">
         <Card.Header>
           <h3 className="mb-0">Addresses</h3>
@@ -867,12 +944,12 @@ export default function CustomerDetails({
           )}
         </Card.Body>
       </Card>
-      {/* Back Button */}
-      <div className="mt-3 mb-4">
+
+      {/* <div className="mt-3 mb-4">
         <button className="btn btn-secondary" onClick={() => router.back()}>
           Back to Customers
         </button>
-      </div>
+      </div> */}
     </Container>
   );
 }

@@ -72,6 +72,7 @@ const NavbarVertical = (props) => {
   }
 
   const isAdmin = user.role === 'admin';
+  const isSalesPerson = user.role === "sales_person";
 
   return (
     <Fragment>
@@ -89,7 +90,7 @@ const NavbarVertical = (props) => {
           </div>
           <Accordion as="ul" className="navbar-nav flex-column">
             {/* Dashboard Link (Direct for Admin, Accordion for Others) */}
-            {!isAdmin ? (
+            {/* {!isAdmin ? (
               <li className="nav-item mb-3">
                 <Link href="/" className={`nav-link d-flex align-items-center ${router === "/" ? "active" : ""}`}>
                   <House className="me-2" /> Dashboard
@@ -120,7 +121,15 @@ const NavbarVertical = (props) => {
                   </ul>
                 </Accordion.Collapse>
               </>
-            )}
+            )} */}
+            <li className="nav-item mb-3">
+              <Link
+                href="/"
+                className={`nav-link d-flex align-items-center ${router === "/" ? "active" : ""}`}
+              >
+                <House className="me-2" /> Dashboard
+              </Link>
+            </li>
 
             {/* Quotations */}
             {/* <li className="nav-item mb-3">
@@ -130,18 +139,28 @@ const NavbarVertical = (props) => {
             </li> */}
 
             {/* Orders Accordion */}
-            <CustomToggle eventKey="orders" icon={<Clipboard className="me-2" />} href="/orders">
+            <CustomToggle
+              eventKey="orders"
+              icon={<Clipboard className="me-2" />}
+              href="/orders"
+            >
               Orders
             </CustomToggle>
             <Accordion.Collapse eventKey="orders">
               <ul className="nav flex-column ms-3">
                 <li className="nav-item mb-3">
-                  <Link href="/orders" className={`nav-link d-flex align-items-center ${router === "/orders" ? "active" : ""}`}>
+                  <Link
+                    href="/orders"
+                    className={`nav-link d-flex align-items-center ${router === "/orders" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> All Orders
                   </Link>
                 </li>
                 <li className="nav-item mb-3">
-                  <Link href="/open-orders" className={`nav-link d-flex align-items-center ${router === "/open-orders" ? "active" : ""}`}>
+                  <Link
+                    href="/open-orders"
+                    className={`nav-link d-flex align-items-center ${router === "/open-orders" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> Open Orders
                   </Link>
                 </li>
@@ -154,34 +173,50 @@ const NavbarVertical = (props) => {
                 <FileText className="me-2" /> Invoice
               </Link>
             </li> */}
-              <CustomToggle eventKey="invoices" icon={<Clipboard className="me-2" />} href="/invoices">
+            <CustomToggle
+              eventKey="invoices"
+              icon={<Clipboard className="me-2" />}
+              href="/invoices"
+            >
               Invoice
             </CustomToggle>
             <Accordion.Collapse eventKey="invoices">
               <ul className="nav flex-column ms-3">
-                
                 <li className="nav-item mb-3">
-                  <Link href="/header-invoices" className={`nav-link d-flex align-items-center ${router === "/header-invoices" ? "active" : ""}`}>
+                  <Link
+                    href="/header-invoices"
+                    className={`nav-link d-flex align-items-center ${router === "/header-invoices" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> Invoices (Header)
                   </Link>
                 </li>
                 <li className="nav-item mb-3">
-                  <Link href="/invoices" className={`nav-link d-flex align-items-center ${router === "/invoices" ? "active" : ""}`}>
+                  <Link
+                    href="/invoices"
+                    className={`nav-link d-flex align-items-center ${router === "/invoices" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> Invoices(Line)
                   </Link>
                 </li>
                 <li className="nav-item mb-3">
-                  <Link href="/dispatch-pending" className={`nav-link d-flex align-items-center ${router === "/dispatch-pending" ? "active" : ""}`}>
-                    <Clipboard className="me-2" />Pending for dispatch
+                  <Link
+                    href="/dispatch-pending"
+                    className={`nav-link d-flex align-items-center ${router === "/dispatch-pending" ? "active" : ""}`}
+                  >
+                    <Clipboard className="me-2" />
+                    Pending for dispatch
                   </Link>
                 </li>
               </ul>
             </Accordion.Collapse>
 
             {/* Customers (Admin Only) */}
-            {isAdmin && (
+            {(isAdmin || isSalesPerson) &&(
               <li className="nav-item mb-3">
-                <Link href="/customers" className={`nav-link d-flex align-items-center ${router === "/customers" ? "active" : ""}`}>
+                <Link
+                  href="/customers"
+                  className={`nav-link d-flex align-items-center ${router === "/customers" ? "active" : ""}`}
+                >
                   <People className="me-2" /> Customers
                 </Link>
               </li>
@@ -190,7 +225,10 @@ const NavbarVertical = (props) => {
             {/* Products (Hidden for Admin) */}
             {isAdmin && (
               <li className="nav-item mb-3">
-                <Link href="/products" className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}>
+                <Link
+                  href="/products"
+                  className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
+                >
                   <FaBox className="me-2" /> Products
                 </Link>
               </li>
@@ -200,7 +238,10 @@ const NavbarVertical = (props) => {
             {isAdmin && (
               <>
                 <li className="nav-item mb-3">
-                  <Link href="/customer-balance" className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}>
+                  <Link
+                    href="/customer-balance"
+                    className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}
+                  >
                     <FaMoneyBillWave className="me-2" /> Customer Balance
                   </Link>
                 </li>
