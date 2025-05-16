@@ -39,7 +39,7 @@ export default function CustomerBalancePage() {
       setIsLoading(true);
       
       const params = new URLSearchParams({
-        queryType: 'deliveries',
+        queryType: "deliveries",
         page: currentPage,
         search: filters.searchTerm,
         status: filters.statusFilter,
@@ -49,7 +49,8 @@ export default function CustomerBalancePage() {
         sortDir: filters.sortDirection,
         slpCode: filters.salesPerson?.value || "",
         itmsGrpCod: filters.category?.value || "",
-        itemCode: filters.product?.value || ""
+        itemCode: filters.product?.value || "",
+        cardCode: filters.customer?.value || "",
       });
 
       const response = await fetch(`/api/dashboard/customers-balances?${params}`);
@@ -121,14 +122,16 @@ export default function CustomerBalancePage() {
       setIsChartLoading(true);
       
       const params = new URLSearchParams({
-        queryType: 'chart',
+        queryType: "chart",
         search: filters.searchTerm,
         status: filters.statusFilter,
         fromDate: filters.fromDate || "",
         toDate: filters.toDate || "",
         slpCode: filters.salesPerson?.value || "",
         itmsGrpCod: filters.category?.value || "",
-        itemCode: filters.product?.value || ""
+        cardCode: filters.customer?.value || "",
+
+        itemCode: filters.product?.value || "",
       });
 
       const response = await fetch(`/api/dashboard/customers-balances?${params}`);
@@ -197,6 +200,7 @@ export default function CustomerBalancePage() {
                 salesPerson: filterValues.salesPerson || null,
                 category: filterValues.category || null,
                 product: filterValues.product || null,
+                customer: filterValues.customer || null,
               }));
               setCurrentPage(1);
             }}
