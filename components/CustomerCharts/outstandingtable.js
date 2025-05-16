@@ -1,6 +1,5 @@
 
 
-// components/CustomerCharts/outstandingtable.js
 import React from "react";
 import { Container, Spinner } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
@@ -17,19 +16,9 @@ const columns = [
   },
   { field: "SO#", label: "SO#" },
   { field: "SO Date", label: "SO Date", render: (value) => formatDate(value) },
-  // { field: "Customer Code", label: "Customer Code" },
   { field: "Customer Name", label: "Customer Name" },
   { field: "Contact Person", label: "Contact Person" },
   { field: "SO Customer Ref. No", label: "SO Customer Ref. No" },
-  // { field: "SO Date", label: "SO Date", render: (value) => formatDate(value) },
-  // { field: "Delivery#", label: "Delivery#" },
-  // {
-  //   field: "Delivery Date",
-  //   label: "Delivery Date",
-  //   render: (value) => formatDate(value),
-  // },
-  // { field: "Invoice No.", label: "Invoice No." },
-  // { field: "AR Invoice Date", label: "Invoice Date", render: (value) => formatDate(value) },
   {
     field: "Invoice Total",
     label: "Invoice Total",
@@ -43,21 +32,14 @@ const columns = [
   },
   { field: "Country", label: "Country" },
   { field: "State", label: "State" },
-  // { field: "BP Reference No.", label: "BP Reference" },
   { field: "Overdue Days", label: "Overdue Days" },
   { field: "Payment Terms", label: "Payment Terms" },
   { field: "Tracking no", label: "Tracking no" },
-  // {
-  //   field: "Delivery Date",
-  //   label: "Delivery Date",
-  //   render: (value) => formatDate(value),
-  // },
   {
     field: "Dispatch Date",
     label: "Dispatch Date",
     render: (value) => formatDate(value),
   },
-
   { field: "SalesEmployee", label: "Sales Person" },
 ];
 
@@ -79,13 +61,37 @@ const CustomerOutstandingTable = ({
   onSelectAll,
 }) => {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-  // const filteredData = customerOutstandings?.filter((item) => {
-  //   if (filterType === "Payment Pending") return item["Balance Due"] > 0;
-  //   if (filterType === "Payment Done") return item["Balance Due"] <= 0;
-  //   return true;
-  // });
   const filteredData = customerOutstandings;
+
+  // Store the displayed values for exact calculation
+  const getDisplayedValues = () => {
+    return filteredData.map((item) => {
+      const balanceDue = item["Balance Due"] || 0;
+      // Apply the same rounding as what's displayed in the table
+      return Math.round(balanceDue * 100) / 100;
+    });
+  };
+
+  // Calculate total based on the exact displayed values
+  // const calculateDisplayedTotal = () => {
+  //   const displayedValues = getDisplayedValues();
+  //   // First sum all the values
+  //   const sum = displayedValues.reduce((acc, val) => acc + val, 0);
+  //   // Then round the final sum to 2 decimal places
+  //   return Math.round(sum * 100) / 100;
+  // };
+  const calculateDisplayedTotal = () => {
+    return filteredData.reduce((sum, item) => {
+      const balanceDue = item["Balance Due"] || 0;
+      // First format to currency (which rounds to 2 decimal places)
+      const formattedValue = formatCurrency(balanceDue);
+      // Then convert back to number for summing
+      const numericValue = parseFloat(formattedValue.replace(/[^0-9.-]+/g, ""));
+      return sum + numericValue;
+    }, 0);
+  };
+
+  const totalOutstandingAmount = calculateDisplayedTotal();
 
   const toggleRow = (invoiceNo) => {
     setSelectedRows((prev) =>
@@ -112,6 +118,17 @@ const CustomerOutstandingTable = ({
         }
       `}</style>
 
+      <div className="px-3 py-2">
+        <div className="card border-0 bg-light shadow-sm">
+          <div className="card-body p-2 text-center">
+            <h6 className="text-muted mb-1">Total Outstanding Amount</h6>
+            <h4 className="mb-0 text-primary fw-bold">
+              {formatCurrency(totalOutstandingAmount)}
+            </h4>
+          </div>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="text-center py-4">
           <Spinner animation="border" />
@@ -135,34 +152,52 @@ const CustomerOutstandingTable = ({
             </thead>
             <tbody>
               {filteredData?.length > 0 ? (
-                filteredData.map((item, index) => (
-                  <tr key={index}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.includes(item["Invoice No."])}
-                        onChange={() => toggleRow(item["Invoice No."])}
-                      />
-                    </td>
-                    {columns.map((col) => {
-                      const cellValue = col.render
-                        ? col.render(item[col.field])
-                        : item[col.field];
-                      const cellClass = col.className
-                        ? col.className(item[col.field])
-                        : "";
-                      return (
-                        <td key={col.field} className={cellClass}>
-                          {cellValue || ""}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
+                filteredData.map((item, index) => {
+                  // Calculate the displayed value for each row
+                  const balanceDue = item["Balance Due"] || 0;
+                  const displayedBalanceDue =
+                    Math.round(balanceDue * 100) / 100;
+
+                  return (
+                    <tr key={index}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedRows.includes(item["Invoice No."])}
+                          onChange={() => toggleRow(item["Invoice No."])}
+                        />
+                      </td>
+                      {columns.map((col) => {
+                        const rawValue = item[col.field];
+                        let cellValue = rawValue;
+
+                        if (col.field === "Balance Due") {
+                          cellValue = formatCurrency(displayedBalanceDue);
+                        } else if (col.render) {
+                          cellValue = col.render(rawValue);
+                        }
+
+                        const cellClass = col.className
+                          ? col.className(rawValue)
+                          : "";
+
+                        return (
+                          <td key={col.field} className={cellClass}>
+                            {cellValue || ""}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={columns.length + 1} className="text-center">
-                    No {filterType === "Payment Pending" ? "pending payments" : "completed payments"} found
+                    No{" "}
+                    {filterType === "Payment Pending"
+                      ? "pending payments"
+                      : "completed payments"}{" "}
+                    found
                   </td>
                 </tr>
               )}

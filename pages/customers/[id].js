@@ -13,6 +13,7 @@ import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
 import downloadExcel from "utils/exporttoexcel"; 
 import TablePagination from "components/TablePagination";
 import DeliveryPerformanceChart from "../../components/CustomerCharts/ordertodelievery";
+import SalesByCategoryWrapper from "components/CustomerCharts/SalesByCategoryWrapper";
 
 
 
@@ -502,18 +503,17 @@ export default function CustomerDetails({
         </Card.Body>
       </Card>
       {/*Purchase Analytics Card */}
-        <Card className="mb-4">
-          <Card.Header>
-            <div className="d-flex justify-content-between align-items-center">
-              <h3 className="mb-0">Purchase Analytics</h3>
-            </div>
-          </Card.Header>
-          <Card.Body>
-            {/* <PurchasesAmountChart data={purchaseData} /> */}
-            <PurchasesAmountChart customerId={customer?.CustomerCode} />
-          </Card.Body>
-        </Card>
-      
+      <Card className="mb-4">
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="mb-0">Purchase Analytics</h3>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          {/* <PurchasesAmountChart data={purchaseData} /> */}
+          <PurchasesAmountChart customerId={customer?.CustomerCode} />
+        </Card.Body>
+      </Card>
 
       {/* {purchaseData && purchaseData.length > 0 && (
         <Card className="mb-4">
@@ -883,25 +883,25 @@ export default function CustomerDetails({
           />
         </Card.Body>
       </Card> */}
-      {purchaseData && purchaseData.length > 0 && (
-        <Card className="mb-4">
-          <Card.Header>
-            <div className="d-flex justify-content-between align-items-center">
-              <h3 className="mb-0">Sales by Category</h3>
-            </div>
-          </Card.Header>
-          <Card.Body>
-            <Row>
-              <Col lg={6}>
+
+      <Card className="mb-4">
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="mb-0">Sales by Category</h3>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <Row>
+            {/* <Col lg={6}>
                 <SalesTable data={salesByCategoryData} />
               </Col>
               <Col lg={6}>
                 <SalesPieChart data={salesByCategoryData} />
-              </Col>
-            </Row>
-          </Card.Body>
-        </Card>
-      )}
+              </Col> */}
+            <SalesByCategoryWrapper customerId={customer?.CustomerCode} />
+          </Row>
+        </Card.Body>
+      </Card>
 
       <Card className="mb-4">
         <Card.Header>
