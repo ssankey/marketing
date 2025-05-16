@@ -35,7 +35,7 @@ ChartJS.register(
 const PurchasesAmountChart = ({ customerId }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Sales Person filter state
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -43,23 +43,23 @@ const PurchasesAmountChart = ({ customerId }) => {
   const [inputValue, setInputValue] = useState("");
   const selectRef = useRef(null);
   const cache = useRef({});
-  
+
   // Filter state
   const [filters, setFilters] = useState({
-    salesPerson: null
+    salesPerson: null,
   });
 
   const fetchCustomerData = async () => {
     try {
       setLoading(true);
-      
+
       // Construct URL with optional salesPerson filter
       let url = `/api/customers/${customerId}/metrics`;
-      
+
       if (filters.salesPerson) {
         url += `?salesPerson=${encodeURIComponent(filters.salesPerson.value)}`;
       }
-      
+
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -90,7 +90,7 @@ const PurchasesAmountChart = ({ customerId }) => {
   // Fetch sales person suggestions
   const fetchSuggestions = async (query = "", initialLoad = false) => {
     const cacheKey = `sales-person_${query}`;
-    
+
     if (cache.current[cacheKey]) {
       setSuggestions(cache.current[cacheKey]);
       return;
@@ -99,16 +99,17 @@ const PurchasesAmountChart = ({ customerId }) => {
     setLoadingSuggestions(true);
     try {
       const url = `/api/dashboard/sales-person/distinct-salesperson?search=${encodeURIComponent(query)}&page=1&limit=50`;
-      
+
       const response = await fetch(url);
       if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
       const data = await response.json();
-      
-      const formattedSuggestions = data.salesEmployees?.map(emp => ({
-        value: emp.value,
-        label: `${emp.value} - ${emp.label}`
-      })) || [];
+
+      const formattedSuggestions =
+        data.salesEmployees?.map((emp) => ({
+          value: emp.value,
+          label: `${emp.value} - ${emp.label}`,
+        })) || [];
 
       cache.current[cacheKey] = formattedSuggestions;
       setSuggestions(formattedSuggestions);
@@ -136,14 +137,14 @@ const PurchasesAmountChart = ({ customerId }) => {
   // Handle option selection
   const handleOptionSelect = (option) => {
     setSelectedValue(option);
-    
+
     if (option) {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
         salesPerson: {
           value: option.value,
-          label: option.label
-        }
+          label: option.label,
+        },
       }));
     }
   };
@@ -153,17 +154,32 @@ const PurchasesAmountChart = ({ customerId }) => {
     setSelectedValue(null);
     setInputValue("");
     setFilters({
-      salesPerson: null
+      salesPerson: null,
     });
   };
 
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
 
+  // Filter out months with no data
   const filteredData = data.filter(
-    (item) => item.AmountSpend > 0 || item.NoOfPurchase > 0
+    (item) =>
+      item.InvoiceAmount > 0 ||
+      item.OrderAmount > 0 ||
+      item.InvoiceCount > 0 ||
+      item.OrderCount > 0
   );
 
   const chartLabels = filteredData.map((item) => {
@@ -171,29 +187,67 @@ const PurchasesAmountChart = ({ customerId }) => {
     return `${months[date.getMonth()]} ${date.getFullYear()}`;
   });
 
-  const chartDataValues = filteredData.map((item) => item.AmountSpend);
-  const chartLineCountValues = filteredData.map((item) => item.NoOfPurchase);
+  // Calculate totals
+  const calculateTotals = () => {
+    return data.reduce(
+      (acc, item) => {
+        return {
+          totalOrderAmount: acc.totalOrderAmount + (item.OrderAmount || 0),
+          totalOrderCount: acc.totalOrderCount + (item.OrderCount || 0),
+          totalLineItems: acc.totalLineItems + (item.InvoiceCount || 0),
+          totalInvoiceAmount:
+            acc.totalInvoiceAmount + (item.InvoiceAmount || 0),
+        };
+      },
+      {
+        totalOrderAmount: 0,
+        totalOrderCount: 0,
+        totalLineItems: 0,
+        totalInvoiceAmount: 0,
+      }
+    );
+  };
+
+  const totals = calculateTotals();
 
   const chartData = {
     labels: chartLabels,
     datasets: [
       {
-        label: "Sales (₹)",
-        data: chartDataValues,
-        backgroundColor: "#198754", // Green
-        borderColor: "#198754",
+        label: "Orders Count",
+        data: filteredData.map((item) => item.OrderCount),
+        backgroundColor: "#7DA0FA", // Light Blue
+        borderColor: "#7DA0FA",
+        yAxisID: "y1",
+        barPercentage: 0.9, // Increased from 0.7 to reduce space
+        categoryPercentage: 0.8, // Adjusted to reduce space between groups
+      },
+      {
+        label: "Orders Total (₹)",
+        data: filteredData.map((item) => item.OrderAmount),
+        backgroundColor: "#1864AB", // Blue
+        borderColor: "#1864AB",
         yAxisID: "y",
-        barPercentage: 0.8,
-        categoryPercentage: 0.4,
+        barPercentage: 0.9,
+        categoryPercentage: 0.8,
       },
       {
         label: "Line Items",
-        data: chartLineCountValues,
-        backgroundColor: "#007bff", // Blue
-        borderColor: "#007bff",
+        data: filteredData.map((item) => item.InvoiceCount),
+        backgroundColor: "#63E6BE", // Light Green
+        borderColor: "#63E6BE",
         yAxisID: "y1",
-        barPercentage: 0.6,
-        categoryPercentage: 0.4,
+        barPercentage: 0.9,
+        categoryPercentage: 0.8,
+      },
+      {
+        label: "Invoice Total (₹)",
+        data: filteredData.map((item) => item.InvoiceAmount),
+        backgroundColor: "#20C997", // Green
+        borderColor: "#20C997",
+        yAxisID: "y",
+        barPercentage: 0.9,
+        categoryPercentage: 0.8,
       },
     ],
   };
@@ -201,6 +255,10 @@ const PurchasesAmountChart = ({ customerId }) => {
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: {
+      mode: "index",
+      intersect: false,
+    },
     plugins: {
       legend: {
         display: true,
@@ -212,33 +270,31 @@ const PurchasesAmountChart = ({ customerId }) => {
       },
       tooltip: {
         backgroundColor: "#212529",
-        titleFont: { size: 14, weight: "bold" },
-        bodyFont: { size: 13 },
-        padding: 12,
+        titleFont: { size: 18, weight: "bold" },
+        bodyFont: { size: 16 },
+        padding: 16,
         callbacks: {
-          label: (tooltipItem) => {
-            if (tooltipItem.dataset.label === "Sales (₹)") {
-              return formatCurrency(tooltipItem.raw);
+          label: (context) => {
+            const label = context.dataset.label || "";
+            const value = context.raw;
+
+            if (label.includes("Total")) {
+              return `${label}: ${formatCurrency(value)}`;
             }
-            return `Line Items: ${tooltipItem.raw}`;
+            return `${label}: ${value}`;
+          },
+          title: (tooltipItems) => {
+            return tooltipItems[0].label;
           },
         },
       },
       datalabels: {
-        display: true,
-        color: "#000",
-        anchor: "end",
-        align: "top",
-        font: { family: "'Inter', sans-serif", size: 11 },
-        formatter: (value, context) => {
-          return context.dataset.label === "Sales (₹)"
-            ? formatCurrency(value)
-            : value;
-        },
+        display: false,
       },
     },
     scales: {
       x: {
+        stacked: false,
         grid: { display: false },
         ticks: { font: { family: "'Inter', sans-serif", size: 12 } },
       },
@@ -246,7 +302,7 @@ const PurchasesAmountChart = ({ customerId }) => {
         type: "linear",
         position: "left",
         beginAtZero: true,
-        title: { display: true, text: "Sales (₹)" },
+        title: { display: true, text: "Amount (₹)" },
         ticks: {
           callback: (value) => formatCurrency(value),
           font: { family: "'Inter', sans-serif", size: 12 },
@@ -257,7 +313,7 @@ const PurchasesAmountChart = ({ customerId }) => {
         position: "right",
         beginAtZero: true,
         grid: { drawOnChartArea: false },
-        title: { display: true, text: "Line Items Count" },
+        title: { display: true, text: "Count" },
         ticks: {
           font: { family: "'Inter', sans-serif", size: 12 },
         },
@@ -265,14 +321,57 @@ const PurchasesAmountChart = ({ customerId }) => {
     },
   };
 
+  const TotalsDisplay = ({ totals }) => (
+    <div className="mb-4">
+      <div className="row g-3">
+        <div className="col-md-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center">
+              <h6 className="text-muted mb-2">Total Orders</h6>
+              <h3 className="mb-0">{totals.totalOrderCount}</h3>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center">
+              <h6 className="text-muted mb-2">Order Amount</h6>
+              <h3 className="mb-0">
+                {formatCurrency(totals.totalOrderAmount)}
+              </h3>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center">
+              <h6 className="text-muted mb-2">Line Items</h6>
+              <h3 className="mb-0">{totals.totalLineItems}</h3>
+            </div>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="card border-0 shadow-sm h-100">
+            <div className="card-body text-center">
+              <h6 className="text-muted mb-2">Invoice Amount</h6>
+              <h3 className="mb-0">
+                {formatCurrency(totals.totalInvoiceAmount)}
+              </h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
       <div className="p-4 border-b">
-        <div className="d-flex justify-content-between align-items-center mb-3">
+        <div className="d-flex justify-content-between align-items-center mb-1">
           <h4 className="text-xl font-semibold text-gray-900 mb-0">
-            Sales & Line Items - Monthly
+            Orders & Invoices - Monthly
           </h4>
-          
+
           {/* Sales Person Filter */}
           <div className="d-flex gap-2 align-items-center">
             <div style={{ width: "300px" }}>
@@ -287,7 +386,9 @@ const PurchasesAmountChart = ({ customerId }) => {
                 isLoading={loadingSuggestions}
                 isClearable
                 placeholder="Filter by Sales Person"
-                noOptionsMessage={() => (loadingSuggestions ? "Loading..." : "No results found")}
+                noOptionsMessage={() =>
+                  loadingSuggestions ? "Loading..." : "No results found"
+                }
                 styles={{
                   control: (base, state) => ({
                     ...base,
@@ -303,7 +404,11 @@ const PurchasesAmountChart = ({ customerId }) => {
                 }}
               />
             </div>
-            <Button variant="primary" onClick={handleReset} disabled={!selectedValue}>
+            <Button
+              variant="primary"
+              onClick={handleReset}
+              disabled={!selectedValue}
+            >
               Reset
             </Button>
           </div>
@@ -318,9 +423,12 @@ const PurchasesAmountChart = ({ customerId }) => {
             <Spinner animation="border" />
           </div>
         ) : (
-          <div style={{ height: "400px" }}>
-            <Bar data={chartData} options={chartOptions} />
-          </div>
+          <>
+            {data.length > 0 && <TotalsDisplay totals={totals} />}
+            <div style={{ height: "400px" }}>
+              <Bar data={chartData} options={chartOptions} />
+            </div>
+          </>
         )}
       </div>
     </div>

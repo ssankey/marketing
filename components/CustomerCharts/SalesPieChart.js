@@ -1,12 +1,18 @@
+
+
+// components/CustomerCharts/SalesPieChart.js
 import React from "react";
 import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, Tooltip, Legend, ArcElement } from "chart.js";
 import { formatCurrency } from "utils/formatCurrency";
 
-
 ChartJS.register(Tooltip, Legend, ArcElement);
 
 const SalesPieChart = ({ data }) => {
+  if (!data || data.length === 0) {
+    return <div className="text-center">No data available for the chart</div>;
+  }
+
   const colorPalette = [
     "#0d6efd", // Primary Blue
     "#6c757d", // Secondary Gray
@@ -21,7 +27,6 @@ const SalesPieChart = ({ data }) => {
     "#fd7e14", // Orange
   ];
 
-  // Ensure we use a unique color for each category
   const chartColors = data.map(
     (_, index) => colorPalette[index % colorPalette.length]
   );
@@ -49,7 +54,7 @@ const SalesPieChart = ({ data }) => {
         },
       },
       datalabels: {
-        display: false, // Disable datalabels for this chart
+        display: false,
       },
     },
   };
