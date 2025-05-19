@@ -271,7 +271,7 @@ const DeliveryPerformanceChart = ({ customerId }) => {
       <div className="p-4 border-b">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h4 className="text-xl font-semibold text-gray-900 mb-0">
-            Delivery Performance - Monthly
+            Invoice to order - Monthly
           </h4>
 
           {/* Sales Person Filter */}
@@ -325,11 +325,74 @@ const DeliveryPerformanceChart = ({ customerId }) => {
             <Spinner animation="border" />
           </div>
         ) : data.length > 0 ? (
-          <div style={{ height: "500px" }}>
-            <Bar data={chartData} options={chartOptions} />
-          </div>
+          //   <div style={{ height: "500px" }}>
+          //     <Bar data={chartData} options={chartOptions} />
+          //   </div>
+          <>
+            <div style={{ height: "500px" }}>
+              <Bar data={chartData} options={chartOptions} />
+            </div>
+
+            {/* 📊 Chart Data Table */}
+            <div className="mt-4">
+              <Table striped bordered hover responsive>
+                <thead>
+                  <tr>
+                    <th>Range / Month</th>
+                    {data.map((item, index) => (
+                      <th key={index}>{item.month}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>0–3 Days</td>
+                    {data.map((item, index) => (
+                      <td key={index}>{item.green}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>4–5 Days</td>
+                    {data.map((item, index) => (
+                      <td key={index}>{item.orange}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>6–8 Days</td>
+                    {data.map((item, index) => (
+                      <td key={index}>{item.blue}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>9–10 Days</td>
+                    {data.map((item, index) => (
+                      <td key={index}>{item.purple}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>&gt;10 Days</td>
+                    {data.map((item, index) => (
+                      <td key={index}>{item.red}</td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td>
+                      <strong>SLA Achieved %</strong>
+                    </td>
+                    {data.map((item, index) => (
+                      <td key={index}>
+                        <strong>{item.slaPercentage}%</strong>
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </Table>
+            </div>
+          </>
         ) : (
-          <div className="text-center">No delivery performance data available</div>
+          <div className="text-center">
+            No delivery performance data available
+          </div>
         )}
       </div>
     </div>
