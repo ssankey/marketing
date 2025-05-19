@@ -1,6 +1,6 @@
 {
   "extends": "next/core-web-vitals",
-  "plugins": ["react-hooks"],
+
   "rules": {
     "react/no-unescaped-entities": 0,
     "react-hooks/rules-of-hooks": "error",
