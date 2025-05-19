@@ -243,8 +243,8 @@ export async function getServerSideProps(context) {
   const { id } = context.params;
 
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3001";
-    const res = await fetch(`${baseUrl}/api/invoices/${id}`);
+    
+    const res = await fetch(`api/invoices/${id}`);
     if (!res.ok) {
       return { notFound: true };
     }
