@@ -14,6 +14,8 @@ import downloadExcel from "utils/exporttoexcel";
 import TablePagination from "components/TablePagination";
 import DeliveryPerformanceChart from "../../components/CustomerCharts/ordertodelievery";
 import SalesByCategoryWrapper from "components/CustomerCharts/SalesByCategoryWrapper";
+import CustomerAgingChart from "../../components/CustomerCharts/customeragingreport";
+
 
 
 
@@ -883,6 +885,18 @@ export default function CustomerDetails({
           />
         </Card.Body>
       </Card> */}
+      <Card className="mb-4">
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="mb-0">Customer Balance Report</h3>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <Row>
+            <CustomerAgingChart cardCode={customer?.CustomerCode} />
+          </Row>
+        </Card.Body>
+      </Card>
 
       <Card className="mb-4">
         <Card.Header>

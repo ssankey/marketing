@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       WHERE T0.TrackNo IS NOT NULL
         AND T0.TrackNo <> ''
         AND T0.TrackNo <> 'N/A'
-        AND T0.UpdateDate >= DATEADD(MINUTE, -900, GETDATE())
+        AND T0.UpdateDate >= DATEADD(MINUTE, -1000, GETDATE())
       ORDER BY T0.UpdateDate DESC
     `;
 
@@ -111,49 +111,82 @@ export default async function handler(req, res) {
           )
           .join("");
 
+
+
         const html = `
-          <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-            <p>Dear Sir / Madam,</p>
-            <p>Greetings of the day!</p>
-            <p>Thank you for choosing us as your preferred partner. We would like to notify you that the following item(s) have been dispatched.</p>
+  <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+    <p>Dear ${customerName},</p>
+    
+    <p>Great news! Your order ${invoiceDetails["SO No"] || "N/A"} has been shipped and is on its way to you.</p>
+    
+    <p>Here are the details:</p>
+    
+    <p>
+      Our Order Number: ${invoiceDetails["Order No"] || "N/A"}-Dated # ${formatDate(invoiceDetails["Order Date"])}<br/>
+      Shipping Method: ${invoiceDetails.U_AirlineName || "N/A"}<br/>
+      Tracking Number: ${invoiceDetails["Tracking Number"] || "N/A"}. Dated# ${formatDate(invoiceDetails["Dispatch Date"])}<br/>
+      Estimated Delivery Date: ${formatDate(invoiceDetails["Delivery Date"])}
+    </p>
+    
+    <p>Items Shipped:</p>
+    
+    <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+      <thead style="background-color: #007BFF; color: white;">
+        <tr>
+          <th>Inv#</th>
+          <th>INV Date</th>
+          <th>Item No.</th>
+          <th>Item/Service Description</th>
+          <th>Cas No</th>
+          <th>Unit</th>
+          <th>Packsize</th>
+          <th>Unit Sales Price</th>
+          <th>QTY</th>
+          <th>Total Sales Price</th>
+          <th>Batch Number</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data
+          .map(
+            (item, index) => `
+          <tr>
+            <td style="text-align: center;">${item["Invoice No."] || "N/A"}</td>
+            <td style="text-align: center;">${formatDate(item["AR Invoice Date"])}</td>
+            <td style="text-align: center;">${item["Item No."] || "N/A"}</td>
+            <td style="text-align: center;">${item["Item/Service Description"] || "N/A"}</td>
+            <td style="text-align: center;">${item.U_CasNo || "N/A"}</td>
+            <td style="text-align: center;">${item.UnitMsr || "N/A"}</td>
+            <td style="text-align: center;">${item.U_PackSize || "N/A"}</td>
+            <td style="text-align: center;">${item["Unit Sales Price"] || "N/A"}</td>
+            <td style="text-align: center;">${item.Quantity || "N/A"}</td>
+            <td style="text-align: center;">${item["Total Sales Price"] || "N/A"}</td>
+            <td style="text-align: center;">${item.BatchNum || "N/A"}</td>
+          </tr>
+        `
+          )
+          .join("")}
+      </tbody>
+    </table>
+    
+    <p>You can track your order status anytime using the tracking link above. If you have any questions or need assistance, please don't hesitate to reach out to us at sales.</p>
+    
+    <p>Thank you for your purchase and support!</p>
+    
+    <p>Warm regards,</p>
+    
+    <img src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg" alt="Logo" style="height: 70px;"/><br/>
+    <strong>Website: www.densitypharmachem.com</strong><br/><br/>
+    DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
+    Sy No 615/A & 624/2/1, Pudur Village<br/>
+    Medchal-Malkajgiri District,<br/>
+    Hyderabad, Telangana, India-501401<br/>
+   
+  </div>
+`;
 
-            <h3>Order Details</h3>
-            <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-              <thead style="background-color: #007BFF; color: white;"><tr><th>Order#</th><th>Order Date</th></tr></thead>
-              <tbody><tr><td style="text-align: center;">${invoiceDetails["Order No"] || "N/A"}</td><td style="text-align: center;">${formatDate(invoiceDetails["Order Date"])}</td></tr></tbody>
-            </table>
-
-            <h3>Track your Shipment</h3>
-            <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-              <thead style="background-color: #007BFF; color: white;"><tr><th>Tracking No</th><th>Dispatch Date</th><th>Expected Delivery Date</th><th>Carrier Name</th></tr></thead>
-              <tbody>
-                <tr>
-                  <td style="text-align: center;">${invoiceDetails["Tracking Number"] || "N/A"}</td>
-                  <td style="text-align: center;">${formatDate(invoiceDetails["Dispatch Date"])}</td>
-                  <td style="text-align: center;">${formatDate(invoiceDetails["Delivery Date"])}</td>
-                  <td style="text-align: center;">${invoiceDetails.U_AirlineName || "N/A"}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <h3>Shipped Items</h3>
-            <p>Invoice# <strong>${invoiceNo}</strong> dated <strong>${invoiceDate}</strong></p>
-            <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%;">
-              <thead style="background-color: #007BFF; color: white;"><tr><th>Sr No</th><th>Item Code</th><th>Description</th><th>Quantity</th><th>Unit</th></tr></thead>
-              <tbody>${items}</tbody>
-            </table>
-
-            <p>Regards,<br/>
-            <img src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg" alt="Logo" style="height: 70px;"/><br/>
-             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
-                DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
-                Sy No 615/A & 624/2/1, Pudur Village<br/>
-                Medchal-Malkajgiri District,<br/>
-                Hyderabad, Telangana, India-501401<br/>
-                Mobile : +91-9029298654<br/><br/>
-          </div>
-        `;
-
+        // Update the subject line to match your requirement
+        const subject = `Your Order# ${invoiceDetails["SO No"] || "N/A"} Has Shipped! Here's Your Tracking Info!-Inv #${invoiceNo}`;
         const protocol = req.headers["x-forwarded-proto"] || "http";
         const host = req.headers.host;
 
@@ -164,7 +197,8 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             from: "prakash@densitypharmachem.com",
             to: "chandraprakashyadav1110@gmail.com", // Change to to for production
-            subject: `Shipment Dispatched Notification - ${invoiceNo}`,
+            // subject: `Shipment Dispatched Notification - ${invoiceNo}`,
+            subject: `Your Order# ${invoiceDetails["SO No"] || "N/A"} Has Shipped! Here's Your Tracking Info!-Inv #${invoiceNo}`,
             body: html,
           }),
         });
