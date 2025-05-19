@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Container, Row, Col, Card, Table, Spinner } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
-import { queryDatabase } from "lib/db"; // Adjust the path based on your project structure
+// Adjust the path based on your project structure
 // import { useAuth } from "../../utils/useAuth";
 import { useAuth } from "hooks/useAuth";
 
@@ -153,7 +153,8 @@ export default function InvoiceDetails({ invoices }) {
 // Server-side authentication and data fetching
 export async function getServerSideProps(context) {
   const token = context.req.cookies.token; // Ensure you adjust to your token storage method
-
+const sql = await import("mssql");
+const { queryDatabase } = await import("lib/db");
   if (!token) {
     // Redirect to login if no token is found
     return {
