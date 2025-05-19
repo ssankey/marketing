@@ -9,7 +9,7 @@ import { formatDate } from "utils/formatDate";
 // import { useAuth } from "../../utils/useAuth";
 import { useAuth } from "hooks/useAuth";
 
-import sql from "mssql";
+
 
 export default function InvoiceDetails({ invoices }) {
   const isAuthenticated = useAuth(); // Protect the invoice page
@@ -150,83 +150,6 @@ export default function InvoiceDetails({ invoices }) {
   );
 }
 
-// Server-side authentication and data fetching
-// export async function getServerSideProps(context) {
-//   const token = context.req.cookies.token; // Ensure you adjust to your token storage method
-// const sql = await import("mssql");
-// const { queryDatabase } = await import("lib/db");
-//   if (!token) {
-//     // Redirect to login if no token is found
-//     return {
-//       redirect: {
-//         destination: "/login",
-//         permanent: false,
-//       },
-//     };
-//   }
-
-//   const { id } = context.params;
-//   const invoiceId = parseInt(id, 10);
-
-//   if (isNaN(invoiceId)) {
-//     return { notFound: true };
-//   }
-
-//   try {
-//     const query = `
-//       SELECT t0.*, t1.*
-//       FROM INV1 t0 
-//       INNER JOIN OINV t1 ON t0.DocEntry = t1.DocEntry
-//       WHERE t1.DocNum = @DocNum;
-//     `;
-
-//     const params = [
-//       {
-//         name: "DocNum",
-//         type: sql.Int,
-//         value: invoiceId,
-//       },
-//     ];
-
-//     const data = await queryDatabase(query, params);
-
-//     if (!data || data.length === 0) {
-//       return { notFound: true };
-//     }
-
-//     // Ensure dates are correctly formatted to ISO strings
-//     const safeDate = (dateString) => {
-//       const date = new Date(dateString);
-//       return isNaN(date.getTime()) ? null : date.toISOString();
-//     };
-
-//     const invoices = data.map((invoice) => ({
-//       ...invoice,
-//       CreateDate: safeDate(invoice.CreateDate),
-//       TaxDate: safeDate(invoice.TaxDate),
-//       AssetDate: safeDate(invoice.AssetDate),
-//       ShipDate: safeDate(invoice.ShipDate),
-//       DocDate: safeDate(invoice.DocDate),
-//       DocDueDate: safeDate(invoice.DocDueDate),
-//       ActDelDate: safeDate(invoice.ActDelDate),
-//       UpdateDate: safeDate(invoice.UpdateDate),
-//     }));
-
-//     return {
-//       props: {
-//         invoices: Array.isArray(invoices) ? invoices : [invoices],
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error fetching invoice:", error);
-//     return {
-//       props: {
-//         invoices: [],
-//       },
-//     };
-//   }
-// }
-
 
 export async function getServerSideProps(context) {
   const token = context.req.cookies.token;
@@ -244,7 +167,11 @@ export async function getServerSideProps(context) {
 
   try {
     
-    const res = await fetch(`api/invoices/${id}`);
+    const protocol = context.req.headers["x-forwarded-proto"] || "http";
+    const host = context.req.headers.host || "localhost:3000";
+    const apiUrl = `${protocol}://${host}/api/invoices/${id}`;
+    
+    const res = await fetch(`${apiUrl}`);
     if (!res.ok) {
       return { notFound: true };
     }

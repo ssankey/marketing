@@ -1,5 +1,5 @@
 // pages/api/invoices/[id].js
-import sql from "mssql";
+
 import { queryDatabase } from "lib/db";
 
 export default async function handler(req, res) {
