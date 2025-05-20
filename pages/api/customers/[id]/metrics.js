@@ -8,19 +8,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // const { id } = req.query;
-    const { id, salesPerson } = req.query;
+    const { id, salesPerson, category } = req.query;
+
     if (!id) {
       return res.status(400).json({ message: "Customer ID is required" });
     }
 
-   
-    const data = await getCustomerPurchaseAndRevenue(id,salesPerson);
+    console.log("API handler received params:", { id, salesPerson, category });
 
-  
+    // Pass both parameters to the model function
+    const data = await getCustomerPurchaseAndRevenue(id, salesPerson, category);
+
     const safeData = Array.isArray(data) ? data : [];
     return res.status(200).json(safeData);
-    
   } catch (error) {
     console.error("API Error:", error);
     res.status(500).json({
@@ -29,3 +29,4 @@ export default async function handler(req, res) {
     });
   }
 }
+

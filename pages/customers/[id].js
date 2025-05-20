@@ -508,7 +508,7 @@ export default function CustomerDetails({
       <Card className="mb-4">
         <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Purchase Analytics</h3>
+            <h3 className="mb-0">Orders & Invoices - Monthly</h3>
           </div>
         </Card.Header>
         <Card.Body>
@@ -541,11 +541,23 @@ export default function CustomerDetails({
       <Card className="mb-4">
         <Card.Header>
           <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Order to Invoice</h3>
+            <h3 className="mb-0">Order to Invoice - Monthly</h3>
           </div>
         </Card.Header>
         <Card.Body>
           <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
+        </Card.Body>
+      </Card>
+      <Card className="mb-4">
+        <Card.Header>
+          <div className="d-flex justify-content-between align-items-center">
+            <h3 className="mb-0">Customer Balance Report</h3>
+          </div>
+        </Card.Header>
+        <Card.Body>
+          <Row>
+            <CustomerAgingChart cardCode={customer?.CustomerCode} />
+          </Row>
         </Card.Body>
       </Card>
       <Card className="mb-4">
@@ -885,18 +897,6 @@ export default function CustomerDetails({
           />
         </Card.Body>
       </Card> */}
-      <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Customer Balance Report</h3>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          <Row>
-            <CustomerAgingChart cardCode={customer?.CustomerCode} />
-          </Row>
-        </Card.Body>
-      </Card>
 
       <Card className="mb-4">
         <Card.Header>
