@@ -13,7 +13,7 @@ import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
 import downloadExcel from "utils/exporttoexcel"; 
 import TablePagination from "components/TablePagination";
 import DeliveryPerformanceChart from "../../components/CustomerCharts/ordertodelievery";
-import SalesByCategoryWrapper from "components/CustomerCharts/SalesByCategoryWrapper";
+import MonthlyCategorySalesChart from "components/CustomerCharts/SalesByCategoryWrapper";
 import CustomerAgingChart from "../../components/CustomerCharts/customeragingreport";
 
 
@@ -912,7 +912,7 @@ export default function CustomerDetails({
               <Col lg={6}>
                 <SalesPieChart data={salesByCategoryData} />
               </Col> */}
-            <SalesByCategoryWrapper customerId={customer?.CustomerCode} />
+            <MonthlyCategorySalesChart customerId={customer?.CustomerCode} />
           </Row>
         </Card.Body>
       </Card>
