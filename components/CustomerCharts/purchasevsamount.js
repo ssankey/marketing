@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
 import { Spinner, Dropdown, Button } from "react-bootstrap";
@@ -36,7 +37,14 @@ const PurchasesAmountChart = ({ customerId }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Sales Person filter state
+  // API Endpoints
+  const API_ENDPOINTS = {
+    salesPerson: "/api/dashboard/sales-person/distinct-salesperson",
+    category: "/api/products/categories",
+  };
+
+  // Search type and filters
+  const [searchType, setSearchType] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [selectedValue, setSelectedValue] = useState(null);
@@ -47,19 +55,25 @@ const PurchasesAmountChart = ({ customerId }) => {
   // Filter state
   const [filters, setFilters] = useState({
     salesPerson: null,
+    category: null,
   });
 
   const fetchCustomerData = async () => {
     try {
       setLoading(true);
 
-      // Construct URL with optional salesPerson filter
-      let url = `/api/customers/${customerId}/metrics`;
+      // Construct URL with optional filters
+      const params = new URLSearchParams();
 
       if (filters.salesPerson) {
-        url += `?salesPerson=${encodeURIComponent(filters.salesPerson.value)}`;
+        params.append("salesPerson", filters.salesPerson.value);
       }
 
+      if (filters.category) {
+        params.append("category", filters.category.value);
+      }
+
+      const url = `/api/customers/${customerId}/metrics?${params.toString()}`;
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -79,18 +93,31 @@ const PurchasesAmountChart = ({ customerId }) => {
     fetchCustomerData();
   }, [customerId, filters]);
 
+  // Handle dropdown selection
+  const handleSearchTypeSelect = async (type) => {
+    setSearchType(type);
+    setSelectedValue(null);
+    setInputValue("");
+    setSuggestions([]);
+    if (type === "salesPerson" || type === "category") {
+      await fetchSuggestions("", true);
+    }
+  };
+
   // Debounced function for API calls when typing
   const debouncedFetchSuggestions = useCallback(
     debounce(async (query) => {
       await fetchSuggestions(query);
     }, 500),
-    []
+    [searchType]
   );
 
-  // Fetch sales person suggestions
+  // Fetch suggestions based on search type
   const fetchSuggestions = async (query = "", initialLoad = false) => {
-    const cacheKey = `sales-person_${query}`;
+    if (!searchType) return;
+    if (!initialLoad && !query) return;
 
+    const cacheKey = `${searchType}_${query}`;
     if (cache.current[cacheKey]) {
       setSuggestions(cache.current[cacheKey]);
       return;
@@ -98,23 +125,31 @@ const PurchasesAmountChart = ({ customerId }) => {
 
     setLoadingSuggestions(true);
     try {
-      const url = `/api/dashboard/sales-person/distinct-salesperson?search=${encodeURIComponent(query)}&page=1&limit=50`;
-
+      const url = `${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(query)}&page=1&limit=50`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
       const data = await response.json();
 
-      const formattedSuggestions =
-        data.salesEmployees?.map((emp) => ({
-          value: emp.value,
-          label: `${emp.value} - ${emp.label}`,
-        })) || [];
+      let formattedSuggestions = [];
+      if (searchType === "salesPerson") {
+        formattedSuggestions =
+          data.salesEmployees?.map((emp) => ({
+            value: emp.value,
+            label: `${emp.value} - ${emp.label}`,
+          })) || [];
+      } else if (searchType === "category") {
+        formattedSuggestions =
+          data.categories?.map((cat) => ({
+            value: cat,
+            label: cat,
+          })) || [];
+      }
 
       cache.current[cacheKey] = formattedSuggestions;
       setSuggestions(formattedSuggestions);
     } catch (error) {
-      console.error(`Error fetching sales-person suggestions:`, error);
+      console.error(`Error fetching ${searchType} suggestions:`, error);
       setSuggestions([]);
     } finally {
       setLoadingSuggestions(false);
@@ -131,7 +166,9 @@ const PurchasesAmountChart = ({ customerId }) => {
 
   // Handle input focus
   const handleFocus = () => {
-    fetchSuggestions(inputValue, true);
+    if (searchType) {
+      fetchSuggestions(inputValue, true);
+    }
   };
 
   // Handle option selection
@@ -141,20 +178,27 @@ const PurchasesAmountChart = ({ customerId }) => {
     if (option) {
       setFilters((prev) => ({
         ...prev,
-        salesPerson: {
+        [searchType]: {
           value: option.value,
           label: option.label,
         },
+      }));
+    } else {
+      setFilters((prev) => ({
+        ...prev,
+        [searchType]: null,
       }));
     }
   };
 
   // Reset filter
   const handleReset = () => {
+    setSearchType(null);
     setSelectedValue(null);
     setInputValue("");
     setFilters({
       salesPerson: null,
+      category: null,
     });
   };
 
@@ -369,11 +413,27 @@ const PurchasesAmountChart = ({ customerId }) => {
       <div className="p-4 border-b">
         <div className="d-flex justify-content-between align-items-center mb-1">
           <h4 className="text-xl font-semibold text-gray-900 mb-0">
-            Orders & Invoices - Monthly
+            {/* Orders & Invoices - Monthly */}
           </h4>
 
-          {/* Sales Person Filter */}
+          {/* Filter Controls */}
           <div className="d-flex gap-2 align-items-center">
+            <Dropdown onSelect={handleSearchTypeSelect}>
+              <Dropdown.Toggle variant="outline-secondary" id="search-dropdown">
+                {searchType
+                  ? searchType === "salesPerson"
+                    ? "Sales Person"
+                    : "Category"
+                  : "Filter By"}
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                <Dropdown.Item eventKey="salesPerson">
+                  Sales Person
+                </Dropdown.Item>
+                <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+              </Dropdown.Menu>
+            </Dropdown>
+
             <div style={{ width: "300px" }}>
               <Select
                 ref={selectRef}
@@ -385,7 +445,12 @@ const PurchasesAmountChart = ({ customerId }) => {
                 options={suggestions}
                 isLoading={loadingSuggestions}
                 isClearable
-                placeholder="Filter by Sales Person"
+                isDisabled={!searchType}
+                placeholder={
+                  searchType
+                    ? `Search ${searchType === "salesPerson" ? "Sales Person" : "Category"}`
+                    : "Select filter type"
+                }
                 noOptionsMessage={() =>
                   loadingSuggestions ? "Loading..." : "No results found"
                 }
@@ -395,6 +460,7 @@ const PurchasesAmountChart = ({ customerId }) => {
                     minHeight: "40px",
                     borderColor: state.isFocused ? "#007bff" : "#dee2e6",
                     fontSize: "14px",
+                    backgroundColor: searchType ? "#fff" : "#f8f9fa",
                   }),
                   option: (base, state) => ({
                     ...base,
@@ -407,7 +473,9 @@ const PurchasesAmountChart = ({ customerId }) => {
             <Button
               variant="primary"
               onClick={handleReset}
-              disabled={!selectedValue}
+              disabled={
+                !searchType && !filters.salesPerson && !filters.category
+              }
             >
               Reset
             </Button>

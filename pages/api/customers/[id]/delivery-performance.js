@@ -1,10 +1,9 @@
 
-// pages/api/customers/[customerId]/delivery-performance.js
 import { queryDatabase } from "../../../../lib/db";
 import sql from 'mssql';
 
 export default async function handler(req, res) {
-  const { id, salesPerson } = req.query;
+  const { id, salesPerson, category } = req.query;
   console.log("customer code", id);
   
   if (!id) {
@@ -32,11 +31,13 @@ export default async function handler(req, res) {
       LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry AND DLN1.LineNum = INV1.BaseLine AND INV1.BaseType = 15
       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED = 'N'
       LEFT JOIN OITM T2 ON T1.ItemCode = T2.ItemCode
+      LEFT JOIN OITB IB ON T2.ItmsGrpCod = IB.ItmsGrpCod
       LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
       WHERE
         OINV.DocDate IS NOT NULL
         AND T0.CardCode = @customerCode
         ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
+        ${category ? 'AND IB.ItmsGrpNam = @category' : ''}
       GROUP BY FORMAT(OINV.DocDate, 'MMM-yyyy')
       ORDER BY MIN(OINV.DocDate);
     `;
@@ -57,18 +58,21 @@ export default async function handler(req, res) {
       });
     }
 
+    if (category) {
+      params.push({
+        name: 'category',
+        type: sql.NVarChar,
+        value: category
+      });
+    }
+
     console.log("With parameters:", params);
     const rawData = await queryDatabase(query, params);
     console.log("Raw SQL query results:", rawData);
 
-    // if (!rawData || rawData.length === 0) {
-    //   return res.status(404).json({ error: "No data found for this customer" });
-    // }
     if (!rawData || rawData.length === 0) {
-      // no matches → return an empty array
       return res.status(200).json([]);
     }
-
 
     const formattedData = rawData.map(item => ({
       month: item.Month,
