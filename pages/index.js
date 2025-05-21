@@ -156,7 +156,13 @@ const Dashboard = () => {
       ) : error && error?.message !== "Token expired" ? (
         <div className="text-danger">Failed to load dashboard data.</div>
       ) : (
-        <KPISection kpiData={data?.kpiData} />
+        // <KPISection kpiData={data?.kpiData} />
+        <KPISection
+          kpiData={data?.kpiData}
+          dateFilter={dateFilter}
+          startDate={startDate}
+          endDate={endDate}
+        />
       )}
 
       {!dataLoading && !error && <DashboardCharts />}

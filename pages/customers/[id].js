@@ -3,21 +3,28 @@
 import { useAuth } from "hooks/useAuth";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { Container, Row, Col, Card, Spinner, Table , Dropdown } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Spinner,
+  Table,
+  Dropdown,
+} from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
-import  PurchasesAmountChart  from "../../components/CustomerCharts/purchasevsamount";
- 
+import PurchasesAmountChart from "../../components/CustomerCharts/purchasevsamount";
+import AllOutstandingTable from "../../components/CustomerCharts/alloutstandingtable";
+
 import CustomerOutstandingTable from "../../components/CustomerCharts/outstandingtable";
 import SalesTable from "../../components/CustomerCharts/salestable";
 import SalesPieChart from "../../components/CustomerCharts/SalesPieChart";
-import downloadExcel from "utils/exporttoexcel"; 
+import downloadExcel from "utils/exporttoexcel";
 import TablePagination from "components/TablePagination";
 import DeliveryPerformanceChart from "../../components/CustomerCharts/ordertodelievery";
+import { generatePDF, handlePrintPDF } from "utils/pdfGenerator";
 import MonthlyCategorySalesChart from "components/CustomerCharts/SalesByCategoryWrapper";
 import CustomerAgingChart from "../../components/CustomerCharts/customeragingreport";
-
-
-
 
 // Utility function to format date
 function formatDate(dateString) {
@@ -27,12 +34,12 @@ function formatDate(dateString) {
 }
 
 const fetchAllCustomerOutstanding = async () => {
-  const res = await fetch(`/api/customers/${customer.CustomerCode}/outstanding?getAll=true`);
+  const res = await fetch(
+    `/api/customers/${customer.CustomerCode}/outstanding?getAll=true`
+  );
   const data = await res.json();
   return data;
 };
-
-
 
 export default function CustomerDetails({
   customer,
@@ -42,13 +49,12 @@ export default function CustomerDetails({
   TopInvoiceData,
   salesByCategoryData,
   initialOutstandings,
-  initialTotalOutstandings
+  initialTotalOutstandings,
 }) {
   const [selectedRows, setSelectedRows] = useState([]);
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [isExcelLoading, setIsExcelLoading] = useState(false);
   const [isMailSending, setIsMailSending] = useState(false);
-
 
   const ITEMS_PER_PAGE = 5; // Set this at the top of your component
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,7 +97,6 @@ export default function CustomerDetails({
     }
   };
 
-
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
     fetchOutstandings(newPage, filters);
@@ -101,7 +106,7 @@ export default function CustomerDetails({
     setFilters(newFilters);
     fetchOutstandings(1, newFilters);
   };
- 
+
   const handleExcelDownload = async (e) => {
     e?.preventDefault?.();
     try {
@@ -151,13 +156,10 @@ export default function CustomerDetails({
       setIsExcelLoading(false);
     }
   };
- 
 
-
-
+  
   // Updated handleMailSend function
   const handleMailSend = async () => {
-
     if (outstandingFilter === "Payment Done") {
       alert("Cannot send mail for 'Payment Done' records.");
       return;
@@ -224,9 +226,6 @@ export default function CustomerDetails({
         })
         .join("");
 
-
-
-
       const totalInvoiceAmount = selectedData.reduce(
         (sum, row) => sum + Math.round(row["Invoice Total"] || 0),
         0
@@ -243,7 +242,6 @@ export default function CustomerDetails({
         }
         return sum;
       }, 0);
-
 
       const summaryLine = `
       <p>
@@ -306,22 +304,37 @@ export default function CustomerDetails({
       </div>
     `;
 
-   
-
       // Send to new mail endpoint
+      // const mailRes = await fetch(`/api/email/base_mail`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     from: "shafique@densitypharmachem.com",
+      //     // Set to real email in production:
+      //     // to: email,
+      //     // For testing:
+      //     // to: [
+      //     //   "chandraprakashyadav1110@gmail.com",
+      //     //   "shafique@densitypharmachem.com",
+      //     //   "satish@densitypharmachem.com",
+      //     // ],
+      //     to:"chandraprakashyadav1110@gmail.com",
+      //     subject: `Request for Confirmation and Payment of Outstanding Invoices`,
+      //     body,
+      //   }),
+      // });
       const mailRes = await fetch(`/api/email/base_mail`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          from: "prakash@densitypharmachem.com",
-          // Set to real email in production:
-          // to: email,
-          // For testing:
-          to: ["chandraprakashyadav1110@gmail.com","shafique@densitypharmachem.com","satish@densitypharmachem.com"],
-          subject: `Request for Confirmation and Payment of Outstanding Invoices`,
-          body,
+          from: "shafique@densitypharmachem.com",
+          to: "chandraprakashyadav1110@gmail.com",
+          subject:
+            "Request for Confirmation and Payment of Outstanding Invoices",
+          body: generatedHtmlBody,
         }),
       });
+
 
       const result = await mailRes.json();
 
@@ -364,7 +377,7 @@ export default function CustomerDetails({
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString();
   };
- 
+
   useEffect(() => {
     const visibleInvoiceNos = outstandings.map((item) => item["Invoice No."]);
     const allVisibleSelected = visibleInvoiceNos.every((invNo) =>
@@ -391,8 +404,6 @@ export default function CustomerDetails({
       </Container>
     );
   }
-
- 
 
   // Modify the fetchOutstandings function to pass filterType
   const fetchOutstandings = async (
@@ -426,12 +437,7 @@ export default function CustomerDetails({
     }
   };
 
-  // Update handleFilterSelect to pass the new filter type
-  // const handleFilterSelect = (eventKey) => {
-  //   setOutstandingFilter(eventKey);
-  //   // Pass the new filter type to fetchOutstandings
-  //   fetchOutstandings(1, filters);
-  // };
+ 
   const handleFilterSelect = (eventKey) => {
     setOutstandingFilter(eventKey); // update the filter in state
 
@@ -448,6 +454,7 @@ export default function CustomerDetails({
   // Handle missing customer data
   if (!customer) {
     return (
+       
       <Container className="mt-5">
         <Card>
           <Card.Body>
@@ -461,6 +468,8 @@ export default function CustomerDetails({
             >
               Back to Customers
             </button>
+           
+
           </Card.Body>
         </Card>
       </Container>
@@ -468,510 +477,317 @@ export default function CustomerDetails({
   }
 
   return (
-    <Container className="mt-4">
-      <div className="mt-3 mb-4">
-        <button className="btn btn-secondary" onClick={() => router.back()}>
-          Back to Customers
-        </button>
-      </div>
-      {/* First Card - Customer Details */}
-      <Card className="mb-4">
-        <Card.Header>
-          <h2 className="mb-0">
-            Customer Details - {customer?.CustomerName || "N/A"}
-          </h2>
-        </Card.Header>
-        <Card.Body>
-          <Row className="mb-4">
-            <Col md={6}>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Customer Code:
+    <div id="content-to-print">
+      <Container className="mt-4">
+        {/* <div className="mt-3 mb-4">
+          <button className="btn btn-secondary" onClick={() => router.back()}>
+            Back to Customers
+          </button>
+          <button className="btn btn-primary" onClick={handlePrintPDF}>
+            <i className="bi bi-printer-fill me-2"></i> Print Report
+          </button>
+        </div> */}
+        <div className="mt-3 mb-4 d-flex justify-content-between align-items-center">
+          <button
+            className="btn btn-secondary me-2 me-md-0"
+            onClick={() => router.back()}
+          >
+            Back to Customers
+          </button>
+          <button
+            id="print-pdf-btn"
+            className="btn btn-primary"
+            onClick={handlePrintPDF}
+          >
+            <i className="bi bi-file-earmark-pdf me-2"></i> Print PDF
+          </button>
+        </div>
+        {/* First Card - Customer Details */}
+        <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <h2 className="mb-0">
+                Customer Details - {customer?.CustomerName || "N/A"}
+              </h2>
+            </Card.Header>
+            <Card.Body>
+              <Row className="mb-4">
+                <Col md={6}>
+                  <Row className="mb-2">
+                    <Col sm={4} className="fw-bold">
+                      Customer Code:
+                    </Col>
+                    <Col sm={8}>{customer?.CustomerCode || "N/A"}</Col>
+                  </Row>
+                  {/* Add more customer details as needed */}
                 </Col>
-                <Col sm={8}>{customer?.CustomerCode || "N/A"}</Col>
-              </Row>
-              {/* Add more customer details as needed */}
-            </Col>
-            <Col md={6}>
-              <Row className="mb-2">
-                <Col sm={4} className="fw-bold">
-                  Billing Address:
+                <Col md={6}>
+                  <Row className="mb-2">
+                    <Col sm={4} className="fw-bold">
+                      Billing Address:
+                    </Col>
+                    <Col sm={8}>{customer?.BillingAddress || "N/A"}</Col>
+                  </Row>
+                  {/* Add more address details as needed */}
                 </Col>
-                <Col sm={8}>{customer?.BillingAddress || "N/A"}</Col>
               </Row>
-              {/* Add more address details as needed */}
-            </Col>
-          </Row>
-        </Card.Body>
-      </Card>
-      {/*Purchase Analytics Card */}
-      <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Orders & Invoices - Monthly</h3>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          {/* <PurchasesAmountChart data={purchaseData} /> */}
-          <PurchasesAmountChart customerId={customer?.CustomerCode} />
-        </Card.Body>
-      </Card>
+            </Card.Body>
+          </Card>
+        </div>
 
-      {/* {purchaseData && purchaseData.length > 0 && (
+        <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Orders & Invoices - Monthly</h3>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              {/* <PurchasesAmountChart data={purchaseData} /> */}
+              <PurchasesAmountChart customerId={customer?.CustomerCode} />
+            </Card.Body>
+          </Card>
+        </div>
+        {/*Purchase Analytics Card */}
+
+        <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Order to Invoice - Monthly</h3>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
+            </Card.Body>
+          </Card>
+        </div>
+
+        <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Customer Balance Report</h3>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+                <CustomerAgingChart cardCode={customer?.CustomerCode} />
+              </Row>
+            </Card.Body>
+          </Card>
+        </div>
+
         <Card className="mb-4">
           <Card.Header>
             <div className="d-flex justify-content-between align-items-center">
-              <h3 className="mb-0">Sales by Category</h3>
+              <h3 className="mb-0">Customer Outstanding</h3>
+
+              <div className="d-flex align-items-center ms-auto gap-2">
+                <Dropdown onSelect={handleFilterSelect}>
+                  <Dropdown.Toggle
+                    variant="outline-secondary"
+                    id="outstanding-filter-dropdown"
+                  >
+                    {outstandingFilter}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Item eventKey="Payment Pending">
+                      Payment Pending
+                    </Dropdown.Item>
+                    <Dropdown.Item eventKey="Payment Done">
+                      Payment Done
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+
+                <button
+                  className="btn btn-primary"
+                  onClick={handleMailSend}
+                  disabled={isMailSending}
+                >
+                  {isMailSending ? (
+                    <>
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                        className="me-2"
+                      />
+                      Sending...
+                    </>
+                  ) : (
+                    "Mail"
+                  )}
+                </button>
+
+                <button
+                  className="btn btn-success"
+                  onClick={handleExcelDownload}
+                  disabled={isExcelLoading}
+                >
+                  Excel
+                </button>
+              </div>
             </div>
           </Card.Header>
-          <Card.Body>
-            <Row>
-              <Col lg={6}>
-                
-                <SalesTable data={salesByCategoryData} />
-              </Col>
-              <Col lg={6}>
-           
-                <SalesPieChart data={salesByCategoryData} />
-              </Col>
-            </Row>
+
+          <Card.Body
+            style={{
+              overflowY: "auto",
+              overflowX: "auto",
+            }}
+          >
+            <CustomerOutstandingTable
+              customerOutstandings={outstandings}
+              totalItems={totalOutstandings}
+              isLoading={isLoadingOutstandings}
+              customerCode={customer?.CustomerCode}
+              onFilterChange={handleFilterChange}
+              onExcelDownload={handleExcelDownload}
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              itemsPerPage={ITEMS_PER_PAGE}
+              filterType={outstandingFilter}
+              onFilterTypeChange={setOutstandingFilter}
+              selectedRows={selectedRows}
+              setSelectedRows={setSelectedRows}
+              isAllSelected={isAllSelected}
+              onSelectAll={handleSelectAll}
+            />
           </Card.Body>
         </Card>
-      )} */}
-      <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Order to Invoice - Monthly</h3>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
-        </Card.Body>
-      </Card>
-      <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Customer Balance Report</h3>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          <Row>
-            <CustomerAgingChart cardCode={customer?.CustomerCode} />
-          </Row>
-        </Card.Body>
-      </Card>
-      <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Customer Outstanding</h3>
 
-            <div className="d-flex align-items-center ms-auto gap-2">
-              <Dropdown onSelect={handleFilterSelect}>
-                <Dropdown.Toggle
-                  variant="outline-secondary"
-                  id="outstanding-filter-dropdown"
-                >
-                  {outstandingFilter}
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item eventKey="Payment Pending">
-                    Payment Pending
-                  </Dropdown.Item>
-                  <Dropdown.Item eventKey="Payment Done">
-                    Payment Done
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-
-              <button
-                className="btn btn-primary"
-                onClick={handleMailSend}
-                disabled={isMailSending}
-              >
-                {isMailSending ? (
-                  <>
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                      className="me-2"
-                    />
-                    Sending...
-                  </>
-                ) : (
-                  "Mail"
-                )}
-              </button>
-
-              <button
-                className="btn btn-success"
-                onClick={handleExcelDownload}
-                disabled={isExcelLoading}
-              >
-                Excel
-              </button>
-            </div>
-          </div>
-        </Card.Header>
-
-        <Card.Body
-          style={{
-            overflowY: "auto",
-            overflowX: "auto",
-          }}
+        {/* <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Complete Outstanding Report</h3>
+                <Dropdown onSelect={handleFilterSelect}>
+                  <Dropdown.Toggle
+                    variant="outline-secondary"
+                    id="complete-outstanding-filter-dropdown"
+                  >
+                    {outstandingFilter}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    <Dropdown.Item eventKey="Payment Pending">
+                      Payment Pending
+                    </Dropdown.Item>
+                    <Dropdown.Item eventKey="Payment Done">
+                      Payment Done
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              </div>
+            </Card.Header>
+            <Card.Body style={{ overflowY: "auto", overflowX: "auto" }}>
+              <AllOutstandingTable
+                customerCode={customer?.CustomerCode}
+                filterType={outstandingFilter}
+                isForPDF={true}
+              />
+            </Card.Body>
+          </Card>
+        </div> */}
+        <div
+          className="pdf-section d-none d-print-block"
+          style={{ pageBreakAfter: "always" }}
         >
-          <CustomerOutstandingTable
-            customerOutstandings={outstandings}
-            totalItems={totalOutstandings}
-            isLoading={isLoadingOutstandings}
-            customerCode={customer?.CustomerCode}
-            onFilterChange={handleFilterChange}
-            onExcelDownload={handleExcelDownload}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            itemsPerPage={ITEMS_PER_PAGE}
-            filterType={outstandingFilter}
-            onFilterTypeChange={setOutstandingFilter}
-            selectedRows={selectedRows}
-            setSelectedRows={setSelectedRows}
-            isAllSelected={isAllSelected}
-            onSelectAll={handleSelectAll}
-          />
-        </Card.Body>
-      </Card>
-
-      {/* <Row className="mb-4">
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Last 10 Quotations</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-3">
-                {TopQuotationData?.map((quote) => (
-                  <div
-                    key={quote.QuotationNumber}
-                    className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
-                  >
-                    
-                    <div className="fw-bold">
-                      Quotation#:{" "}
-                      <span
-                        style={{ cursor: "pointer", color: "blue" }}
-                        onClick={() =>
-                          
-                          router.push(
-                            `/quotationdetails?d=${quote.QuotationNumber}&e=${quote.DocEntry}`
-                          )
-                        }
-                      >
-                        {quote.QuotationNumber}
-                      </span>
-                    </div>
-                    <div className="text-muted small mt-1">
-                      <div>
-                        <i className="bi bi-calendar-event me-1"></i>
-                        Quotation Date: {formatDate(quote.QuotationDate)}
-                      </div>
-                      <div>
-                        <i className="bi bi-truck me-1"></i>
-                        Delivery Date: {formatDate(quote.DeliveryDate)}
-                      </div>
-                      <div className="fw-bold mt-2">
-                        Status:{" "}
-                        <span
-                          className={`badge ${
-                            quote.QuotationStatus === "C"
-                              ? "bg-danger"
-                              : "bg-success"
-                          }`}
-                        >
-                          {quote.QuotationStatus === "C" ? "Closed" : "Open"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Complete Outstanding Report</h3>
               </div>
+            </Card.Header>
+            <Card.Body style={{ overflowY: "auto", overflowX: "auto" }}>
+              <AllOutstandingTable
+                customerCode={customer?.CustomerCode}
+                filterType={outstandingFilter}
+                isForPDF={true}
+              />
             </Card.Body>
           </Card>
-        </Col>
+        </div>
 
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Last 10 Orders</h5>
+        <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Sales by Category</h3>
+              </div>
             </Card.Header>
             <Card.Body>
-              <div className="p-3">
-                {TopOrderData?.map((order) => (
-                  <div
-                    key={order.OrderNumber}
-                    className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
-                  >
-                   
-                    <div className="fw-bold">
-                      Order#:{" "}
-                      <span
-                        style={{ cursor: "pointer", color: "blue" }}
-                        onClick={() =>
-                          
-                          router.push(
-                            `/orderdetails?d=${order.OrderNumber}&e=${order.DocEntry}`
-                          )
-                        }
-                      >
-                        {order.OrderNumber}
-                      </span>
-                    </div>
-                    <div className="text-muted small mt-1">
-                      <div>
-                        <i className="bi bi-calendar-check me-1"></i>
-                        Order Date: {formatDate(order.OrderDate)}
-                      </div>
-                      <div>
-                        <i className="bi bi-truck me-1"></i>
-                        Delivery Date: {formatDate(order.DeliveryDate)}
-                      </div>
-                      <div className="fw-bold mt-2">
-                        Status:{" "}
-                        <span
-                          className={`badge ${
-                            order.OrderStatus === "C"
-                              ? "bg-danger"
-                              : "bg-success"
-                          }`}
-                        >
-                          {order.OrderStatus === "C" ? "Closed" : "Open"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-
-        <Col lg={4}>
-          <Card className="shadow-sm border-0 h-100">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Last 10 Invoices</h5>
-            </Card.Header>
-            <Card.Body>
-              <div className="p-3">
-                {TopInvoiceData?.map((invoice) => (
-                  <div
-                    key={invoice.InvoiceNumber}
-                    className="py-3 px-3 mb-2 rounded bg-light shadow-sm d-flex flex-column"
-                  >
-                   
-                    <div className="fw-bold">
-                      Invoice#:{" "}
-                      <span
-                        style={{ cursor: "pointer", color: "blue" }}
-                        onClick={() =>
-                          
-                          router.push(
-                            `/invoicedetails?d=${invoice.InvoiceNumber}&e=${invoice.DocEntry}`
-                          )
-                        }
-                      >
-                        {invoice.InvoiceNumber}
-                      </span>
-                    </div>
-                    <div className="text-muted small mt-1">
-                      <div>
-                        <i className="bi bi-calendar me-1"></i>
-                        Invoice Date: {formatDate(invoice.InvoiceDate)}
-                      </div>
-                      <div>
-                        <i className="bi bi-calendar me-1"></i>
-                        Delivery Date: {formatDate(invoice.DeliveryDate)}
-                      </div>
-                      <div>
-                        <i className="bi bi-calendar me-1"></i>
-                        NetAmount : {formatCurrency(invoice.NetAmount)}
-                      </div>
-                      <div className="fw-bold mt-2">
-                        Status:{" "}
-                        <span
-                          className={`badge ${
-                            invoice.InvoiceStatus === "C"
-                              ? "bg-danger"
-                              : "bg-success"
-                          }`}
-                        >
-                          {invoice.InvoiceStatus === "C" ? "Closed" : "Open"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row> */}
-
-      {/* <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Customer Outstanding</h3>
-
-            <div className="d-flex align-items-center ms-auto gap-2">
-              <Dropdown onSelect={handleFilterSelect}>
-                <Dropdown.Toggle
-                  variant="outline-secondary"
-                  id="outstanding-filter-dropdown"
-                >
-                  {outstandingFilter}
-                </Dropdown.Toggle>
-                <Dropdown.Menu>
-                  <Dropdown.Item eventKey="Payment Pending">
-                    Payment Pending
-                  </Dropdown.Item>
-                  <Dropdown.Item eventKey="Payment Done">
-                    Payment Done
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-              
-              <button
-                className="btn btn-primary"
-                onClick={handleMailSend}
-                disabled={isMailSending}
-              >
-                {isMailSending ? (
-                  <>
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                      className="me-2"
-                    />
-                    Sending...
-                  </>
-                ) : (
-                  "Mail"
-                )}
-              </button>
-
-              <button
-                className="btn btn-success"
-                onClick={handleExcelDownload}
-                disabled={isExcelLoading}
-              >
-                Excel
-              </button>
-            </div>
-          </div>
-        </Card.Header>
-
-        <Card.Body
-          style={{
-            overflowY: "auto",  
-            overflowX: "auto", 
-          }}
-        >
-          <CustomerOutstandingTable
-            customerOutstandings={outstandings}
-            totalItems={totalOutstandings}
-            isLoading={isLoadingOutstandings}
-            customerCode={customer?.CustomerCode}
-            onFilterChange={handleFilterChange}
-            onExcelDownload={handleExcelDownload}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            itemsPerPage={ITEMS_PER_PAGE}
-            filterType={outstandingFilter}  
-            onFilterTypeChange={setOutstandingFilter}  
-            selectedRows={selectedRows}
-            setSelectedRows={setSelectedRows}
-            isAllSelected={isAllSelected}
-            onSelectAll={handleSelectAll}
-          />
-        </Card.Body>
-      </Card> */}
-
-      <Card className="mb-4">
-        <Card.Header>
-          <div className="d-flex justify-content-between align-items-center">
-            <h3 className="mb-0">Sales by Category</h3>
-          </div>
-        </Card.Header>
-        <Card.Body>
-          <Row>
-            {/* <Col lg={6}>
+              <Row>
+                {/* <Col lg={6}>
                 <SalesTable data={salesByCategoryData} />
               </Col>
               <Col lg={6}>
                 <SalesPieChart data={salesByCategoryData} />
               </Col> */}
-            <MonthlyCategorySalesChart customerId={customer?.CustomerCode} />
-          </Row>
-        </Card.Body>
-      </Card>
+                <MonthlyCategorySalesChart
+                  customerId={customer?.CustomerCode}
+                />
+              </Row>
+            </Card.Body>
+          </Card>
+        </div>
 
-      <Card className="mb-4">
-        <Card.Header>
-          <h3 className="mb-0">Addresses</h3>
-        </Card.Header>
-        <Card.Body>
-          {customer?.Addresses && customer.Addresses.length > 0 ? (
-            <Table responsive striped bordered hover>
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Address Name</th>
-                  <th>Street</th>
-                  <th>Block</th>
-                  <th>City</th>
-                  <th>State</th>
-                  <th>Zip Code</th>
-                  <th>Country</th>
-                </tr>
-              </thead>
-              <tbody>
-                {customer.Addresses.map((address, index) => (
-                  <tr key={index}>
-                    <td>
-                      {address.AddressType === "B" ? "Billing" : "Shipping"}
-                    </td>
-                    <td>{address.AddressName || "N/A"}</td>
-                    <td>{address.Street || "N/A"}</td>
-                    <td>{address.Block || "N/A"}</td>
-                    <td>{address.City || "N/A"}</td>
-                    <td>{address.State || "N/A"}</td>
-                    <td>{address.ZipCode || "N/A"}</td>
-                    <td>{address.Country || "N/A"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          ) : (
-            <p className="mb-0">No addresses available.</p>
-          )}
-        </Card.Body>
-      </Card>
+        <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <h3 className="mb-0">Addresses</h3>
+            </Card.Header>
+            <Card.Body>
+              {customer?.Addresses && customer.Addresses.length > 0 ? (
+                <Table responsive striped bordered hover>
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Address Name</th>
+                      <th>Street</th>
+                      <th>Block</th>
+                      <th>City</th>
+                      <th>State</th>
+                      <th>Zip Code</th>
+                      <th>Country</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {customer.Addresses.map((address, index) => (
+                      <tr key={index}>
+                        <td>
+                          {address.AddressType === "B" ? "Billing" : "Shipping"}
+                        </td>
+                        <td>{address.AddressName || "N/A"}</td>
+                        <td>{address.Street || "N/A"}</td>
+                        <td>{address.Block || "N/A"}</td>
+                        <td>{address.City || "N/A"}</td>
+                        <td>{address.State || "N/A"}</td>
+                        <td>{address.ZipCode || "N/A"}</td>
+                        <td>{address.Country || "N/A"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              ) : (
+                <p className="mb-0">No addresses available.</p>
+              )}
+            </Card.Body>
+          </Card>
+        </div>
 
-      {/* <div className="mt-3 mb-4">
+        {/* <div className="mt-3 mb-4">
         <button className="btn btn-secondary" onClick={() => router.back()}>
           Back to Customers
         </button>
       </div> */}
-    </Container>
+      </Container>
+    </div>
   );
 }
-
-
-
-
-
 
 export async function getServerSideProps(context) {
   const { id } = context.params;
@@ -996,7 +812,9 @@ export async function getServerSideProps(context) {
     const outstandingRes = await fetch(outstandingUrl);
 
     if (!outstandingRes.ok) {
-      throw new Error(`Failed to fetch customer outstanding: ${outstandingRes.statusText}`);
+      throw new Error(
+        `Failed to fetch customer outstanding: ${outstandingRes.statusText}`
+      );
     }
 
     // const customerOutstandings = await outstandingRes.json();
@@ -1004,7 +822,6 @@ export async function getServerSideProps(context) {
       customerOutstandings: initialOutstandings,
       totalItems: initialTotalOutstandings,
     } = await outstandingRes.json();
-
 
     if (!customerRes.ok) {
       throw new Error(
@@ -1096,7 +913,7 @@ export async function getServerSideProps(context) {
         TopInvoiceData,
         salesByCategoryData,
         initialOutstandings,
-        initialTotalOutstandings
+        initialTotalOutstandings,
       },
     };
   } catch (error) {
@@ -1110,11 +927,11 @@ export async function getServerSideProps(context) {
         TopOrderData: null,
         TopInvoiceData: null,
         salesByCategoryData: null,
-        customerOutstandings:null,
+        customerOutstandings: null,
         error: error.message,
-         initialOutstandings: [],
-        initialTotalOutstandings: 0
+        initialOutstandings: [],
+        initialTotalOutstandings: 0,
       },
     };
   }
-} 
+}

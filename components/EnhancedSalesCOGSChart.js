@@ -159,7 +159,7 @@ const EnhancedSalesCOGSChart = () => {
     pointHoverRadius: 6,
   };
 
-  let finalDatasets = [salesDataset];
+  let finalDatasets = [salesDataset, invoiceCountDataset];
   if (user?.role === 'admin') {
     finalDatasets = [
       invoiceCountDataset,
@@ -360,7 +360,7 @@ const EnhancedSalesCOGSChart = () => {
                         ))}
                         <td>{`${averageGrossMargin.toFixed(2)}%`}</td>
                       </tr>
-                      <tr>
+                      {/* <tr>
                         <td>Lines</td>
                         {salesData.map((data, index) => (
                           <td key={index}>{data.invoiceCount || 0}</td>
@@ -371,9 +371,21 @@ const EnhancedSalesCOGSChart = () => {
                             0
                           )}
                         </td>
-                      </tr>
+                      </tr> */}
                     </>
                   )}
+                  <tr>
+                    <td>Lines</td>
+                    {salesData.map((data, index) => (
+                      <td key={index}>{data.invoiceCount || 0}</td>
+                    ))}
+                    <td>
+                      {salesData.reduce(
+                        (sum, d) => sum + (d.invoiceCount || 0),
+                        0
+                      )}
+                    </td>
+                  </tr>
                 </tbody>
               </Table>
             </div>

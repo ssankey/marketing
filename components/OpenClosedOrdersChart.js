@@ -180,7 +180,6 @@ const OrdersChart = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      // Turn off data labels display on the bars
       datalabels: {
         display: false,
       },
@@ -188,13 +187,10 @@ const OrdersChart = () => {
         backgroundColor: "#212529",
         callbacks: {
           label: (context) => {
-            // We have just one dataset, so context.dataset.label is "Open Orders"
             const datasetLabel = context.dataset.label;
-            const numOrders = context.raw; // the raw bar value (openOrders)
+            const numOrders = context.raw;
             const dataIndex = context.dataIndex;
             const dataPoint = ordersData[dataIndex];
-
-            // Show openOrders and openSales in the tooltip
             return `${datasetLabel}: ${numOrders} (Sales: ${formatCurrency(
               dataPoint.openSales
             )})`;
@@ -206,11 +202,11 @@ const OrdersChart = () => {
       },
     },
     hover: {
-      onHover: (event, elements) => {
-        if (elements.length > 0) {
-          event.native.target.style.cursor = "pointer";
-        } else {
-          event.native.target.style.cursor = "default";
+      mode: "nearest",
+      intersect: true,
+      onHover: (event, elements, chart) => {
+        if (chart && chart.canvas) {
+          chart.canvas.style.cursor = elements.length ? "pointer" : "default";
         }
       },
     },
@@ -219,12 +215,12 @@ const OrdersChart = () => {
         const dataIndex = elements[0].index;
         const { year, month } = ordersData[dataIndex];
         const status = "open";
-
-        // Convert month name to numeric index
         const monthIndex =
           new Date(Date.parse(`${month} 1, ${year}`)).getMonth() + 1;
         const fromDate = `${year}-${String(monthIndex).padStart(2, "0")}-01`;
-        const toDate = new Date(year, monthIndex, 0).toISOString().split("T")[0];
+        const toDate = new Date(year, monthIndex, 0)
+          .toISOString()
+          .split("T")[0];
 
         router.push({
           pathname: "/orders",
@@ -238,10 +234,7 @@ const OrdersChart = () => {
       }
     },
   };
-
-  // ----------------------------------
-  // CSV Export (unchanged, optional)
-  // ----------------------------------
+ 
   const exportToCSV = () => {
     if (!ordersData.length) return;
     const csvData = [
@@ -267,75 +260,166 @@ const OrdersChart = () => {
   // Render
   // ----------------------------------
   return (
-    <Card className="shadow-sm border-0 mb-4">
-      <Card.Header className="bg-white py-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-          <h4
-            className="mb-3 mb-md-0"
-            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
-          >
-            Monthly Open Orders
-          </h4>
-          <div className="ms-auto">
-            <AllFilter
-              searchQuery={searchQuery}
-              setSearchQuery={(value) => {
-                if (value) {
-                  setFilters((prev) => ({
-                    ...prev,
-                    [value.type === "sales-person" ? "salesPerson" : value.type]:
-                      {
+    <>
+        <style jsx global>{`
+        .ordersChartWrapper canvas:hover {
+          cursor: pointer !important;
+        }
+      `}</style>
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Header className="bg-white py-3">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <h4
+              className="mb-3 mb-md-0"
+              style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+            >
+              Monthly Open Orders
+            </h4>
+            <div className="ms-auto">
+              <AllFilter
+                searchQuery={searchQuery}
+                setSearchQuery={(value) => {
+                  if (value) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      [value.type === "sales-person"
+                        ? "salesPerson"
+                        : value.type]: {
                         value: value.value,
                         label: value.label,
                       },
-                  }));
-                } else {
-                  // Reset all filters when cleared
-                  setFilters({
-                    salesPerson: null,
-                    category: null,
-                    product: null,
-                  });
-                }
-              }}
-            />
-          </div>
-        </div>
-      </Card.Header>
-
-      <Card.Body>
-        {/* Show error if any */}
-        {error && <p className="text-danger mb-3">Error: {error}</p>}
-
-        {/* Show loading spinner */}
-        {loading ? (
-          <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "500px" }}
-          >
-            <Spinner animation="border" role="status" className="me-2">
-              <span className="visually-hidden">Loading...</span>
-            </Spinner>
-            <span>Loading chart data...</span>
-          </div>
-        ) : ordersData.length ? (
-          <>
-            <div
-              className="chart-container"
-              style={{ height: "500px", width: "100%" }}
-            >
-              <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
+                    }));
+                  } else {
+                    // Reset all filters when cleared
+                    setFilters({
+                      salesPerson: null,
+                      category: null,
+                      product: null,
+                    });
+                  }
+                }}
+              />
             </div>
-            {/* Example button for CSV export, if desired */}
-            {/* <Button variant="outline-primary" className="mt-3" onClick={exportToCSV}>
+          </div>
+        </Card.Header>
+
+        <Card.Body>
+          {/* Show error if any */}
+          {error && <p className="text-danger mb-3">Error: {error}</p>}
+
+          {/* Show loading spinner */}
+          {loading ? (
+            <div
+              className="d-flex justify-content-center align-items-center"
+              style={{ height: "500px" }}
+            >
+              <Spinner animation="border" role="status" className="me-2">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+              <span>Loading chart data...</span>
+            </div>
+          ) : ordersData.length ? (
+            <>
+              <div
+                className="chart-container"
+                style={{ height: "500px", width: "100%" }}
+              >
+                {/* <Bar
+                  ref={chartRef}
+                  data={ordersChartData}
+                  options={ordersChartOptions}
+                /> */}
+                <div
+                  className="ordersChartWrapper"
+                  style={{ height: 500, width: "100%" }}
+                >
+                  <Bar
+                    ref={chartRef}
+                    data={ordersChartData}
+                    options={ordersChartOptions}
+                  />
+                </div>
+              </div>
+              {/* Example button for CSV export, if desired */}
+              {/* <Button variant="outline-primary" className="mt-3" onClick={exportToCSV}>
               Export CSV
             </Button> */}
-          </>
-        ) : (
-          <p className="text-center mt-4">No data available.</p>
-        )}
-      </Card.Body>
-    </Card>
+            </>
+          ) : (
+            <p className="text-center mt-4">No data available.</p>
+          )}
+        </Card.Body>
+      </Card>
+    </>
+    // <Card className="shadow-sm border-0 mb-4">
+    //   <Card.Header className="bg-white py-3">
+    //     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+    //       <h4
+    //         className="mb-3 mb-md-0"
+    //         style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+    //       >
+    //         Monthly Open Orders
+    //       </h4>
+    //       <div className="ms-auto">
+    //         <AllFilter
+    //           searchQuery={searchQuery}
+    //           setSearchQuery={(value) => {
+    //             if (value) {
+    //               setFilters((prev) => ({
+    //                 ...prev,
+    //                 [value.type === "sales-person" ? "salesPerson" : value.type]:
+    //                   {
+    //                     value: value.value,
+    //                     label: value.label,
+    //                   },
+    //               }));
+    //             } else {
+    //               // Reset all filters when cleared
+    //               setFilters({
+    //                 salesPerson: null,
+    //                 category: null,
+    //                 product: null,
+    //               });
+    //             }
+    //           }}
+    //         />
+    //       </div>
+    //     </div>
+    //   </Card.Header>
+
+    //   <Card.Body>
+    //     {/* Show error if any */}
+    //     {error && <p className="text-danger mb-3">Error: {error}</p>}
+
+    //     {/* Show loading spinner */}
+    //     {loading ? (
+    //       <div
+    //         className="d-flex justify-content-center align-items-center"
+    //         style={{ height: "500px" }}
+    //       >
+    //         <Spinner animation="border" role="status" className="me-2">
+    //           <span className="visually-hidden">Loading...</span>
+    //         </Spinner>
+    //         <span>Loading chart data...</span>
+    //       </div>
+    //     ) : ordersData.length ? (
+    //       <>
+    //         <div
+    //           className="chart-container"
+    //           style={{ height: "500px", width: "100%" }}
+    //         >
+    //           <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
+    //         </div>
+    //         {/* Example button for CSV export, if desired */}
+    //         {/* <Button variant="outline-primary" className="mt-3" onClick={exportToCSV}>
+    //           Export CSV
+    //         </Button> */}
+    //       </>
+    //     ) : (
+    //       <p className="text-center mt-4">No data available.</p>
+    //     )}
+    //   </Card.Body>
+    // </Card>
   );
 };
 

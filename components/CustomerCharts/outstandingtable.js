@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import { Container, Spinner } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
@@ -216,4 +214,4 @@ const CustomerOutstandingTable = ({
   );
 };
 
-export default CustomerOutstandingTable;
+export default CustomerOutstandingTable; 
