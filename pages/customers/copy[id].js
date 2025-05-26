@@ -179,7 +179,6 @@ export default function CustomerDetails({
       const { email } = await emailRes.json();
 
       if (!email) {
-
         alert("Customer email address not found");
         return;
       }
@@ -210,7 +209,6 @@ export default function CustomerDetails({
         );
       });
 
-      
       const tableRows = selectedData
         .map((row) => {
           const overdueDays = parseInt(row["Overdue Days"]);
@@ -218,9 +216,10 @@ export default function CustomerDetails({
      <tr>
   <td style="text-align:center;">${row["Invoice No."] || "N/A"}</td>
   <td style="text-align:center;">${formatDate(row["AR Invoice Date"])}</td>
-  
+  <td style="text-align:center;">${row["SO#"] || "N/A"}</td>
+  <td style="text-align:center;">${formatDate(row["SO Date"])}</td>
   <td style="text-align:center;">${row["Customer Name"] || "N/A"}</td>
-  
+  <td style="text-align:center;">${row["Contact Person"] || "N/A"}</td>
   <td style="text-align:center;">${row["SO Customer Ref. No"] || "N/A"}</td>
   <td style="text-align:center;">${formatCurrency(row["Invoice Total"])}</td>
   <td style="text-align:center;">${formatCurrency(row["Balance Due"])}</td>
@@ -238,7 +237,10 @@ export default function CustomerDetails({
         (sum, row) => sum + Math.round(row["Invoice Total"] || 0),
         0
       );
-      
+      // const totalBalanceDue = selectedData.reduce(
+      //   (sum, row) => sum + Math.round(row["Balance Due"] || 0),
+      //   0
+      // );
 
       const totalBalanceDue = selectedData.reduce((sum, row) => {
         const overdue = parseInt(row["Overdue Days"]);
@@ -277,9 +279,10 @@ export default function CustomerDetails({
     <tr>
       <th>Invoice No.</th>
       <th>Invoice Date</th>
-       
+      <th>SO#</th>
+      <th>SO Date</th>
       <th>Customer Name</th>
-     
+      <th>Contact Person</th>
       <th>SO Customer Ref. No</th>
       <th>Invoice Total</th>
       <th>Balance Due</th>
@@ -317,31 +320,43 @@ export default function CustomerDetails({
            IFSC Code: HDFC0001996
         </p>
       </div>
-
     `;
 
-    const salesPersonEmail = selectedData[0]?.SalesEmployeeMail;
-    if (!salesPersonEmail) throw new Error("No sales-person email available");
-    // console.log("sales person email", salesPersonEmail);
-
-     
+      // Send to new mail endpoint
+      // const mailRes = await fetch(`/api/email/base_mail`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({
+      //     from: "shafique@densitypharmachem.com",
+      //     // Set to real email in production:
+      //     // to: email,
+      //     // For testing:
+      //     // to: [
+      //     //   "chandraprakashyadav1110@gmail.com",
+      //     //   "shafique@densitypharmachem.com",
+      //     //   "satish@densitypharmachem.com",
+      //     // ],
+      //     to:"chandraprakashyadav1110@gmail.com",
+      //     subject: `Request for Confirmation and Payment of Outstanding Invoices`,
+      //     body,
+      //   }),
+      // });
       const mailRes = await fetch(`/api/email/base_mail`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           from: "shafique@densitypharmachem.com",
-
-          to: [email], // customer gets it
-          cc: [salesPersonEmail], // sales-person on CC
-
+          // to: "chandraprakashyadav1110@gmail.com",
+          to: [
+                "chandraprakashyadav1110@gmail.com",
+                "satish@densitypharmachem.com"
+              ],
           subject:
             "Request for Confirmation and Payment of Outstanding Invoices",
           body,
         }),
       });
 
-     
-      
 
       const result = await mailRes.json();
 
@@ -456,7 +471,7 @@ export default function CustomerDetails({
   if (!isAuthenticated) {
     return null;
   }
-  // console.log("PurchasesAmountChart:", PurchasesAmountChart);
+  console.log("PurchasesAmountChart:", PurchasesAmountChart);
 
   // Handle missing customer data
   if (!customer) {
@@ -847,13 +862,13 @@ export async function getServerSideProps(context) {
 
     // Fetch purchase and revenue data
     const metricsUrl = `${protocol}://${host}/api/customers/${id}?metrics=true&year=${currentYear}`;
-    // console.log(metricsUrl);
+    console.log(metricsUrl);
     const metricsRes = await fetch(metricsUrl);
 
     if (!id) {
       throw new Error("Customer ID is required");
     }
-    // console.log("Customer ID in getServerSideProps:", id);
+    console.log("Customer ID in getServerSideProps:", id);
 
     if (!metricsRes.ok) {
       throw new Error(
@@ -862,12 +877,12 @@ export async function getServerSideProps(context) {
     }
 
     const purchaseData = await metricsRes.json();
-    // console.log(purchaseData);
+    console.log(purchaseData);
 
     /****Top quotation  */
     const topquotation = `${protocol}://${host}/api/customers/${id}?quotations=true`;
     const quotationRes = await fetch(topquotation);
-    // console.log(id);
+    console.log(id);
     if (!quotationRes.ok) {
       throw new Error(
         `Failed to fetch top quotation: ${quotationRes.statusText}`
@@ -875,7 +890,7 @@ export async function getServerSideProps(context) {
     }
 
     const TopQuotationData = await quotationRes.json();
-    // console.log(TopQuotationData);
+    console.log(TopQuotationData);
 
     /****Top Orders  */
     const toporders = `${protocol}://${host}/api/customers/${id}?orders=true`;
@@ -886,7 +901,7 @@ export async function getServerSideProps(context) {
     }
 
     const TopOrderData = await orderRes.json();
-    // console.log(TopOrderData);
+    console.log(TopOrderData);
 
     /***Top Invoices */
 
@@ -898,7 +913,7 @@ export async function getServerSideProps(context) {
     }
 
     const TopInvoiceData = await invoiceRes.json();
-    // console.log(TopInvoiceData);
+    console.log(TopInvoiceData);
 
     const salesByCategoryUrl = `${protocol}://${host}/api/customers/salesbycategory?id=${id}`;
     const salesByCategoryRes = await fetch(salesByCategoryUrl);
