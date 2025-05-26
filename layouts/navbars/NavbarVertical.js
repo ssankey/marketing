@@ -245,6 +245,7 @@ const NavbarVertical = (props) => {
                     <FaMoneyBillWave className="me-2" /> Customer Balance
                   </Link>
                 </li>
+                
 
                 {/* <li className="nav-item mb-3">
                   <Link href="/vendor-payment" className={`nav-link d-flex align-items-center ${router === "/vendor-payment" ? "active" : ""}`}>
