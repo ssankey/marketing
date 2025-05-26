@@ -556,7 +556,7 @@ export default function CustomerBalancePage() {
       </Card>
 
       {/* — New Summary Table (TenStack) — */}
-      <Card className="mt-3 shadow-sm">
+      {/* <Card className="mt-3 shadow-sm">
         <Card.Header className="bg-white">
           <h3 className="mb-0">Customer Balance Summary</h3>
         </Card.Header>
@@ -575,7 +575,7 @@ export default function CustomerBalancePage() {
             />
           )}
         </Card.Body>
-      </Card>
+      </Card> */}
     </Container>
   );
 }
