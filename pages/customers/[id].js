@@ -221,7 +221,7 @@ export default function CustomerDetails({
   
   <td style="text-align:center;">${row["Customer Name"] || "N/A"}</td>
   
-  <td style="text-align:center;">${row["SO Customer Ref. No"] || "N/A"}</td>
+  <td style="text-align:center;">${row["CustomerPONo"] || "N/A"}</td>
   <td style="text-align:center;">${formatCurrency(row["Invoice Total"])}</td>
   <td style="text-align:center;">${formatCurrency(row["Balance Due"])}</td>
   <td style="text-align: center;">${overdueDays >= 0 ? overdueDays : ""}</td>
@@ -339,6 +339,21 @@ export default function CustomerDetails({
           body,
         }),
       });
+
+      //  const mailRes = await fetch(`/api/email/base_mail`, {
+      //    method: "POST",
+      //    headers: { "Content-Type": "application/json" },
+      //    body: JSON.stringify({
+      //      from: "prakash@densitypharmachem.com",
+
+      //      to: ["chandraprakashyadav1110@gmail.com"], // customer gets it
+           
+
+      //      subject:
+      //        "Request for Confirmation and Payment of Outstanding Invoices",
+      //      body,
+      //    }),
+      //  });
 
      
       
