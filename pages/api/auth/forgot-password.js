@@ -1,6 +1,7 @@
-//  // =======================
-// // 1. API: /api/auth/forgot-password.js
-// // =======================
+
+
+// // pages/api/auth/forgot-password.js
+
 // import { queryDatabase } from "lib/db";
 // import sql from "mssql";
 // import jwt from "jsonwebtoken";
@@ -25,7 +26,7 @@
 //       if (!user.U_Password?.trim()) {
 //         return res.status(200).json({ redirectTo: "set-password", email });
 //       }
-//       return await handleOtp(email, res);
+//       return await handleOtp(email, req, res);
 //     }
 
 //     // Check in OCPR (Customer)
@@ -39,7 +40,7 @@
 //       if (!user.Password?.trim()) {
 //         return res.status(200).json({ redirectTo: "set-password", email });
 //       }
-//       return await handleOtp(email, res);
+//       return await handleOtp(email, req, res);
 //     }
 
 //     return res.status(401).json({ message: "Email address not found" });
@@ -49,14 +50,14 @@
 //   }
 // }
 
-// async function handleOtp(email, res) {
+// async function handleOtp(email, req, res) {
 //   const otp = Math.floor(100000 + Math.random() * 900000);
 //   const otpToken = jwt.sign({ email, otp, exp: Date.now() + 6 * 60 * 1000 }, process.env.JWT_SECRET);
 
 //   const protocol = req.headers["x-forwarded-proto"] || "http";
 //   const host = req.headers.host;
 //   const baseUrl = `${protocol}://${host}`;
-//   // Send OTP using existing base_mail SMTP API
+
 //   const baseMailRes = await fetch(`${baseUrl}/api/email/base_mail`, {
 //     method: "POST",
 //     headers: { "Content-Type": "application/json" },
@@ -64,7 +65,7 @@
 //       from: "prakash@densitypharmachem.com",
 //       to: email,
 //       subject: "Dashboard OTP",
-//       body: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 6 minutes.</p>`,
+//       body: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 6 minutes.</p>`
 //     }),
 //   });
 
@@ -78,12 +79,23 @@
 // }
 
 
-
-// pages/api/auth/forgot-password.js
-
 import { queryDatabase } from "lib/db";
 import sql from "mssql";
 import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+
+const smtpAccounts = {
+  "prakash@densitypharmachem.com": {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+    fromName: "Density Pharmachem",
+  },
+  "shafique@densitypharmachem.com": {
+    user: "shafique@densitypharmachem.com",
+    pass: process.env.SHAFIQUE_EMAIL_PASS,
+    fromName: "Shafique Khan - Density Pharmachem",
+  },
+};
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -94,7 +106,6 @@ export default async function handler(req, res) {
   if (!email) return res.status(400).json({ message: "Email is required" });
 
   try {
-    // Check in OSLP (Sales Person)
     const salesRes = await queryDatabase(
       `SELECT email, U_Password FROM OSLP WHERE email = @email`,
       [{ name: "email", type: sql.VarChar, value: email }]
@@ -105,10 +116,9 @@ export default async function handler(req, res) {
       if (!user.U_Password?.trim()) {
         return res.status(200).json({ redirectTo: "set-password", email });
       }
-      return await handleOtp(email, req, res);
+      return await handleOtp(email, res);
     }
 
-    // Check in OCPR (Customer)
     const custRes = await queryDatabase(
       `SELECT E_MailL, Password FROM OCPR WHERE E_MailL = @email`,
       [{ name: "email", type: sql.VarChar, value: email }]
@@ -119,7 +129,7 @@ export default async function handler(req, res) {
       if (!user.Password?.trim()) {
         return res.status(200).json({ redirectTo: "set-password", email });
       }
-      return await handleOtp(email, req, res);
+      return await handleOtp(email, res);
     }
 
     return res.status(401).json({ message: "Email address not found" });
@@ -129,30 +139,52 @@ export default async function handler(req, res) {
   }
 }
 
-async function handleOtp(email, req, res) {
+async function handleOtp(email, res) {
   const otp = Math.floor(100000 + Math.random() * 900000);
-  const otpToken = jwt.sign({ email, otp, exp: Date.now() + 6 * 60 * 1000 }, process.env.JWT_SECRET);
+  const otpToken = jwt.sign(
+    { email, otp, exp: Date.now() + 6 * 60 * 1000 },
+    process.env.JWT_SECRET
+  );
 
-  const protocol = req.headers["x-forwarded-proto"] || "http";
-  const host = req.headers.host;
-  const baseUrl = `${protocol}://${host}`;
+  const from = "prakash@densitypharmachem.com";
+  const subject = "Dashboard OTP";
+  const body = `<p>Your OTP is <strong>${otp}</strong>. It is valid for 6 minutes.</p>`;
 
-  const baseMailRes = await fetch(`${baseUrl}/api/email/base_mail`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      from: "prakash@densitypharmachem.com",
+  try {
+    const senderConfig = smtpAccounts[from];
+    if (!senderConfig) {
+      return res.status(400).json({ message: `Unauthorized sender: ${from}` });
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: parseInt(process.env.EMAIL_PORT, 10),
+      secure: process.env.EMAIL_SECURE === "true",
+      requireTLS: true,
+      auth: {
+        user: senderConfig.user,
+        pass: senderConfig.pass,
+      },
+      tls: {
+        ciphers: "SSLv3",
+        rejectUnauthorized: false,
+      },
+      connectionTimeout: 10000,
+    });
+
+    await transporter.verify();
+
+    const info = await transporter.sendMail({
+      from: `"${senderConfig.fromName}" <${from}>`,
       to: email,
-      subject: "Dashboard OTP",
-      body: `<p>Your OTP is <strong>${otp}</strong>. It is valid for 6 minutes.</p>`
-    }),
-  });
+      subject,
+      html: body,
+    });
 
-  if (!baseMailRes.ok) {
-    const errorData = await baseMailRes.json();
-    console.error("Failed to send OTP email:", errorData);
+    console.log("✅ OTP email sent:", info.messageId);
+    return res.status(200).json({ message: "OTP_SENT", otpToken });
+  } catch (error) {
+    console.error("❌ Failed to send OTP email:", error);
     return res.status(500).json({ message: "Failed to send OTP email" });
   }
-
-  return res.status(200).json({ message: "OTP_SENT", otpToken });
 }
