@@ -151,32 +151,57 @@ export default function CustomerBalTable({
   }, [globalFilter, fromDate, toDate, overdueFilter, onPageChange, page]);
 
   // Format data for Excel export to match UI exactly
-  const handleExportExcel = () => {
-    const exportData = pageData.map((row) => {
-      const formattedRow = {};
+//   const handleExportExcel = () => {
+//     const exportData = pageData.map((row) => {
+//       const formattedRow = {};
 
-      // Map each column in the exact order and format as shown in UI
-      columns.forEach((column) => {
-        const value = row[column.accessorKey];
+//       // Map each column in the exact order and format as shown in UI
+//       columns.forEach((column) => {
+//         const value = row[column.accessorKey];
 
-        // Apply formatting based on column type
-        if (
-          column.accessorKey.includes("Date") ||
-          column.accessorKey === "Dispatch Date"
-        ) {
-          formattedRow[column.header] = formatDate(value);
-        } else if (column.accessorKey === "BalanceDue") {
-          formattedRow[column.header] = formatCurrency(value).slice(1); // Remove currency symbol
-        } else {
-          formattedRow[column.header] = value;
-        }
-      });
+//         // Apply formatting based on column type
+//         if (
+//           column.accessorKey.includes("Date") ||
+//           column.accessorKey === "Dispatch Date"
+//         ) {
+//           formattedRow[column.header] = formatDate(value);
+//         } else if (column.accessorKey === "BalanceDue") {
+//           formattedRow[column.header] = formatCurrency(value).slice(1); // Remove currency symbol
+//         } else {
+//           formattedRow[column.header] = value;
+//         }
+//       });
 
-      return formattedRow;
+//       return formattedRow;
+//     });
+
+//     downloadExcel(exportData, "Customer_Balance_Report");
+//   };
+
+const handleExportExcel = () => {
+  const exportData = uniqueData.map((row) => {
+    const formattedRow = {};
+
+    columns.forEach((column) => {
+      const value = row[column.accessorKey];
+
+      if (
+        column.accessorKey.includes("Date") ||
+        column.accessorKey === "Dispatch Date"
+      ) {
+        formattedRow[column.header] = formatDate(value);
+      } else if (column.accessorKey === "BalanceDue") {
+        formattedRow[column.header] = formatCurrency(value).slice(1); // remove currency symbol
+      } else {
+        formattedRow[column.header] = value;
+      }
     });
 
-    downloadExcel(exportData, "Customer_Balance_Report");
-  };
+    return formattedRow;
+  });
+
+  downloadExcel(exportData, "Customer_Balance_Report");
+};
 
   // Reset all filters
   const handleReset = () => {
