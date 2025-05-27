@@ -1,4 +1,7 @@
 module.exports = {
+  experimental: {
+    appDir: true,
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -15,8 +18,8 @@ module.exports = {
   async rewrites() {
     return [
       {
-        source: '/.well-known/pki-validation/:file',
-        destination: '/api/well-known/pki-validation/:file',
+        source: "/.well-known/pki-validation/:file",
+        destination: "/api/well-known/pki-validation/:file",
       },
     ];
   },
