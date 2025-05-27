@@ -1,3 +1,4 @@
+//pages/set-password/index.js
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, Form, Button, Alert } from "react-bootstrap";

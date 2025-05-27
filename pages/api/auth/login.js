@@ -1,5 +1,5 @@
 
-
+// pages/api/auth/login.js
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { queryDatabase } from "lib/db";
@@ -138,7 +138,23 @@ export default async function handler(req, res) {
       }
 
       // Verify password
-      const isMatch = await bcrypt.compare(password, user.U_Password);
+      // const isMatch = await bcrypt.compare(password, user.U_Password);
+      // Improved comparison
+      let isMatch = false;
+      try {
+        if (!user.U_Password || typeof user.U_Password !== "string") {
+          console.error("Invalid password hash format");
+        } else {
+          console.log("Comparing:", {
+            input: password,
+            stored: user.U_Password,
+          });
+          isMatch = await bcrypt.compare(password, user.U_Password);
+          console.log("Comparison result:", isMatch);
+        }
+      } catch (err) {
+        console.error("Password comparison error:", err);
+      }
       if (!isMatch) {
         return res.status(401).json({ message: "Incorrect Password" });
       }
