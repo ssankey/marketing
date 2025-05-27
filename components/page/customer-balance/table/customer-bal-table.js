@@ -141,14 +141,14 @@ export default function CustomerBalTable({
   });
 
   // Reset to page 1 when filters change
-  useEffect(() => {
-    if (
-      (globalFilter || fromDate || toDate || overdueFilter !== "All") &&
-      page !== 1
-    ) {
-      onPageChange(1);
-    }
-  }, [globalFilter, fromDate, toDate, overdueFilter, onPageChange, page]);
+//   useEffect(() => {
+//     if (
+//       (globalFilter || fromDate || toDate || overdueFilter !== "All") &&
+//       page !== 1
+//     ) {
+//       onPageChange(1);
+//     }
+//   }, [globalFilter, fromDate, toDate, overdueFilter, onPageChange, page]);
 
   // Format data for Excel export to match UI exactly
 //   const handleExportExcel = () => {
