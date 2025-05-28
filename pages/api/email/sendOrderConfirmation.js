@@ -139,6 +139,8 @@ WHERE o.CANCELED = 'N'
             body: JSON.stringify({
               from: "sales@densitypharmachem.com",
               to: [SalesPerson_Email], // replace with toEmail in prod
+              // from: "prakash@densitypharmachem.com",
+              // to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
               subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
               body: html,
             }),
