@@ -47,7 +47,7 @@ export default async function handler(req, res) {
         CASE WHEN ISNUMERIC(T4.[U_Quantity]) = 1 THEN CAST(T4.[U_Quantity] AS DECIMAL(18,2)) ELSE NULL END AS [Packsize],
         CASE WHEN ISNUMERIC(T4.[U_Price]) = 1 THEN CAST(T4.[U_Price] AS DECIMAL(18,2)) ELSE NULL END AS [Unit Price],
         CASE WHEN (CASE WHEN ISNUMERIC(T2.[OnHand]) = 1 THEN CAST(T2.[OnHand] AS DECIMAL(18,2)) ELSE 0 END) > 0 
-             OR (CASE WHEN ISNUMERIC(T0.[U_ChinaStock]) = 1 THEN CAST(T0.[U_ChinaStock] AS DECIMAL(18,2)) ELSE 0 END) > 0 
+             
              THEN 'Yes' ELSE 'No' END AS [InStock],
         T0.[ItemName],
         T4.[U_UOM],
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         'HYD' AS [UniqueIdofItem],
         'China' AS [Country],
         CASE WHEN ISNUMERIC(T2.[OnHand]) = 1 THEN CAST(T2.[OnHand] AS DECIMAL(18,2)) ELSE NULL END AS [Quantity Available],
-        CASE WHEN ISNUMERIC(T0.U_ChinaStock) = 1 THEN CAST(T0.U_ChinaStock AS DECIMAL(18,2)) ELSE NULL END AS [China Quantity],
+       
         T0.[U_Smiles],
         '' AS [Expected Delivery Date],
         T0.[U_ALTCAT] AS [Cat No]
