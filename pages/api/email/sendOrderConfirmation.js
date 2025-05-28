@@ -348,12 +348,15 @@ export default async function handler(req, res) {
         `
         ).join("");
 
-        const html = `
+              const html = `
           <div style="font-family: Arial, sans-serif;">
             <p>Dear ${details.ContactPerson},</p>
-            <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong>. Our order ref# ${details.DocNum}</p>
+            <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong> our order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
+
+          
+
             <p><strong>Order Summary:</strong></p>
-            <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
+            <table border="1" cellpadding="6" cellspacing="0"  style="border-collapse: collapse;">
               <thead style="background-color: #007BFF; color: white;">
                 <tr>
                   <th>Item Code</th><th>Description</th><th>CAS No.</th><th>Qty</th><th>Unit</th>
@@ -361,15 +364,53 @@ export default async function handler(req, res) {
                 </tr>
               </thead>
               <tbody>${lineItems}</tbody>
-            </table><br/>
+            </table>
+              <br/>
             <p><strong>Billing Address:</strong> ${details.BillToAddress || "N/A"}</p>
-            <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
-            <p>Contact: sales@densitypharmachem.com</p><br/>
-            <p><strong>Regards,</strong><br/>${details.SalesEmployee}</p>
-            <img src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg" style="height: 50px;" />
-            <p><strong>Website:</strong> www.densitypharmachem.com</p>
+
+        <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
+
+            <p>Should you have any inquiries or require further assistance, please do not hesitate to contact our customer service team at sales@densitypharmachem.com<br/><br>
+
+        Thank you for your patronage. We greatly appreciate your business and look forward to serving you again.</p><br/>
+
+            <p><Strong>Yours Sincerely,<br/></Strong></p>
+            <p>${details.SalesEmployee}</p>
+            <img
+              src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg"
+              alt="Logo"
+              style="height: 50px; width: auto; max-width: 200px; display: block; margin-bottom: 10px;"
+            /><br/>
+            <strong>Website: www.densitypharmachem.com</strong><br/><br/>
+            DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
+            Sy No 615/A & 624/2/1, Pudur Village<br/>
+            Medchal-Malkajgiri District,<br/>
+            Hyderabad, Telangana, India-501401<br/>
+            
           </div>
-        `;
+      `;
+        // const html = `
+        //   <div style="font-family: Arial, sans-serif;">
+        //     <p>Dear ${details.ContactPerson},</p>
+        //     <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong>. Our order ref# ${details.DocNum}</p>
+        //     <p><strong>Order Summary:</strong></p>
+        //     <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
+        //       <thead style="background-color: #007BFF; color: white;">
+        //         <tr>
+        //           <th>Item Code</th><th>Description</th><th>CAS No.</th><th>Qty</th><th>Unit</th>
+        //           <th>Price</th><th>Line Total</th><th>Stock</th><th>Delivery Date</th>
+        //         </tr>
+        //       </thead>
+        //       <tbody>${lineItems}</tbody>
+        //     </table><br/>
+        //     <p><strong>Billing Address:</strong> ${details.BillToAddress || "N/A"}</p>
+        //     <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
+        //     <p>Contact: sales@densitypharmachem.com</p><br/>
+        //     <p><strong>Regards,</strong><br/>${details.SalesEmployee}</p>
+        //     <img src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg" style="height: 50px;" />
+        //     <p><strong>Website:</strong> www.densitypharmachem.com</p>
+        //   </div>
+        // `;
 
         // ✉️ Step 5: Send mail
         const protocol = req.headers["x-forwarded-proto"] || "http";
