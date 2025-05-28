@@ -13,6 +13,11 @@ const smtpAccounts = {
     pass: process.env.SHAFIQUE_EMAIL_PASS,
     fromName: "Shafique Khan - Density Pharmachem",
   },
+  "sales@densitypharmachem.com": {
+    user: "sales@densitypharmachem.com",
+    pass: process.env.SALES_EMAIL_PASS,
+    fromName: "Density Pharmachem",
+  },
 };
 
 export default async function handler(req, res) {

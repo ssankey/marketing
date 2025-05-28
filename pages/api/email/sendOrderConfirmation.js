@@ -285,13 +285,20 @@ export default async function handler(req, res) {
 
   try {
     // 🔍 Step 1: Get new orders created in the last 5 minutes
-    const ordersQuery = `
-      SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime, o.U_EmailSentDT, o.U_EmailSentTM
-      FROM ORDR o
-      WHERE o.CANCELED = 'N'
-        AND DATEADD(MINUTE, -5, GETDATE()) <= 
-            DATEADD(MINUTE, o.DocTime % 100, DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
-    `;
+    // const ordersQuery = `
+    //   SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime, o.U_EmailSentDT, o.U_EmailSentTM
+    //   FROM ORDR o
+    //   WHERE o.CANCELED = 'N'
+    //     AND DATEADD(MINUTE, -5, GETDATE()) <= 
+    //         DATEADD(MINUTE, o.DocTime % 100, DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
+    // `;
+    const ordersQuery = `SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime, o.U_EmailSentDT, o.U_EmailSentTM
+FROM ORDR o
+WHERE o.CANCELED = 'N'
+  AND DATEADD(MINUTE, -5, GETDATE()) <= 
+      DATEADD(MINUTE, o.DocTime % 100, DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
+  AND (o.U_EmailSentDT IS NULL AND o.U_EmailSentTM IS NULL)
+`;
 
     const orders = await queryDatabase(ordersQuery);
 
@@ -331,6 +338,8 @@ export default async function handler(req, res) {
           continue;
         }
 
+        const SalesPerson_Email = details.SalesPerson_Email
+        console.log("sales employee", SalesPerson_Email);
         // 📧 Step 4: Prepare email body
         const lineItems = details.LineItems.map(
           (item) => `
@@ -422,8 +431,8 @@ export default async function handler(req, res) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: "prakash@densitypharmachem.com",
-              to: "chandraprakashyadav1110@gmail.com", // replace with toEmail in prod
+              from: "sales@densitypharmachem.com",
+              to: [SalesPerson_Email], // replace with toEmail in prod
               subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
               body: html,
             }),
