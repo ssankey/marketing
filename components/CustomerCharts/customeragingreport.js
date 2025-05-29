@@ -200,7 +200,7 @@ const CustomerAgingChart = ({ cardCode }) => {
     labels: ["0-30 Days", "31-60 Days", "61-90 Days", "> 90 Days"],
     datasets: [
       {
-        label: "Outstanding Amount",
+        label: "Amount",
         data: [
           data["0-30 Days"],
           data["31-60 Days"],

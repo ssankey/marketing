@@ -4,6 +4,7 @@ import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 import TablePagination from "components/TablePagination";
 import TableFilters from "components/TableFilters";
+import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 
 const columns = [
   { field: "Invoice No.", label: "Invoice No." },
@@ -20,12 +21,13 @@ const columns = [
   {
     field: "Invoice Total",
     label: "Invoice Total",
-    render: (value) => formatCurrency(value),
+    render: (value) => formatNumberWithIndianCommas(value),
   },
   {
     field: "Balance Due",
     label: "Balance Due",
-    render: (value) => formatCurrency(value),
+    render: (value) => formatNumberWithIndianCommas(value),
+
     className: (value) => (value > 0 ? "text-danger fw-bold" : "text-success"),
   },
   { field: "Country", label: "Country" },
@@ -80,7 +82,10 @@ const CustomerOutstandingTable = ({
             return sum + balanceDue;
           }, 0);
 
-          setTotalOutstandingAmount(total);
+          // setTotalOutstandingAmount(total);
+          setTotalOutstandingAmount(
+            formatNumberWithIndianCommas(Math.round(total * 100) / 100)
+          );
         }
       } catch (error) {
         console.error("Error fetching total outstanding amount:", error);
@@ -122,7 +127,7 @@ const CustomerOutstandingTable = ({
           <div className="card-body p-2 text-center">
             <h6 className="text-muted mb-1">Total Outstanding Amount</h6>
             <h4 className="mb-0 text-primary fw-bold">
-              {formatCurrency(totalOutstandingAmount)}
+              ₹{totalOutstandingAmount}
             </h4>
           </div>
         </div>
@@ -155,8 +160,7 @@ const CustomerOutstandingTable = ({
                   // Calculate the displayed value for each row
                   const balanceDue = item["Balance Due"] || 0;
                   const displayedBalanceDue =
-                    Math.round(balanceDue * 100) / 100;
-
+                    formatNumberWithIndianCommas(balanceDue);
                   return (
                     <tr key={index}>
                       <td>
@@ -171,7 +175,7 @@ const CustomerOutstandingTable = ({
                         let cellValue = rawValue;
 
                         if (col.field === "Balance Due") {
-                          cellValue = formatCurrency(displayedBalanceDue);
+                          cellValue = displayedBalanceDue;
                         } else if (col.render) {
                           cellValue = col.render(rawValue);
                         }

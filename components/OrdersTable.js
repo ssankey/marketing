@@ -1,30 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Spinner } from 'react-bootstrap';
-import GenericTable from './GenericTable';
-import TableFilters from './TableFilters';
-import TablePagination from './TablePagination';
-import { formatCurrency } from 'utils/formatCurrency';
-import Link from 'next/link';
-import StatusBadge from './StatusBadge';
-import { formatDate } from 'utils/formatDate';
-import usePagination from 'hooks/usePagination';
-import useTableFilters from 'hooks/useFilteredData';
-import { truncateText } from 'utils/truncateText';
-import downloadExcel from "utils/exporttoexcel";
-import { Printer } from 'react-bootstrap-icons';
 
-const OrdersTable = ({ orders, totalItems, isLoading = false, status ,onExcelDownload}) => {
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { Container, Row, Col, Spinner } from "react-bootstrap";
+import { Printer } from "react-bootstrap-icons";
+import GenericTable from "./GenericTable";
+import TableFilters from "./TableFilters";
+import TablePagination from "./TablePagination";
+import usePagination from "hooks/usePagination";
+import useTableFilters from "hooks/useFilteredData";
+import { formatCurrency } from "utils/formatCurrency";
+import { formatDate } from "utils/formatDate";
+import { truncateText } from "utils/truncateText";
+
+const OrdersTable = ({
+  orders,
+  totalItems,
+  isLoading = false,
+  onExcelDownload,
+}) => {
+  // 1) Local copy so we can patch a row
+  const [tableData, setTableData] = useState(orders);
+
+  // 2) Reset when parent prop changes
+  useEffect(() => {
+    setTableData(orders);
+  }, [orders]);
+
+  // Pagination & filters
   const ITEMS_PER_PAGE = 20;
-  const [displayState, setDisplayState] = useState({
-    hasData: false,
-    showLoading: true
-  });
-
   const { currentPage, totalPages, onPageChange } = usePagination(
     totalItems,
     ITEMS_PER_PAGE
   );
-
   const {
     searchTerm,
     statusFilter,
@@ -39,185 +46,134 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status ,onExcelDow
     handleReset,
   } = useTableFilters();
 
-  // Update display state based on props
-  useEffect(() => {
-    setDisplayState(prev => ({
-      hasData: orders.length > 0,
-      showLoading: isLoading && !prev.hasData
-    }));
-  }, [isLoading, orders]);
+  // 3) sendMail patches only the clicked row
+  const sendMail = async (row) => {
+    try {
+      const res = await fetch("/api/email/sendOrderEmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docEntry: row.DocEntry, docNum: row.DocNum }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      setTableData((prev) =>
+        prev.map((r) =>
+          r.DocEntry === row.DocEntry
+            ? {
+                ...r,
+                EmailSentDT: data.EmailSentDT,
+                EmailSentTM: data.EmailSentTM,
+              }
+            : r
+        )
+      );
+    } catch (e) {
+      console.error(e);
+      alert("Failed to send email: " + e.message);
+    }
+  };
 
   const columns = [
     {
       field: "DocNum",
       label: "Order#",
       render: (value, row) => (
-        <>
-          <Link
-            href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            prefetch
-          >
-            {value}
-          </Link>
-          {/* &nbsp;
-          <Link
-            href={`/printOrder?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            target="_blank"
-          >
-            <Printer />
-          </Link> */}
-        </>
+        <Link href={`/orderdetails?d=${value}&e=${row.DocEntry}`}>{value}</Link>
       ),
     },
     {
       field: "DocStatus",
       label: "Order Status",
       render: (value) => {
-        let badgeClass = "bg-danger"; // default
-    
-        if (value === "Closed") {
-          badgeClass = "bg-success";
-        } else if (value === "Partial") {
-          badgeClass = "bg-warning";
-        } else if (value === "Open") {
-          badgeClass = "bg-primary";
-        } else if (value === "Cancelled") {
-          badgeClass = "bg-secondary";
-        }
-    
-        return (
-          <span className={`badge ${badgeClass}`}>
-            {value}
-          </span>
-        );
+        let cls = "bg-danger";
+        if (value === "Open") cls = "bg-primary";
+        if (value === "Partial") cls = "bg-warning";
+        if (value === "Closed") cls = "bg-success";
+        if (value === "Cancelled") cls = "bg-secondary";
+        return <span className={`badge ${cls}`}>{value}</span>;
       },
-    },    
+    },
     {
       field: "CustomerPONo",
       label: "Customer PONo",
-      render: (value) => value || "N/A",
+      render: (v) => v || "N/A",
     },
     {
       field: "CardName",
       label: "Customer",
-      render: (value) => truncateText(value, 20),
+      render: (v) => truncateText(v, 20),
     },
-    
     {
       field: "DocDate",
       label: "Order Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "ProductCount",
-      label: "Product Count",
-      render: (value) => value || "N/A",
+      render: (v) => formatDate(v),
     },
     {
       field: "DeliveryDate",
       label: "Delivery Date",
-      render: (value) => formatDate(value),
+      render: (v) => formatDate(v),
     },
     {
       field: "DocTotal",
       label: "Total Amount",
       render: (value, row) => {
-        const amountInINR =
-          row.DocCur === "INR" ? value : value * row.ExchangeRate;
-        return formatCurrency(amountInINR);
+        const amt = row.DocCur === "INR" ? value : value * row.ExchangeRate;
+        return formatCurrency(amt);
       },
-    },
-    {
-      field: "DocCur",
-      label: "Currency",
-      render: (value) => value || "N/A",
     },
     {
       field: "SalesEmployee",
       label: "Sales Employee",
-      render: (value) => value || "N/A",
+      render: (v) => v || "N/A",
     },
-     {
+    {
       field: "ContactPerson",
       label: "Contact Person",
-      render: (value) => value || "N/A",
+      render: (v) => v || "N/A",
+    },
+    {
+      field: "EmailSentDT",
+      label: "Mail Sent",
+      render: (_, row) => {
+        if (row.EmailSentDT) {
+          const h = Math.floor(row.EmailSentTM / 60);
+          const m = row.EmailSentTM % 60;
+          return (
+            <>
+              {new Date(row.EmailSentDT).toLocaleDateString()}{" "}
+              {String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}
+            </>
+          );
+        }
+        return (
+          <button
+            className="btn btn-sm btn-primary"
+            onClick={() => sendMail(row)}
+          >
+            Send Mail
+          </button>
+        );
+      },
     },
   ];
-
-  // const handleExcelDownload = async () => {
-  //   try {
-  //     const token = localStorage.getItem("token");
-  //     if (!token) {
-  //       console.error("No token found");
-  //       return;
-  //     }
-
-  //     const url = `/api/excel/getAllOrders?status=${statusFilter}&search=${searchTerm}&sortField=${sortField}&sortDir=${sortDirection}&fromDate=${fromDate || ""}&toDate=${toDate || ""}`;
-      
-  //     const response = await fetch(url, {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-
-  //     const filteredOrders = await response.json();
-
-  //     if (filteredOrders && filteredOrders.length > 0) {
-  //       downloadExcel(filteredOrders, `Orders_${statusFilter}`);
-  //     } else {
-  //       alert("No data available to export.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Failed to fetch data for Excel export:", error);
-  //     alert("Failed to export data. Please try again.");
-  //   }
-  // };
-
-  const renderContent = () => {
-    if (displayState.showLoading) {
-      return (
-        <div className="relative min-h-[400px] bg-gray-50 rounded-lg flex items-center justify-center">
-          <div className="text-center">
-            <Spinner className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-            <p className="text-gray-600">Loading orders...</p>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <>
-        <GenericTable
-          columns={columns}
-          data={orders}
-          onSort={handleSort}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          onExcelDownload={onExcelDownload}
-        />
-        {!isLoading && orders.length === 0 && (
-          <div className="text-center py-4">No orders found.</div>
-        )}
-      </>
-    );
-  };
 
   return (
     <Container fluid>
       <TableFilters
         searchConfig={{
           enabled: true,
-          placeholder: "Search orders...",
-          fields: ["DocNum", "CardName", "ItemCode", "ItemDescription","NumAtCard","CustomerPONo"],
+          placeholder: "Search orders…",
+          fields: ["DocNum", "CardName", "NumAtCard", "CustomerPONo"],
         }}
         onSearch={handleSearch}
         searchTerm={searchTerm}
         statusFilter={{
           enabled: true,
           options: [
-            { value: "Open", label: "Open" },       // Changed to match case in backend
-            { value: "Closed", label: "Closed" },   // Changed to match case in backend
-            { value: "Partial", label: "Partial" }, // Changed to match case in backend
+            { value: "Open", label: "Open" },
+            { value: "Partial", label: "Partial" },
+            { value: "Closed", label: "Closed" },
           ],
           value: statusFilter,
           label: "Status",
@@ -231,7 +187,20 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status ,onExcelDow
         totalItemsLabel="Total Orders"
       />
 
-      {renderContent()}
+      {isLoading && tableData.length === 0 ? (
+        <div className="flex justify-center p-8">
+          <Spinner animation="border" />
+        </div>
+      ) : (
+        <GenericTable
+          columns={columns}
+          data={tableData}
+          onSort={handleSort}
+          sortField={sortField}
+          sortDirection={sortDirection}
+          onExcelDownload={onExcelDownload}
+        />
+      )}
 
       <TablePagination
         currentPage={currentPage}
@@ -239,11 +208,9 @@ const OrdersTable = ({ orders, totalItems, isLoading = false, status ,onExcelDow
         onPageChange={onPageChange}
       />
 
-      <Row className="mb-2">
+      <Row className="mt-2">
         <Col className="text-center">
-          <h5>
-            Page {currentPage} of {totalPages}
-          </h5>
+          Page {currentPage} of {totalPages}
         </Col>
       </Row>
     </Container>
