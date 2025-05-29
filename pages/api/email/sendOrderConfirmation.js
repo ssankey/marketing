@@ -20,13 +20,29 @@ export default async function handler(req, res) {
 
   try {
    
-    const ordersQuery = `SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime, o.U_EmailSentDT, o.U_EmailSentTM
-FROM ORDR o
-WHERE o.CANCELED = 'N'
-  AND DATEADD(MINUTE, -5, GETDATE()) <= 
-      DATEADD(MINUTE, o.DocTime % 100, DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
-  AND (o.U_EmailSentDT IS NULL AND o.U_EmailSentTM IS NULL)
-`;
+//     const ordersQuery = `SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime, o.U_EmailSentDT, o.U_EmailSentTM
+// FROM ORDR o
+// WHERE o.CANCELED = 'N'
+//   AND DATEADD(MINUTE, -5, GETDATE()) <= 
+//       DATEADD(MINUTE, o.DocTime % 100, DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
+//   AND (o.U_EmailSentDT IS NULL AND o.U_EmailSentTM IS NULL)
+// `;
+
+const ordersQuery = `  SELECT
+        o.DocEntry,
+        o.DocNum,
+        o.CntctCode,
+        o.CreateDate,
+        o.DocTime,
+        o.U_EmailSentDT,
+        o.U_EmailSentTM
+      FROM ORDR o
+      WHERE o.CANCELED = 'N'
+        -- Simple “yesterday”-equality approach
+AND CAST(o.CreateDate AS DATE) = DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
+
+        AND o.U_EmailSentDT IS NULL
+        AND o.U_EmailSentTM IS NULL`;
 
     const orders = await queryDatabase(ordersQuery);
 
@@ -87,7 +103,7 @@ WHERE o.CANCELED = 'N'
 
               const html = `
           <div style="font-family: Arial, sans-serif;">
-            <p>Dear ${details.ContactPerson},</p>
+            <p>Dear Dear Valued Customer,</p>
             <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong> our order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
 
           
@@ -113,11 +129,7 @@ WHERE o.CANCELED = 'N'
 
             <p><Strong>Yours Sincerely,<br/></Strong></p>
             <p>${details.SalesEmployee}</p>
-            <img
-              src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg"
-              alt="Logo"
-              style="height: 50px; width: auto; max-width: 200px; display: block; margin-bottom: 10px;"
-            /><br/>
+            
             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
             DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
             Sy No 615/A & 624/2/1, Pudur Village<br/>
@@ -137,10 +149,10 @@ WHERE o.CANCELED = 'N'
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: "sales@densitypharmachem.com",
-              to: [SalesPerson_Email], // replace with toEmail in prod
-              // from: "prakash@densitypharmachem.com",
-              // to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
+              // from: "sales@densitypharmachem.com",
+              // to: [SalesPerson_Email], // replace with toEmail in prod
+              from: "prakash@densitypharmachem.com",
+              to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
               subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
               body: html,
             }),

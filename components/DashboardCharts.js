@@ -21,6 +21,7 @@ import OrdersChart from "./OpenClosedOrdersChart";
 import FilterDropdown from './FilterDropdown';
 import CustomerBalancesChart from './CustomerBalancesChart';
 import VendorPaymentsChart from './VendorPaymentsChart';
+ import CustomerAgingChart from "./CustomerCharts/customeragingreport";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -221,6 +222,20 @@ function DashboardCharts({ userRole }) {
     <div className="g-4">
       <EnhancedSalesCOGSChart />
       <OrdersChart />
+      {/* <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Customer Balance Report</h3>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+                <CustomerAgingChart  />
+              </Row>
+            </Card.Body>
+          </Card>
+        </div> */}
 
       {/* Show admin-only content: */}
       {userRole === 'admin' && (

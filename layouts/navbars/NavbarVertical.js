@@ -211,7 +211,7 @@ const NavbarVertical = (props) => {
             </Accordion.Collapse>
 
             {/* Customers (Admin Only) */}
-            {(isAdmin || isSalesPerson) &&(
+            {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link
                   href="/customers"
@@ -235,7 +235,7 @@ const NavbarVertical = (props) => {
             )}
 
             {/* Outstanding Payments (Hidden for Admin) */}
-            {isAdmin && (
+            {(isAdmin || isSalesPerson) && (
               <>
                 <li className="nav-item mb-3">
                   <Link
@@ -245,7 +245,6 @@ const NavbarVertical = (props) => {
                     <FaMoneyBillWave className="me-2" /> Customer Balance
                   </Link>
                 </li>
-                
 
                 {/* <li className="nav-item mb-3">
                   <Link href="/vendor-payment" className={`nav-link d-flex align-items-center ${router === "/vendor-payment" ? "active" : ""}`}>

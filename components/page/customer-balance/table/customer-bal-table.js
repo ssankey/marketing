@@ -178,6 +178,15 @@ export default function CustomerBalTable({
 //     downloadExcel(exportData, "Customer_Balance_Report");
 //   };
 
+useEffect(() => {
+  // Whenever any filter (globalFilter, fromDate, toDate, overdueFilter) changes,
+  // if we're not on page 1, jump back to page 1.
+  if (page !== 1) {
+    onPageChange(1);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [globalFilter, fromDate, toDate, overdueFilter]);
+
 const handleExportExcel = () => {
   const exportData = uniqueData.map((row) => {
     const formattedRow = {};

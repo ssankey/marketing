@@ -26,6 +26,7 @@ import DeliveryPerformanceChart from "../../components/CustomerCharts/ordertodel
 import { generatePDF, handlePrintPDF } from "utils/pdfGenerator";
 import MonthlyCategorySalesChart from "components/CustomerCharts/SalesByCategoryWrapper";
 import CustomerAgingChart from "../../components/CustomerCharts/customeragingreport";
+import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 
 // Utility function to format date
 function formatDate(dateString) {
@@ -75,28 +76,61 @@ export default function CustomerDetails({
     toDate: "",
   });
 
-  const handleSelectAll = async () => {
-    if (!isAllSelected) {
-      try {
-        const queryParams = new URLSearchParams({ getAll: "true" });
-        const res = await fetch(
-          `/api/customers/${customer.CustomerCode}/outstanding?${queryParams.toString()}`
-        );
-        const { customerOutstandings } = await res.json();
+  // const handleSelectAll = async () => {
+  //   if (!isAllSelected) {
+  //     try {
+  //       const queryParams = new URLSearchParams({ getAll: "true" });
+  //       const res = await fetch(
+  //         `/api/customers/${customer.CustomerCode}/outstanding?${queryParams.toString()}`
+  //       );
+        
 
-        const allInvoiceNos = customerOutstandings.map(
-          (item) => item["Invoice No."]
-        );
-        setSelectedRows(allInvoiceNos);
-        setIsAllSelected(true);
-      } catch (error) {
-        console.error("Failed to fetch all rows for select all", error);
+  //       const allInvoiceNos = customerOutstandings.map(
+  //         (item) => item["Invoice No."]
+  //       );
+  //       setSelectedRows(allInvoiceNos);
+  //       setIsAllSelected(true);
+  //     } catch (error) {
+  //       console.error("Failed to fetch all rows for select all", error);
+  //     }
+  //   } else {
+  //     setSelectedRows([]);
+  //     setIsAllSelected(false);
+  //   }
+  // };
+
+    const handleSelectAll = async () => {
+      if (!isAllSelected) {
+        try {
+          // Include your filterType if needed:
+          const queryParams = new URLSearchParams({
+            getAll: "true",
+            filterType: outstandingFilter,
+          });
+          const res = await fetch(
+            `/api/customers/${customer.CustomerCode}/outstanding?${queryParams}`
+          );
+          if (!res.ok) {
+            throw new Error(`Fetch failed: ${res.statusText}`);
+          }
+
+          // 1) Pull the array out of the JSON
+          const { customerOutstandings: allRows } = await res.json();
+
+          // 2) Map to invoice numbers
+          const allInvoiceNos = allRows.map((item) => item["Invoice No."]);
+
+          // 3) Select them all
+          setSelectedRows(allInvoiceNos);
+          // NO need to manually setIsAllSelected — your useEffect will pick this up
+        } catch (error) {
+          console.error("Failed to select all invoices:", error);
+        }
+      } else {
+        // unselect everything
+        setSelectedRows([]);
       }
-    } else {
-      setSelectedRows([]);
-      setIsAllSelected(false);
-    }
-  };
+    };
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
@@ -126,6 +160,8 @@ export default function CustomerDetails({
       );
       const { customerOutstandings } = await res.json();
 
+    
+
       // Map columns exactly as they appear in the UI (from your columns array)
       const formattedData = customerOutstandings.map((item) => ({
         "Invoice No.": item["Invoice No."],
@@ -134,9 +170,9 @@ export default function CustomerDetails({
         "SO Date": formatDate(item["SO Date"]),
         "Customer Name": item["Customer Name"],
         "Contact Person": item["Contact Person"],
-        "SO Customer Ref. No": item["SO Customer Ref. No"],
-        "Invoice Total": formatCurrency(item["Invoice Total"]),
-        "Balance Due": formatCurrency(item["Balance Due"]),
+        "SO Customer Ref. No": item["CustomerPONo"],
+        "Invoice Total": formatNumberWithIndianCommas(item["Invoice Total"]),
+        "Balance Due": formatNumberWithIndianCommas(item["Balance Due"]),
         Country: item["Country"],
         State: item["State"],
         "Overdue Days": item["Overdue Days"],
@@ -222,9 +258,9 @@ export default function CustomerDetails({
   <td style="text-align:center;">${row["Customer Name"] || "N/A"}</td>
   
   <td style="text-align:center;">${row["CustomerPONo"] || "N/A"}</td>
-  <td style="text-align:center;">${formatCurrency(row["Invoice Total"])}</td>
-  <td style="text-align:center;">${formatCurrency(row["Balance Due"])}</td>
-  <td style="text-align: center;">${overdueDays >= 0 ? overdueDays : ""}</td>
+  <td style="text-align:center;">${formatNumberWithIndianCommas(row["Invoice Total"])}</td>
+  <td style="text-align:center;">${formatNumberWithIndianCommas(row["Balance Due"])}</td>
+  <td style="text-align: center;">${overdueDays > 0 ? overdueDays : ""}</td>
   <td style="text-align:center;">${row["Tracking no"] || "N/A"}</td>
   <td style="text-align:center;">${formatDate(row["Dispatch Date"])}</td>
   <td style="text-align:center;">${row["SalesEmployee"] || "N/A"}</td>
@@ -235,25 +271,46 @@ export default function CustomerDetails({
         .join("");
 
       const totalInvoiceAmount = selectedData.reduce(
-        (sum, row) => sum + Math.round(row["Invoice Total"] || 0),
+        (sum, row) => sum + row["Invoice Total"] || 0,
         0
       );
       
 
-      const totalBalanceDue = selectedData.reduce((sum, row) => {
-        const overdue = parseInt(row["Overdue Days"]);
-        if (!isNaN(overdue) && overdue > 0) {
-          return sum + Math.round(row["Balance Due"] || 0);
-        }
-        return sum;
-      }, 0);
+    //   const totalBalanceDue = selectedData.reduce((sum, row) => {
+    //     const overdue = row["Overdue Days"];
+    //     if (!isNaN(overdue) && overdue > 0) {
+    //       return sum + row["Balance Due"] ;
+    //     }
+    //     return formatNumberWithIndianCommas(Math.round(sum * 100) / 100);
+    //   }, 0);
 
-      const summaryLine = `
-      <p>
-        The <strong>total outstanding amount</strong> is <strong>₹${totalInvoiceAmount.toLocaleString("en-IN")}</strong>,
-        out of which <strong>₹${totalBalanceDue.toLocaleString("en-IN")}</strong> is <strong>overdue for payment.</strong>
-      </p>
-    `;
+    //   const summaryLine = `
+    //   <p>
+    //     The <strong>total outstanding amount</strong> is <strong>₹${totalInvoiceAmount.toLocaleString("en-IN")}</strong>,
+    //     out of which <strong>₹${totalBalanceDue.toLocaleString("en-IN")}</strong> is <strong>overdue for payment.</strong>
+    //   </p>
+    // `;
+    const totalBalanceDueValue = selectedData.reduce((sum, row) => {
+      const overdue = parseInt(row["Overdue Days"], 10) || 0;
+      const balance = parseFloat(row["Balance Due"]) || 0;
+      return sum + (overdue > 0 ? balance : 0);
+    }, 0);
+
+    // 2. Now format once, for display
+    const formattedInvoiceAmount = totalInvoiceAmount.toLocaleString("en-IN");
+    const formattedBalanceDueAmount =
+      totalBalanceDueValue.toLocaleString("en-IN");
+
+    // 3. Build your summary line
+    const summaryLine = `
+  <p>
+    The <strong>total outstanding amount</strong> is 
+    <strong>₹${formattedInvoiceAmount}</strong>,
+    out of which 
+    <strong>₹${formattedBalanceDueAmount}</strong> 
+    is <strong>overdue for payment.</strong>
+  </p>
+`;
 
       const body = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
@@ -333,6 +390,7 @@ export default function CustomerDetails({
 
           to: [email], // customer gets it
           cc: [salesPersonEmail], // sales-person on CC
+         
 
           subject:
             "Request for Confirmation and Payment of Outstanding Invoices",
