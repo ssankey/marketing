@@ -1,8 +1,3 @@
-
-
-
-
-
 // pages/api/email/sendOrderConfirmation.js
 
 import { getOrderDetails } from "../../../lib/models/orders";
@@ -56,7 +51,8 @@ export default async function handler(req, res) {
       WHERE o.CANCELED = 'N'
         AND CAST(o.CreateDate AS DATE) = CAST(GETDATE() AS DATE)
         AND o.U_EmailSentDT IS NULL
-        AND o.U_EmailSentTM IS NULL`;
+        AND o.U_EmailSentTM IS NULL
+        AND o.CardCode NOT IN ('C000021', 'C000020')`;
 
     const orders = await queryDatabase(ordersQuery);
 
@@ -118,7 +114,7 @@ export default async function handler(req, res) {
               const html = `
           <div style="font-family: Arial, sans-serif;">
             <p>Dear Valued Customer,</p>
-            <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong> our order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
+            <p>We are pleased to confirm your Purchase order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong>.<br/>our Sales order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
 
           
 
@@ -168,7 +164,7 @@ export default async function handler(req, res) {
               cc: [SalesPerson_Email],
               // from: "prakash@densitypharmachem.com",
               // to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
-              subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
+              subject: `Order confirmation- SO # ${details.DocNum}`,
               body: html,
             }),
           }
