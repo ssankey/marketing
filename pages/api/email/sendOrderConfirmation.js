@@ -28,7 +28,23 @@ export default async function handler(req, res) {
 //   AND (o.U_EmailSentDT IS NULL AND o.U_EmailSentTM IS NULL)
 // `;
 
-const ordersQuery = `  SELECT
+// const ordersQuery = `  SELECT
+//         o.DocEntry,
+//         o.DocNum,
+//         o.CntctCode,
+//         o.CreateDate,
+//         o.DocTime,
+//         o.U_EmailSentDT,
+//         o.U_EmailSentTM
+//       FROM ORDR o
+//       WHERE o.CANCELED = 'N'
+//         -- Simple “yesterday”-equality approach
+// AND CAST(o.CreateDate AS DATE) = DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
+
+//         AND o.U_EmailSentDT IS NULL
+//         AND o.U_EmailSentTM IS NULL`;
+
+        const ordersQuery = ` SELECT
         o.DocEntry,
         o.DocNum,
         o.CntctCode,
@@ -38,9 +54,7 @@ const ordersQuery = `  SELECT
         o.U_EmailSentTM
       FROM ORDR o
       WHERE o.CANCELED = 'N'
-        -- Simple “yesterday”-equality approach
-AND CAST(o.CreateDate AS DATE) = DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
-
+        AND CAST(o.CreateDate AS DATE) = CAST(GETDATE() AS DATE)
         AND o.U_EmailSentDT IS NULL
         AND o.U_EmailSentTM IS NULL`;
 
@@ -150,7 +164,8 @@ AND CAST(o.CreateDate AS DATE) = DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               // from: "sales@densitypharmachem.com",
-              // to: [SalesPerson_Email], // replace with toEmail in prod
+              //to: [SalesPerson_Email],
+              // to: [toEmail], // replace with toEmail in prod
               from: "prakash@densitypharmachem.com",
               to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
               subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
