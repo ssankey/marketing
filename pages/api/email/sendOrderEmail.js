@@ -25,7 +25,8 @@ export default async function handler(req, res) {
     const statusRows = await queryDatabase(
       `SELECT U_EmailSentDT, U_EmailSentTM 
          FROM ORDR 
-        WHERE DocEntry = @docEntry`,
+        WHERE DocEntry = @docEntry
+        AND CardCode NOT IN ('C000021','C000020')`,
       [{ name: "docEntry", type: sql.Int, value: docEntry }]
     );
 
@@ -56,6 +57,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No email for this order" });
     }
 
+    const SalesPerson_Email = details.SalesPerson_Email
+            console.log("sales employee", SalesPerson_Email);
+
     // 3) Build HTML body (same as before)…
     const lineItems = details.LineItems.map(
       (item) => `
@@ -73,40 +77,43 @@ export default async function handler(req, res) {
     `
     ).join("");
 
-    const html = `
-              <div style="font-family: Arial, sans-serif;">
-                <p>Dear Valued Customer,</p>
-                <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong> our order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
-                <p><strong>Order Summary:</strong></p>
-                <table border="1" cellpadding="6" cellspacing="0"  style="border-collapse: collapse;">
-                  <thead style="background-color: #007BFF; color: white;">
-                    <tr>
-                      <th>Item Code</th><th>Description</th><th>CAS No.</th><th>Qty</th><th>Unit</th>
-                      <th>Price</th><th>Line Total</th><th>Stock</th><th>Delivery Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>${lineItems}</tbody>
-                </table>
-                <br/>
-                <p><strong>Billing Address:</strong> ${details.BillToAddress || "N/A"}</p>
-    
-                <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
-    
-                <p>Should you have any inquiries or require further assistance, please do not hesitate to contact our customer service team at sales@densitypharmachem.com<br/><br>
-    
-                Thank you for your patronage. We greatly appreciate your business and look forward to serving you again.</p><br/>
-    
-                <p><Strong>Yours Sincerely,<br/></Strong></p>
-                <p>${details.SalesEmployee}</p>
-                
-                <strong>Website: www.densitypharmachem.com</strong><br/><br/>
-                DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
-                Sy No 615/A & 624/2/1, Pudur Village<br/>
-                Medchal-Malkajgiri District,<br/>
-                Hyderabad, Telangana, India-501401<br/>
-                
-              </div>
-          `;
+           const html = `
+             <div style="font-family: Arial, sans-serif;">
+               <p>Dear Valued Customer,</p>
+               <p>We are pleased to confirm your Purchase order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong>.<br/>our Sales order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
+   
+             
+   
+               <p><strong>Order Summary:</strong></p>
+               <table border="1" cellpadding="6" cellspacing="0"  style="border-collapse: collapse;">
+                 <thead style="background-color: #007BFF; color: white;">
+                   <tr>
+                     <th>Item Code</th><th>Description</th><th>CAS No.</th><th>Qty</th><th>Unit</th>
+                     <th>Price</th><th>Line Total</th><th>Stock</th><th>Delivery Date</th>
+                   </tr>
+                 </thead>
+                 <tbody>${lineItems}</tbody>
+               </table>
+                 <br/>
+               <p><strong>Billing Address:</strong> ${details.BillToAddress || "N/A"}</p>
+   
+           <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
+   
+               <p>Should you have any inquiries or require further assistance, please do not hesitate to contact our customer service team at sales@densitypharmachem.com<br/><br>
+   
+           Thank you for your patronage. We greatly appreciate your business and look forward to serving you again.</p><br/>
+   
+               <p><Strong>Yours Sincerely,<br/></Strong></p>
+               <p>${details.SalesEmployee}</p>
+               
+               <strong>Website: www.densitypharmachem.com</strong><br/><br/>
+               DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
+               Sy No 615/A & 624/2/1, Pudur Village<br/>
+               Medchal-Malkajgiri District,<br/>
+               Hyderabad, Telangana, India-501401<br/>
+               
+             </div>
+         `;
 
     // 4) Send via base_mail
     let emailResult;
@@ -119,10 +126,11 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             // from:    "sales@densitypharmachem.com",
             // to:      [details.SalesPerson_Email],
-            from: "prakash@densitypharmachem.com",
-            to: ["chandraprakashyadav1110@gmail.com"],
+           from: "sales@densitypharmachem.com",
+                         to: [toEmail], // replace with toEmail in prod
+                         cc: [SalesPerson_Email],
 
-            subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
+           subject: `Order confirmation- SO # ${details.DocNum}`,
             body: html,
           }),
         }
