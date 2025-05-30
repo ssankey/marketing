@@ -117,7 +117,7 @@ export default async function handler(req, res) {
 
               const html = `
           <div style="font-family: Arial, sans-serif;">
-            <p>Dear Dear Valued Customer,</p>
+            <p>Dear Valued Customer,</p>
             <p>We are pleased to confirm your order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong> our order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
 
           
@@ -163,11 +163,11 @@ export default async function handler(req, res) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              // from: "sales@densitypharmachem.com",
-              //to: [SalesPerson_Email],
-              // to: [toEmail], // replace with toEmail in prod
-              from: "prakash@densitypharmachem.com",
-              to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
+              from: "sales@densitypharmachem.com",
+              to: [toEmail], // replace with toEmail in prod
+              cc: [SalesPerson_Email],
+              // from: "prakash@densitypharmachem.com",
+              // to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
               subject: `Your order ref # ${details.CustomerPONo} our order ref # ${details.DocNum}`,
               body: html,
             }),

@@ -261,7 +261,7 @@ const OrdersChart = () => {
   // ----------------------------------
   return (
     <>
-        <style jsx global>{`
+      <style jsx global>{`
         .ordersChartWrapper canvas:hover {
           cursor: pointer !important;
         }
