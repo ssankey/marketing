@@ -1,459 +1,8 @@
-// // // pages/api/email/dispatched.js
-
-// // import { queryDatabase } from "../../../lib/db";
-// // import sql from "mssql";
-
-// // export default async function handler(req, res) {
-// //   if (req.method !== "POST") {
-// //     res.setHeader("Allow", ["POST"]);
-// //     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-// //   }
-
-// //   try {
-// //     // Find invoices where TrackNo was updated in the last 5 minutes
-// //     // and TrackNo is not null, empty, or 'N/A'
-// //     const recentInvoicesQuery = `
-// //       SELECT T0.DocEntry, T0.DocNum, T0.CardCode, T0.CardName, T0.TrackNo
-// //       FROM OINV T0
-// //       WHERE T0.TrackNo IS NOT NULL
-// //         AND T0.TrackNo <> ''
-// //         AND T0.TrackNo <> 'N/A'
-// //         AND T0.UpdateDate >= DATEADD(MINUTE, -1000, GETDATE())
-// //       ORDER BY T0.UpdateDate DESC
-// //     `;
-
-// //     const recentInvoices = await queryDatabase(recentInvoicesQuery);
-
-// //     if (!recentInvoices.length) {
-// //       return res
-// //         .status(200)
-// //         .json({ message: "No new dispatched invoices in last 5 mins." });
-// //     }
-
-// //     console.log(`Found ${recentInvoices.length} dispatched invoices to process`);
-// //     let successCount = 0;
-// //     let failureCount = 0;
-
-// //     // Process each invoice that has an updated tracking number
-// //     for (const invoice of recentInvoices) {
-// //       try {
-// //         const { DocEntry, DocNum, TrackNo } = invoice;
-
-// //         // Get detailed invoice information
-// //         const invoiceQuery = `
-// //           SELECT
-// //             T0.DocNum AS "Invoice No.",
-// //             T0.DocDate AS "AR Invoice Date",
-// //             T0.TrackNo AS "Tracking Number",
-// //             T0.U_DeliveryDate AS "Delivery Date",
-// //             T0.U_DispatchDate AS "Dispatch Date",
-// //             T4.DocNum AS "Order No",
-// //             T4.DocDate AS "Order Date",
-// //             T0.U_AirlineName,
-// //             T0.CardName,
-// //             T0.CardCode,
-// //             T0.NumAtCard AS "SO No",
-// //             T1.ItemCode AS "Item No.",
-// //             T1.Dscription AS "Item/Service Description",
-// //             T1.Quantity,
-// //             T1.UnitMsr,
-// //             T3.E_Mail AS "Customer Email"
-// //           FROM OINV T0
-// //           INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-// //           LEFT JOIN ORDR T4 ON T1.BaseEntry = T4.DocEntry
-// //           LEFT JOIN OCRD T3 ON T3.CardCode = T0.CardCode
-// //           WHERE T0.DocEntry = @docEntry
-// //         `;
-
-// //         const invoiceParams = [
-// //           { name: "docEntry", type: sql.Int, value: DocEntry },
-// //         ];
-
-// //         const data = await queryDatabase(invoiceQuery, invoiceParams);
-// //         if (!data.length) {
-// //           console.error(`Invoice details not found for DocEntry: ${DocEntry}`);
-// //           failureCount++;
-// //           continue;
-// //         }
-
-// //         const to = data[0]["Customer Email"];
-// //         const customerName = data[0].CardName;
-
-// //         if (!to) {
-// //           console.error(`Customer email not found for invoice ${DocNum}`);
-// //           failureCount++;
-// //           continue;
-// //         }
-
-// //         // Format the email content
-// //         function formatDate(dateString) {
-// //           if (!dateString) return "N/A";
-// //           const date = new Date(dateString);
-// //           return date.toLocaleDateString();
-// //         }
-
-// //         const invoiceDetails = data[0];
-// //         const invoiceNo = invoiceDetails["Invoice No."] || "N/A";
-// //         const invoiceDate = formatDate(invoiceDetails["AR Invoice Date"]);
-
-// //         const items = data
-// //           .map(
-// //             (item, index) => `
-// //           <tr>
-// //             <td style="text-align: center;">${index + 1}</td>
-// //             <td style="text-align: center;">${item["Item No."] || "N/A"}</td>
-// //             <td style="text-align: center;">${item["Item/Service Description"] || "N/A"}</td>
-// //             <td style="text-align: center;">${item.Quantity || "N/A"}</td>
-// //             <td style="text-align: center;">${item.UnitMsr || "N/A"}</td>
-// //           </tr>
-// //         `
-// //           )
-// //           .join("");
-
-// //         const html = `
-// //   <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-// //     <p>Dear ${customerName},</p>
-
-// //     <p>Great news! Your order ${invoiceDetails["SO No"] || "N/A"} has been shipped and is on its way to you.</p>
-
-// //     <p>Here are the details:</p>
-
-// //     <p>
-// //       Our Order Number: ${invoiceDetails["Order No"] || "N/A"}-Dated # ${formatDate(invoiceDetails["Order Date"])}<br/>
-// //       Shipping Method: ${invoiceDetails.U_AirlineName || "N/A"}<br/>
-// //       Tracking Number: ${invoiceDetails["Tracking Number"] || "N/A"}. Dated# ${formatDate(invoiceDetails["Dispatch Date"])}<br/>
-// //       Estimated Delivery Date: ${formatDate(invoiceDetails["Delivery Date"])}
-// //     </p>
-
-// //     <p>Items Shipped:</p>
-
-// //     <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-// //       <thead style="background-color: #007BFF; color: white;">
-// //         <tr>
-// //           <th>Inv#</th>
-// //           <th>INV Date</th>
-// //           <th>Item No.</th>
-// //           <th>Item/Service Description</th>
-// //           <th>Cas No</th>
-// //           <th>Unit</th>
-// //           <th>Packsize</th>
-// //           <th>Unit Sales Price</th>
-// //           <th>QTY</th>
-// //           <th>Total Sales Price</th>
-// //           <th>Batch Number</th>
-// //         </tr>
-// //       </thead>
-// //       <tbody>
-// //         ${data
-// //           .map(
-// //             (item, index) => `
-// //           <tr>
-// //             <td style="text-align: center;">${item["Invoice No."] || "N/A"}</td>
-// //             <td style="text-align: center;">${formatDate(item["AR Invoice Date"])}</td>
-// //             <td style="text-align: center;">${item["Item No."] || "N/A"}</td>
-// //             <td style="text-align: center;">${item["Item/Service Description"] || "N/A"}</td>
-// //             <td style="text-align: center;">${item.U_CasNo || "N/A"}</td>
-// //             <td style="text-align: center;">${item.UnitMsr || "N/A"}</td>
-// //             <td style="text-align: center;">${item.U_PackSize || "N/A"}</td>
-// //             <td style="text-align: center;">${item["Unit Sales Price"] || "N/A"}</td>
-// //             <td style="text-align: center;">${item.Quantity || "N/A"}</td>
-// //             <td style="text-align: center;">${item["Total Sales Price"] || "N/A"}</td>
-// //             <td style="text-align: center;">${item.BatchNum || "N/A"}</td>
-// //           </tr>
-// //         `
-// //           )
-// //           .join("")}
-// //       </tbody>
-// //     </table>
-
-// //     <p>You can track your order status anytime using the tracking link above. If you have any questions or need assistance, please don't hesitate to reach out to us at sales.</p>
-
-// //     <p>Thank you for your purchase and support!</p>
-
-// //     <p>Warm regards,</p>
-
-// //     <img src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg" alt="Logo" style="height: 70px;"/><br/>
-// //     <strong>Website: www.densitypharmachem.com</strong><br/><br/>
-// //     DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
-// //     Sy No 615/A & 624/2/1, Pudur Village<br/>
-// //     Medchal-Malkajgiri District,<br/>
-// //     Hyderabad, Telangana, India-501401<br/>
-
-// //   </div>
-// // `;
-
-// //         // Update the subject line to match your requirement
-// //         const subject = `Your Order# ${invoiceDetails["SO No"] || "N/A"} Has Shipped! Here's Your Tracking Info!-Inv #${invoiceNo}`;
-// //         const protocol = req.headers["x-forwarded-proto"] || "http";
-// //         const host = req.headers.host;
-
-// //         // Send the email
-// //         const mailRes = await fetch(`${protocol}://${host}/api/email/base_mail`, {
-// //           method: "POST",
-// //           headers: { "Content-Type": "application/json" },
-// //           body: JSON.stringify({
-// //             from: "prakash@densitypharmachem.com",
-// //             to: "chandraprakashyadav1110@gmail.com", // Change to to for production
-// //             // subject: `Shipment Dispatched Notification - ${invoiceNo}`,
-// //             subject: `Your Order# ${invoiceDetails["SO No"] || "N/A"} Has Shipped! Here's Your Tracking Info!-Inv #${invoiceNo}`,
-// //             body: html,
-// //           }),
-// //         });
-
-// //         const result = await mailRes.json();
-// //         if (!mailRes.ok) {
-// //           throw new Error(result.message || "Failed to send email");
-// //         }
-
-// //         console.log(`✅ Dispatch notification sent for invoice: ${DocNum}, tracking: ${TrackNo}`);
-// //         successCount++;
-// //       } catch (invoiceError) {
-// //         // console.error(`Error processing invoice ${invoice.DocNum}:`, invoiceError);
-// //         console.error(`❌ Failure reason for invoice ${invoice.DocNum}:`, {
-// //           error: invoiceError.message,
-// //           docEntry: invoice.DocEntry,
-// //           email: to || "Missing email",
-// //         });
-
-// //         failureCount++;
-// //       }
-// //     }
-
-// //     return res.status(200).json({
-// //       success: true,
-// //       message: `Processed ${recentInvoices.length} invoices. Success: ${successCount}, Failed: ${failureCount}`
-// //     });
-// //   } catch (err) {
-// //     console.error("Error in dispatched email:", err);
-// //     return res.status(500).json({ error: "Internal server error.", details: err.message });
-// //   }
-// // }
-
-// import { queryDatabase } from "../../../lib/db";
-// import sql from "mssql";
-
-// export default async function handler(req, res) {
-//   if (req.method !== "POST") {
-//     res.setHeader("Allow", ["POST"]);
-//     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-//   }
-
-//   try {
-//     const recentInvoicesQuery = `
-//       SELECT T0.DocEntry, T0.DocNum, T0.CardCode, T0.CardName, T0.TrackNo
-//       FROM OINV T0
-//       WHERE T0.TrackNo IS NOT NULL
-//         AND T0.TrackNo <> ''
-//         AND T0.TrackNo <> 'N/A'
-//         AND T0.UpdateDate >= DATEADD(MINUTE, -1000, GETDATE())
-//       ORDER BY T0.UpdateDate DESC
-//     `;
-
-//     const recentInvoices = await queryDatabase(recentInvoicesQuery);
-
-//     if (!recentInvoices.length) {
-//       return res
-//         .status(200)
-//         .json({ message: "No new dispatched invoices in last 5 mins." });
-//     }
-
-//     console.log(
-//       `Found ${recentInvoices.length} dispatched invoices to process`
-//     );
-//     let successCount = 0;
-//     let failureCount = 0;
-
-//     for (const invoice of recentInvoices) {
-//       try {
-//         const { DocEntry, DocNum, TrackNo } = invoice;
-
-//         // Enhanced query to include all needed fields
-//         const invoiceQuery = `
-//           SELECT 
-//             T0.DocNum AS "Invoice No.",
-//             T0.DocDate AS "AR Invoice Date",
-//             T0.TrackNo AS "Tracking Number",
-//             T0.U_DeliveryDate AS "Delivery Date",
-//             T0.U_DispatchDate AS "Dispatch Date",
-//             T4.DocNum AS "Order No",
-//             T4.DocDate AS "Order Date",
-//             T0.U_AirlineName,
-//             T0.CardName,
-//             T0.CardCode,
-//             T0.NumAtCard AS "SO No",
-//             T1.ItemCode AS "Item No.",
-//             T1.Dscription AS "Item/Service Description",
-//             T1.Quantity,
-//             T1.UnitMsr,
-//             T1.Price AS "Unit Sales Price",
-//             T1.LineTotal AS "Total Sales Price",
-//             T1.U_CasNo,
-//             T1.U_PackSize,
-//             T1.BatchNum,
-//             T3.E_Mail AS "Customer Email",
-//             T3.Name AS "Contact Person"
-//           FROM OINV T0
-//           INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-//           LEFT JOIN ORDR T4 ON T1.BaseEntry = T4.DocEntry 
-//           LEFT JOIN OCRD T3 ON T3.CardCode = T0.CardCode
-//           WHERE T0.DocEntry = @docEntry
-//         `;
-
-//         const invoiceParams = [
-//           { name: "docEntry", type: sql.Int, value: DocEntry },
-//         ];
-
-//         const data = await queryDatabase(invoiceQuery, invoiceParams);
-//         if (!data.length) {
-//           console.error(`Invoice details not found for DocEntry: ${DocEntry}`);
-//           failureCount++;
-//           continue;
-//         }
-
-//         const to = data[0]["Customer Email"];
-//         const customerName = data[0].CardName;
-
-//         if (!to) {
-//           console.error(`Customer email not found for invoice ${DocNum}`);
-//           failureCount++;
-//           continue;
-//         }
-
-//         function formatDate(dateString) {
-//           if (!dateString) return "N/A";
-//           const date = new Date(dateString);
-//           return date.toLocaleDateString();
-//         }
-
-//         const invoiceDetails = data[0];
-//         const invoiceNo = invoiceDetails["Invoice No."] || "N/A";
-//         const invoiceDate = formatDate(invoiceDetails["AR Invoice Date"]);
-
-//         const html = `
-//           <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-//             <p>Dear ${customerName},</p>
-            
-//             <p>Great news! Your order ${invoiceDetails["SO No"] || "N/A"} has been shipped and is on its way to you.</p>
-            
-//             <p>Here are the details:</p>
-            
-//             <p>
-//               Our Order Number: ${invoiceDetails["Order No"] || "N/A"}-Dated # ${formatDate(invoiceDetails["Order Date"])}<br/>
-//               Shipping Method: ${invoiceDetails.U_AirlineName || "N/A"}<br/>
-//               Tracking Number: ${invoiceDetails["Tracking Number"] || "N/A"}. Dated# ${formatDate(invoiceDetails["Dispatch Date"])}<br/>
-//               Estimated Delivery Date: ${formatDate(invoiceDetails["Delivery Date"])}
-//             </p>
-            
-//             <p>Items Shipped:</p>
-            
-//             <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
-//               <thead style="background-color: #007BFF; color: white;">
-//                 <tr>
-//                   <th>Inv#</th>
-//                   <th>INV Date</th>
-//                   <th>Item No.</th>
-//                   <th>Item/Service Description</th>
-//                   <th>Cas No</th>
-//                   <th>Unit</th>
-//                   <th>Packsize</th>
-//                   <th>Unit Sales Price</th>
-//                   <th>QTY</th>
-//                   <th>Total Sales Price</th>
-//                   <th>Batch Number</th>
-//                 </tr>
-//               </thead>
-//               <tbody>
-//                 ${data
-//                   .map(
-//                     (item) => `
-//                   <tr>
-//                     <td style="text-align: center;">${item["Invoice No."] || "N/A"}</td>
-//                     <td style="text-align: center;">${formatDate(item["AR Invoice Date"])}</td>
-//                     <td style="text-align: center;">${item["Item No."] || "N/A"}</td>
-//                     <td style="text-align: center;">${item["Item/Service Description"] || "N/A"}</td>
-//                     <td style="text-align: center;">${item.U_CasNo || "N/A"}</td>
-//                     <td style="text-align: center;">${item.UnitMsr || "N/A"}</td>
-//                     <td style="text-align: center;">${item.U_PackSize || "N/A"}</td>
-//                     <td style="text-align: center;">${item["Unit Sales Price"] || "N/A"}</td>
-//                     <td style="text-align: center;">${item.Quantity || "N/A"}</td>
-//                     <td style="text-align: center;">${item["Total Sales Price"] || "N/A"}</td>
-//                     <td style="text-align: center;">${item.BatchNum || "N/A"}</td>
-//                   </tr>
-//                 `
-//                   )
-//                   .join("")}
-//               </tbody>
-//             </table>
-            
-//             <p>You can track your order status anytime using the tracking link above. If you have any questions or need assistance, please don't hesitate to reach out to us at sales.</p>
-            
-//             <p>Thank you for your purchase and support!</p>
-            
-//             <p>Warm regards,</p>
-            
-//             <img src="http://marketing.densitypharmachem.com/assets/Density_LOGO.jpg" alt="Logo" style="height: 70px;"/><br/>
-//             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
-//             DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
-//             Sy No 615/A & 624/2/1, Pudur Village<br/>
-//             Medchal-Malkajgiri District,<br/>
-//             Hyderabad, Telangana, India-501401<br/>
-//           </div>
-//         `;
-
-//         const subject = `Your Order# ${invoiceDetails["SO No"] || "N/A"} Has Shipped! Here's Your Tracking Info!-Inv #${invoiceNo}`;
-//         const protocol = req.headers["x-forwarded-proto"] || "http";
-//         const host = req.headers.host;
-
-//         // Send the email
-//         const mailRes = await fetch(
-//           `${protocol}://${host}/api/email/base_mail`,
-//           {
-//             method: "POST",
-//             headers: { "Content-Type": "application/json" },
-//             body: JSON.stringify({
-//               from: "prakash@densitypharmachem.com",
-//               // to: to, // Using the customer's actual email
-//               to:"chandraprakashyadav1110@gmail.com",
-//               subject: subject,
-//               body: html,
-//             }),
-//           }
-//         );
-
-//         const result = await mailRes.json();
-//         if (!mailRes.ok) {
-//           throw new Error(result.message || "Failed to send email");
-//         }
-
-//         console.log(
-//           `✅ Dispatch notification sent for invoice: ${DocNum}, tracking: ${TrackNo}`
-//         );
-//         successCount++;
-//       } catch (invoiceError) {
-//         console.error(`❌ Failure reason for invoice ${invoice.DocNum}:`, {
-//           error: invoiceError.message,
-//           docEntry: invoice.DocEntry,
-//           email: to || "Missing email",
-//         });
-//         failureCount++;
-//       }
-//     }
-
-//     return res.status(200).json({
-//       success: true,
-//       message: `Processed ${recentInvoices.length} invoices. Success: ${successCount}, Failed: ${failureCount}`,
-//     });
-//   } catch (err) {
-//     console.error("Error in dispatched email:", err);
-//     return res
-//       .status(500)
-//       .json({ error: "Internal server error.", details: err.message });
-//   }
-// }
-// pages/api/email/dispatched.js
 
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
+import { formatCurrency } from "utils/formatCurrency";
+import { formatDate } from "utils/formatDate";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -462,139 +11,298 @@ export default async function handler(req, res) {
   }
 
   try {
-    // STEP 1: Get invoices where TrackingNo was updated today and within last 5 mins
+    // 1) Find invoices updated in the last 24–48 hours (adjust as needed)
     const recentInvoicesQuery = `
-      SELECT DocEntry, DocNum, TrackNo, 
-             U_TrackingNoUpdateDT, U_TrackingNoUpdateTM, 
-             U_EmailSentDT, U_EmailSentTM
+      SELECT 
+        DocEntry,
+        DocNum                         AS InvoiceNo,
+        TrackNo                        AS TrackingNumber,
+        U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
+        U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
+        U_DispatchDate                 AS DispatchDate,
+        U_DeliveryDate                 AS DeliveryDate,
+        U_EmailSentDT,
+        U_EmailSentTM
       FROM OINV
-      WHERE TrackNo IS NOT NULL
-        AND TrackNo <> ''
-        AND TrackNo <> 'N/A'
-        AND U_TrackingNoUpdateDT = CAST(GETDATE() AS DATE)
-        AND DATEADD(MINUTE, -5, GETDATE()) <= 
-            DATEADD(MINUTE, U_TrackingNoUpdateTM % 100, 
-                DATEADD(HOUR, U_TrackingNoUpdateTM / 100, 
-                    CAST(U_TrackingNoUpdateDT AS DATETIME)))
+      WHERE
+        TrackNo IS NOT NULL
+        AND U_TrackingNoUpdateDT IS NOT NULL
+        -- If you truly mean “from midnight yesterday onward,” use -1 instead of -2:
+        AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(GETDATE() AS DATE)
+        AND U_EmailSentDT IS NULL
+        AND U_EmailSentTM IS NULL;
     `;
+    const invoices = await queryDatabase(recentInvoicesQuery);
 
-    const recentInvoices = await queryDatabase(recentInvoicesQuery);
-
-    if (!recentInvoices.length) {
-      return res.status(200).json({ message: "No recent tracking updates." });
+    if (!invoices.length) {
+      return res.status(200).json({ message: "No new shipments to notify." });
     }
 
-    let successCount = 0;
-    let failureCount = 0;
+    let success = 0, failure = 0;
 
-    for (const invoice of recentInvoices) {
-      const { DocEntry, DocNum, TrackNo, U_EmailSentDT, U_EmailSentTM } = invoice;
+    for (const inv of invoices) {
+      const {
+        DocEntry,
+        InvoiceNo,
+        TrackingNumber,
+        TrackingUpdatedDate,
+        DispatchDate,
+        DeliveryDate
+      } = inv;
 
       try {
-        // STEP 2: If email already sent, skip
-        if (U_EmailSentDT && U_EmailSentTM) {
-          console.log(`Email already sent for Invoice ${DocNum}`);
-          continue;
-        }
+        // 2) Load full detail for exactly that DocEntry
+        // const detailQuery = `
+        //   SELECT
+        //     -- Header fields
+        //     T0.DocNum                AS InvoiceNo,
+        //     T0.DocDate               AS InvoiceDate,
+        //     T4.DocNum                AS OrderNo,
+        //     T4.DocDate               AS OrderDate,
+        //     T0.TrackNo               AS TrackingNumber,
+        //     T0.U_TrackingNoUpdateDT  AS TrackingUpdatedDate,
+        //     T0.U_TrackingNoUpdateTM  AS TrackingUpdatedTime,
+        //     T0.U_DispatchDate        AS DispatchDate,
+        //     T0.U_DeliveryDate        AS DeliveryDate,
+        //     T0.U_AirlineName         AS ShippingMethod,
+        //     T0.CardName              AS CustomerName,
+        //     T0.CardCode              AS CustomerCode,
+        //     T7.Name                  AS ContactPerson,
+        //     T0.SlpCode               AS SalesPersonID,
+        //     T5.SlpName               AS SalesPersonName,
+        //     T5.EMail               AS SalesPersonEmail,
+        //     T6.PymntGroup            AS PaymentTerms,
+        //     T0.NumAtCard             AS CustomerPONo,
 
-        // STEP 3: Get detailed invoice data
-        const invoiceQuery = `
-          SELECT T0.DocNum AS "Invoice No.", T0.DocDate AS "AR Invoice Date",
-                 T0.TrackNo AS "Tracking Number", T0.U_DeliveryDate AS "Delivery Date",
-                 T0.U_DispatchDate AS "Dispatch Date", T4.DocNum AS "Order No",
-                 T4.DocDate AS "Order Date", T0.U_AirlineName, T0.CardName, T0.CardCode,
-                 T0.NumAtCard AS "SO No", T1.ItemCode, T1.Dscription, T1.Quantity,
-                 T1.UnitMsr, T1.Price, T1.LineTotal, T1.U_CasNo, T1.U_PackSize,
-                 T1.BatchNum, T3.E_Mail AS "Customer Email"
-          FROM OINV T0
-          INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-          LEFT JOIN ORDR T4 ON T1.BaseEntry = T4.DocEntry
-          LEFT JOIN OCRD T3 ON T3.CardCode = T0.CardCode
-          WHERE T0.DocEntry = @docEntry
-        `;
+        //     -- Line‐level fields
+        //     T1.ItemCode              AS ItemNo,
+        //     T1.Dscription            AS ItemDescription,
+        //     T1.U_CasNo               AS CasNo,
+        //     T1.UnitMsr               AS Unit,
+        //     T1.U_PackSize            AS PackSize,
+        //     T1.Price                 AS UnitSalesPrice,
+        //     T1.Quantity              AS Qty,
+        //     T1.LineTotal             AS TotalSalesPrice,
+
+        //     -- Customer email (for “to:”)
+        //     T3.EMail               AS CustomerEmail
+
+        //   FROM OINV  T0
+        //   INNER JOIN INV1  T1  ON T1.DocEntry   = T0.DocEntry
+        //   LEFT JOIN ORDR   T4  ON T1.BaseEntry  = T4.DocEntry
+        //   LEFT JOIN OCRD   T3  ON T3.CardCode   = T0.CardCode
+        //   LEFT JOIN OCPR   T7  ON T0.CntctCode  = T7.CntctCode
+        //   LEFT JOIN OSLP   T5  ON T0.SlpCode    = T5.SlpCode
+        //   LEFT JOIN OCTG   T6  ON T0.GroupNum   = T6.GroupNum
+
+        //   WHERE T0.DocEntry = @docEntry
+        //   ORDER BY T1.LineNum;
+        // `;
+        const detailQuery = `
+  SELECT
+    T0.DocNum                AS InvoiceNo,
+    T0.DocDate               AS InvoiceDate,
+    T4.DocNum                AS OrderNo,
+    T4.DocDate               AS OrderDate,
+    T0.TrackNo               AS TrackingNumber,
+    T0.U_TrackingNoUpdateDT  AS TrackingUpdatedDate,
+    T0.U_DispatchDate        AS DispatchDate,
+    T0.U_DeliveryDate        AS DeliveryDate,
+    T0.U_AirlineName         AS ShippingMethod,
+    T0.CardName              AS CustomerName,
+    T0.CardCode              AS CustomerCode,
+    T7.Name                  AS ContactPerson,
+    T0.SlpCode               AS SalesPersonID,
+    T5.SlpName               AS SalesPersonName,
+    T5.Email                 AS SalesPersonEmail,   -- adjusted here
+    T6.PymntGroup            AS PaymentTerms,
+    T0.NumAtCard             AS CustomerPONo,
+
+    -- Line‐level fields
+    T1.ItemCode              AS ItemNo,
+    T1.Dscription            AS ItemDescription,
+    T1.U_CasNo               AS CasNo,
+    T1.UnitMsr               AS Unit,
+    T1.U_PackSize            AS PackSize,
+    T1.Price                 AS UnitSalesPrice,
+    T1.Quantity              AS Qty,
+    T1.LineTotal             AS TotalSalesPrice,
+
+    -- Customer email (for “to:”)
+    T3.E_Mail                AS CustomerEmail
+
+  FROM OINV  T0
+  INNER JOIN INV1  T1   ON T1.DocEntry   = T0.DocEntry
+  LEFT JOIN ORDR   T4   ON T1.BaseEntry  = T4.DocEntry
+  LEFT JOIN OCRD   T3   ON T3.CardCode   = T0.CardCode
+  LEFT JOIN OCPR   T7   ON T0.CntctCode  = T7.CntctCode
+  LEFT JOIN OSLP   T5   ON T0.SlpCode    = T5.SlpCode
+  LEFT JOIN OCTG   T6   ON T0.GroupNum   = T6.GroupNum
+
+  WHERE T0.DocEntry = @docEntry
+  ORDER BY T1.LineNum;
+`;
 
         const params = [{ name: "docEntry", type: sql.Int, value: DocEntry }];
-        const data = await queryDatabase(invoiceQuery, params);
-        if (!data.length) throw new Error("Invoice details not found");
-
-        const to = data[0]["Customer Email"];
-        const customerName = data[0].CardName;
-        if (!to) throw new Error("Missing customer email");
-
-        // STEP 4: Prepare HTML content
-        function formatDate(date) {
-          return date ? new Date(date).toLocaleDateString() : "N/A";
+        const rows = await queryDatabase(detailQuery, params);
+        if (!rows.length) {
+          throw new Error("No details found for DocEntry=" + DocEntry);
         }
 
-        const htmlRows = data.map((item) => `
+        // 3) Destructure exactly the aliases we defined above
+        const {
+          InvoiceDate,
+          OrderNo,
+          OrderDate,
+          CustomerName,
+          CustomerEmail,
+          ShippingMethod,
+          CustomerPONo,
+          SalesPersonName,
+          SalesPersonEmail,
+          PaymentTerms
+        } = rows[0];
+
+        // --- CONSOLE LOGS for debugging ---
+        console.log(`Invoice ${InvoiceNo} → CustomerEmail:`, CustomerEmail);
+        console.log(`Invoice ${InvoiceNo} → SalesPersonEmail:`, SalesPersonEmail);
+
+        // 4) Error‐out if no CustomerEmail is present
+        // if (!CustomerEmail) {
+        //   throw new Error(`Missing CustomerEmail for Invoice ${InvoiceNo}`);
+        // }
+
+        // 5) Build bullet‐list HTML
+        const bulletsHtml = `
+          <ul>
+            <li><strong>Our Order Number:</strong> ${OrderNo} – Dated # ${formatDate(OrderDate)}</li>
+            <li><strong>Shipping Method:</strong> ${ShippingMethod}</li>
+            <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
+            <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
+          </ul>
+        `;
+
+        // 6) Build the table‐rows HTML
+        const htmlRows = rows.map(r => `
           <tr>
-            <td>${item["Invoice No."]}</td>
-            <td>${formatDate(item["AR Invoice Date"])}</td>
-            <td>${item.ItemCode}</td>
-            <td>${item.Dscription}</td>
-            <td>${item.U_CasNo || "N/A"}</td>
-            <td>${item.UnitMsr}</td>
-            <td>${item.U_PackSize || "N/A"}</td>
-            <td>${item.Price}</td>
-            <td>${item.Quantity}</td>
-            <td>${item.LineTotal}</td>
-            <td>${item.BatchNum || "N/A"}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${r.InvoiceNo}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${formatDate(r.InvoiceDate)}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${r.ItemNo}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${r.ItemDescription}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${r.CasNo || ""}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${r.Unit}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${r.PackSize || ""}</td>
+            <td style="border:1px solid #ccc; padding:4px; text-align:right;">
+              ${formatCurrency(r.UnitSalesPrice)}
+            </td>
+            <td style="border:1px solid #ccc; padding:4px; text-align:center;">
+              ${r.Qty}
+            </td>
+            <td style="border:1px solid #ccc; padding:4px; text-align:right;">
+              ${formatCurrency(r.TotalSalesPrice)}
+            </td>
           </tr>
         `).join("");
 
+        // 7) Wrap the HTML email body
         const html = `
-          <div>
-            <p>Dear ${customerName},</p>
-            <p>Your order ${data[0]["SO No"]} has shipped.</p>
-            <table border="1" cellpadding="5" cellspacing="0">
+          <div style="font-family: Arial, sans-serif; line-height:1.4; color:#333;">
+            <p>Dear ${CustomerName},</p>
+
+            <p>Great news! Your order <strong>${CustomerPONo}</strong> has been shipped and is on its way to you.</p>
+
+            <p><strong>Here are the details:</strong></p>
+            ${bulletsHtml}
+
+            <p><strong>Items Shipped:</strong></p>
+            <table style="border-collapse:collapse; width:100%; margin-top:8px; margin-bottom:16px;">
               <thead>
-                <tr>
-                  <th>Inv#</th><th>INV Date</th><th>Item</th><th>Description</th><th>CAS</th><th>Unit</th>
-                  <th>Pack</th><th>Price</th><th>Qty</th><th>Total</th><th>Batch</th>
+                <tr style="background:#f7f7f7;">
+                  <th style="border:1px solid #ccc; padding:6px; text-align:left;">Inv#</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:left;">INV Date</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:left;">Item No.</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:left;">Item/Service Description</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:left;">CAS No.</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:left;">Unit</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:left;">Packsize</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:right;">Unit Sales Price</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:center;">QTY</th>
+                  <th style="border:1px solid #ccc; padding:6px; text-align:right;">Total Sales Price</th>
                 </tr>
               </thead>
-              <tbody>${htmlRows}</tbody>
+              <tbody>
+                ${htmlRows}
+              </tbody>
             </table>
+
+            <p>
+              If you have any questions or need assistance, please don’t hesitate to reach out to us at 
+              <a href="mailto:sales@densitypharmachem.com">sales@densitypharmachem.com</a>.
+            </p>
+
+            <p>Thank you for your purchase and support!</p>
+
+            <strong>Website: www.densitypharmachem.com</strong><br/><br/>
+                        DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
+                        Sy No 615/A & 624/2/1, Pudur Village<br/>
+                        Medchal-Malkajgiri District,<br/>
+                        Hyderabad, Telangana, India-501401<br/>
           </div>
         `;
 
-        // STEP 5: Send email
-        const protocol = req.headers["x-forwarded-proto"] || "http";
-        const host = req.headers.host;
-        const sendRes = await fetch(`${protocol}://${host}/api/email/base_mail`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            from: "prakash@densitypharmachem.com",
-            to: "chandraprakashyadav1110@gmail.com", // Replace with actual
-            subject: `Your Order# ${data[0]["SO No"]} Has Shipped!`,
-            body: html
-          })
-        });
+        // 8) Send the email (to = CustomerEmail, cc = SalesPersonEmail)
+        const subject = `Your Order# ${CustomerPONo} Has Shipped! Here's Your Tracking Info! – Inv# ${InvoiceNo}`;
+        const sendRes = await fetch(
+          `${req.headers["x-forwarded-proto"] || "http"}://${req.headers.host}/api/email/base_mail`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              // from:    "prakash@densitypharmachem.com",
+              // to:      [CustomerEmail],
+              // cc:      [SalesPersonEmail],
+              from: "sales@densitypharmachem.com",
+              to: ["SalesPersonEmail"],
+              // cc: ["cpy11102001@gmail.com"],
+              subject: subject,
+              body: html,
+            }),
+          }
+        );
+        if (!sendRes.ok) {
+          const errText = await sendRes.text();
+          throw new Error(`base_mail failed: ${errText}`);
+        }
 
-        const emailResult = await sendRes.json();
-        if (!sendRes.ok) throw new Error(emailResult.message);
+        // 9) Mark invoice as emailed
+        const now = new Date();
+        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+        await queryDatabase(
+          `
+            UPDATE OINV
+              SET U_EmailSentDT = GETDATE(),
+                  U_EmailSentTM = @tm
+            WHERE DocEntry = @docEntry
+          `,
+          [
+            { name: "tm",       type: sql.SmallInt, value: minutesSinceMidnight },
+            { name: "docEntry", type: sql.Int,       value: DocEntry }
+          ]
+        );
 
-        // STEP 6: Update sent timestamp
-        const updateQuery = `
-          UPDATE OINV
-          SET U_EmailSentDT = GETDATE(),
-              U_EmailSentTM = CAST(FORMAT(GETDATE(), 'HHmm') AS SMALLINT)
-          WHERE DocEntry = @docEntry
-        `;
-        await queryDatabase(updateQuery, params);
-
-        console.log(`✅ Mail sent for Invoice# ${DocNum}`);
-        successCount++;
+        success++;
       } catch (err) {
-        console.error(`❌ Failed Invoice# ${invoice.DocNum}: ${err.message}`);
-        failureCount++;
+        console.error(`Invoice ${InvoiceNo} failed:`, err);
+        failure++;
       }
     }
 
-    return res.status(200).json({ success: true, message: `Processed: ${successCount} success, ${failureCount} failed.` });
-  } catch (error) {
-    console.error("Server error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(200).json({
+      success: true,
+      message: `Notified ${success} shipments, ${failure} failures.`
+    });
+  } catch (err) {
+    console.error("sendShipmentNotification error:", err);
+    return res.status(500).json({ error: err.message });
   }
 }
