@@ -262,7 +262,7 @@ export default async function handler(req, res) {
               // to:      [CustomerEmail],
               // cc:      [SalesPersonEmail],
               from: "sales@densitypharmachem.com",
-              to: ["SalesPersonEmail"],
+              to: [SalesPersonEmail],
               // cc: ["cpy11102001@gmail.com"],
               subject: subject,
               body: html,
