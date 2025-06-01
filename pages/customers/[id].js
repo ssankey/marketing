@@ -373,6 +373,10 @@ export default function CustomerDetails({
            Account Number: 99999989991174<br/>
            IFSC Code: HDFC0001996
         </p>
+         <p style="color: red; font-weight: bold;">
+    GST Number: 36AAKCD9426G1ZE<br/>
+    MSME Number: UDYAM-TS-20-0101328
+  </p>
       </div>
 
     `;
@@ -390,7 +394,8 @@ export default function CustomerDetails({
 
           to: [email], // customer gets it
           cc: [salesPersonEmail], // sales-person on CC
-         
+
+             
 
           subject:
             "Request for Confirmation and Payment of Outstanding Invoices",
