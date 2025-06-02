@@ -172,7 +172,7 @@ export default async function handler(req, res) {
         console.log(`Invoice ${InvoiceNo} → CustomerEmail:`, CustomerEmail);
         console.log(`Invoice ${InvoiceNo} → SalesPersonEmail:`, SalesPersonEmail);
         console.log(
-          `Invoice ${InvoiceNo} -> Contact Person Email:,`,
+          `Invoice ${InvoiceNo} -> Contact Person Email:`,
           ContactPersonEmail
         );
 
@@ -256,7 +256,7 @@ export default async function handler(req, res) {
             <p>Thank you for your purchase and support!</p>
 
             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
-                        DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
+                        DENSITY PHARMACHEM PRIVATE LIMITED<br/>
                         Sy No 615/A & 624/2/1, Pudur Village<br/>
                         Medchal-Malkajgiri District,<br/>
                         Hyderabad, Telangana, India-501401<br/>
@@ -271,12 +271,12 @@ export default async function handler(req, res) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              from:    "prakash@densitypharmachem.com",
-              to:      ["chandraprakashyadav1110@gmail.com"],
+              // from:    "prakash@densitypharmachem.com",
+              // to:      ["chandraprakashyadav1110@gmail.com"],
               
-              // from: "sales@densitypharmachem.com",
-              // to: [SalesPersonEmail],
-              // cc: ["chandraprakashyadav1110@gmail.com"],
+              from: "sales@densitypharmachem.com",
+              to: [SalesPersonEmail],
+              cc: ["chandraprakashyadav1110@gmail.com"],
               subject: subject,
               body: html,
             }),
