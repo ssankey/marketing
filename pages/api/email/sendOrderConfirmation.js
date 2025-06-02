@@ -93,9 +93,7 @@ export default async function handler(req, res) {
           skippedCount++;
           continue;
         }
-        if (toEmail === "order@mallbiol.ru") {
-          toEmail = "samsonova@chimmed.ru";
-        }
+        
 
         const SalesPerson_Email = details.SalesPerson_Email;
        
