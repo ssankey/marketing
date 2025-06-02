@@ -57,9 +57,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No email for this order" });
     }
 
-    if (toEmail === "order@mallbiol.ru") {
-              toEmail = "samsonova@chimmed.ru";
-            }
+    
              const ContactPersonEmail = details.ContactPersonEmail;
 
     const SalesPerson_Email = details.SalesPerson_Email
