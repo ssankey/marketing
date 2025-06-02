@@ -3,6 +3,9 @@ import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
+import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
+
+
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -115,6 +118,7 @@ export default async function handler(req, res) {
     T0.SlpCode               AS SalesPersonID,
     T5.SlpName               AS SalesPersonName,
     T5.Email                 AS SalesPersonEmail,   -- adjusted here
+    T7.E_MailL               AS "ContactPersonEmail",
     T6.PymntGroup            AS PaymentTerms,
     T0.NumAtCard             AS CustomerPONo,
 
@@ -160,12 +164,17 @@ export default async function handler(req, res) {
           CustomerPONo,
           SalesPersonName,
           SalesPersonEmail,
+          ContactPersonEmail,
           PaymentTerms
         } = rows[0];
 
         // --- CONSOLE LOGS for debugging ---
         console.log(`Invoice ${InvoiceNo} → CustomerEmail:`, CustomerEmail);
         console.log(`Invoice ${InvoiceNo} → SalesPersonEmail:`, SalesPersonEmail);
+        console.log(
+          `Invoice ${InvoiceNo} -> Contact Person Email:,`,
+          ContactPersonEmail
+        );
 
         // 4) Error‐out if no CustomerEmail is present
         // if (!CustomerEmail) {
@@ -183,7 +192,9 @@ export default async function handler(req, res) {
         `;
 
         // 6) Build the table‐rows HTML
-        const htmlRows = rows.map(r => `
+        const htmlRows = rows
+          .map(
+            (r) => `
           <tr>
             <td style="border:1px solid #ccc; padding:4px;">${r.InvoiceNo}</td>
             <td style="border:1px solid #ccc; padding:4px;">${formatDate(r.InvoiceDate)}</td>
@@ -193,23 +204,25 @@ export default async function handler(req, res) {
             <td style="border:1px solid #ccc; padding:4px;">${r.Unit}</td>
             <td style="border:1px solid #ccc; padding:4px;">${r.PackSize || ""}</td>
             <td style="border:1px solid #ccc; padding:4px; text-align:right;">
-              ${formatCurrency(r.UnitSalesPrice)}
+              ${formatNumberWithIndianCommas(r.UnitSalesPrice)}
             </td>
             <td style="border:1px solid #ccc; padding:4px; text-align:center;">
               ${r.Qty}
             </td>
             <td style="border:1px solid #ccc; padding:4px; text-align:right;">
-              ${formatCurrency(r.TotalSalesPrice)}
+              ${formatNumberWithIndianCommas(r.TotalSalesPrice)}
             </td>
           </tr>
-        `).join("");
+        `
+          )
+          .join("");
 
         // 7) Wrap the HTML email body
         const html = `
           <div style="font-family: Arial, sans-serif; line-height:1.4; color:#333;">
-            <p>Dear ${CustomerName},</p>
+            <p>Dear Valued Customer,</p>
 
-            <p>Great news! Your order <strong>${CustomerPONo}</strong> has been shipped and is on its way to you.</p>
+            <p>Your order <strong>${CustomerPONo}</strong> has been shipped.</p>
 
             <p><strong>Here are the details:</strong></p>
             ${bulletsHtml}
@@ -251,7 +264,7 @@ export default async function handler(req, res) {
         `;
 
         // 8) Send the email (to = CustomerEmail, cc = SalesPersonEmail)
-        const subject = `Your Order# ${CustomerPONo} Has Shipped! Here's Your Tracking Info! – Inv# ${InvoiceNo}`;
+        const subject = `Your Order has Shipped! Your Tracking Info- ${CustomerPONo}`;
         const sendRes = await fetch(
           `${req.headers["x-forwarded-proto"] || "http"}://${req.headers.host}/api/email/base_mail`,
           {
@@ -259,11 +272,11 @@ export default async function handler(req, res) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               // from:    "prakash@densitypharmachem.com",
-              // to:      [CustomerEmail],
+              // to:      ["chandraprakashyadav1110@gmail.com"],
               // cc:      [SalesPersonEmail],
               from: "sales@densitypharmachem.com",
               to: [SalesPersonEmail],
-              // cc: ["cpy11102001@gmail.com"],
+              cc: ["chandraprakashyadav1110@gmail.com"],
               subject: subject,
               body: html,
             }),

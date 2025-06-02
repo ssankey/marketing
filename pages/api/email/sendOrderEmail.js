@@ -57,6 +57,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "No email for this order" });
     }
 
+    if (toEmail === "order@mallbiol.ru") {
+              toEmail = "samsonova@chimmed.ru";
+            }
+             const ContactPersonEmail = details.ContactPersonEmail;
+
     const SalesPerson_Email = details.SalesPerson_Email
             console.log("sales employee", SalesPerson_Email);
 
@@ -128,7 +133,7 @@ export default async function handler(req, res) {
             // to:      [details.SalesPerson_Email],
            from: "sales@densitypharmachem.com",
                          to: [toEmail], // replace with toEmail in prod
-                         cc: [SalesPerson_Email],
+                         cc: [SalesPerson_Email,ContactPersonEmail],
 
            subject: `Order confirmation- SO # ${details.DocNum}`,
             body: html,

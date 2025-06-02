@@ -6,6 +6,7 @@ import sql from "mssql";
 import nodemailer from "nodemailer";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
+import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 
 
 export default async function handler(req, res) {
@@ -85,15 +86,21 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const toEmail = details.Email;
+        let toEmail = details.Email;
+        
         if (!toEmail) {
           console.warn(`⚠️ No email for Order ${order.DocNum}`);
           skippedCount++;
           continue;
         }
+        if (toEmail === "order@mallbiol.ru") {
+          toEmail = "samsonova@chimmed.ru";
+        }
 
-        const SalesPerson_Email = details.SalesPerson_Email
+        const SalesPerson_Email = details.SalesPerson_Email;
+       
         console.log("sales employee", SalesPerson_Email);
+         const ContactPersonEmail = details.ContactPersonEmail;
         // 📧 Step 4: Prepare email body
         const lineItems = details.LineItems.map(
           (item) => `
@@ -103,8 +110,8 @@ export default async function handler(req, res) {
             <td>${item.U_CasNo || "N/A"}</td>
             <td>${item.Quantity}</td>
             <td>${item.UnitMsr}</td>
-            <td>${formatCurrency(item.Price)}</td>
-            <td>${formatCurrency(item.LineTotal)}</td>
+            <td>${formatNumberWithIndianCommas(item.Price)}</td>
+            <td>${formatNumberWithIndianCommas(item.LineTotal)}</td>
             <td>${item.StockStatus}</td>
             <td>${formatDate(item.ShipDate)}</td>
           </tr>
@@ -161,7 +168,7 @@ export default async function handler(req, res) {
             body: JSON.stringify({
               from: "sales@densitypharmachem.com",
               to: [toEmail], // replace with toEmail in prod
-              cc: [SalesPerson_Email],
+              cc: [SalesPerson_Email, ContactPersonEmail],
               // from: "prakash@densitypharmachem.com",
               // to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
               subject: `Order confirmation- SO # ${details.DocNum}`,
