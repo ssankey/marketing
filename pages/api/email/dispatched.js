@@ -137,11 +137,11 @@ export default async function handler(req, res) {
 
   FROM OINV  T0
   INNER JOIN INV1  T1   ON T1.DocEntry   = T0.DocEntry
-  LEFT JOIN ORDR   T4   ON T1.BaseEntry  = T4.DocEntry
-  LEFT JOIN OCRD   T3   ON T3.CardCode   = T0.CardCode
-  LEFT JOIN OCPR   T7   ON T0.CntctCode  = T7.CntctCode
-  LEFT JOIN OSLP   T5   ON T0.SlpCode    = T5.SlpCode
-  LEFT JOIN OCTG   T6   ON T0.GroupNum   = T6.GroupNum
+  INNER JOIN ORDR   T4   ON T1.BaseEntry  = T4.DocEntry
+  INNER JOIN OCRD   T3   ON T3.CardCode   = T0.CardCode
+  INNER JOIN OCPR   T7   ON T0.CntctCode  = T7.CntctCode
+  INNER JOIN OSLP   T5   ON T0.SlpCode    = T5.SlpCode
+  INNER JOIN OCTG   T6   ON T0.GroupNum   = T6.GroupNum
 
   WHERE T0.DocEntry = @docEntry
   ORDER BY T1.LineNum;
