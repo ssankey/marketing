@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     }
 
     // 2) Validate recipient
-    const toEmail = details.Email;
+    let toEmail = details.Email;
     if (!toEmail) {
       console.warn(
         `[sendOrderEmail] No email address for DocEntry=${docEntry}`
