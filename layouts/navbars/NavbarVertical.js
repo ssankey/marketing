@@ -253,6 +253,16 @@ const NavbarVertical = (props) => {
                 </li> */}
               </>
             )}
+            {isAdmin && (
+              <li className="nav-item mb-3">
+                <Link
+                  href="/category"
+                  className={`nav-link d-flex align-items-center ${router === "/category" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Category Analytics
+                </Link>
+              </li>
+            )}
           </Accordion>
         </SimpleBar>
 
