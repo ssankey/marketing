@@ -118,7 +118,7 @@ export default async function handler(req, res) {
     T0.SlpCode               AS SalesPersonID,
     T5.SlpName               AS SalesPersonName,
     T5.Email                 AS SalesPersonEmail,   -- adjusted here
-    T7.E_MailL               AS "ContactPersonEmail",
+    T7.E_MailL               AS ContactPersonEmail,
     T6.PymntGroup            AS PaymentTerms,
     T0.NumAtCard             AS CustomerPONo,
 
@@ -271,12 +271,12 @@ export default async function handler(req, res) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              // from:    "prakash@densitypharmachem.com",
-              // to:      ["chandraprakashyadav1110@gmail.com"],
-              // cc:      [SalesPersonEmail],
-              from: "sales@densitypharmachem.com",
-              to: [SalesPersonEmail],
-              cc: ["chandraprakashyadav1110@gmail.com"],
+              from:    "prakash@densitypharmachem.com",
+              to:      ["chandraprakashyadav1110@gmail.com"],
+              
+              // from: "sales@densitypharmachem.com",
+              // to: [SalesPersonEmail],
+              // cc: ["chandraprakashyadav1110@gmail.com"],
               subject: subject,
               body: html,
             }),
