@@ -1,4 +1,6 @@
-import { queryDatabase } from "../../../lib/db";
+// pages/api/customers[id]/all-delivery-perfrmance.js
+
+import { queryDatabase } from "../../../../lib/db";
 import sql from "mssql";
 
 export default async function handler(req, res) {
