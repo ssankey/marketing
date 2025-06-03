@@ -1,200 +1,4 @@
-// import { queryDatabase } from "../../../lib/db";
-// import sql from "mssql";
 
-// const queries = {
-//   customer: `
-//     DECLARE @cols NVARCHAR(MAX);
-//     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
-//     FROM (
-//         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
-//         FROM OINV
-//         WHERE OINV.CANCELED = 'N'
-//         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
-//     ) AS MonthList;
-
-//     DECLARE @sql NVARCHAR(MAX) = '
-//     WITH BaseData AS (
-//         SELECT OCRD.CardName AS [Customer Name], FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-//         INV1.LineTotal, 1 AS LineCount
-//         FROM OINV
-//         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//         INNER JOIN OCRD ON OINV.CardCode = OCRD.CardCode
-//         WHERE OINV.CANCELED = ''N''
-//     ),
-//     Aggregated AS (
-//         SELECT [Customer Name], SUM(LineTotal) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
-//         FROM BaseData
-//         GROUP BY [Customer Name]
-//     ),
-//     Pivoted AS (
-//         SELECT * FROM (
-//             SELECT [Customer Name], MonthYear, LineCount FROM BaseData
-//         ) AS src
-//         PIVOT (
-//             SUM(LineCount) FOR MonthYear IN (' + @cols + ')
-//         ) AS pvt
-//     )
-//     SELECT p.[Customer Name], a.[Total Sales], a.[Total Line Items],' + @cols + '
-//     FROM Pivoted p
-//     JOIN Aggregated a ON p.[Customer Name] = a.[Customer Name]
-//     ORDER BY a.[Total Sales] DESC';
-
-//     EXEC sp_executesql @sql;
-//   `,
-
-//   salesperson: `
-//     DECLARE @cols NVARCHAR(MAX);
-//     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
-//     FROM (
-//         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
-//         FROM OINV
-//         WHERE OINV.CANCELED = 'N'
-//         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
-//     ) AS MonthList;
-
-//     DECLARE @sql NVARCHAR(MAX) = '
-//     WITH BaseData AS (
-//         SELECT OSLP.SlpName AS [Sales Person Name], FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-//         INV1.LineTotal, 1 AS LineCount
-//         FROM OINV
-//         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//         INNER JOIN OSLP ON OINV.SlpCode = OSLP.SlpCode
-//         WHERE OINV.CANCELED = ''N''
-//     ),
-//     Aggregated AS (
-//         SELECT [Sales Person Name], SUM(LineTotal) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
-//         FROM BaseData
-//         GROUP BY [Sales Person Name]
-//     ),
-//     Pivoted AS (
-//         SELECT * FROM (
-//             SELECT [Sales Person Name], MonthYear, LineCount FROM BaseData
-//         ) AS src
-//         PIVOT (
-//             SUM(LineCount) FOR MonthYear IN (' + @cols + ')
-//         ) AS pvt
-//     )
-//     SELECT p.[Sales Person Name], a.[Total Sales], a.[Total Line Items],' + @cols + '
-//     FROM Pivoted p
-//     JOIN Aggregated a ON p.[Sales Person Name] = a.[Sales Person Name]
-//     ORDER BY a.[Total Sales] DESC';
-
-//     EXEC sp_executesql @sql;
-//   `,
-
-//   state: `
-//     DECLARE @cols NVARCHAR(MAX);
-//     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
-//     FROM (
-//         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
-//         FROM OINV
-//         WHERE OINV.CANCELED = 'N'
-//         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
-//     ) AS MonthList;
-
-//     DECLARE @sql NVARCHAR(MAX) = '
-//     WITH BaseData AS (
-//         SELECT COALESCE(CRD1.State, ''Unknown'') AS [State], FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-//         INV1.LineTotal, 1 AS LineCount
-//         FROM OINV
-//         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//         INNER JOIN OCRD ON OINV.CardCode = OCRD.CardCode
-//         LEFT JOIN CRD1 ON OCRD.CardCode = CRD1.CardCode AND CRD1.AdresType = ''B''
-//         WHERE OINV.CANCELED = ''N''
-//     ),
-//     Aggregated AS (
-//         SELECT [State], SUM(LineTotal) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
-//         FROM BaseData
-//         GROUP BY [State]
-//     ),
-//     Pivoted AS (
-//         SELECT * FROM (
-//             SELECT [State], MonthYear, LineCount FROM BaseData
-//         ) AS src
-//         PIVOT (
-//             SUM(LineCount) FOR MonthYear IN (' + @cols + ')
-//         ) AS pvt
-//     )
-//     SELECT p.[State], a.[Total Sales], a.[Total Line Items],' + @cols + '
-//     FROM Pivoted p
-//     JOIN Aggregated a ON p.[State] = a.[State]
-//     ORDER BY a.[Total Sales] DESC';
-
-//     EXEC sp_executesql @sql;
-//   `,
-
-//   category: `
-//     DECLARE @cols NVARCHAR(MAX);
-//     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
-//     FROM (
-//         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
-//         FROM OINV
-//         WHERE OINV.CANCELED = 'N'
-//         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
-//     ) AS MonthList;
-
-//     DECLARE @sql NVARCHAR(MAX) = '
-//     WITH BaseData AS (
-//         SELECT
-//             T4.ItmsGrpNam AS [Category],
-//             FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-//             INV1.LineTotal,
-//             1 AS LineCount
-//         FROM OINV
-//         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-//         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-//         WHERE OINV.CANCELED = ''N''
-//     ),
-//     Aggregated AS (
-//         SELECT
-//             [Category],
-//             SUM(LineTotal) AS [Total Sales],
-//             SUM(LineCount) AS [Total Line Items]
-//         FROM BaseData
-//         GROUP BY [Category]
-//     ),
-//     Pivoted AS (
-//         SELECT * FROM (
-//             SELECT [Category], MonthYear, LineCount FROM BaseData
-//         ) AS src
-//         PIVOT (
-//             SUM(LineCount) FOR MonthYear IN (' + @cols + ')
-//         ) AS pvt
-//     )
-//     SELECT
-//         p.[Category],
-//         a.[Total Sales],
-//         a.[Total Line Items],' + @cols + '
-//     FROM Pivoted p
-//     JOIN Aggregated a ON p.[Category] = a.[Category]
-//     ORDER BY a.[Total Sales] DESC';
-
-//     EXEC sp_executesql @sql;
-//   `,
-// };
-
-// export default async function handler(req, res) {
-//   try {
-//     const { type = "customer" } = req.query;
-//     const sqlQuery = queries[type];
-
-//     if (!sqlQuery) {
-//       return res
-//         .status(400)
-//         .json({
-//           error:
-//             "Invalid type parameter. Valid types: customer, salesperson, state, category",
-//         });
-//     }
-
-//     const result = await queryDatabase(sqlQuery);
-//     res.status(200).json(result);
-//   } catch (err) {
-//     console.error("Error in monthlyLineItems API:", err);
-//     res.status(500).json({ error: "Internal Server Error" });
-//   }
-// }
 
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
@@ -230,7 +34,7 @@ const queries = {
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ),
     Aggregated AS (
-        SELECT [Customer Name], SUM(LineTotal) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
+        SELECT [Customer Name], ROUND(SUM(LineTotal), 1) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
         FROM BaseData
         GROUP BY [Customer Name]
     ),
@@ -245,7 +49,7 @@ const queries = {
     SELECT p.[Customer Name], a.[Total Sales], a.[Total Line Items],' + @cols + '
     FROM Pivoted p
     JOIN Aggregated a ON p.[Customer Name] = a.[Customer Name]
-    ORDER BY a.[Total Sales] DESC';
+    ORDER BY a.[Total Line Items] DESC';
     `;
 
     const execQuery = categoryFilter
@@ -255,59 +59,125 @@ const queries = {
     return execQuery;
   },
 
+  //   salesperson: (categoryFilter) => {
+  //     const baseQuery = `
+  //     DECLARE @cols NVARCHAR(MAX);
+  //     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
+  //     FROM (
+  //         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
+  //         FROM OINV
+  //         WHERE OINV.CANCELED = 'N'
+  //         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
+  //     ) AS MonthList;
+
+  //     DECLARE @sql NVARCHAR(MAX) = '
+  //     WITH BaseData AS (
+  //         SELECT OSLP.SlpName AS [Sales Person Name], FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
+  //         INV1.LineTotal, 1 AS LineCount
+  //         FROM OINV
+  //         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+  //         INNER JOIN OSLP ON OINV.SlpCode = OSLP.SlpCode
+  //         ${
+  //           categoryFilter
+  //             ? `
+  //         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+  //         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+  //         `
+  //             : ""
+  //         }
+  //         WHERE OINV.CANCELED = ''N''
+  //         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+  //     ),
+  //     Aggregated AS (
+  //         SELECT [Sales Person Name], ROUND(SUM(LineTotal), 1) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
+  //         FROM BaseData
+  //         GROUP BY [Sales Person Name]
+  //     ),
+  //     Pivoted AS (
+  //         SELECT * FROM (
+  //             SELECT [Sales Person Name], MonthYear, LineCount FROM BaseData
+  //         ) AS src
+  //         PIVOT (
+  //             SUM(LineCount) FOR MonthYear IN (' + @cols + ')
+  //         ) AS pvt
+  //     )
+  //     SELECT p.[Sales Person Name], a.[Total Sales], a.[Total Line Items],' + @cols + '
+  //     FROM Pivoted p
+  //     JOIN Aggregated a ON p.[Sales Person Name] = a.[Sales Person Name]
+  //     ORDER BY a.[Total Line Items] DESC';
+  //     `;
+
+  //     const execQuery = categoryFilter
+  //       ? `${baseQuery}\nEXEC sp_executesql @sql, N'@category NVARCHAR(100)', @category;`
+  //       : `${baseQuery}\nEXEC sp_executesql @sql;`;
+
+  //     return execQuery;
+  //   },
+
+  // ⬇️  replace ONLY this "salesperson" definition
   salesperson: (categoryFilter) => {
     const baseQuery = `
-    DECLARE @cols NVARCHAR(MAX);
-    SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
-    FROM (
-        SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
-        FROM OINV
-        WHERE OINV.CANCELED = 'N'
-        GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
-    ) AS MonthList;
+  DECLARE @cols NVARCHAR(MAX);
+  /* Build month list e.g. [May 2025],[Apr 2025] … */
+  SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',')
+                 WITHIN GROUP (ORDER BY MonthDate DESC)
+  FROM (
+      SELECT DISTINCT
+             FORMAT(OINV.DocDate,'MMM yyyy') AS MonthYear,
+             MAX(OINV.DocDate)               AS MonthDate
+      FROM OINV
+      WHERE OINV.CANCELED = 'N'
+      GROUP BY FORMAT(OINV.DocDate,'MMM yyyy')
+  ) AS MonthList;
 
-    DECLARE @sql NVARCHAR(MAX) = '
-    WITH BaseData AS (
-        SELECT OSLP.SlpName AS [Sales Person Name], FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-        INV1.LineTotal, 1 AS LineCount
-        FROM OINV
-        INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-        INNER JOIN OSLP ON OINV.SlpCode = OSLP.SlpCode
-        ${
-          categoryFilter
-            ? `
-        INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        `
-            : ""
-        }
-        WHERE OINV.CANCELED = ''N''
-        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
-    ),
-    Aggregated AS (
-        SELECT [Sales Person Name], SUM(LineTotal) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
-        FROM BaseData
-        GROUP BY [Sales Person Name]
-    ),
-    Pivoted AS (
-        SELECT * FROM (
-            SELECT [Sales Person Name], MonthYear, LineCount FROM BaseData
-        ) AS src
-        PIVOT (
-            SUM(LineCount) FOR MonthYear IN (' + @cols + ')
-        ) AS pvt
-    )
-    SELECT p.[Sales Person Name], a.[Total Sales], a.[Total Line Items],' + @cols + '
-    FROM Pivoted p
-    JOIN Aggregated a ON p.[Sales Person Name] = a.[Sales Person Name]
-    ORDER BY a.[Total Sales] DESC';
-    `;
+  /* Dynamic pivot query */
+  DECLARE @sql NVARCHAR(MAX) = '
+  WITH BaseData AS (
+      SELECT  OSLP.SlpName                       AS [Sales Person Name],
+              FORMAT(OINV.DocDate,''MMM yyyy'')  AS MonthYear,
+              ROUND(INV1.LineTotal,1)                   AS LineTotal
+      FROM    OINV
+      INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+      INNER JOIN OSLP ON OINV.SlpCode  = OSLP.SlpCode
+      ${
+        categoryFilter
+          ? `
+      INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+      INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+      `
+          : ""
+      }
+      WHERE   OINV.CANCELED = ''N''
+      ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+  ),
+  Aggregated AS (
+      SELECT  [Sales Person Name],
+              ROUND(SUM(LineTotal),1) AS [Total Sales],
+              COUNT(*)                AS [Total Line Items]
+      FROM    BaseData
+      GROUP BY [Sales Person Name]
+  ),
+  Pivoted AS (
+      SELECT * FROM (
+          SELECT  [Sales Person Name], MonthYear, LineTotal
+          FROM    BaseData
+      ) src
+      PIVOT (
+          SUM(LineTotal) FOR MonthYear IN (' + @cols + ')
+      ) pvt
+  )
+  SELECT  p.[Sales Person Name],
+          a.[Total Sales],
+          a.[Total Line Items],' + @cols + '
+  FROM    Pivoted  p
+  JOIN    Aggregated a
+        ON a.[Sales Person Name] = p.[Sales Person Name]
+  ORDER BY a.[Total Sales] DESC';
+  `;
 
-    const execQuery = categoryFilter
+    return categoryFilter
       ? `${baseQuery}\nEXEC sp_executesql @sql, N'@category NVARCHAR(100)', @category;`
       : `${baseQuery}\nEXEC sp_executesql @sql;`;
-
-    return execQuery;
   },
 
   state: (categoryFilter) => {
@@ -341,7 +211,7 @@ const queries = {
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ),
     Aggregated AS (
-        SELECT [State], SUM(LineTotal) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
+        SELECT [State], ROUND(SUM(LineTotal), 1) AS [Total Sales], SUM(LineCount) AS [Total Line Items]
         FROM BaseData
         GROUP BY [State]
     ),
@@ -356,7 +226,7 @@ const queries = {
     SELECT p.[State], a.[Total Sales], a.[Total Line Items],' + @cols + '
     FROM Pivoted p
     JOIN Aggregated a ON p.[State] = a.[State]
-    ORDER BY a.[Total Sales] DESC';
+    ORDER BY a.[Total Line Items] DESC';
     `;
 
     const execQuery = categoryFilter
@@ -392,7 +262,7 @@ const queries = {
     Aggregated AS (
         SELECT 
             [Category], 
-            SUM(LineTotal) AS [Total Sales], 
+            ROUND(SUM(LineTotal), 1) AS [Total Sales],
             SUM(LineCount) AS [Total Line Items]
         FROM BaseData
         GROUP BY [Category]
@@ -411,7 +281,7 @@ const queries = {
         a.[Total Line Items],' + @cols + '
     FROM Pivoted p
     JOIN Aggregated a ON p.[Category] = a.[Category]
-    ORDER BY a.[Total Sales] DESC';
+    ORDER BY a.[Total Line Items] DESC';
 
     EXEC sp_executesql @sql;
   `,
