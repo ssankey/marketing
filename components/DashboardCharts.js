@@ -223,7 +223,7 @@ function DashboardCharts({ userRole }) {
   return (
     <div className="g-4">
       <EnhancedSalesCOGSChart />
-      {/* <DeliveryPerformanceChart /> */}
+      <DeliveryPerformanceChart />
       <OrdersChart />
 
       {/* Show admin-only content: */}
