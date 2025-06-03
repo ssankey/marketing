@@ -253,7 +253,7 @@ const NavbarVertical = (props) => {
                 </li> */}
               </>
             )}
-            {isAdmin && (
+            {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link
                   href="/category"

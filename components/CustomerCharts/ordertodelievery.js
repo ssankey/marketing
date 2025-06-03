@@ -70,7 +70,10 @@ const DeliveryPerformanceChart = ({ customerId }) => {
         params.append("category", filters.category.value);
       }
 
-      const url = `/api/customers/${customerId}/delivery-performance?${params.toString()}`;
+      // const url = `/api/customers/${customerId}/delivery-performance?${params.toString()}`;
+        const url = customerId
+          ? `/api/customers/${customerId}/delivery-performance?${params.toString()}`
+          : `/api/customers/delivery-performance?${params.toString()}`;
       const response = await fetch(url);
       
       if (!response.ok) {
@@ -91,6 +94,7 @@ const DeliveryPerformanceChart = ({ customerId }) => {
     if (customerId) {
       fetchData();
     }
+     fetchData();
   }, [customerId, filters]);
 
   // Handle dropdown selection
