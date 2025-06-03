@@ -1,6 +1,4 @@
-
-
-// components/DeliveryPerformanceChart.js
+// components/CustomerCharts/ordertodelivery.js
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
 import { Spinner, Table, Button, Dropdown } from "react-bootstrap";
