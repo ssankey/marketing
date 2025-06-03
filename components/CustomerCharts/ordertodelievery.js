@@ -1,3 +1,275 @@
+
+
+//   // components/CustomerCharts/ordertodelivery.js
+// import React, { useState, useEffect, useRef, useCallback } from "react";
+// import { Bar } from "react-chartjs-2";
+// import { Spinner, Table, Button, Dropdown } from "react-bootstrap";
+// import Select from "react-select";
+// import debounce from "lodash/debounce";
+// import {
+//   Chart as ChartJS,
+//   CategoryScale,
+//   LinearScale,
+//   BarElement,
+//   Title,
+//   Tooltip,
+//   Legend
+// } from "chart.js";
+
+// ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+// /* ------------------------------------------------------------------ */
+// /* helper APIs                                                         */
+// /* ------------------------------------------------------------------ */
+// const API_ENDPOINTS = {
+//   salesPerson: "/api/dashboard/sales-person/distinct-salesperson",
+//   category   : "/api/products/categories",
+//   customer   : "/api/customers/distinct-customer",
+//   product    : "/api/products/distinct-product",
+// };
+
+// export default function DeliveryPerformanceChart({ customerId }) {
+//   /* ------------------------------ state --------------------------- */
+//   const [data,  setData]  = useState([]);
+//   const [loading, setLoading] = useState(true);
+
+//   const [searchType, setSearchType]   = useState(null);
+//   const [suggestions, setSuggestions] = useState([]);
+//   const [loadingSuggestions, setLS]   = useState(false);
+//   const [selectedValue, setSelectedValue] = useState(null);
+//   const [inputValue,    setInputValue]    = useState("");
+//   const cache = useRef({});
+
+//   const [filters, setFilters] = useState({
+//     salesPerson : null,
+//     category    : null,
+//     customer    : null,
+//     product     : null,
+//   });
+
+//   /* ------------------------------ data fetch ---------------------- */
+//   const fetchData = async (active) => {
+//     setLoading(true);
+//     try {
+//       const params = new URLSearchParams();
+//       if (active.salesPerson) params.append("salesPerson", active.salesPerson.value);
+//       if (active.category   ) params.append("category"   , active.category.value);
+//       if (active.customer   ) params.append("customer"   , active.customer.value);
+//       if (active.product    ) params.append("product"    , active.product.value);
+
+//       const url = customerId
+//         ? `/api/customers/${customerId}/delivery-performance?${params}`
+//         : `/api/customers/all-delivery-performance?${params}`;
+
+//       const res = await fetch(url);
+//       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//       setData(await res.json());
+//     } catch (err) {
+//       console.error("fetch error:", err);
+//       setData([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+//   useEffect(() => { fetchData(filters); }, [customerId, filters]);
+
+//   /* ------------------------------ suggestions --------------------- */
+//   const getSuggestions = async (q="", initial=false) => {
+//     if (!searchType) return;
+//     if (!initial && !q) return;
+
+//     const key = `${searchType}_${q}`;
+//     if (cache.current[key]) return setSuggestions(cache.current[key]);
+
+//     setLS(true);
+//     try {
+//       const res  = await fetch(`${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(q)}`);
+//       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//       const json = await res.json();
+
+//       let opts = [];
+//       switch (searchType) {
+//         case "salesPerson":
+//           opts = json.salesEmployees?.map(e => ({ value: e.value,  label: `${e.value} - ${e.label}` })) ?? [];
+//           break;
+//         case "category":
+//           opts = json.categories?.map(c => ({ value: c.value ?? c, label: c.label ?? c })) ?? [];
+//           break;
+//         case "customer":
+//           opts = json.customers?.map(c => ({ value: c.value, label: c.label })) ?? [];
+//           break;
+//         case "product":
+//           opts = json.products?.map(p => ({ value: p.value, label: p.label })) ?? [];
+//           break;
+//         default: break;
+//       }
+//       cache.current[key] = opts;
+//       setSuggestions(opts);
+//     } catch (err) {
+//       console.error("suggestion error:", err);
+//       setSuggestions([]);
+//     } finally {
+//       setLS(false);
+//     }
+//   };
+//   const debouncedFetch = useCallback(debounce(getSuggestions, 500), [searchType]);
+
+//   /* ------------------------------ handlers ------------------------ */
+//   const chooseType = async (type) => {
+//     setSearchType(type);
+//     setSelectedValue(null);
+//     setInputValue("");
+//     setSuggestions([]);
+//     await getSuggestions("", true);
+//   };
+
+//   const chooseOption = (opt) => {
+//     setSelectedValue(opt);
+//     setFilters(prev => ({ ...prev, [searchType]: opt ? { value: opt.value, label: opt.label } : null }));
+//   };
+
+//   const resetAll = () => {
+//     setSearchType(null);
+//     setSelectedValue(null);
+//     setInputValue("");
+//     setFilters({ salesPerson:null, category:null, customer:null, product:null });
+//   };
+
+//   /* ------------------------------ chart --------------------------- */
+//   const chartData = {
+//     labels: data.map(d => d.month),
+//     datasets: [
+//       { label:"0–3 days", backgroundColor:"#4CAF50", data:data.map(d=>d.green ) },
+//       { label:"4–5 days", backgroundColor:"#FF9800", data:data.map(d=>d.orange) },
+//       { label:"6–8 days", backgroundColor:"#2196F3", data:data.map(d=>d.blue  ) },
+//       { label:"9–10 days",backgroundColor:"#9C27B0", data:data.map(d=>d.purple) },
+//       { label:">10 days", backgroundColor:"#F44336", data:data.map(d=>d.red   ) },
+//     ],
+//   };
+
+//   /* hover-once-show-everything:  use interaction.mode = "index" &
+//      tooltip.mode = "index" with intersect false                    */
+//   const chartOptions = {
+//     responsive: true,
+//     maintainAspectRatio: false,
+//     interaction: { mode: "index", intersect: false },
+//     plugins: {
+//       datalabels: {
+//         display: false,
+//       },
+//       tooltip: {
+//         mode: "index",
+//         intersect: false,
+//         padding: 12,
+//         titleFont: { size: 16, weight: "bold" },
+//         bodyFont: { size: 14, weight: "bold" },
+//       },
+//       legend: { position: "top" },
+//     },
+//     scales: {
+//       x: { grid: { display: false } },
+//       y: {
+//         beginAtZero: true,
+//         title: { display: true, text: "Number of Orders" },
+//       },
+//     },
+//   };
+
+//   /* ------------------------------ render -------------------------- */
+//   const labelMap = {salesPerson:"Sales Person",category:"Category",customer:"Customer",product:"Product"};
+//   const anyActive = Object.values(filters).some(Boolean);
+
+//   return (
+//     <div className="bg-white rounded-lg shadow-sm">
+//       {/* header w/ filters */}
+//       <div className="p-4 border-b">
+//         <div className="d-flex justify-content-between align-items-center">
+//           <h4 className="mb-0 fw-semibold">Order → Invoice Performance</h4>
+
+//           <div className="d-flex gap-2 align-items-center">
+//             <Dropdown onSelect={chooseType}>
+//               <Dropdown.Toggle variant="outline-secondary" id="filter-type">
+//                 {searchType ? labelMap[searchType] : "Filter By"}
+//               </Dropdown.Toggle>
+//               <Dropdown.Menu>
+//                 <Dropdown.Item eventKey="salesPerson">Sales Person</Dropdown.Item>
+//                 <Dropdown.Item eventKey="category"   >Category</Dropdown.Item>
+//                 <Dropdown.Item eventKey="customer"   >Customer</Dropdown.Item>
+//                 <Dropdown.Item eventKey="product"    >Product</Dropdown.Item>
+//               </Dropdown.Menu>
+//             </Dropdown>
+
+//             <div style={{width:300}}>
+//               <Select
+//                 value={selectedValue}
+//                 inputValue={inputValue}
+//                 onChange={chooseOption}
+//                 onInputChange={(v,{action})=>{
+//                   if(action==="input-change"){ setInputValue(v); debouncedFetch(v); }
+//                 }}
+//                 onFocus={()=> searchType && getSuggestions(inputValue,true)}
+//                 options={suggestions}
+//                 isLoading={loadingSuggestions}
+//                 isClearable
+//                 isDisabled={!searchType}
+//                 placeholder={searchType ? `Search ${labelMap[searchType]}` : "Select filter type"}
+//               />
+//             </div>
+
+//             <Button variant="primary" onClick={resetAll} disabled={!anyActive && !searchType}>
+//               Reset
+//             </Button>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* chart & table */}
+//       <div className="p-4 bg-gray-50">
+//         {loading ? (
+//           <div className="d-flex justify-content-center align-items-center" style={{height:500}}>
+//             <Spinner animation="border" />
+//           </div>
+//         ) : data.length ? (
+//           <>
+//             <div style={{height:500}}>
+//               <Bar data={chartData} options={chartOptions} />
+//             </div>
+
+//             {/* table */}
+//             <div className="mt-4">
+//               <Table striped bordered hover responsive>
+//                 <thead>
+//                   <tr>
+//                     <th>Range / Month</th>
+//                     {data.map((d,i)=><th key={i}>{d.month}</th>)}
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   {[
+//                     ["0–3 Days","green"],
+//                     ["4–5 Days","orange"],
+//                     ["6–8 Days","blue"],
+//                     ["9–10 Days","purple"],
+//                     [">10 Days","red"]
+//                   ].map(([lbl,key])=>(
+//                     <tr key={key}>
+//                       <td>{lbl}</td>
+//                       {data.map((d,i)=><td key={i}>{d[key]}</td>)}
+//                     </tr>
+//                   ))}
+//                 </tbody>
+//               </Table>
+//             </div>
+//           </>
+//         ) : (
+//           <p className="text-center m-0">No delivery performance data available</p>
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+
 // components/CustomerCharts/ordertodelivery.js
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
@@ -9,441 +281,341 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
-  PointElement,
-  LineElement,
   Title,
   Tooltip,
   Legend,
 } from "chart.js";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const DeliveryPerformanceChart = ({ customerId }) => {
-  console.log("customer code inside chart", customerId);
+/* ------------------------------------------------------------------ */
+/* helper APIs                                                         */
+/* ------------------------------------------------------------------ */
+const API_ENDPOINTS = {
+  salesPerson: "/api/dashboard/sales-person/distinct-salesperson",
+  category: "/api/products/categories",
+  customer: "/api/customers/distinct-customer",
+  product: "/api/products/distinct-product",
+};
+
+export default function DeliveryPerformanceChart({ customerId }) {
+  /* ------------------------------ state --------------------------- */
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // API Endpoints
-  const API_ENDPOINTS = {
-    salesPerson: "/api/dashboard/sales-person/distinct-salesperson",
-    category: "/api/products/categories",
-  };
-
-  // Search type and filters
   const [searchType, setSearchType] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [loadingSuggestions, setLS] = useState(false);
   const [selectedValue, setSelectedValue] = useState(null);
   const [inputValue, setInputValue] = useState("");
-  const selectRef = useRef(null);
   const cache = useRef({});
 
-  // Filter state
   const [filters, setFilters] = useState({
     salesPerson: null,
     category: null,
+    customer: null,
+    product: null,
   });
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      
-      // Construct URL with optional filters
-      const params = new URLSearchParams();
-      
-      if (filters.salesPerson) {
-        params.append("salesPerson", filters.salesPerson.value);
-      }
-      
-      if (filters.category) {
-        params.append("category", filters.category.value);
-      }
+  /* ------------------------------------------------------------------
+     decide which filter types are allowed on this page
+     ‣ dashboard   : 4 filters
+     ‣ customer page: only salesPerson & category
+  ------------------------------------------------------------------ */
+  const allowedTypes = customerId
+    ? ["salesPerson", "category"]
+    : ["salesPerson", "category", "customer", "product"];
 
-      // const url = `/api/customers/${customerId}/delivery-performance?${params.toString()}`;
-        const url = customerId
-          ? `/api/customers/${customerId}/delivery-performance?${params.toString()}`
-          : `/api/customers/delivery-performance?${params.toString()}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch data");
-      }
-      
-      const result = await response.json();
-      console.log("API response data:", result);
-      setData(result);
-    } catch (error) {
-      console.error("Error fetching delivery performance data:", error);
+  /* prevent stale searchType after navigation */
+  useEffect(() => {
+    if (searchType && !allowedTypes.includes(searchType)) {
+      setSearchType(null);
+      setSelectedValue(null);
+      setInputValue("");
+    }
+  }, [searchType, allowedTypes]);
+
+  /* ------------------------------ data fetch ---------------------- */
+  // const fetchData = async (active) => {
+  //   setLoading(true);
+  //   try {
+  //     const params = new URLSearchParams();
+  //     if (active.salesPerson) params.append("salesPerson", active.salesPerson.value);
+  //     if (active.category) params.append("category", active.category.value);
+  //     if (active.customer) params.append("customer", active.customer.value);
+  //     if (active.product) params.append("product", active.product.value);
+
+  //     const url = customerId
+  //       ? `/api/customers/${customerId}/delivery-performance?${params}`
+  //       : `/api/customers/all-delivery-performance?${params}`;
+
+  //     const res = await fetch(url);
+  //     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  //     setData(await res.json());
+  //   } catch (err) {
+  //     console.error("fetch error:", err);
+  //     setData([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+  const fetchData = async (active) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (active.salesPerson) params.append("salesPerson", active.salesPerson);
+      if (active.category) params.append("category", active.category);
+      if (active.customer) params.append("customer", active.customer);
+      if (active.product) params.append("product", active.product);
+
+      const url = customerId
+        ? `/api/customers/${customerId}/delivery-performance?${params}`
+        : `/api/customers/all-delivery-performance?${params}`;
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setData(await res.json());
+    } catch (err) {
+      console.error("fetch error:", err);
+      setData([]);
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
-    if (customerId) {
-      fetchData();
-    }
-     fetchData();
+    fetchData(filters);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId, filters]);
 
-  // Handle dropdown selection
-  const handleSearchTypeSelect = async (type) => {
+  /* ------------------------------ suggestions --------------------- */
+  const getSuggestions = async (q = "", initial = false) => {
+    if (!searchType || !allowedTypes.includes(searchType)) return;
+    if (!initial && !q) return;
+
+    const key = `${searchType}_${q}`;
+    if (cache.current[key]) return setSuggestions(cache.current[key]);
+
+    setLS(true);
+    try {
+      const res = await fetch(`${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(q)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+
+      let opts = [];
+      switch (searchType) {
+        case "salesPerson":
+          opts =
+            json.salesEmployees?.map((e) => ({ value: e.value, label: `${e.value} - ${e.label}` })) ?? [];
+          break;
+        case "category":
+          opts = json.categories?.map((c) => ({ value: c.value ?? c, label: c.label ?? c })) ?? [];
+          break;
+        case "customer":
+          opts = json.customers?.map((c) => ({ value: c.value, label: c.label })) ?? [];
+          break;
+        case "product":
+          opts = json.products?.map((p) => ({ value: p.value, label: p.label })) ?? [];
+          break;
+        default:
+          break;
+      }
+      cache.current[key] = opts;
+      setSuggestions(opts);
+    } catch (err) {
+      console.error("suggestion error:", err);
+      setSuggestions([]);
+    } finally {
+      setLS(false);
+    }
+  };
+  const debouncedFetch = useCallback(debounce(getSuggestions, 500), [searchType]);
+
+  /* ------------------------------ handlers ------------------------ */
+  const chooseType = async (type) => {
+    if (!allowedTypes.includes(type)) return; // guard
     setSearchType(type);
     setSelectedValue(null);
     setInputValue("");
     setSuggestions([]);
-    if (type === "salesPerson" || type === "category") {
-      await fetchSuggestions("", true);
-    }
+    await getSuggestions("", true);
   };
 
-  // Debounced function for API calls when typing
-  const debouncedFetchSuggestions = useCallback(
-    debounce(async (query) => {
-      await fetchSuggestions(query);
-    }, 500),
-    [searchType]
-  );
-
-  // Fetch suggestions based on search type
-  const fetchSuggestions = async (query = "", initialLoad = false) => {
-    if (!searchType) return;
-    if (!initialLoad && !query) return;
-
-    const cacheKey = `${searchType}_${query}`;
-    if (cache.current[cacheKey]) {
-      setSuggestions(cache.current[cacheKey]);
-      return;
-    }
-
-    setLoadingSuggestions(true);
-    try {
-      const url = `${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(query)}&page=1&limit=50`;
-      const response = await fetch(url);
-
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-      const data = await response.json();
-
-      let formattedSuggestions = [];
-      if (searchType === "salesPerson") {
-        formattedSuggestions =
-          data.salesEmployees?.map((emp) => ({
-            value: emp.value,
-            label: `${emp.value} - ${emp.label}`,
-          })) || [];
-      } else if (searchType === "category") {
-        formattedSuggestions =
-          data.categories?.map((cat) => ({
-            value: cat,
-            label: cat,
-          })) || [];
-      }
-
-      cache.current[cacheKey] = formattedSuggestions;
-      setSuggestions(formattedSuggestions);
-    } catch (error) {
-      console.error(`Error fetching ${searchType} suggestions:`, error);
-      setSuggestions([]);
-    } finally {
-      setLoadingSuggestions(false);
-    }
+  // const chooseOption = (opt) => {
+  //   setSelectedValue(opt);
+  //   setFilters((prev) => ({ ...prev, [searchType]: opt ? { value: opt.value, label: opt.label } : null }));
+  // };
+  const chooseOption = (opt) => {
+    setSelectedValue(opt);
+    setFilters((prev) => ({
+      ...prev,
+      [searchType]: opt ? opt.value : null,
+    }));
   };
 
-  // Handle input change
-  const handleInputChange = (inputValue, { action }) => {
-    if (action === "input-change") {
-      setInputValue(inputValue);
-      debouncedFetchSuggestions(inputValue);
-    }
-  };
-
-  // Handle input focus
-  const handleFocus = () => {
-    if (searchType) {
-      fetchSuggestions(inputValue, true);
-    }
-  };
-
-  // Handle option selection
-  const handleOptionSelect = (option) => {
-    setSelectedValue(option);
-
-    if (option) {
-      setFilters((prev) => ({
-        ...prev,
-        [searchType]: {
-          value: option.value,
-          label: option.label,
-        },
-      }));
-    } else {
-      setFilters((prev) => ({
-        ...prev,
-        [searchType]: null,
-      }));
-    }
-  };
-
-  // Reset filter
-  const handleReset = () => {
+  // const resetAll = () => {
+  //   setSearchType(null);
+  //   setSelectedValue(null);
+  //   setInputValue("");
+  //   setFilters({ salesPerson: null, category: null, customer: null, product: null });
+  // };
+  const resetAll = () => {
     setSearchType(null);
     setSelectedValue(null);
     setInputValue("");
     setFilters({
       salesPerson: null,
       category: null,
+      customer: null,
+      product: null,
     });
   };
 
+  /* ------------------------------ chart --------------------------- */
   const chartData = {
-    labels: data.map((item) => item.month),
+    labels: data.map((d) => d.month),
     datasets: [
-      {
-        type: "bar",
-        label: "0-3 days",
-        data: data.map((item) => item.green),
-        backgroundColor: "#4CAF50",
-        yAxisID: "y",
-      },
-      {
-        type: "bar",
-        label: "4-5 days",
-        data: data.map((item) => item.orange),
-        backgroundColor: "#FF9800",
-        yAxisID: "y",
-      },
-      {
-        type: "bar",
-        label: "6-8 days",
-        data: data.map((item) => item.blue),
-        backgroundColor: "#2196F3",
-        yAxisID: "y",
-      },
-      {
-        type: "bar",
-        label: "9-10 days",
-        data: data.map((item) => item.purple),
-        backgroundColor: "#9C27B0",
-        yAxisID: "y",
-      },
-      {
-        type: "bar",
-        label: ">10 days",
-        data: data.map((item) => item.red),
-        backgroundColor: "#F44336",
-        yAxisID: "y",
-      },
+      { label: "0–3 days", backgroundColor: "#4CAF50", data: data.map((d) => d.green) },
+      { label: "4–5 days", backgroundColor: "#FF9800", data: data.map((d) => d.orange) },
+      { label: "6–8 days", backgroundColor: "#2196F3", data: data.map((d) => d.blue) },
+      { label: "9–10 days", backgroundColor: "#9C27B0", data: data.map((d) => d.purple) },
+      { label: ">10 days", backgroundColor: "#F44336", data: data.map((d) => d.red) },
     ],
   };
 
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
     plugins: {
-      legend: {
-        position: "top",
-      },
+      datalabels: { display: false },
       tooltip: {
         mode: "index",
         intersect: false,
-        bodyFont: {
-          size: 18,
-          weight: "bold",
-        },
-        titleFont: {
-          size: 20,
-          weight: "bold",
-        },
         padding: 12,
+        titleFont: { size: 16, weight: "bold" },
+        bodyFont: { size: 14, weight: "bold" },
       },
-      datalabels: {
-        display: false,
-      },
+      legend: { position: "top" },
     },
     scales: {
-      x: {
-        grid: {
-          display: false,
-        },
-      },
+      x: { grid: { display: false } },
       y: {
-        type: "linear",
-        display: true,
-        position: "left",
-        title: {
-          display: true,
-          text: "Number of Orders",
-        },
         beginAtZero: true,
-      },
-      y1: {
-        type: "linear",
-        display: true,
-        position: "right",
-        title: {
-          display: true,
-          text: "SLA %",
-        },
-        min: 0,
-        max: 100,
-        grid: {
-          drawOnChartArea: false,
-        },
+        title: { display: true, text: "Number of Orders" },
       },
     },
   };
 
+  /* ------------------------------ render -------------------------- */
+  const labelMap = {
+    salesPerson: "Sales Person",
+    category: "Category",
+    customer: "Customer",
+    product: "Product",
+  };
+  const anyActive = Object.values(filters).some(Boolean);
+
   return (
     <div className="bg-white rounded-lg shadow-sm">
+      {/* header w/ filters */}
       <div className="p-4 border-b">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h4 className="text-xl font-semibold text-gray-900 mb-0">
-            {/* Invoice to order - Monthly */}
-          </h4>
+        <div className="d-flex justify-content-between align-items-center">
+          <h4 className="mb-0 fw-semibold">Order → Invoice Performance</h4>
 
-          {/* Filter Controls */}
           <div className="d-flex gap-2 align-items-center">
-            <Dropdown onSelect={handleSearchTypeSelect}>
-              <Dropdown.Toggle variant="outline-secondary" id="search-dropdown">
-                {searchType
-                  ? searchType === "salesPerson"
-                    ? "Sales Person"
-                    : "Category"
-                  : "Filter By"}
+            <Dropdown onSelect={chooseType}>
+              <Dropdown.Toggle variant="outline-secondary" id="filter-type">
+                {searchType ? labelMap[searchType] : "Filter By"}
               </Dropdown.Toggle>
               <Dropdown.Menu>
-                <Dropdown.Item eventKey="salesPerson">
-                  Sales Person
-                </Dropdown.Item>
-                <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+                {allowedTypes.includes("salesPerson") && (
+                  <Dropdown.Item eventKey="salesPerson">Sales Person</Dropdown.Item>
+                )}
+                {allowedTypes.includes("category") && (
+                  <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+                )}
+                {allowedTypes.includes("customer") && (
+                  <Dropdown.Item eventKey="customer">Customer</Dropdown.Item>
+                )}
+                {allowedTypes.includes("product") && (
+                  <Dropdown.Item eventKey="product">Product</Dropdown.Item>
+                )}
               </Dropdown.Menu>
             </Dropdown>
 
-            <div style={{ width: "300px" }}>
+            <div style={{ width: 300 }}>
               <Select
-                ref={selectRef}
                 value={selectedValue}
                 inputValue={inputValue}
-                onChange={handleOptionSelect}
-                onInputChange={handleInputChange}
-                onFocus={handleFocus}
+                onChange={chooseOption}
+                onInputChange={(v, { action }) => {
+                  if (action === "input-change") {
+                    setInputValue(v);
+                    debouncedFetch(v);
+                  }
+                }}
+                onFocus={() => searchType && getSuggestions(inputValue, true)}
                 options={suggestions}
                 isLoading={loadingSuggestions}
                 isClearable
                 isDisabled={!searchType}
-                placeholder={
-                  searchType
-                    ? `Search ${searchType === "salesPerson" ? "Sales Person" : "Category"}`
-                    : "Select filter type"
-                }
-                noOptionsMessage={() =>
-                  loadingSuggestions ? "Loading..." : "No results found"
-                }
-                styles={{
-                  control: (base, state) => ({
-                    ...base,
-                    minHeight: "40px",
-                    borderColor: state.isFocused ? "#007bff" : "#dee2e6",
-                    fontSize: "14px",
-                    backgroundColor: searchType ? "#fff" : "#f8f9fa",
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isFocused ? "#007bff" : "#fff",
-                    color: state.isFocused ? "#fff" : "#212529",
-                  }),
-                }}
+                placeholder={searchType ? `Search ${labelMap[searchType]}` : "Select filter type"}
               />
             </div>
-            <Button
-              variant="primary"
-              onClick={handleReset}
-              disabled={
-                !searchType && !filters.salesPerson && !filters.category
-              }
-            >
+
+            <Button variant="primary" onClick={resetAll} disabled={!anyActive && !searchType}>
               Reset
             </Button>
           </div>
         </div>
       </div>
+
+      {/* chart & table */}
       <div className="p-4 bg-gray-50">
         {loading ? (
-          <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "500px" }}
-          >
+          <div className="d-flex justify-content-center align-items-center" style={{ height: 500 }}>
             <Spinner animation="border" />
           </div>
-        ) : data.length > 0 ? (
+        ) : data.length ? (
           <>
-            <div style={{ height: "500px" }}>
+            <div style={{ height: 500 }}>
               <Bar data={chartData} options={chartOptions} />
             </div>
 
-            {/* 📊 Chart Data Table */}
+            {/* summary table */}
             <div className="mt-4">
               <Table striped bordered hover responsive>
                 <thead>
                   <tr>
                     <th>Range / Month</th>
-                    {data.map((item, index) => (
-                      <th key={index}>{item.month}</th>
+                    {data.map((d, i) => (
+                      <th key={i}>{d.month}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>0–3 Days</td>
-                    {data.map((item, index) => (
-                      <td key={index}>{item.green}</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>4–5 Days</td>
-                    {data.map((item, index) => (
-                      <td key={index}>{item.orange}</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>6–8 Days</td>
-                    {data.map((item, index) => (
-                      <td key={index}>{item.blue}</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>9–10 Days</td>
-                    {data.map((item, index) => (
-                      <td key={index}>{item.purple}</td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td>&gt;10 Days</td>
-                    {data.map((item, index) => (
-                      <td key={index}>{item.red}</td>
-                    ))}
-                  </tr>
+                  {[
+                    ["0–3 Days", "green"],
+                    ["4–5 Days", "orange"],
+                    ["6–8 Days", "blue"],
+                    ["9–10 Days", "purple"],
+                    [">10 Days", "red"],
+                  ].map(([lbl, key]) => (
+                    <tr key={key}>
+                      <td>{lbl}</td>
+                      {data.map((d, i) => (
+                        <td key={i}>{d[key]}</td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </Table>
             </div>
           </>
         ) : (
-          <div className="text-center">
-            No delivery performance data available
-          </div>
+          <p className="text-center m-0">No delivery performance data available</p>
         )}
       </div>
     </div>
   );
-};
-
-export default DeliveryPerformanceChart;
+}
