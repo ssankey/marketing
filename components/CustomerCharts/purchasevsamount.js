@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
-import { Spinner, Dropdown, Button } from "react-bootstrap";
+import { Spinner, Dropdown, Button,Table } from "react-bootstrap";
 import Select from "react-select";
 import debounce from "lodash/debounce";
 import { formatCurrency } from "utils/formatCurrency";
@@ -408,99 +408,249 @@ const PurchasesAmountChart = ({ customerId }) => {
     </div>
   );
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-4 border-b">
-        <div className="d-flex justify-content-between align-items-center mb-1">
-          <h4 className="text-xl font-semibold text-gray-900 mb-0">
-            {/* Orders & Invoices - Monthly */}
-          </h4>
+  // return (
+  //   <div className="bg-white rounded-lg shadow-sm">
+  //     <div className="p-4 border-b">
+  //       <div className="d-flex justify-content-between align-items-center mb-1">
+  //         <h4 className="text-xl font-semibold text-gray-900 mb-0">
+  //           {/* Orders & Invoices - Monthly */}
+  //         </h4>
 
-          {/* Filter Controls */}
-          <div className="d-flex gap-2 align-items-center">
-            <Dropdown onSelect={handleSearchTypeSelect}>
-              <Dropdown.Toggle variant="outline-secondary" id="search-dropdown">
-                {searchType
-                  ? searchType === "salesPerson"
-                    ? "Sales Person"
-                    : "Category"
-                  : "Filter By"}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item eventKey="salesPerson">
-                  Sales Person
-                </Dropdown.Item>
-                <Dropdown.Item eventKey="category">Category</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
+  //         {/* Filter Controls */}
+  //         <div className="d-flex gap-2 align-items-center">
+  //           <Dropdown onSelect={handleSearchTypeSelect}>
+  //             <Dropdown.Toggle variant="outline-secondary" id="search-dropdown">
+  //               {searchType
+  //                 ? searchType === "salesPerson"
+  //                   ? "Sales Person"
+  //                   : "Category"
+  //                 : "Filter By"}
+  //             </Dropdown.Toggle>
+  //             <Dropdown.Menu>
+  //               <Dropdown.Item eventKey="salesPerson">
+  //                 Sales Person
+  //               </Dropdown.Item>
+  //               <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+  //             </Dropdown.Menu>
+  //           </Dropdown>
 
-            <div style={{ width: "300px" }}>
-              <Select
-                ref={selectRef}
-                value={selectedValue}
-                inputValue={inputValue}
-                onChange={handleOptionSelect}
-                onInputChange={handleInputChange}
-                onFocus={handleFocus}
-                options={suggestions}
-                isLoading={loadingSuggestions}
-                isClearable
-                isDisabled={!searchType}
-                placeholder={
-                  searchType
-                    ? `Search ${searchType === "salesPerson" ? "Sales Person" : "Category"}`
-                    : "Select filter type"
-                }
-                noOptionsMessage={() =>
-                  loadingSuggestions ? "Loading..." : "No results found"
-                }
-                styles={{
-                  control: (base, state) => ({
-                    ...base,
-                    minHeight: "40px",
-                    borderColor: state.isFocused ? "#007bff" : "#dee2e6",
-                    fontSize: "14px",
-                    backgroundColor: searchType ? "#fff" : "#f8f9fa",
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isFocused ? "#007bff" : "#fff",
-                    color: state.isFocused ? "#fff" : "#212529",
-                  }),
-                }}
-              />
-            </div>
-            <Button
-              variant="primary"
-              onClick={handleReset}
-              disabled={
-                !searchType && !filters.salesPerson && !filters.category
-              }
-            >
-              Reset
-            </Button>
-          </div>
-        </div>
-      </div>
-      <div className="p-4 bg-gray-50">
-        {loading ? (
-          <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "400px" }}
-          >
-            <Spinner animation="border" />
-          </div>
-        ) : (
-          <>
-            {data.length > 0 && <TotalsDisplay totals={totals} />}
-            <div style={{ height: "400px" }}>
-              <Bar data={chartData} options={chartOptions} />
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+  //           <div style={{ width: "300px" }}>
+  //             <Select
+  //               ref={selectRef}
+  //               value={selectedValue}
+  //               inputValue={inputValue}
+  //               onChange={handleOptionSelect}
+  //               onInputChange={handleInputChange}
+  //               onFocus={handleFocus}
+  //               options={suggestions}
+  //               isLoading={loadingSuggestions}
+  //               isClearable
+  //               isDisabled={!searchType}
+  //               placeholder={
+  //                 searchType
+  //                   ? `Search ${searchType === "salesPerson" ? "Sales Person" : "Category"}`
+  //                   : "Select filter type"
+  //               }
+  //               noOptionsMessage={() =>
+  //                 loadingSuggestions ? "Loading..." : "No results found"
+  //               }
+  //               styles={{
+  //                 control: (base, state) => ({
+  //                   ...base,
+  //                   minHeight: "40px",
+  //                   borderColor: state.isFocused ? "#007bff" : "#dee2e6",
+  //                   fontSize: "14px",
+  //                   backgroundColor: searchType ? "#fff" : "#f8f9fa",
+  //                 }),
+  //                 option: (base, state) => ({
+  //                   ...base,
+  //                   backgroundColor: state.isFocused ? "#007bff" : "#fff",
+  //                   color: state.isFocused ? "#fff" : "#212529",
+  //                 }),
+  //               }}
+  //             />
+  //           </div>
+  //           <Button
+  //             variant="primary"
+  //             onClick={handleReset}
+  //             disabled={
+  //               !searchType && !filters.salesPerson && !filters.category
+  //             }
+  //           >
+  //             Reset
+  //           </Button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //     <div className="p-4 bg-gray-50">
+  //       {loading ? (
+  //         <div
+  //           className="d-flex justify-content-center align-items-center"
+  //           style={{ height: "400px" }}
+  //         >
+  //           <Spinner animation="border" />
+  //         </div>
+  //       ) : (
+  //         <>
+  //           {data.length > 0 && <TotalsDisplay totals={totals} />}
+  //           <div style={{ height: "400px" }}>
+  //             <Bar data={chartData} options={chartOptions} />
+  //           </div>
+  //         </>
+  //       )}
+  //     </div>
+  //   </div>
+  // );
+   return (
+     <div className="bg-white rounded-lg shadow-sm">
+       <div className="p-4 border-b">
+         <div className="d-flex justify-content-between align-items-center mb-1">
+           <h4 className="text-xl font-semibold text-gray-900 mb-0">
+             {/* Orders & Invoices - Monthly */}
+           </h4>
+
+           {/* Filter Controls */}
+           <div className="d-flex gap-2 align-items-center">
+             <Dropdown onSelect={handleSearchTypeSelect}>
+               <Dropdown.Toggle
+                 variant="outline-secondary"
+                 id="search-dropdown"
+               >
+                 {searchType
+                   ? searchType === "salesPerson"
+                     ? "Sales Person"
+                     : "Category"
+                   : "Filter By"}
+               </Dropdown.Toggle>
+               <Dropdown.Menu>
+                 <Dropdown.Item eventKey="salesPerson">
+                   Sales Person
+                 </Dropdown.Item>
+                 <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+               </Dropdown.Menu>
+             </Dropdown>
+
+             <div style={{ width: "300px" }}>
+               <Select
+                 ref={selectRef}
+                 value={selectedValue}
+                 inputValue={inputValue}
+                 onChange={handleOptionSelect}
+                 onInputChange={handleInputChange}
+                 onFocus={handleFocus}
+                 options={suggestions}
+                 isLoading={loadingSuggestions}
+                 isClearable
+                 isDisabled={!searchType}
+                 placeholder={
+                   searchType
+                     ? `Search ${searchType === "salesPerson" ? "Sales Person" : "Category"}`
+                     : "Select filter type"
+                 }
+                 noOptionsMessage={() =>
+                   loadingSuggestions ? "Loading..." : "No results found"
+                 }
+                 styles={{
+                   control: (base, state) => ({
+                     ...base,
+                     minHeight: "40px",
+                     borderColor: state.isFocused ? "#007bff" : "#dee2e6",
+                     fontSize: "14px",
+                     backgroundColor: searchType ? "#fff" : "#f8f9fa",
+                   }),
+                   option: (base, state) => ({
+                     ...base,
+                     backgroundColor: state.isFocused ? "#007bff" : "#fff",
+                     color: state.isFocused ? "#fff" : "#212529",
+                   }),
+                 }}
+               />
+             </div>
+             <Button
+               variant="primary"
+               onClick={handleReset}
+               disabled={
+                 !searchType && !filters.salesPerson && !filters.category
+               }
+             >
+               Reset
+             </Button>
+           </div>
+         </div>
+       </div>
+       <div className="p-4 bg-gray-50">
+         {loading ? (
+           <div
+             className="d-flex justify-content-center align-items-center"
+             style={{ height: "400px" }}
+           >
+             <Spinner animation="border" />
+           </div>
+         ) : (
+           <>
+             {data.length > 0 && <TotalsDisplay totals={totals} />}
+             <div style={{ height: "400px" }}>
+               <Bar data={chartData} options={chartOptions} />
+             </div>
+
+             {/* Data Table */}
+             {filteredData.length > 0 && (
+               <div className="mt-4">
+                 <h5 className="mb-3">Monthly Data Breakdown</h5>
+                 <div className="table-responsive">
+                   <Table striped bordered hover className="mb-0">
+                     <thead>
+                       <tr>
+                         <th>Metric</th>
+                         {filteredData.map((item, index) => {
+                           const date = new Date(item.Date);
+                           return (
+                             <th key={index}>
+                               {months[date.getMonth()]} {date.getFullYear()}
+                             </th>
+                           );
+                         })}
+                       </tr>
+                     </thead>
+                     <tbody>
+                       <tr>
+                         <td>Orders Count</td>
+                         {filteredData.map((item, index) => (
+                           <td key={index}>{item.OrderCount}</td>
+                         ))}
+                       </tr>
+                       <tr>
+                         <td>Orders Total (₹)</td>
+                         {filteredData.map((item, index) => (
+                           <td key={index}>
+                             {formatCurrency(item.OrderAmount)}
+                           </td>
+                         ))}
+                       </tr>
+                       <tr>
+                         <td>Line Items</td>
+                         {filteredData.map((item, index) => (
+                           <td key={index}>{item.InvoiceCount}</td>
+                         ))}
+                       </tr>
+                       <tr>
+                         <td>Invoice Total (₹)</td>
+                         {filteredData.map((item, index) => (
+                           <td key={index}>
+                             {formatCurrency(item.InvoiceAmount)}
+                           </td>
+                         ))}
+                       </tr>
+                     </tbody>
+                   </Table>
+                 </div>
+               </div>
+             )}
+           </>
+         )}
+       </div>
+     </div>
+   );
 };
 
 export default PurchasesAmountChart;

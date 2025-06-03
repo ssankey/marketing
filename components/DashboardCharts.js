@@ -6,6 +6,7 @@ import React, { memo, useState, useEffect } from 'react';
 import { Card, Row, Col, Spinner, ListGroup } from 'react-bootstrap';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { formatCurrency } from 'utils/formatCurrency';
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -22,6 +23,7 @@ import FilterDropdown from './FilterDropdown';
 import CustomerBalancesChart from './CustomerBalancesChart';
 import VendorPaymentsChart from './VendorPaymentsChart';
  import CustomerAgingChart from "./CustomerCharts/customeragingreport";
+ import DeliveryPerformanceChart from "./CustomerCharts/ordertodelievery";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -221,24 +223,11 @@ function DashboardCharts({ userRole }) {
   return (
     <div className="g-4">
       <EnhancedSalesCOGSChart />
+      {/* <DeliveryPerformanceChart /> */}
       <OrdersChart />
-      {/* <div className="pdf-section">
-          <Card className="mb-4">
-            <Card.Header>
-              <div className="d-flex justify-content-between align-items-center">
-                <h3 className="mb-0">Customer Balance Report</h3>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row>
-                <CustomerAgingChart  />
-              </Row>
-            </Card.Body>
-          </Card>
-        </div> */}
 
       {/* Show admin-only content: */}
-      {userRole === 'admin' && (
+      {userRole === "admin" && (
         <>
           <Row className="g-4 mt-4">
             <Col lg={6} md={6}>
@@ -269,8 +258,14 @@ function DashboardCharts({ userRole }) {
                   ) : topCustomers.length === 0 ? (
                     <NoDataDisplay />
                   ) : (
-                    <div className="chart-container" style={{ height: '400px' }}>
-                      <Bar data={customersChartData} options={commonChartOptions} />
+                    <div
+                      className="chart-container"
+                      style={{ height: "400px" }}
+                    >
+                      <Bar
+                        data={customersChartData}
+                        options={commonChartOptions}
+                      />
                     </div>
                   )}
                 </Card.Body>
@@ -297,8 +292,14 @@ function DashboardCharts({ userRole }) {
                     <NoDataDisplay />
                   ) : (
                     <Row className="flex-grow-1">
-                      <Col md={7} className="d-flex justify-content-center align-items-center">
-                        <Doughnut data={categoriesChartData} options={doughnutOptions} />
+                      <Col
+                        md={7}
+                        className="d-flex justify-content-center align-items-center"
+                      >
+                        <Doughnut
+                          data={categoriesChartData}
+                          options={doughnutOptions}
+                        />
                       </Col>
                       <Col md={5} className="d-flex align-items-center">
                         <ListGroup variant="flush" className="w-100">
@@ -313,9 +314,11 @@ function DashboardCharts({ userRole }) {
                                   style={{
                                     width: 12,
                                     height: 12,
-                                    borderRadius: '50%',
+                                    borderRadius: "50%",
                                     backgroundColor:
-                                      colorPalette.gradient[index % colorPalette.gradient.length],
+                                      colorPalette.gradient[
+                                        index % colorPalette.gradient.length
+                                      ],
                                   }}
                                 />
                                 <span className="small text-capitalize">
