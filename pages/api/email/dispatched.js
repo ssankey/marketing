@@ -43,6 +43,7 @@ export default async function handler(req, res) {
   U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
   U_DispatchDate                 AS DispatchDate,
   U_DeliveryDate                 AS DeliveryDate,
+  OINV.CardCode ,
   U_EmailSentDT,
   U_EmailSentTM
 FROM OINV
@@ -51,7 +52,8 @@ WHERE
   AND U_TrackingNoUpdateDT IS NOT NULL
   AND CAST(U_TrackingNoUpdateDT AS DATE) BETWEEN CAST(DATEADD(DAY, -1, GETDATE()) AS DATE) AND CAST(GETDATE() AS DATE)
   AND U_EmailSentDT IS NULL
-  AND U_EmailSentTM IS NULL;
+  AND U_EmailSentTM IS NULL
+   AND OINV.CardCode NOT IN ('C000021', 'C000020')
 `;
     const invoices = await queryDatabase(recentInvoicesQuery);
 
@@ -84,6 +86,7 @@ WHERE
     T0.U_DispatchDate        AS DispatchDate,
     T0.U_DeliveryDate        AS DeliveryDate,
     T0.U_AirlineName         AS ShippingMethod,
+    SHP.TrnspName            AS TranspportName,
     T0.CardName              AS CustomerName,
     T0.CardCode              AS CustomerCode,
     T7.Name                  AS ContactPerson,
@@ -105,6 +108,7 @@ WHERE
     -- Customer email (for "to:")
     T9.E_Mail                AS CustomerEmail
 FROM OINV  T0
+LEFT JOIN OSHP SHP ON T0.TrnspCode = SHP.TrnspCode
 INNER JOIN INV1  T1   ON T1.DocEntry   = T0.DocEntry
 -- Corrected delivery join - match line to line
 LEFT JOIN DLN1  T2   ON T2.DocEntry   = T1.BaseEntry 
@@ -139,6 +143,7 @@ ORDER BY T1.LineNum;
           CustomerName,
           CustomerEmail,
           ShippingMethod,
+          TranspportName,
           CustomerPONo,
           SalesPersonName,
           SalesPersonEmail,
@@ -163,7 +168,7 @@ ORDER BY T1.LineNum;
         const bulletsHtml = `
           <ul>
             
-            <li><strong>Carrier name:</strong> ${ShippingMethod}</li>
+            <li><strong>Carrier name:</strong> ${TranspportName}</li>
             <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
             <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
             <li><strong>Our Invoice Number:</strong> ${InvoiceNo}</li>
