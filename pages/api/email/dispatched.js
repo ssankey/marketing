@@ -162,10 +162,11 @@ ORDER BY T1.LineNum;
         // 5) Build bullet‐list HTML
         const bulletsHtml = `
           <ul>
-            <li><strong>Our Order Number:</strong> ${OrderNo} – Dated # ${formatDate(OrderDate)}</li>
-            <li><strong>Shipping Method:</strong> ${ShippingMethod}</li>
+            
+            <li><strong>Carrier name:</strong> ${ShippingMethod}</li>
             <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
             <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
+            <li><strong>Our Invoice Number:</strong> ${InvoiceNo}</li>
           </ul>
         `;
 
@@ -202,7 +203,7 @@ ORDER BY T1.LineNum;
 
             <p>Your order <strong>${CustomerPONo}</strong> has been shipped.</p>
 
-            <p><strong>Here are the details:</strong></p>
+            <p><strong>Here are the tracking details:</strong></p>
             ${bulletsHtml}
 
             <p><strong>Items Shipped:</strong></p>
@@ -242,7 +243,7 @@ ORDER BY T1.LineNum;
         `;
 
         // 8) Send the email (to = CustomerEmail, cc = SalesPersonEmail)
-        const subject = `Your Order has Shipped! Your Tracking Info- ${CustomerPONo}`;
+        const subject = `Shipment tracking details # order no- ${CustomerPONo}`;
         const sendRes = await fetch(
           `${process.env.API_BASE_URL}/api/email/base_mail`,
           {
@@ -254,7 +255,7 @@ ORDER BY T1.LineNum;
 
               // from: "prakash@densitypharmachem.com",
               to: [CustomerEmail],
-              cc: [SalesPersonEmail],
+              cc: [SalesPersonEmail, ContactPersonEmail],
               subject: subject,
               body: html,
             }),
