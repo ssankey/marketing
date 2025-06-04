@@ -244,7 +244,7 @@ ORDER BY T1.LineNum;
         // 8) Send the email (to = CustomerEmail, cc = SalesPersonEmail)
         const subject = `Your Order has Shipped! Your Tracking Info- ${CustomerPONo}`;
         const sendRes = await fetch(
-          `${req.headers["x-forwarded-proto"] || "http"}://${req.headers.host}/api/email/base_mail`,
+           `${process.env.API_BASE_URL}/api/email/base_mail`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
