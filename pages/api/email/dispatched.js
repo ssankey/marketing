@@ -15,26 +15,44 @@ export default async function handler(req, res) {
 
   try {
     // 1) Find invoices updated in the last 24–48 hours (adjust as needed)
-    const recentInvoicesQuery = `
-      SELECT 
-        DocEntry,
-        DocNum                         AS InvoiceNo,
-        TrackNo                        AS TrackingNumber,
-        U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
-        U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
-        U_DispatchDate                 AS DispatchDate,
-        U_DeliveryDate                 AS DeliveryDate,
-        U_EmailSentDT,
-        U_EmailSentTM
-      FROM OINV
-      WHERE
-        TrackNo IS NOT NULL
-        AND U_TrackingNoUpdateDT IS NOT NULL
-        -- If you truly mean “from midnight yesterday onward,” use -1 instead of -2:
-        AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(GETDATE() AS DATE)
-        AND U_EmailSentDT IS NULL
-        AND U_EmailSentTM IS NULL;
-    `;
+    // const recentInvoicesQuery = `
+    //   SELECT 
+    //     DocEntry,
+    //     DocNum                         AS InvoiceNo,
+    //     TrackNo                        AS TrackingNumber,
+    //     U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
+    //     U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
+    //     U_DispatchDate                 AS DispatchDate,
+    //     U_DeliveryDate                 AS DeliveryDate,
+    //     U_EmailSentDT,
+    //     U_EmailSentTM
+    //   FROM OINV
+    //   WHERE
+    //     TrackNo IS NOT NULL
+    //     AND U_TrackingNoUpdateDT IS NOT NULL
+    //     -- If you truly mean “from midnight yesterday onward,” use -1 instead of -2:
+    //     AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(GETDATE() AS DATE)
+    //     AND U_EmailSentDT IS NULL
+    //     AND U_EmailSentTM IS NULL;
+    // `;
+    const recentInvoicesQuery = `SELECT 
+  DocEntry,
+  DocNum                         AS InvoiceNo,
+  TrackNo                        AS TrackingNumber,
+  U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
+  U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
+  U_DispatchDate                 AS DispatchDate,
+  U_DeliveryDate                 AS DeliveryDate,
+  U_EmailSentDT,
+  U_EmailSentTM
+FROM OINV
+WHERE
+  TrackNo IS NOT NULL
+  AND U_TrackingNoUpdateDT IS NOT NULL
+  AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(DATEADD(DAY, -1, GETDATE()) AS DATE)
+  AND U_EmailSentDT IS NULL
+  AND U_EmailSentTM IS NULL;
+`;
     const invoices = await queryDatabase(recentInvoicesQuery);
 
     if (!invoices.length) {
@@ -54,55 +72,9 @@ export default async function handler(req, res) {
       } = inv;
 
       try {
-        // 2) Load full detail for exactly that DocEntry
-        // const detailQuery = `
-        //   SELECT
-        //     -- Header fields
-        //     T0.DocNum                AS InvoiceNo,
-        //     T0.DocDate               AS InvoiceDate,
-        //     T4.DocNum                AS OrderNo,
-        //     T4.DocDate               AS OrderDate,
-        //     T0.TrackNo               AS TrackingNumber,
-        //     T0.U_TrackingNoUpdateDT  AS TrackingUpdatedDate,
-        //     T0.U_TrackingNoUpdateTM  AS TrackingUpdatedTime,
-        //     T0.U_DispatchDate        AS DispatchDate,
-        //     T0.U_DeliveryDate        AS DeliveryDate,
-        //     T0.U_AirlineName         AS ShippingMethod,
-        //     T0.CardName              AS CustomerName,
-        //     T0.CardCode              AS CustomerCode,
-        //     T7.Name                  AS ContactPerson,
-        //     T0.SlpCode               AS SalesPersonID,
-        //     T5.SlpName               AS SalesPersonName,
-        //     T5.EMail               AS SalesPersonEmail,
-        //     T6.PymntGroup            AS PaymentTerms,
-        //     T0.NumAtCard             AS CustomerPONo,
-
-        //     -- Line‐level fields
-        //     T1.ItemCode              AS ItemNo,
-        //     T1.Dscription            AS ItemDescription,
-        //     T1.U_CasNo               AS CasNo,
-        //     T1.UnitMsr               AS Unit,
-        //     T1.U_PackSize            AS PackSize,
-        //     T1.Price                 AS UnitSalesPrice,
-        //     T1.Quantity              AS Qty,
-        //     T1.LineTotal             AS TotalSalesPrice,
-
-        //     -- Customer email (for “to:”)
-        //     T3.EMail               AS CustomerEmail
-
-        //   FROM OINV  T0
-        //   INNER JOIN INV1  T1  ON T1.DocEntry   = T0.DocEntry
-        //   LEFT JOIN ORDR   T4  ON T1.BaseEntry  = T4.DocEntry
-        //   LEFT JOIN OCRD   T3  ON T3.CardCode   = T0.CardCode
-        //   LEFT JOIN OCPR   T7  ON T0.CntctCode  = T7.CntctCode
-        //   LEFT JOIN OSLP   T5  ON T0.SlpCode    = T5.SlpCode
-        //   LEFT JOIN OCTG   T6  ON T0.GroupNum   = T6.GroupNum
-
-        //   WHERE T0.DocEntry = @docEntry
-        //   ORDER BY T1.LineNum;
-        // `;
+      
         const detailQuery = `
-  SELECT
+   SELECT
     T0.DocNum                AS InvoiceNo,
     T0.DocDate               AS InvoiceDate,
     T4.DocNum                AS OrderNo,
@@ -117,12 +89,11 @@ export default async function handler(req, res) {
     T7.Name                  AS ContactPerson,
     T0.SlpCode               AS SalesPersonID,
     T5.SlpName               AS SalesPersonName,
-    T5.Email                 AS SalesPersonEmail,   -- adjusted here
+    T5.Email                 AS SalesPersonEmail,
     T7.E_MailL               AS ContactPersonEmail,
     T6.PymntGroup            AS PaymentTerms,
     T0.NumAtCard             AS CustomerPONo,
-
-    -- Line‐level fields
+    -- Line-level fields
     T1.ItemCode              AS ItemNo,
     T1.Dscription            AS ItemDescription,
     T1.U_CasNo               AS CasNo,
@@ -131,26 +102,33 @@ export default async function handler(req, res) {
     T1.Price                 AS UnitSalesPrice,
     T1.Quantity              AS Qty,
     T1.LineTotal             AS TotalSalesPrice,
-
-    -- Customer email (for “to:”)
-    T3.E_Mail                AS CustomerEmail
-
-  FROM OINV  T0
-  INNER JOIN INV1  T1   ON T1.DocEntry   = T0.DocEntry
-  INNER JOIN ORDR   T4   ON T1.BaseEntry  = T4.DocEntry
-  INNER JOIN OCRD   T3   ON T3.CardCode   = T0.CardCode
-  INNER JOIN OCPR   T7   ON T0.CntctCode  = T7.CntctCode
-  INNER JOIN OSLP   T5   ON T0.SlpCode    = T5.SlpCode
-  INNER JOIN OCTG   T6   ON T0.GroupNum   = T6.GroupNum
-
-  WHERE T0.DocEntry = @docEntry
-  ORDER BY T1.LineNum;
+    -- Customer email (for "to:")
+    T9.E_Mail                AS CustomerEmail
+FROM OINV  T0
+INNER JOIN INV1  T1   ON T1.DocEntry   = T0.DocEntry
+-- Corrected delivery join - match line to line
+LEFT JOIN DLN1  T2   ON T2.DocEntry   = T1.BaseEntry 
+                     AND T2.LineNum    = T1.BaseLine 
+                     AND T1.BaseType   = 15  -- Delivery document type
+LEFT JOIN ODLN  T3   ON T3.DocEntry   = T2.DocEntry
+-- Corrected order join - match line to line  
+LEFT JOIN RDR1  T8   ON T8.DocEntry   = T2.BaseEntry 
+                     AND T8.LineNum    = T2.BaseLine
+                     AND T2.BaseType   = 17  -- Sales Order document type
+LEFT JOIN ORDR  T4   ON T4.DocEntry   = T8.DocEntry
+INNER JOIN OCRD T9   ON T9.CardCode   = T0.CardCode
+-- Modified contact join to avoid duplicates
+LEFT JOIN OCPR  T7   ON T0.CntctCode  = T7.CntctCode
+INNER JOIN OSLP T5   ON T0.SlpCode    = T5.SlpCode
+INNER JOIN OCTG T6   ON T0.GroupNum   = T6.GroupNum
+WHERE T0.DocNum = @docNum
+ORDER BY T1.LineNum;
 `;
 
-        const params = [{ name: "docEntry", type: sql.Int, value: DocEntry }];
+        const params = [{ name: "docNum", type: sql.Int, value: InvoiceNo }];
         const rows = await queryDatabase(detailQuery, params);
         if (!rows.length) {
-          throw new Error("No details found for DocEntry=" + DocEntry);
+          throw new Error("No details found for DocNum=" + DocEntry);
         }
 
         // 3) Destructure exactly the aliases we defined above
@@ -271,10 +249,10 @@ export default async function handler(req, res) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              // from:    "prakash@densitypharmachem.com",
+              from:    "sales@densitypharmachem.com",
               // to:      ["chandraprakashyadav1110@gmail.com"],
               
-              from: "sales@densitypharmachem.com",
+              // from: "prakash@densitypharmachem.com",
               to: [SalesPersonEmail],
               cc: ["chandraprakashyadav1110@gmail.com"],
               subject: subject,
@@ -292,14 +270,15 @@ export default async function handler(req, res) {
         const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
         await queryDatabase(
           `
-            UPDATE OINV
-              SET U_EmailSentDT = GETDATE(),
-                  U_EmailSentTM = @tm
-            WHERE DocEntry = @docEntry
+          UPDATE OINV
+  SET U_EmailSentDT = GETDATE(),
+      U_EmailSentTM = @tm
+WHERE DocNum = @docNum
+
           `,
           [
-            { name: "tm",       type: sql.SmallInt, value: minutesSinceMidnight },
-            { name: "docEntry", type: sql.Int,       value: DocEntry }
+            { name: "tm", type: sql.SmallInt, value: minutesSinceMidnight },
+            { name: "docNum", type: sql.Int, value: InvoiceNo },
           ]
         );
 
