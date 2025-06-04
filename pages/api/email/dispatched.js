@@ -244,17 +244,17 @@ ORDER BY T1.LineNum;
         // 8) Send the email (to = CustomerEmail, cc = SalesPersonEmail)
         const subject = `Your Order has Shipped! Your Tracking Info- ${CustomerPONo}`;
         const sendRes = await fetch(
-           `${process.env.API_BASE_URL}/api/email/base_mail`,
+          `${process.env.API_BASE_URL}/api/email/base_mail`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              from:    "sales@densitypharmachem.com",
+              from: "sales@densitypharmachem.com",
               // to:      ["chandraprakashyadav1110@gmail.com"],
-              
+
               // from: "prakash@densitypharmachem.com",
-              to: [SalesPersonEmail],
-              cc: ["chandraprakashyadav1110@gmail.com"],
+              to: [CustomerEmail],
+              cc: [SalesPersonEmail],
               subject: subject,
               body: html,
             }),
