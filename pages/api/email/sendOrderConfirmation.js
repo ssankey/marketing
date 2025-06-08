@@ -8,39 +8,14 @@ import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
   try {
-   
-//     const ordersQuery = `SELECT o.DocEntry, o.DocNum, o.CntctCode, o.CreateDate, o.DocTime, o.U_EmailSentDT, o.U_EmailSentTM
-// FROM ORDR o
-// WHERE o.CANCELED = 'N'
-//   AND DATEADD(MINUTE, -5, GETDATE()) <= 
-//       DATEADD(MINUTE, o.DocTime % 100, DATEADD(HOUR, o.DocTime / 100, CAST(o.CreateDate AS DATETIME)))
-//   AND (o.U_EmailSentDT IS NULL AND o.U_EmailSentTM IS NULL)
-// `;
-
-// const ordersQuery = `  SELECT
-//         o.DocEntry,
-//         o.DocNum,
-//         o.CntctCode,
-//         o.CreateDate,
-//         o.DocTime,
-//         o.U_EmailSentDT,
-//         o.U_EmailSentTM
-//       FROM ORDR o
-//       WHERE o.CANCELED = 'N'
-//         -- Simple “yesterday”-equality approach
-// AND CAST(o.CreateDate AS DATE) = DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
-
-//         AND o.U_EmailSentDT IS NULL
-//         AND o.U_EmailSentTM IS NULL`;
-
-        const ordersQuery = ` SELECT
+    const ordersQuery = ` 
+      SELECT
         o.DocEntry,
         o.DocNum,
         o.CntctCode,
@@ -87,44 +62,42 @@ export default async function handler(req, res) {
         }
 
         let toEmail = details.Email;
-        
+
         if (!toEmail) {
           console.warn(`⚠️ No email for Order ${order.DocNum}`);
           skippedCount++;
           continue;
         }
-        
 
         const SalesPerson_Email = details.SalesPerson_Email;
-       
         console.log("sales employee", SalesPerson_Email);
-         const ContactPersonEmail = details.ContactPersonEmail;
+
+        const ContactPersonEmail = details.ContactPersonEmail;
+
         // 📧 Step 4: Prepare email body
         const lineItems = details.LineItems.map(
           (item) => `
-          <tr>
-            <td>${item.ItemCode}</td>
-            <td>${item.Description}</td>
-            <td>${item.U_CasNo || "N/A"}</td>
-            <td>${item.Quantity}</td>
-            <td>${item.UnitMsr}</td>
-            <td>${formatNumberWithIndianCommas(item.Price)}</td>
-            <td>${formatNumberWithIndianCommas(item.LineTotal)}</td>
-            <td>${item.StockStatus}</td>
-            <td>${formatDate(item.ShipDate)}</td>
-          </tr>
-        `
+            <tr>
+              <td>${item.ItemCode}</td>
+              <td>${item.Description}</td>
+              <td>${item.U_CasNo || "N/A"}</td>
+              <td>${item.Quantity}</td>
+              <td>${item.UnitMsr}</td>
+              <td>${formatNumberWithIndianCommas(item.Price)}</td>
+              <td>${formatNumberWithIndianCommas(item.LineTotal)}</td>
+              <td>${item.StockStatus}</td>
+              <td>${formatDate(item.DeliveryDate)}</td>
+            </tr>
+          `
         ).join("");
 
-              const html = `
+        const html = `
           <div style="font-family: Arial, sans-serif;">
             <p>Dear Valued Customer,</p>
-            <p>We are pleased to confirm your Purchase order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong>.<br/>our Sales order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
-
-          
+            <p>We are pleased to confirm your Purchase order <strong>${details.CustomerPONo}</strong> placed on <strong>${formatDate(details.DocDate)}</strong>.<br/>Our Sales order ref# ${details.DocNum} dated ${formatDate(details.DocDate)}</p>
 
             <p><strong>Order Summary:</strong></p>
-            <table border="1" cellpadding="6" cellspacing="0"  style="border-collapse: collapse;">
+            <table border="1" cellpadding="6" cellspacing="0" style="border-collapse: collapse;">
               <thead style="background-color: #007BFF; color: white;">
                 <tr>
                   <th>Item Code</th><th>Description</th><th>CAS No.</th><th>Qty</th><th>Unit</th>
@@ -133,31 +106,25 @@ export default async function handler(req, res) {
               </thead>
               <tbody>${lineItems}</tbody>
             </table>
-              <br/>
+            <br/>
             <p><strong>Billing Address:</strong> ${details.BillToAddress || "N/A"}</p>
-
-        <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
+            <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
 
             <p>Should you have any inquiries or require further assistance, please do not hesitate to contact our customer service team at sales@densitypharmachem.com<br/><br>
+            Thank you for your patronage. We greatly appreciate your business and look forward to serving you again.</p><br/>
 
-        Thank you for your patronage. We greatly appreciate your business and look forward to serving you again.</p><br/>
-
-            <p><Strong>Yours Sincerely,<br/></Strong></p>
+            <p><strong>Yours Sincerely,<br/></strong></p>
             <p>${details.SalesEmployee}</p>
-            
+
             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
             DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
             Sy No 615/A & 624/2/1, Pudur Village<br/>
             Medchal-Malkajgiri District,<br/>
             Hyderabad, Telangana, India-501401<br/>
-            
           </div>
-      `;
-       
+        `;
 
         // ✉️ Step 5: Send mail
-       
-
         const emailRes = await fetch(
           `${process.env.API_BASE_URL}/api/email/base_mail`,
           {
@@ -166,7 +133,7 @@ export default async function handler(req, res) {
             body: JSON.stringify({
               from: "sales@densitypharmachem.com",
               to: [toEmail], // replace with toEmail in prod
-              cc: [SalesPerson_Email, ContactPersonEmail],
+              cc: [SalesPerson_Email],
               // from: "prakash@densitypharmachem.com",
               // to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
               subject: `Order confirmation- SO # ${details.DocNum}`,

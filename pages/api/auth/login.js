@@ -212,12 +212,12 @@ export default async function handler(req, res) {
       userWithPassword?.CardCode?.trim() || results[0].CardCode?.trim();
 
     if (!userWithPassword) {
-      const token = jwt.sign(
-        { email, role: "contact_person", cardCodes: [cardCode] },
-        process.env.JWT_SECRET,
-        { expiresIn: "1h" }
-      );
-      res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+      // const token = jwt.sign(
+      //   { email, role: "contact_person", cardCodes: [cardCode] },
+      //   process.env.JWT_SECRET,
+      //   { expiresIn: "1h" }
+      // );
+      // res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
 
       return res.status(200).json({
         message: "PASSWORD_NOT_SET",
