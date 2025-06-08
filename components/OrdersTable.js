@@ -47,6 +47,32 @@ const OrdersTable = ({
   } = useTableFilters();
 
   // 3) sendMail patches only the clicked row
+  // const sendMail = async (row) => {
+  //   try {
+  //     const res = await fetch("/api/email/sendOrderEmail", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ docEntry: row.DocEntry, docNum: row.DocNum }),
+  //     });
+  //     const data = await res.json();
+  //     if (!data.success) throw new Error(data.error);
+
+  //     setTableData((prev) =>
+  //       prev.map((r) =>
+  //         r.DocEntry === row.DocEntry
+  //           ? {
+  //               ...r,
+  //               EmailSentDT: data.EmailSentDT,
+  //               EmailSentTM: data.EmailSentTM,
+  //             }
+  //           : r
+  //       )
+  //     );
+  //   } catch (e) {
+  //     console.error(e);
+  //     alert("Failed to send email: " + e.message);
+  //   }
+  // };
   const sendMail = async (row) => {
     try {
       const res = await fetch("/api/email/sendOrderEmail", {
@@ -54,9 +80,16 @@ const OrdersTable = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ docEntry: row.DocEntry, docNum: row.DocNum }),
       });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
 
+      const data = await res.json();
+
+      if (!data.success) {
+        // Show alert with the specific message from the server
+        alert(data.message || "Email sending failed.");
+        return;
+      }
+
+      // If successful, update table data with sent timestamp
       setTableData((prev) =>
         prev.map((r) =>
           r.DocEntry === row.DocEntry
@@ -68,6 +101,9 @@ const OrdersTable = ({
             : r
         )
       );
+
+      // Optional: Show success message
+      alert("Order confirmation email sent successfully!");
     } catch (e) {
       console.error(e);
       alert("Failed to send email: " + e.message);
@@ -137,15 +173,25 @@ const OrdersTable = ({
       label: "Mail Sent",
       render: (_, row) => {
         if (row.EmailSentDT) {
-          const h = Math.floor(row.EmailSentTM / 60);
-          const m = row.EmailSentTM % 60;
+          const dt = new Date(row.EmailSentDT);
+
+          // Safely handle EmailSentTM or fallback to datetime object
+          const hasTime =
+            row.EmailSentTM !== null && row.EmailSentTM !== undefined;
+          const h = hasTime ? Math.floor(row.EmailSentTM / 60) : dt.getHours();
+          const m = hasTime ? row.EmailSentTM % 60 : dt.getMinutes();
+
+          const day = String(dt.getDate()).padStart(2, "0");
+          const month = String(dt.getMonth() + 1).padStart(2, "0"); // 0-based
+          const year = dt.getFullYear();
+
           return (
             <>
-              {new Date(row.EmailSentDT).toLocaleDateString()}{" "}
-              {String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}
+              {`${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
             </>
           );
         }
+
         return (
           <button
             className="btn btn-sm btn-primary"

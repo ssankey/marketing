@@ -11,6 +11,7 @@ import { formatDate } from "utils/formatDate";
 import Link from "next/link";
 import { formatCurrency } from "utils/formatCurrency";
 
+import { Download, FileText, Shield } from "lucide-react";
 
 // Client-side caching helpers
 const CLIENT_CACHE_TTL = 300000; // 5 minutes
@@ -37,6 +38,7 @@ const columns = [
           <Printer />
         </Link>
       </>
+      
     ),
   },
   {
@@ -238,6 +240,7 @@ const columns = [
     label: "SO Date",
     render: (value) => formatDate(value),
   },
+  
 ];
 // Client-side caching helpers
 // const CLIENT_CACHE_TTL = 0; // 5 minutes
