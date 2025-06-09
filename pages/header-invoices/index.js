@@ -362,6 +362,11 @@ export default function InvoicesPage() {
       ),
     },
     {
+      field: "LineItemCount",
+      label: "Items",
+      render: (value) => value ?? 0,
+    },
+    {
       field: "DocDate",
       label: "Invoice Date",
       render: (value) => formatDate(value),
