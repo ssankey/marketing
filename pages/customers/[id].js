@@ -27,6 +27,7 @@ import { generatePDF, handlePrintPDF } from "utils/pdfGenerator";
 import MonthlyCategorySalesChart from "components/CustomerCharts/SalesByCategoryWrapper";
 import CustomerAgingChart from "../../components/CustomerCharts/customeragingreport";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
+import CategorySalesChart from "../../components/CustomerCharts/CategorySalesChart";
 
 // Utility function to format date
 function formatDate(dateString) {
@@ -797,11 +798,28 @@ export default function CustomerDetails({
           </Card>
         </div>
 
-        <div className="pdf-section">
+        {/* <div className="pdf-section">
           <Card className="mb-4">
             <Card.Header>
               <div className="d-flex justify-content-between align-items-center">
                 <h3 className="mb-0">Sales by Category</h3>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+               
+                <MonthlyCategorySalesChart
+                  customerId={customer?.CustomerCode}
+                />
+              </Row>
+            </Card.Body>
+          </Card>
+        </div> */}
+        <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Sales by Category-Monthly</h3>
               </div>
             </Card.Header>
             <Card.Body>
@@ -812,9 +830,7 @@ export default function CustomerDetails({
               <Col lg={6}>
                 <SalesPieChart data={salesByCategoryData} />
               </Col> */}
-                <MonthlyCategorySalesChart
-                  customerId={customer?.CustomerCode}
-                />
+                <CategorySalesChart cardCode={customer?.CustomerCode} />
               </Row>
             </Card.Body>
           </Card>

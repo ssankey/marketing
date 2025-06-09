@@ -1,8 +1,3 @@
-
-
-
-
-
 // components/Category/MonthlyLineItemsTable.js
 import React, { useMemo, useState } from "react";
 import {
@@ -111,8 +106,7 @@ export default function MonthlyLineItemsTable({ data = [], columns: initialColum
                     style={{
                       whiteSpace: "nowrap",
                       overflow: "hidden",
-                    //   textOverflow: "ellipsis",
-                      
+                      //   textOverflow: "ellipsis",
                     }}
                     title={String(header.column.columnDef.header)}
                   >
@@ -133,19 +127,24 @@ export default function MonthlyLineItemsTable({ data = [], columns: initialColum
                     // <td
                     //   key={cell.id}
                     //   className="border px-2 py-1 text-sm text-center"
+                    //   style={{
+                    //     whiteSpace: "nowrap", // Prevent line break
+                    //     overflow: "hidden", // Hide overflow
+                    //     // textOverflow: "ellipsis", // Show ellipsis if text is too long
+
+                    //   }}
+                    //   title={String(cell.getValue())} // Optional: full value on hover
                     // >
                     //   {formatCellValue(cell.getValue(), cell.column.columnDef)}
                     // </td>
                     <td
                       key={cell.id}
-                      className="border px-2 py-1 text-sm text-center"
+                      className={`border px-2 py-1 text-sm ${cell.column.id === table.getAllColumns()[0].id ? "text-start" : "text-center"}`}
                       style={{
-                        whiteSpace: "nowrap", // Prevent line break
-                        overflow: "hidden", // Hide overflow
-                        // textOverflow: "ellipsis", // Show ellipsis if text is too long
-                        
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
                       }}
-                      title={String(cell.getValue())} // Optional: full value on hover
+                      title={String(cell.getValue())}
                     >
                       {formatCellValue(cell.getValue(), cell.column.columnDef)}
                     </td>

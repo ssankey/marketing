@@ -58,6 +58,11 @@ import InvoicesTable from "components/HeaderInvoiceTable"; // Changed to use Hea
       ),
     },
     {
+      field: "LineItemCount",
+      label: "Items",
+      render: (value) => value ?? 0,
+    },
+    {
       field: "DocDate",
       label: "Invoice Date",
       render: (value) => formatDate(value),
