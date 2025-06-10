@@ -14,216 +14,100 @@ import { Download, FileText, FlaskConical, Sparkles } from "lucide-react";
   import Link from "next/link";
   import { formatCurrency } from "utils/formatCurrency";
 
+  import msdsMap from "public/data/msds-map.json"; // Adjust path if needed
 
 
-  // const columns = [
-  //   // {
-  //   //   field: "DocNum",
-  //   //   label: "Invoice#",
-  //   //   render: (value, row) => (
-  //   //     <>
-  //   //       <Link
-  //   //         href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-  //   //         className="text-blue-600 hover:text-blue-800"
-  //   //       >
-  //   //         {value}
-  //   //       </Link>
-  //   //       &nbsp;
-  //   //       <Link
-  //   //         href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
-  //   //         className="text-blue-600 hover:text-blue-800"
-  //   //         target="_blank"
-  //   //       >
-  //   //         <Printer />
-  //   //       </Link>
-  //   //     </>
-  //   //   ),
-  //   //   sortable: true,
-  //   // },
-  //   {
-  //     field: "DocNum",
-  //     label: "Invoice#",
-  //     render: (value, row) => (
-  //       <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 space-y-1 sm:space-y-0">
-  //         {/* Invoice Number Link */}
-  //         <Link
-  //           href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-  //           className="text-blue-700 hover:text-blue-900 font-semibold text-sm underline"
-  //         >
-  //           {value}
-  //         </Link>
+// const handleMSDSDownload = async (docEntry, docNum) => {
+//   try {
+//     const res = await fetch(
+//       `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
+//     );
+//     const invoice = await res.json();
 
-  //         {/* MSDS Button */}
-  //         <button
-  //           onClick={(e) => {
-  //             e.stopPropagation();
-  //             handleMSDSDownload(row.DocEntry, value);
-  //           }}
-  //           className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md border border-blue-300 shadow-sm hover:shadow-md transition-all duration-150"
-  //           title="Download MSDS"
-  //         >
-  //           <FlaskConical size={12} />
-  //           <span className="hidden sm:inline font-medium">MSDS</span>
-  //         </button>
+//     if (!invoice?.LineItems || invoice.LineItems.length === 0) {
+//       alert("No line items found for this invoice.");
+//       return;
+//     }
 
-  //         {/* COA Button */}
-  //         <button
-  //           onClick={(e) => {
-  //             e.stopPropagation();
-  //             handleCOADownload(row.DocEntry, value);
-  //           }}
-  //           className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-green-100 text-green-800 hover:bg-green-200 rounded-md border border-green-300 shadow-sm hover:shadow-md transition-all duration-150"
-  //           title="Download COA"
-  //         >
-  //           <FileText size={12} />
-  //           <span className="hidden sm:inline font-medium">COA</span>
-  //         </button>
-  //       </div>
-  //     ),
-  //     sortable: true,
-  //   },
-  //   {
-  //     field: "DocStatusDisplay",
-  //     label: "Status",
-  //     render: (value) => (
-  //       <span
-  //         className={`badge ${
-  //           value === "Closed"
-  //             ? "bg-success"
-  //             : value === "Cancelled"
-  //               ? "bg-warning"
-  //               : "bg-danger"
-  //         }`}
-  //       >
-  //         {value}
-  //       </span>
-  //     ),
-  //   },
-  //   {
-  //     field: "DocDate",
-  //     label: "Invoice Date",
-  //     render: (value) => formatDate(value),
-  //     sortable: true,
-  //   },
-  //   {
-  //     field: "DocDueDate",
-  //     label: "Due Date",
-  //     render: (value) => formatDate(value),
-  //     sortable: true,
-  //   },
-  //   {
-  //     field: "U_DispatchDate",
-  //     label: "Dispatch Date",
-  //     render: (value) => (value ? formatDate(value) : "Pending"),
-  //   },
-  //   {
-  //     field: "CardCode",
-  //     label: "Customer Code",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "CardName",
-  //     label: "Customer Name",
-  //     render: (value) => value || "N/A",
-  //     sortable: true,
-  //   },
-  //   // {
-  //   //   field: "CustomerGroup",
-  //   //   label: "Customer Group",
-  //   //   render: (value) => value || "N/A",
-  //   // },
-  //   //   {
-  //   //     field: "NumAtCard",
-  //   //     label: "Customer PO#",
-  //   //     render: (value) => value || "N/A"
-  //   //   },
-  //   {
-  //     field: "DocTotal",
-  //     label: "Total Amount",
-  //     render: (value) => formatCurrency(value),
-  //     sortable: true,
-  //   },
-  //   {
-  //     field: "DocCur",
-  //     label: "Currency",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "VatSum",
-  //     label: "Tax Amount",
-  //     render: (value) => formatCurrency(value),
-  //   },
-  //   {
-  //     field: "TaxDate",
-  //     label: "Tax Date",
-  //     render: (value) => formatDate(value),
-  //   },
-  //   //   {
-  //   //     field: "U_DispatchDate",
-  //   //     label: "Dispatch Date",
-  //   //     render: (value) => (value ? formatDate(value) : "Pending")
-  //   //   },
-  //   {
-  //     field: "TrackNo",
-  //     label: "Tracking #",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "TransportName",
-  //     label: "Transport",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "PaymentGroup",
-  //     label: "Payment Terms",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "Country",
-  //     label: "Country",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "SalesEmployee",
-  //     label: "Sales Person",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "ContactPerson",
-  //     label: "Contact Person",
-  //     render: (value) => value || "N/A",
-  //   },
-  //   {
-  //     field: "U_EmailSentDT",
-  //     label: "Mail Sent",
-  //     render: (_, row) => {
-  //       if (row.U_EmailSentDT) {
-  //         const dt = new Date(row.U_EmailSentDT);
-  //         const h = Math.floor((row.U_EmailSentTM || 0) / 60);
-  //         const m = (row.U_EmailSentTM || 0) % 60;
+//     const downloaded = new Set();
 
-  //         const day = String(dt.getDate()).padStart(2, "0");
-  //         const month = String(dt.getMonth() + 1).padStart(2, "0"); // Month is 0-indexed
-  //         const year = dt.getFullYear();
+//     for (const item of invoice.LineItems) {
+//       const itemCode = item.ItemCode?.trim();
+//       const key = itemCode; // or use `${item.ItemCode}-${item.UnitMsr}`, etc. if MSDS keys are like "A010014-25ml"
+//       const msdsUrl = msdsMap[key];
 
-  //         return (
-  //           <>
-  //             {`${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
-  //           </>
-  //         );
-  //       }
+//       if (msdsUrl && !downloaded.has(msdsUrl)) {
+//         const a = document.createElement("a");
+//         a.href = msdsUrl;
+//         a.download = "";
+//         a.target = "_blank";
+//         document.body.appendChild(a);
+//         a.click();
+//         document.body.removeChild(a);
+//         downloaded.add(msdsUrl);
 
-  //       return (
-  //         <button
-  //           className="btn btn-sm btn-primary"
-  //           onClick={() => sendInvoiceMail(row)}
-  //         >
-  //           Send Mail
-  //         </button>
-  //       );
-  //     },
-  //   },
-  // ];
+//         await new Promise((resolve) => setTimeout(resolve, 300));
+//       }
+//     }
+
+//     if (downloaded.size === 0) {
+//       alert("No MSDS files found for this invoice.");
+//     }
+//   } catch (err) {
+//     console.error("Error in MSDS download:", err);
+//     alert("Failed to download MSDS files.");
+//   }
+// };
+const handleMSDSDownload = async (docEntry, docNum) => {
+  try {
+    const res = await fetch(
+      `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
+    );
+    const invoice = await res.json();
+
+    if (!invoice?.LineItems || invoice.LineItems.length === 0) {
+      alert("No line items found for this invoice.");
+      return;
+    }
+
+    const downloaded = new Set();
+
+    for (const item of invoice.LineItems) {
+      const key = item.ItemCode?.trim(); // or `${item.ItemCode}-${item.UnitMsr}`
+      const msdsUrl = msdsMap[key];
+
+      if (msdsUrl && !downloaded.has(msdsUrl)) {
+        try {
+          const fileRes = await fetch(msdsUrl);
+          const blob = await fileRes.blob();
+          const blobUrl = URL.createObjectURL(blob);
+
+          const a = document.createElement("a");
+          a.href = blobUrl;
+          a.download = `${key}_MSDS.pdf`; // Custom filename
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(blobUrl);
+
+          downloaded.add(msdsUrl);
+          await new Promise((resolve) => setTimeout(resolve, 300)); // spacing
+        } catch (err) {
+          console.error(`Failed to download ${key}:`, err);
+        }
+      }
+    }
+
+    if (downloaded.size === 0) {
+      alert("No MSDS files matched this invoice.");
+    }
+  } catch (err) {
+    console.error("Error in MSDS download:", err);
+    alert("Failed to download MSDS files.");
+  }
+};
+
+  
 export default function InvoicesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
