@@ -16,8 +16,7 @@ import { Download, FileText, FlaskConical, Sparkles } from "lucide-react";
 
   import msdsMap from "public/data/msds-map.json"; // Adjust path if needed
 
-
-// const handleMSDSDownload = async (docEntry, docNum) => {
+// const handleCOADownload = async (docEntry, docNum) => {
 //   try {
 //     const res = await fetch(
 //       `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
@@ -32,32 +31,127 @@ import { Download, FileText, FlaskConical, Sparkles } from "lucide-react";
 //     const downloaded = new Set();
 
 //     for (const item of invoice.LineItems) {
-//       const itemCode = item.ItemCode?.trim();
-//       const key = itemCode; // or use `${item.ItemCode}-${item.UnitMsr}`, etc. if MSDS keys are like "A010014-25ml"
-//       const msdsUrl = msdsMap[key];
+//       // const itemCode = item.ItemCode?.trim();
+//           const rawCode = item.ItemCode?.trim() || "";
 
-//       if (msdsUrl && !downloaded.has(msdsUrl)) {
-//         const a = document.createElement("a");
-//         a.href = msdsUrl;
-//         a.download = "";
-//         a.target = "_blank";
-//         document.body.appendChild(a);
-//         a.click();
-//         document.body.removeChild(a);
-//         downloaded.add(msdsUrl);
+//           const itemCode = rawCode.includes("-")
+//             ? rawCode.split("-")[0]
+//             : rawCode;
+//       const batchNumber = item.BatchNum?.trim();
 
-//         await new Promise((resolve) => setTimeout(resolve, 300));
+//       if (itemCode && batchNumber) {
+//         const coaUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${itemCode}_${batchNumber}.pdf`;
+//         console.log("COA api", coaUrl);
+//         if (!downloaded.has(coaUrl)) {
+//           try {
+//             const fileRes = await fetch(coaUrl);
+
+//             // Check if the file exists (response status 200)
+//             if (fileRes.ok) {
+//               const blob = await fileRes.blob();
+//               const blobUrl = URL.createObjectURL(blob);
+
+//               const a = document.createElement("a");
+//               a.href = blobUrl;
+//               a.download = `${itemCode}_${batchNumber}_COA.pdf`;
+//               document.body.appendChild(a);
+//               a.click();
+//               document.body.removeChild(a);
+//               URL.revokeObjectURL(blobUrl);
+
+//               downloaded.add(coaUrl);
+//               await new Promise((resolve) => setTimeout(resolve, 300)); // spacing between downloads
+//             }
+//           } catch (err) {
+//             console.error(
+//               `Failed to download COA for ${itemCode}_${batchNumber}:`,
+//               err
+//             );
+//           }
+//         }
 //       }
 //     }
 
 //     if (downloaded.size === 0) {
-//       alert("No MSDS files found for this invoice.");
+//       alert(
+//         "No COA files matched this invoice or batch numbers not available."
+//       );
 //     }
 //   } catch (err) {
-//     console.error("Error in MSDS download:", err);
-//     alert("Failed to download MSDS files.");
+//     console.error("Error in COA download:", err);
+//     alert("Failed to download COA files.");
 //   }
 // };
+
+const handleCOADownload = async (docEntry, docNum) => {
+  try {
+    const res = await fetch(
+      `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
+    );
+    const invoice = await res.json();
+
+    if (!invoice?.LineItems?.length) {
+      alert("No line items found for this invoice.");
+      return;
+    }
+
+    // 1) Gather all unique URLs
+    const coaUrls = new Set();
+    for (const item of invoice.LineItems) {
+      const raw = item.ItemCode?.trim() || "";
+      const code = raw.includes("-") ? raw.split("-")[0] : raw;
+      const batch = item.BatchNum?.trim();
+      if (code && batch) {
+        coaUrls.add(
+          `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`
+        );
+      }
+    }
+
+    if (!coaUrls.size) {
+      alert("No valid COA URLs could be constructed.");
+      return;
+    }
+
+    // 2) Download them one-by-one
+    let downloadedAny = false;
+    for (const url of coaUrls) {
+      try {
+        const fileRes = await fetch(url);
+        if (!fileRes.ok) {
+          console.warn("COA not found at", url);
+          continue;
+        }
+        const blob = await fileRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        // derive a nice file name from the url
+        const filename = url.split("/").pop();
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+
+        downloadedAny = true;
+        // slight pause so downloads don’t stomp each other
+        await new Promise((r) => setTimeout(r, 300));
+      } catch (e) {
+        console.error("Failed to download COA from", url, e);
+      }
+    }
+
+    if (!downloadedAny) {
+      alert("None of the COA files were available.");
+    }
+  } catch (err) {
+    console.error("Error in COA download:", err);
+    alert("Failed to download COA files.");
+  }
+};
+
 const handleMSDSDownload = async (docEntry, docNum) => {
   try {
     const res = await fetch(
@@ -183,6 +277,48 @@ export default function InvoicesPage() {
     //         <Printer />
     //       </Link>
     //     </>
+    //   ),
+    //   sortable: true,
+    // },
+    // {
+    //   field: "DocNum",
+    //   label: "Invoice#",
+    //   render: (value, row) => (
+    //     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 space-y-1 sm:space-y-0">
+    //       {/* Invoice Number Link */}
+    //       <Link
+    //         href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
+    //         className="text-blue-700 hover:text-blue-900 font-semibold text-sm underline"
+    //       >
+    //         {value}
+    //       </Link>
+
+    //       {/* MSDS Button */}
+    //       <button
+    //         onClick={(e) => {
+    //           e.stopPropagation();
+    //           handleMSDSDownload(row.DocEntry, value);
+    //         }}
+    //         className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md border border-blue-300 shadow-sm hover:shadow-md transition-all duration-150"
+    //         title="Download MSDS"
+    //       >
+    //         <FlaskConical size={12} />
+    //         <span className="hidden sm:inline font-medium">MSDS</span>
+    //       </button>
+
+    //       {/* COA Button */}
+    //       <button
+    //         onClick={(e) => {
+    //           e.stopPropagation();
+    //           handleCOADownload(row.DocEntry, value);
+    //         }}
+    //         className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-green-100 text-green-800 hover:bg-green-200 rounded-md border border-green-300 shadow-sm hover:shadow-md transition-all duration-150"
+    //         title="Download COA"
+    //       >
+    //         <FileText size={12} />
+    //         <span className="hidden sm:inline font-medium">COA</span>
+    //       </button>
+    //     </div>
     //   ),
     //   sortable: true,
     // },
@@ -344,6 +480,38 @@ export default function InvoicesPage() {
       label: "Contact Person",
       render: (value) => value || "N/A",
     },
+    // {
+    //   field: "U_EmailSentDT",
+    //   label: "Mail Sent",
+    //   render: (_, row) => {
+    //     if (row.U_EmailSentDT) {
+    //       const dt = new Date(row.U_EmailSentDT);
+
+    //       // Extract using UTC methods to avoid timezone offset
+    //       const day = String(dt.getUTCDate()).padStart(2, "0");
+    //       const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    //       const year = dt.getUTCFullYear();
+
+    //       const h = Math.floor((row.U_EmailSentTM || 0) / 60);
+    //       const m = (row.U_EmailSentTM || 0) % 60;
+
+    //       return (
+    //         <>
+    //           {`${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
+    //         </>
+    //       );
+    //     }
+
+    //     return (
+    //       <button
+    //         className="btn btn-sm btn-primary"
+    //         onClick={() => sendInvoiceMail(row)}
+    //       >
+    //         Send Mail
+    //       </button>
+    //     );
+    //   },
+    // },
     {
       field: "U_EmailSentDT",
       label: "Mail Sent",
@@ -351,7 +519,24 @@ export default function InvoicesPage() {
         if (row.U_EmailSentDT) {
           const dt = new Date(row.U_EmailSentDT);
 
-          // Extract using UTC methods to avoid timezone offset
+          // Check if time is exactly 00:00
+          const isMidnight =
+            dt.getUTCHours() === 0 &&
+            dt.getUTCMinutes() === 0 &&
+            dt.getUTCSeconds() === 0;
+
+          // Also fallback to Send Mail button if it's midnight
+          if (isMidnight) {
+            return (
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => sendInvoiceMail(row)}
+              >
+                Send Mail
+              </button>
+            );
+          }
+
           const day = String(dt.getUTCDate()).padStart(2, "0");
           const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
           const year = dt.getUTCFullYear();
@@ -366,6 +551,7 @@ export default function InvoicesPage() {
           );
         }
 
+        // Fallback if no date
         return (
           <button
             className="btn btn-sm btn-primary"

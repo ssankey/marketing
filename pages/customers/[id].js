@@ -356,11 +356,7 @@ export default function CustomerDetails({
            Shafique Khan<br/>
 
            Manager - Accounts<br/><br/>
-           <img
-      src="https://tinypic.host/images/2025/05/05/Density_LOGO.jpg"
-      alt="Logo"
-      style="height: 70px; width: auto; max-width: 200px; display: block; margin-bottom: 10px;"
-    /><br/>
+           
            <strong>Website:www.densitypharmachem.com</strong><br/><br/>
            DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
            Sy No 615/A & 624/2/1, Pudur Village<br/>

@@ -96,23 +96,6 @@ const KPICard = ({ title, value, icon, color, trend, trendValue }) => (
     </Card>
 );
 
-// Main KPI Section Component
-// const KPISection = ({ kpiData = []}) => (
-//     <Row className="g-4 mb-4">
-//         {kpiData.map((card, index) => (
-//             <Col key={index} xs={12} sm={6} xl={3}>
-//                 <KPICard
-//                     title={card.title}
-//                     value={card.value}
-//                     icon={card.icon}
-//                     color={card.color}
-//                     trend={card.trend}
-//                     trendValue={card.trendValue}
-//                 />
-//             </Col>
-//         ))}
-//     </Row>
-// );
 
 const KPISection = ({ kpiData = [], dateFilter, startDate, endDate }) => (
   <Row className="g-4 mb-4">
