@@ -1,6 +1,3 @@
-
-
-
 // src/components/DashboardCharts.js
 import React, { memo, useState, useEffect } from 'react';
 import { Card, Row, Col, Spinner, ListGroup } from 'react-bootstrap';
