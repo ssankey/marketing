@@ -12,26 +12,30 @@ export default async function handler(req, res) {
 
   try {
     const recentInvoicesQuery = `SELECT 
-          DocEntry,
-          DocNum                         AS InvoiceNo,
-          TrackNo                        AS TrackingNumber,
-          U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
-          U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
-          U_DispatchDate                 AS DispatchDate,
-          U_DeliveryDate                 AS DeliveryDate,
-          OINV.CardCode,
-          U_EmailSentDT,
-          U_EmailSentTM
-      FROM OINV
-      WHERE
-          TrackNo IS NOT NULL
-          AND U_TrackingNoUpdateDT IS NOT NULL
-          AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(GETDATE() AS DATE)
-          AND OINV.CardCode NOT IN ('C000021', 'C000020')
-          AND (
-              (U_EmailSentDT IS NULL AND U_EmailSentTM IS NULL)
-              OR (U_EmailSentDT = CAST(GETDATE() AS DATE))   
-          )
+    DocEntry,
+    DocNum                         AS InvoiceNo,
+    TrackNo                        AS TrackingNumber,
+    U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
+    U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
+    U_DispatchDate                 AS DispatchDate,
+    U_DeliveryDate                 AS DeliveryDate,
+    OINV.CardCode,
+    U_EmailSentDT,
+    U_EmailSentTM
+FROM OINV
+WHERE
+    TrackNo IS NOT NULL
+    AND U_TrackingNoUpdateDT IS NOT NULL
+    AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(GETDATE() AS DATE)
+    AND OINV.CardCode NOT IN ('C000021', 'C000020')
+    AND (
+        -- Case 1: Email not sent yet
+        (U_EmailSentDT IS NULL AND U_EmailSentTM IS NULL)
+        OR (CAST(U_EmailSentDT AS TIME) = '00:00:00.000')
+        -- Case 2: Tracking updated after email was sent
+        OR (U_EmailSentDT IS NOT NULL AND U_TrackingNoUpdateDT > U_EmailSentDT)
+    )
+
         `;
 
     const invoices = await queryDatabase(recentInvoicesQuery);

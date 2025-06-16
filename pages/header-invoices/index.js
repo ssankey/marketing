@@ -16,72 +16,6 @@ import { Download, FileText, FlaskConical, Sparkles } from "lucide-react";
 
   import msdsMap from "public/data/msds-map.json"; // Adjust path if needed
 
-// const handleCOADownload = async (docEntry, docNum) => {
-//   try {
-//     const res = await fetch(
-//       `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
-//     );
-//     const invoice = await res.json();
-
-//     if (!invoice?.LineItems || invoice.LineItems.length === 0) {
-//       alert("No line items found for this invoice.");
-//       return;
-//     }
-
-//     const downloaded = new Set();
-
-//     for (const item of invoice.LineItems) {
-//       // const itemCode = item.ItemCode?.trim();
-//           const rawCode = item.ItemCode?.trim() || "";
-
-//           const itemCode = rawCode.includes("-")
-//             ? rawCode.split("-")[0]
-//             : rawCode;
-//       const batchNumber = item.BatchNum?.trim();
-
-//       if (itemCode && batchNumber) {
-//         const coaUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${itemCode}_${batchNumber}.pdf`;
-//         console.log("COA api", coaUrl);
-//         if (!downloaded.has(coaUrl)) {
-//           try {
-//             const fileRes = await fetch(coaUrl);
-
-//             // Check if the file exists (response status 200)
-//             if (fileRes.ok) {
-//               const blob = await fileRes.blob();
-//               const blobUrl = URL.createObjectURL(blob);
-
-//               const a = document.createElement("a");
-//               a.href = blobUrl;
-//               a.download = `${itemCode}_${batchNumber}_COA.pdf`;
-//               document.body.appendChild(a);
-//               a.click();
-//               document.body.removeChild(a);
-//               URL.revokeObjectURL(blobUrl);
-
-//               downloaded.add(coaUrl);
-//               await new Promise((resolve) => setTimeout(resolve, 300)); // spacing between downloads
-//             }
-//           } catch (err) {
-//             console.error(
-//               `Failed to download COA for ${itemCode}_${batchNumber}:`,
-//               err
-//             );
-//           }
-//         }
-//       }
-//     }
-
-//     if (downloaded.size === 0) {
-//       alert(
-//         "No COA files matched this invoice or batch numbers not available."
-//       );
-//     }
-//   } catch (err) {
-//     console.error("Error in COA download:", err);
-//     alert("Failed to download COA files.");
-//   }
-// };
 
 const handleCOADownload = async (docEntry, docNum) => {
   try {
@@ -563,37 +497,7 @@ export default function InvoicesPage() {
       },
     },
   ];
-    // const sendInvoiceMail = async (row) => {
-    //   try {
-    //     const res = await fetch("/api/email/sendInvoiceEmail", {
-    //       method: "POST",
-    //       headers: { "Content-Type": "application/json" },
-    //       body: JSON.stringify({ docEntry: row.DocEntry, docNum: row.DocNum }),
-    //     });
-
-    //     const data = await res.json();
-    //     if (!data.success) {
-    //       alert(data.message || "Email already sent or failed.");
-    //       return;
-    //     }
-
-    //     // Update invoice list with sent timestamp
-    //     setInvoices((prev) =>
-    //       prev.map((inv) =>
-    //         inv.DocEntry === row.DocEntry
-    //           ? {
-    //               ...inv,
-    //               U_EmailSentDT: data.EmailSentDT,
-    //               U_EmailSentTM: data.EmailSentTM,
-    //             }
-    //           : inv
-    //       )
-    //     );
-    //   } catch (err) {
-    //     console.error("Error sending invoice email:", err);
-    //     alert("Failed to send invoice email: " + err.message);
-    //   }
-    // };
+   
 const sendInvoiceMail = async (row) => {
   try {
     const res = await fetch("/api/email/sendInvoiceEmail", {
