@@ -1,3 +1,4 @@
+// pages/api/customers/distinct-customer.js
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
 

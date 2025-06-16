@@ -4,7 +4,7 @@ import { queryDatabase } from '../../../lib/db';
 import sql from 'mssql';
 
 export default async function handler(req, res) {
-  const { salesPerson, category, customer, product } = req.query;
+  const { salesPerson, category, customer, product ,contactPerson } = req.query;
 
   /* ── build WHERE + param list on the fly ───────────────────────── */
   const where   = ['OINV.DocDate IS NOT NULL'];
@@ -29,6 +29,11 @@ export default async function handler(req, res) {
     where.push('T2.ItemCode = @itemCode');
     params.push({ name: 'itemCode', type: sql.NVarChar, value: product });
   }
+  if (contactPerson) {
+  where.push("T0.CntctCode = @cntctCode");
+  params.push({ name: "cntctCode", type: sql.NVarChar, value: contactPerson });
+}
+
 
   /* ── final SQL ─────────────────────────────────────────────────── */
   const sqlText = `

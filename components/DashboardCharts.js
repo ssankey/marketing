@@ -21,6 +21,7 @@ import CustomerBalancesChart from './CustomerBalancesChart';
 import VendorPaymentsChart from './VendorPaymentsChart';
  import CustomerAgingChart from "./CustomerCharts/customeragingreport";
  import DeliveryPerformanceChart from "./CustomerCharts/ordertodelievery";
+  import CategorySalesChart from "./CustomerCharts/CategorySalesChart";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -222,6 +223,7 @@ function DashboardCharts({ userRole }) {
       <EnhancedSalesCOGSChart />
       <DeliveryPerformanceChart />
       <OrdersChart />
+      <CategorySalesChart />
 
       {/* Show admin-only content: */}
       {userRole === "admin" && (

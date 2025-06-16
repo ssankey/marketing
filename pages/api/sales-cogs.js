@@ -7,7 +7,7 @@ import { getCache, setCache } from "../../lib/redis";
 
 export default async function handler(req, res) {
   try {
-    const { year, slpCode, itmsGrpCod, itemCode } = req.query;
+    const { year, slpCode, itmsGrpCod, itemCode, cntctCode ,cardCode} = req.query;
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
         : cardCodes.join("-");
     const cacheKey = `sales-data:${userIdentifier}:${year || "all"}:$${
       slpCode || "all"
-    }:${itmsGrpCod || "all"}:${itemCode || "all"}`;
+    }:${cardCode || "all"}:${cntctCode || "all"}:${itmsGrpCod || "all"}:${itemCode || "all"}`;
 
     const cachedResult = await getCache(cacheKey);
     if (cachedResult) {
@@ -74,10 +74,20 @@ export default async function handler(req, res) {
       params.push({ name: "slpCode", type: sql.Int, value: parseInt(slpCode) });
     }
 
+    if (cntctCode) {
+      whereClauses.push(`T0.CntctCode = @cntctCode`);
+      params.push({ name: "cntctCode", type: sql.Int, value: parseInt(cntctCode) });
+    }
+
     if (itmsGrpCod) {
       whereClauses.push(`T6.ItmsGrpNam = @itmsGrpCod`);
       params.push({ name: "itmsGrpCod", type: sql.VarChar, value: itmsGrpCod });
     }
+
+    if (cardCode) {
+    whereClauses.push(`T0.CardCode = @cardCode`);
+    params.push({ name: "cardCode", type: sql.VarChar, value: cardCode });
+  }
 
     if (itemCode) {
       whereClauses.push(`T5.ItemCode = @itemCode`);

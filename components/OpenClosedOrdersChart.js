@@ -65,11 +65,20 @@ const OrdersChart = () => {
 
   // Filters and search query
   const [searchQuery, setSearchQuery] = useState("");
+  // const [filters, setFilters] = useState({
+  //   salesPerson: null,
+  //   category: null,
+  //   product: null,
+  // });
+
   const [filters, setFilters] = useState({
-    salesPerson: null,
-    category: null,
-    product: null,
-  });
+  salesPerson: null,
+  contactPerson: null,
+  category: null,
+  product: null,
+  customer: null,
+});
+
 
   // ----------------------------------
   // Refs and other hooks
@@ -80,55 +89,106 @@ const OrdersChart = () => {
   // ----------------------------------
   // Fetch data
   // ----------------------------------
+  // const fetchOrdersData = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+
+  //     const token = localStorage.getItem("token");
+  //     const queryParams = new URLSearchParams();
+
+  //     if (filters.salesPerson?.value) {
+  //       queryParams.append("slpCode", filters.salesPerson.value);
+  //     }
+  //     if (filters.category?.value) {
+  //       queryParams.append("itmsGrpCod", filters.category.value);
+  //     }
+  //     if (filters.product?.value) {
+  //       queryParams.append("itemCode", filters.product.value);
+  //     }
+
+  //     const response = await fetch(`/api/monthly-orders?${queryParams}`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+
+  //     // if (!response.ok) {
+  //     //   throw new Error("Failed to fetch orders data");
+  //     // }
+
+  //     if (!response.ok) {
+  //       const text = await response.text();
+  //       console.error("Failed response text:", text); // 🪵 This will show the backend error
+  //       throw new Error("Failed to fetch orders data");
+  //     }
+
+  //     const { data } = await response.json();
+  //     // Sort data chronologically
+  //     const sortedData = data.sort((a, b) => {
+  //       const dateA = new Date(a.year, monthMapping[a.month]);
+  //       const dateB = new Date(b.year, monthMapping[b.month]);
+  //       return dateA - dateB;
+  //     });
+
+  //     setOrdersData(sortedData);
+  //   } catch (err) {
+  //     console.error("Error fetching orders data:", err);
+  //     setError(err.message);
+  //     setOrdersData([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchOrdersData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      const token = localStorage.getItem("token");
-      const queryParams = new URLSearchParams();
+    const token = localStorage.getItem("token");
+    const queryParams = new URLSearchParams();
 
-      if (filters.salesPerson?.value) {
-        queryParams.append("slpCode", filters.salesPerson.value);
-      }
-      if (filters.category?.value) {
-        queryParams.append("itmsGrpCod", filters.category.value);
-      }
-      if (filters.product?.value) {
-        queryParams.append("itemCode", filters.product.value);
-      }
-
-      const response = await fetch(`/api/monthly-orders?${queryParams}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      // if (!response.ok) {
-      //   throw new Error("Failed to fetch orders data");
-      // }
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error("Failed response text:", text); // 🪵 This will show the backend error
-        throw new Error("Failed to fetch orders data");
-      }
-
-      const { data } = await response.json();
-      // Sort data chronologically
-      const sortedData = data.sort((a, b) => {
-        const dateA = new Date(a.year, monthMapping[a.month]);
-        const dateB = new Date(b.year, monthMapping[b.month]);
-        return dateA - dateB;
-      });
-
-      setOrdersData(sortedData);
-    } catch (err) {
-      console.error("Error fetching orders data:", err);
-      setError(err.message);
-      setOrdersData([]);
-    } finally {
-      setLoading(false);
+    if (filters.salesPerson?.value) {
+      queryParams.append("slpCode", filters.salesPerson.value);
     }
-  };
+    if (filters.contactPerson?.value) {
+      queryParams.append("contactPerson", filters.contactPerson.value);
+    }
+    if (filters.category?.value) {
+      queryParams.append("itmsGrpCod", filters.category.value);
+    }
+    if (filters.product?.value) {
+      queryParams.append("itemCode", filters.product.value);
+    }
+    if (filters.customer?.value) {
+      queryParams.append("cardCode", filters.customer.value);
+    }
+
+    const response = await fetch(`/api/monthly-orders?${queryParams}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("Failed response text:", text);
+      throw new Error("Failed to fetch orders data");
+    }
+
+    const { data } = await response.json();
+    const sortedData = data.sort((a, b) => {
+      const dateA = new Date(a.year, monthMapping[a.month]);
+      const dateB = new Date(b.year, monthMapping[b.month]);
+      return dateA - dateB;
+    });
+
+    setOrdersData(sortedData);
+  } catch (err) {
+    console.error("Error fetching orders data:", err);
+    setError(err.message);
+    setOrdersData([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Re-fetch data whenever filters change
   useEffect(() => {
@@ -276,7 +336,7 @@ const OrdersChart = () => {
               Monthly Open Orders
             </h4>
             <div className="ms-auto">
-              <AllFilter
+              {/* <AllFilter
                 searchQuery={searchQuery}
                 setSearchQuery={(value) => {
                   if (value) {
@@ -298,7 +358,34 @@ const OrdersChart = () => {
                     });
                   }
                 }}
-              />
+              /> */}
+               
+            <AllFilter
+              allowedTypes={["sales-person", "contact-person", "product", "category", "customer"]}
+              setSearchQuery={(value) => {
+                if (value) {
+                  setFilters((prev) => ({
+                    ...prev,
+                    [value.type === "sales-person" ? "salesPerson" : 
+                    value.type === "contact-person" ? "contactPerson" : 
+                    value.type === "customer" ? "customer" : value.type]: 
+                      value.value ? {
+                        value: value.value,
+                        label: value.label,
+                      } : null
+                  }));
+                } else {
+                  // Reset all filters when cleared
+                  setFilters({
+                    salesPerson: null,
+                    contactPerson: null,
+                    category: null,
+                    product: null,
+                    customer: null,
+                  });
+                }
+              }}
+            />
             </div>
           </div>
         </Card.Header>

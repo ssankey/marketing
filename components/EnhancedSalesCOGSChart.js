@@ -44,8 +44,10 @@ const EnhancedSalesCOGSChart = () => {
 
   const [filters, setFilters] = useState({
     salesPerson: null,
+     contactPerson: null,
     category: null,
-    product: null
+    product: null,
+    customer: null
   });
 
   const fetchSalesData = async () => {
@@ -63,6 +65,13 @@ const EnhancedSalesCOGSChart = () => {
       if (filters.product?.value) {
         queryParams.append('itemCode', filters.product.value);
       }
+
+      if (filters.contactPerson?.value) {
+        queryParams.append('cntctCode', filters.contactPerson.value);
+      }
+       if (filters.customer?.value) {  // Add this
+      queryParams.append('cardCode', filters.customer.value);
+    }
 
       const token = localStorage.getItem('token');
       const response = await fetch(`/api/sales-cogs?${queryParams}`, {
@@ -269,7 +278,7 @@ const EnhancedSalesCOGSChart = () => {
             Sales
           </h4>
           <div className="ms-auto">
-            <AllFilter
+            {/* <AllFilter
               searchQuery={searchQuery}
               setSearchQuery={(value) => {
                 if (value) {
@@ -277,6 +286,8 @@ const EnhancedSalesCOGSChart = () => {
                     ...prev,
                     [value.type === "sales-person"
                       ? "salesPerson"
+                      : value.type === "contact-person"
+                      ? "contactPerson"
                       : value.type]: {
                       value: value.value,
                       label: value.label,
@@ -285,12 +296,40 @@ const EnhancedSalesCOGSChart = () => {
                 } else {
                   setFilters({
                     salesPerson: null,
+                    contactPerson: null,
                     category: null,
                     product: null,
                   });
                 }
               }}
-            />
+            /> */}
+            <AllFilter
+            allowedTypes={["sales-person", "contact-person", "product", "category", "customer"]}
+            searchQuery={searchQuery}
+            setSearchQuery={(value) => {
+              if (value) {
+                setFilters((prev) => ({
+                  ...prev,
+                  [value.type === "sales-person"
+                    ? "salesPerson"
+                    : value.type === "contact-person"
+                    ? "contactPerson"
+                    : value.type]: {
+                    value: value.value,
+                    label: value.label,
+                  },
+                }));
+              } else {
+                setFilters({
+                  salesPerson: null,
+                  contactPerson: null,
+                  category: null,
+                  product: null,
+                });
+              }
+            }}
+          />
+
           </div>
         </div>
       </Card.Header>
