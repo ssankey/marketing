@@ -1,145 +1,3 @@
-// // components/CustomerCharts/CategorySalesChart.js
-// import React, { useState, useEffect } from "react";
-// import { Bar } from "react-chartjs-2";
-// import { Spinner } from "react-bootstrap";
-// import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
-
-// import {
-//   Chart as ChartJS,
-//   CategoryScale,
-//   LinearScale,
-//   BarElement,
-//   Title,
-//   Tooltip,
-//   Legend,
-// } from "chart.js";
-
-// ChartJS.register(
-//   CategoryScale,
-//   LinearScale,
-//   BarElement,
-//   Title,
-//   Tooltip,
-//   Legend
-// );
-
-
-
-
-// export default function CategorySalesChart({ cardCode }) {
-//   const [chartData, setChartData] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       try {
-//         setLoading(true);
-//         const response = await fetch(
-//           `/api/customers/${cardCode}/category-sales`
-//         );
-//         if (!response.ok) throw new Error("Failed to fetch data");
-//         const data = await response.json();
-//         setChartData(data);
-//       } catch (err) {
-//         console.error("Error fetching data:", err);
-//         setError(err.message);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchData();
-//   }, [cardCode]);
-
-//   if (loading) {
-//     return (
-//       <div
-//         className="d-flex justify-content-center align-items-center"
-//         style={{ height: "400px" }}
-//       >
-//         <Spinner animation="border" />
-//       </div>
-//     );
-//   }
-
-//   if (error) {
-//     return <div className="alert alert-danger">Error: {error}</div>;
-//   }
-
-//   if (!chartData || chartData.datasets.length === 0) {
-//     return (
-//       <div className="alert alert-info">No category sales data available</div>
-//     );
-//   }
-
-//   const options = {
-//     responsive: true,
-//     maintainAspectRatio: false,
-//     plugins: {
-//       datalabels: { display: false },
-//       legend: {
-//         position: "bottom",
-//         labels: {
-//           boxWidth: 12,
-//           padding: 20,
-//         },
-//       },
-//       tooltip: {
-//         callbacks: {
-         
-//           label: function (context) {
-//             const value = context.parsed.y;
-//             if (value === 0) {
-//               return null; // ✅ skip tooltip if value is 0
-//             }
-//             let label = context.dataset.label || "";
-//             return `${label}: ₹ ${formatNumberWithIndianCommas(value)}`;
-//           },
-
-//           footer: function (tooltipItems) {
-//             let total = 0;
-//             tooltipItems.forEach((item) => {
-//               total += item.parsed.y;
-//             });
-//             return "Total: ₹ " + formatNumberWithIndianCommas(total);
-//           },
-//         },
-//       },
-//     },
-//     scales: {
-//       x: {
-//         stacked: true,
-//         grid: {
-//           display: false,
-//         },
-//       },
-
-//       y: {
-//         stacked: true,
-//         ticks: {
-//           callback: function (value) {
-//             return "₹ " + formatNumberWithIndianCommas(value);
-//           },
-//         },
-//       },
-//     },
-//     interaction: {
-//       mode: "nearest",
-//       axis: "x",
-//       intersect: false,
-//     },
-//   };
-
-//   return (
-//     <div className="bg-white rounded-lg shadow-sm p-4">
-      
-//       <div style={{ height: "500px" }}>
-//         <Bar data={chartData} options={options} />
-//       </div>
-//     </div>
-//   );
-// }
 
 
 // components/CustomerCharts/CategorySalesChart.js
@@ -204,28 +62,56 @@ export default function CategorySalesChart({ cardCode }) {
   }, [searchType, allowedTypes]);
 
   /* ------------------------------ data fetch ---------------------- */
-  const fetchData = async (activeFilters) => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
-      if (activeFilters.category) params.append("category", activeFilters.category);
+  // const fetchData = async (activeFilters) => {
+  //   try {
+  //     setLoading(true);
+  //     const params = new URLSearchParams();
+  //     if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
+  //     if (activeFilters.category) params.append("category", activeFilters.category);
 
-      const response = await fetch(
-        `/api/customers/${cardCode}/category-sales?${params}`
-      );
-      if (!response.ok) throw new Error("Failed to fetch data");
-      const data = await response.json();
-      setChartData(data);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching data:", err);
-      setError(err.message);
-      setChartData(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     // const response = await fetch(
+  //     //   `/api/customers/${cardCode}/category-sales?${params}`
+  //     // );
+  //     const response = await fetch(
+  //       `/api/dashboard/category-sales?${cardCode ? `cardCode=${cardCode}&` : ""}${params.toString()}`
+  //               )
+
+  //     if (!response.ok) throw new Error("Failed to fetch data");
+  //     const data = await response.json();
+  //     setChartData(data);
+  //     setError(null);
+  //   } catch (err) {
+  //     console.error("Error fetching data:", err);
+  //     setError(err.message);
+  //     setChartData(null);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  const fetchData = async (activeFilters) => {
+  try {
+    setLoading(true);
+    const params = new URLSearchParams();
+
+    if (cardCode) params.append("cardCode", cardCode);
+    if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
+    if (activeFilters.category) params.append("category", activeFilters.category);
+
+    const response = await fetch(`/api/dashboard/category-sales?${params.toString()}`);
+    if (!response.ok) throw new Error("Failed to fetch data");
+
+    const data = await response.json();
+    setChartData(data);
+    setError(null);
+  } catch (err) {
+    console.error("Error fetching data:", err);
+    setError(err.message);
+    setChartData(null);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchData(filters);
