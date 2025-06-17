@@ -41,6 +41,20 @@ export default async function handler(req, res) {
       return await handleOtp(email, res);
     }
 
+     // 2. NEW: Check OHEM (Employees)
+      const empRes = await queryDatabase(
+        `SELECT email, U_Password FROM OHEM WHERE email = @email`,
+        [{ name: "email", type: sql.VarChar, value: email }]
+      );
+
+      if (empRes.length > 0) {
+        const user = empRes[0];
+        if (!user.U_Password?.trim()) {
+          return res.status(200).json({ redirectTo: "set-password", email });
+        }
+        return await handleOtp(email, res);
+      }
+
     const custRes = await queryDatabase(
       `SELECT E_MailL, Password FROM OCPR WHERE E_MailL = @email`,
       [{ name: "email", type: sql.VarChar, value: email }]

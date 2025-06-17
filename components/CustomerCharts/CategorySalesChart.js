@@ -1,13 +1,10 @@
 
-
-// components/CustomerCharts/CategorySalesChart.js
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
-import { Spinner, Button, Dropdown } from "react-bootstrap";
+import { Card, Spinner, Button, Dropdown } from "react-bootstrap";
 import Select from "react-select";
 import debounce from "lodash/debounce";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
-
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -30,6 +27,8 @@ ChartJS.register(
 const API_ENDPOINTS = {
   salesPerson: "/api/dashboard/sales-person/distinct-salesperson",
   category: "/api/products/categories",
+  customer: "/api/customers/distinct-customer",
+  contactPerson: "/api/dashboard/contact-person/distinct-contact-person",
 };
 
 export default function CategorySalesChart({ cardCode }) {
@@ -48,9 +47,18 @@ export default function CategorySalesChart({ cardCode }) {
   const [filters, setFilters] = useState({
     salesPerson: null,
     category: null,
+    customer: null,
+    contactPerson: null,
   });
 
-  const allowedTypes = ["salesPerson", "category"];
+  /* ------------------------------------------------------------------
+     decide which filter types are allowed on this page
+     ‣ customer page: salesPerson, category, contactPerson
+     ‣ dashboard   : all filters
+  ------------------------------------------------------------------ */
+  const allowedTypes = cardCode
+    ? ["salesPerson", "category", "contactPerson"]
+    : ["salesPerson", "category", "customer", "contactPerson"];
 
   /* prevent stale searchType */
   useEffect(() => {
@@ -62,56 +70,44 @@ export default function CategorySalesChart({ cardCode }) {
   }, [searchType, allowedTypes]);
 
   /* ------------------------------ data fetch ---------------------- */
-  // const fetchData = async (activeFilters) => {
-  //   try {
-  //     setLoading(true);
-  //     const params = new URLSearchParams();
-  //     if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
-  //     if (activeFilters.category) params.append("category", activeFilters.category);
-
-  //     // const response = await fetch(
-  //     //   `/api/customers/${cardCode}/category-sales?${params}`
-  //     // );
-  //     const response = await fetch(
-  //       `/api/dashboard/category-sales?${cardCode ? `cardCode=${cardCode}&` : ""}${params.toString()}`
-  //               )
-
-  //     if (!response.ok) throw new Error("Failed to fetch data");
-  //     const data = await response.json();
-  //     setChartData(data);
-  //     setError(null);
-  //   } catch (err) {
-  //     console.error("Error fetching data:", err);
-  //     setError(err.message);
-  //     setChartData(null);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const fetchData = async (activeFilters) => {
-  try {
-    setLoading(true);
-    const params = new URLSearchParams();
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
 
-    if (cardCode) params.append("cardCode", cardCode);
-    if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
-    if (activeFilters.category) params.append("category", activeFilters.category);
+      if (cardCode) {
+        // Customer-specific endpoint
+        const endpoint = `/api/customers/${cardCode}/category-sales`;
+        if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
+        if (activeFilters.category) params.append("category", activeFilters.category);
+        if (activeFilters.contactPerson) params.append("contactPerson", activeFilters.contactPerson);
 
-    const response = await fetch(`/api/dashboard/category-sales?${params.toString()}`);
-    if (!response.ok) throw new Error("Failed to fetch data");
+        const response = await fetch(`${endpoint}?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const data = await response.json();
+        setChartData(data);
+      } else {
+        // Dashboard endpoint
+        if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
+        if (activeFilters.category) params.append("category", activeFilters.category);
+        if (activeFilters.customer) params.append("customer", activeFilters.customer);
+        if (activeFilters.contactPerson) params.append("contactPerson", activeFilters.contactPerson);
 
-    const data = await response.json();
-    setChartData(data);
-    setError(null);
-  } catch (err) {
-    console.error("Error fetching data:", err);
-    setError(err.message);
-    setChartData(null);
-  } finally {
-    setLoading(false);
-  }
-};
+        const response = await fetch(`/api/dashboard/category-sales?${params.toString()}`);
+        if (!response.ok) throw new Error("Failed to fetch data");
+        const data = await response.json();
+        setChartData(data);
+      }
+      
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching data:", err);
+      setError(err.message);
+      setChartData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchData(filters);
@@ -134,11 +130,28 @@ export default function CategorySalesChart({ cardCode }) {
       let opts = [];
       switch (searchType) {
         case "salesPerson":
-          opts =
-            json.salesEmployees?.map((e) => ({ value: e.value, label: `${e.value} - ${e.label}` })) ?? [];
+          opts = json.salesEmployees?.map((e) => ({ 
+            value: e.value, 
+            label: `${e.value} - ${e.label}` 
+          })) ?? [];
           break;
         case "category":
-          opts = json.categories?.map((c) => ({ value: c.value ?? c, label: c.label ?? c })) ?? [];
+          opts = json.categories?.map((c) => ({ 
+            value: c.value ?? c, 
+            label: c.label ?? c 
+          })) ?? [];
+          break;
+        case "customer":
+          opts = json.customers?.map((c) => ({ 
+            value: c.value, 
+            label: c.label 
+          })) ?? [];
+          break;
+        case "contactPerson":
+          opts = json.contactPersons?.map((c) => ({ 
+            value: c.value, 
+            label: c.label 
+          })) ?? [];
           break;
         default:
           break;
@@ -165,21 +178,35 @@ export default function CategorySalesChart({ cardCode }) {
     await getSuggestions("", true);
   };
 
+  // const chooseOption = (opt) => {
+  //   setSelectedValue(opt);
+  //   setInputValue(opt ? opt.label : "");
+  //   setFilters((prev) => ({
+  //     ...prev,
+  //     [searchType]: opt ? opt.value : null,
+  //   }));
+  // };
+
   const chooseOption = (opt) => {
-    setSelectedValue(opt);
-    setFilters((prev) => ({
-      ...prev,
-      [searchType]: opt ? opt.value : null,
-    }));
-  };
+  setSelectedValue(opt);
+  setInputValue(opt ? opt.label : ""); // Add this line to show the selected text
+  setFilters((prev) => ({
+    ...prev,
+    [searchType]: opt ? opt.value : null,
+  }));
+};
+
 
   const resetAll = () => {
     setSearchType(null);
     setSelectedValue(null);
     setInputValue("");
+    setSuggestions([]);
     setFilters({
       salesPerson: null,
       category: null,
+      customer: null,
+      contactPerson: null,
     });
   };
 
@@ -203,8 +230,18 @@ export default function CategorySalesChart({ cardCode }) {
             if (value === 0) {
               return null; // skip tooltip if value is 0
             }
+            
+            // Calculate total for the current data point
+            const dataIndex = context.dataIndex;
+            const total = context.chart.data.datasets.reduce((sum, dataset) => {
+              return sum + (dataset.data[dataIndex] || 0);
+            }, 0);
+            
+            // Calculate percentage
+            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+            
             let label = context.dataset.label || "";
-            return `${label}: ₹ ${formatNumberWithIndianCommas(value)}`;
+            return `${label}: ₹ ${formatNumberWithIndianCommas(value)} (${percentage}%)`;
           },
           footer: function (tooltipItems) {
             let total = 0;
@@ -213,6 +250,9 @@ export default function CategorySalesChart({ cardCode }) {
             });
             return "Total: ₹ " + formatNumberWithIndianCommas(total);
           },
+        },
+        itemSort: function (a, b) {
+          return b.parsed.y - a.parsed.y;
         },
       },
     },
@@ -243,118 +283,50 @@ export default function CategorySalesChart({ cardCode }) {
   const labelMap = {
     salesPerson: "Sales Person",
     category: "Category",
+    customer: "Customer",
+    contactPerson: "Contact Person",
   };
 
   const anyActive = Object.values(filters).some(Boolean);
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div
-          className="d-flex justify-content-center align-items-center"
-          style={{ height: "400px" }}
-        >
-          <Spinner animation="border" />
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-4">
-        <div className="alert alert-danger">Error: {error}</div>
-      </div>
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Body>
+          <div className="alert alert-danger">Error: {error}</div>
+        </Card.Body>
+      </Card>
     );
   }
 
-//   if (!chartData || chartData.datasets.length === 0) {
-//     return (
-//       <div className="bg-white rounded-lg shadow-sm p-4">
-//         <div className="alert alert-info">No category sales data available</div>
-//       </div>
-//     );
-//   }
-if (!chartData || chartData.datasets.length === 0) {
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      {/* header with filters */}
-      <div className="p-4 border-b">
+    <Card className="shadow-sm border-0 mb-4">
+      <Card.Header className="bg-white py-3">
         <div className="d-flex justify-content-between align-items-center">
-          <h4 className="mb-0 fw-semibold"></h4>
-
-          <div className="d-flex gap-2 align-items-center">
+          <h4
+            className="mb-3 mb-md-0"
+            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+          >
+            Category Sales Performance
+          </h4>
+          <div className="ms-auto d-flex gap-2 align-items-center">
             <Dropdown onSelect={chooseType}>
               <Dropdown.Toggle variant="outline-secondary" id="filter-type">
-                {searchType ? labelMap[searchType] : "Filter By"}
+                {searchType ? labelMap[searchType] : "Order By"}
               </Dropdown.Toggle>
               <Dropdown.Menu>
-                <Dropdown.Item eventKey="salesPerson">
-                  Sales Person
-                </Dropdown.Item>
-                <Dropdown.Item eventKey="category">Category</Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-
-            <div style={{ width: 300 }}>
-              <Select
-                value={selectedValue}
-                inputValue={inputValue}
-                onChange={chooseOption}
-                onInputChange={(v, { action }) => {
-                  if (action === "input-change") {
-                    setInputValue(v);
-                    debouncedFetch(v);
-                  }
-                }}
-                onFocus={() => searchType && getSuggestions(inputValue, true)}
-                options={suggestions}
-                isLoading={loadingSuggestions}
-                isClearable
-                isDisabled={!searchType}
-                placeholder={
-                  searchType
-                    ? `Search ${labelMap[searchType]}`
-                    : "Select filter type"
-                }
-              />
-            </div>
-
-            <Button
-              variant="primary"
-              onClick={resetAll}
-              disabled={!anyActive && !searchType}
-            >
-              Reset
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* No data message */}
-      <div className="p-4">
-        <div className="alert alert-info">No category sales data available</div>
-      </div>
-    </div>
-  );
-}
-
-
-  return (
-    <div className="bg-white rounded-lg shadow-sm">
-      {/* header with filters */}
-      <div className="p-4 border-b">
-        <div className="d-flex justify-content-between align-items-center">
-          <h4 className="mb-0 fw-semibold"></h4>
-
-          <div className="d-flex gap-2 align-items-center">
-            <Dropdown onSelect={chooseType}>
-              <Dropdown.Toggle variant="outline-secondary" id="filter-type">
-                {searchType ? labelMap[searchType] : "Filter By"}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                <Dropdown.Item eventKey="salesPerson">Sales Person</Dropdown.Item>
-                <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+                {allowedTypes.includes("salesPerson") && (
+                  <Dropdown.Item eventKey="salesPerson">Sales Person</Dropdown.Item>
+                )}
+                {allowedTypes.includes("category") && (
+                  <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+                )}
+                {allowedTypes.includes("customer") && (
+                  <Dropdown.Item eventKey="customer">Customer</Dropdown.Item>
+                )}
+                {allowedTypes.includes("contactPerson") && (
+                  <Dropdown.Item eventKey="contactPerson">Contact Person</Dropdown.Item>
+                )}
               </Dropdown.Menu>
             </Dropdown>
 
@@ -383,14 +355,25 @@ if (!chartData || chartData.datasets.length === 0) {
             </Button>
           </div>
         </div>
-      </div>
+      </Card.Header>
 
-      {/* chart */}
-      <div className="p-4">
-        <div style={{ height: "500px" }}>
-          <Bar data={chartData} options={options} />
-        </div>
-      </div>
-    </div>
+      <Card.Body>
+        {loading ? (
+          <div
+            className="d-flex justify-content-center align-items-center"
+            style={{ height: 500 }}
+          >
+            <Spinner animation="border" role="status" className="me-2" />
+            <span>Loading chart data...</span>
+          </div>
+        ) : chartData && chartData.datasets.length > 0 ? (
+          <div className="chart-container" style={{ height: 500 }}>
+            <Bar data={chartData} options={options} />
+          </div>
+        ) : (
+          <p className="text-center m-0">No category sales data available</p>
+        )}
+      </Card.Body>
+    </Card>
   );
 }
