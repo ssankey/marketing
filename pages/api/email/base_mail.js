@@ -18,6 +18,11 @@ const smtpAccounts = {
     pass: process.env.SALES_EMAIL_PASS,
     fromName: "Density Pharmachem",
   },
+  "gurpreet@densitypharmachem.com": {
+    user: "gurpreet@densitypharmachem.com",
+    pass: process.env.GURPREET_EMAIL_PASS,
+    fromName: "Density Pharmachem",
+  },
 };
 
 export default async function handler(req, res) {

@@ -202,7 +202,7 @@ export default async function handler(req, res) {
       {
         code: "1028",
         name: "Chandra Prakash Rajnath Yadav",
-        dob: "13-06-2001",
+        dob: "17-06-2001",
         branch: "MUMBAI",
         email: "prakash@densitypharmachem.com",
       },
@@ -240,7 +240,7 @@ export default async function handler(req, res) {
               <strong>Wishing you a very Happy Birthday!</strong> 🎉🎂
             </p>
             <img
-                            src="https://marketing.densitypharmachem.com/assets/birthday-cake.jpg"
+                            src="https://marketing.densitypharmachem.com/assets/cake.jpg"
                             alt="Birthday"
                             className="img-fluid"
                             style={{ height: "100px", width: "auto" }}
@@ -266,7 +266,7 @@ export default async function handler(req, res) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: "prakash@densitypharmachem.com",
+              from: "gurpreet@densitypharmachem.com",
               to: [email],
               bcc: ["chandraprakashyadav1110@gmail.com"], // BCC to HR for records
               subject: subject,
