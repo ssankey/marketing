@@ -8,9 +8,15 @@ import CustomerBalanceTable from "../../components/page/customer-balance/table/C
 import CustomerBalanceChart from "../../components/page/customer-balance/chart/CustomerBalanceChart";
 import CustomerBalTable from "../../components/page/customer-balance/table/customer-bal-table";
 import { formatDate } from "utils/formatDate";
+import { useAuth } from "contexts/AuthContext";
+
 
 export default function CustomerBalancePage() {
   const router = useRouter();
+  const { user } = useAuth();
+const userRole = user?.role;
+
+
 
   // —— State for Filters, Chart & Details Table —— //
   const [customerData, setCustomerData] = useState([]);
@@ -46,24 +52,48 @@ export default function CustomerBalancePage() {
   }, [currentPage, filters]);
 
   // Fetch the summary invoices once, then paginate in-memory
+  // useEffect(() => {
+  //   const fetchAllBalances = async () => {
+  //     setIsBalanceLoading(true);
+  //     try {
+  //       const res = await fetch("/api/customer-balance");
+  //       const json = await res.json();
+  //       setBalances(json.invoices || []);
+  //       setSummaryTotal(json.totalItems || 0);
+  //     } catch (e) {
+  //       console.error(e);
+  //       setBalances([]);
+  //       setSummaryTotal(0);
+  //     } finally {
+  //       setIsBalanceLoading(false);
+  //     }
+  //   };
+  //   fetchAllBalances();
+  // }, []);
   useEffect(() => {
-    const fetchAllBalances = async () => {
-      setIsBalanceLoading(true);
-      try {
-        const res = await fetch("/api/customer-balance");
-        const json = await res.json();
-        setBalances(json.invoices || []);
-        setSummaryTotal(json.totalItems || 0);
-      } catch (e) {
-        console.error(e);
-        setBalances([]);
-        setSummaryTotal(0);
-      } finally {
-        setIsBalanceLoading(false);
-      }
-    };
-    fetchAllBalances();
-  }, []);
+  const fetchAllBalances = async () => {
+    setIsBalanceLoading(true);
+    try {
+      const token = localStorage.getItem("token"); // ✅ Add this
+      const res = await fetch("/api/customer-balance", {
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Add this
+        },
+      });
+      const json = await res.json();
+      setBalances(json.invoices || []);
+      setSummaryTotal(json.totalItems || 0);
+    } catch (e) {
+      console.error(e);
+      setBalances([]);
+      setSummaryTotal(0);
+    } finally {
+      setIsBalanceLoading(false);
+    }
+  };
+  fetchAllBalances();
+}, []);
+
 
   // —— API calls —— //
   const fetchCustomerData = async () => {
@@ -201,6 +231,7 @@ export default function CustomerBalancePage() {
   return (
     <Container className="mt-3">
       {/* — Chart Section — */}
+      {(userRole === "admin" || userRole === "salesperson") && (
       <Card className="mb-3 shadow-sm">
         <Card.Header className="bg-white">
           <h3 className="mb-0">Customer Balance Overview</h3>
@@ -222,29 +253,9 @@ export default function CustomerBalancePage() {
           />
         </Card.Body>
       </Card>
+    )}
 
-      {/* — Details Table Section — */}
-      {/* <Card className="shadow-sm">
-        <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-          <h3 className="mb-0">Customer Balance Details</h3>
-        </Card.Header>
-        <Card.Body>
-          <CustomerBalanceTable
-            balances={customerData}
-            totalItems={totalItems}
-            totalPages={totalPages}
-            isLoading={isLoading}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            onSearch={handleSearch}
-            onStatusChange={handleStatusChange}
-            onDateFilterChange={handleDateFilterChange}
-            onSort={handleSort}
-            onReset={handleReset}
-            onExcelDownload={handleExcelDownload}
-          />
-        </Card.Body>
-      </Card> */}
+
 
       {/* — New Summary Table (TenStack) — */}
       <Card className="mt-3 shadow-sm">

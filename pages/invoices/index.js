@@ -16,235 +16,37 @@ import { Download, FileText, Shield } from "lucide-react";
 // Client-side caching helpers
 const CLIENT_CACHE_TTL = 300000; // 5 minutes
 
-const columns = [
-  {
-    field: "DocNum",
-    label: "Invoice#",
-    render: (value, row) => (
-      <>
-        <Link
-          href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-          className="text-blue-600 hover:text-blue-800"
-          prefetch
-        >
-          {value}
-        </Link>
-        &nbsp;
-        <Link
-          href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
-          className="text-blue-600 hover:text-blue-800"
-          target="_blank"
-        >
-          <Printer />
-        </Link>
-      </>
-      
-    ),
-  },
-  {
-    field: "Document Status",
-    label: "Status",
-    render: (value) => (
-      <span
-        className={`badge ${
-          value === "Closed"
-            ? "bg-success"
-            : value === "Cancelled"
-              ? "bg-warning"
-              : "bg-danger"
-        }`}
-      >
-        {value}
-      </span>
-    ),
-  },
-  {
-    field: "Invoice Posting Dt.",
-    label: "Invoice Date",
-    render: (value) => formatDate(value),
-  },
-  {
-    field: "Dispatch Date",
-    label: "Dispatch Date",
-    render: (value) => formatDate(value),
-  },
-  // {
-  //   field: "Series Name",
-  //   label: "Series",
-  //   render: (value) => value || "N/A",
-  // },
-  {
-    field: "Vendor Catalog No.",
-    label: "Vendor Cat. No.",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Cust Code",
-    label: "Customer Code",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Customer/Vendor Name",
-    label: "Customer Name",
-    render: (value) => value || "N/A",
-  },
-  // {
-  //   field: "SO Customer Ref. No",
-  //   label: "SO Customer Ref",
-  //   render: (value) => value || "N/A",
-  // },
-  {
-    field: "SO No",
-    label: "Sales Order No.",
-    render: (value) => value || "N/A",
-  },
-
-  {
-    field: "Customer ref no",
-    label: "Customer Ref",
-    render: (value) => value || "N/A",
-  },
-
-  // {
-  //   field: "Delivery Date",
-  //   label: "Delivery Date",
-  //   render: (value) => formatDate(value),
-  // },
-  // {
-  //   field: "Dispatch Date",
-  //   label: "Dispatch Date",
-  //   render: (value) => formatDate(value),
-  // },
-  {
-    field: "Item No.",
-    label: "Item No.",
-    render: (value) => value || "N/A",
-  },
-
-  {
-    field: "Item/Service Description",
-    label: "Description",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Group Name",
-    label: "Group",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "BatchNum",
-    label: "Batch No.",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Qty.",
-    label: "Quantity",
-    render: (value) => (value != null ? value : "N/A"),
-  },
-  {
-    field: "Unit",
-    label: "UoM",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Packsize",
-    label: "Pack Size",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Cas No",
-    label: "CAS No.",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Unit Sales Price",
-    label: "Unit Price",
-    render: (value) => formatCurrency(value),
-  },
-  {
-    field: "Total Sales Price",
-    label: "Total",
-    render: (value) => formatCurrency(value),
-  },
-  {
-    field: "Document Currency",
-    label: "Currency",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Country",
-    label: "Country",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "State",
-    label: "State",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Pymnt Group",
-    label: "Payment Terms",
-    render: (value) => value || "N/A",
-  },
-  // {
-  //   field: "Payment Status",
-  //   label: "Payment Status",
-  //   render: (value) => (
-  //     <span className={`badge ${value === "Paid" ? "bg-success" : value === "Partially Paid" ? "bg-warning" : "bg-danger"}`}>
-  //       {value}
-  //     </span>
-  //   ),
-  // },
-  {
-    field: "Exchange Rate",
-    label: "Exch. Rate",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Sales Employee",
-    label: "Sales Employee",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "ContactPerson",
-    label: "Contact Person",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Transport Name",
-    label: "Transport",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "Tax Amount",
-    label: "Tax Amount",
-    render: (value) => formatCurrency(value),
-  },
-  {
-    field: "GSTIN",
-    label: "GSTIN",
-    render: (value) => value || "N/A",
-  },
-  //   {
-  //   field: "U_DispatchDate", // Add this field
-  //   label: "Dispatch Date",
-  //   render: (value) => (value ? formatDate(value) : "N/A"), // Format the date
-  // },
-  {
-    field: "Tracking Number",
-    label: "Tracking No.",
-    render: (value) => value || "N/A",
-  },
-  {
-    field: "SO Date",
-    label: "SO Date",
-    render: (value) => formatDate(value),
-  },
-  
-];
-// Client-side caching helpers
 // const CLIENT_CACHE_TTL = 0; // 5 minutes
+ const columns = [
+   {
+    field: "DocNum",
+    label: "Inv#",
+    render: (value, row) => (
+      <Link href={`/invoicedetails?d=${value}&e=${row.DocEntry}`} className="text-blue-600 hover:text-blue-800">
+        {value}
+      </Link>
+    ),
+  },
+  { field: "Invoice Posting Dt.", label: "Invoice Posting Dt.", render: (v) => formatDate(v) },
+  { field: "SO No", label: "SO No", render: (v) => v || "N/A" },
+  { field: "SO Date", label: "SO Date", render: (v) => formatDate(v) },
+  { field: "Customer ref no", label: "SO Customer Ref. No", render: (v) => v || "N/A" },
+  { field: "ContactPerson", label: "Contact Person", render: (v) => v || "N/A" },
+  { field: "Item No.", label: "Item No.", render: (v) => v || "N/A" },
+  { field: "Item/Service Description", label: "Item/Service Description", render: (v) => v || "N/A" },
+  { field: "Cas No", label: "Cas No", render: (v) => v || "N/A" },
+  { field: "Vendor Catalog No.", label: "Vendor Catalog No.", render: (v) => v || "N/A" },
+  { field: "Packsize", label: "PKZ", render: (v) => v || "N/A" },
+  { field: "Qty.", label: "Qty", render: (v) => (v != null ? v : "N/A") },
+  { field: "Document Status", label: "STATU", render: (v) => v || "N/A" },
+  { field: "Tracking Number", label: "Tracking Number", render: (v) => v || "N/A" },
+  { field: "Dispatch Date", label: "Dispatch Date", render: (v) => formatDate(v) },
+  { field: "Unit Sales Price", label: "Unit Sales Price", render: (v) => formatCurrency(v) },
+  { field: "Total Sales Price", label: "Total Sales Price/Open Value", render: (v) => formatCurrency(v) },
+  { field: "BatchNum", label: "BatchNum", render: (v) => v || "N/A" },
+  { field: "Mkt_Feedback", label: "Mkt_Feedback", render: (v) => v || "N/A" },
 
+ ];
 const getClientCacheKey = (query) => `invoices:${JSON.stringify(query)}`;
 
 const saveToClientCache = (key, data) => {

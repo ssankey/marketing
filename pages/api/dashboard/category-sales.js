@@ -1,6 +1,8 @@
+
 // pages/api/dashboard/category-sales.js
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
+import { verify } from "jsonwebtoken";
 
 const categoryColorMap = {
   "3A Chemicals": "#4E79A7",
@@ -61,308 +63,151 @@ const categoryColorMap = {
   "USP Standards": "#FDB462"
 };
 
-// export default async function handler(req, res) {
-//   const { cardCode, salesPerson, category } = req.query;
-
-//   try {
-//     // Build parameter declarations for sp_executesql
-//     const paramDeclarations = [];
-//     const paramValues = [];
-//     const params = [];
-
-//     if (cardCode) {
-//       paramDeclarations.push("@cardCode NVARCHAR(20)");
-//       paramValues.push("@cardCode");
-//       params.push({ name: "cardCode", type: sql.NVarChar(20), value: cardCode });
-//     }
-//     if (salesPerson) {
-//       paramDeclarations.push("@salesPersonCode INT");
-//       paramValues.push("@salesPersonCode");
-//       params.push({ name: "salesPersonCode", type: sql.Int, value: parseInt(salesPerson, 10) });
-//     }
-//     if (category) {
-//       paramDeclarations.push("@categoryName NVARCHAR(100)");
-//       paramValues.push("@categoryName");
-//       params.push({ name: "categoryName", type: sql.NVarChar(100), value: category });
-//     }
-
-//     const paramDeclarationString = paramDeclarations.join(", ");
-//     const paramValueString = paramValues.join(", ");
-
-//     let query;
-    
-//     if (paramDeclarations.length > 0) {
-//       // Query with parameters - with proper chronological ordering
-//       query = `
-//         DECLARE @cols NVARCHAR(MAX);
-//         SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY SortOrder)
-//         FROM (
-//           SELECT DISTINCT 
-//             FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
-//             YEAR(OINV.DocDate) * 100 + MONTH(OINV.DocDate) AS SortOrder
-//           FROM OINV
-//           INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//           INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-//           INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-//           WHERE OINV.CANCELED = 'N'
-//           ${cardCode ? 'AND OINV.CardCode = @cardCode' : ''}
-//           ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
-//           ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}
-//         ) AS MonthList;
-
-//         DECLARE @sql NVARCHAR(MAX) = '
-//           WITH CategorySales AS (
-//             SELECT T4.ItmsGrpNam AS Category,
-//                    FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-//                    SUM(INV1.LineTotal) AS Amount
-//             FROM OINV
-//             JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//             JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-//             JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-//             WHERE OINV.CANCELED = ''N''
-//             ${cardCode ? 'AND OINV.CardCode = @cardCode' : ''}
-//             ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
-//             ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}
-//             GROUP BY T4.ItmsGrpNam, FORMAT(OINV.DocDate, ''MMM yyyy'')
-//           )
-//           SELECT * FROM (
-//             SELECT Category, MonthYear, Amount FROM CategorySales
-//           ) AS SourceData
-//           PIVOT (
-//             SUM(Amount) FOR MonthYear IN (' + @cols + ')
-//           ) AS PivotTable
-//           ORDER BY Category';
-
-//         EXEC sp_executesql @sql, N'${paramDeclarationString}', ${paramValueString};
-//       `;
-//     } else {
-//       // Query without parameters - with proper chronological ordering
-//       query = `
-//         DECLARE @cols NVARCHAR(MAX);
-//         SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY SortOrder)
-//         FROM (
-//           SELECT DISTINCT 
-//             FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
-//             YEAR(OINV.DocDate) * 100 + MONTH(OINV.DocDate) AS SortOrder
-//           FROM OINV
-//           INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//           INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-//           INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-//           WHERE OINV.CANCELED = 'N'
-//         ) AS MonthList;
-
-//         DECLARE @sql NVARCHAR(MAX) = '
-//           WITH CategorySales AS (
-//             SELECT T4.ItmsGrpNam AS Category,
-//                    FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-//                    SUM(INV1.LineTotal) AS Amount
-//             FROM OINV
-//             JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-//             JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-//             JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-//             WHERE OINV.CANCELED = ''N''
-//             GROUP BY T4.ItmsGrpNam, FORMAT(OINV.DocDate, ''MMM yyyy'')
-//           )
-//           SELECT * FROM (
-//             SELECT Category, MonthYear, Amount FROM CategorySales
-//           ) AS SourceData
-//           PIVOT (
-//             SUM(Amount) FOR MonthYear IN (' + @cols + ')
-//           ) AS PivotTable
-//           ORDER BY Category';
-
-//         EXEC sp_executesql @sql;
-//       `;
-//     }
-
-//     const result = await queryDatabase(query, params);
-
-//     // Get months in the order they appear in the result (which is now chronologically sorted)
-//     const categories = result.map((row) => row.Category);
-//     let months = [];
-    
-//     if (result.length > 0) {
-//       // Get column names excluding 'Category', preserving the order from the pivoted result
-//       months = Object.keys(result[0]).filter((k) => k !== "Category");
-//     }
-
-//     const datasets = categories.map((cat) => {
-//       const data = result.find((r) => r.Category === cat);
-//       return {
-//         label: cat,
-//         data: months.map((m) => data[m] || 0),
-//         backgroundColor: getCategoryColor(cat)
-//       };
-//     });
-
-//     res.status(200).json({ labels: months, datasets });
-//   } catch (error) {
-//     console.error("Error fetching category sales data:", error);
-//     res.status(500).json({ error: "Failed to fetch category sales data" });
-//   }
-// }
-
 export default async function handler(req, res) {
-  const { cardCode, salesPerson, category, customer, contactPerson } = req.query;
-
   try {
-    // Build parameter declarations for sp_executesql
-    const paramDeclarations = [];
-    const paramValues = [];
+    const { cardCode, salesPerson, category, customer, contactPerson } = req.query;
+    const authHeader = req.headers.authorization;
+
+    // Authentication check
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Missing or malformed Authorization header',
+        received: authHeader 
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let decoded;
+
+    try {
+      decoded = verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      console.error("Token verification failed:", err);
+      return res.status(401).json({ error: 'Token verification failed' });
+    }
+
+    const isAdmin = decoded.role === 'admin';
+    const contactCodes = decoded.contactCodes || [];
+    const cardCodes = decoded.cardCodes || [];
+
+    // Build WHERE conditions and parameters
+    const whereConditions = ["OINV.CANCELED = 'N'"];
     const params = [];
 
+    // Role-based filtering
+    if (!isAdmin) {
+      if (contactCodes.length > 0) {
+        whereConditions.push(`OINV.CntctCode IN (${contactCodes.map(c => `'${c}'`).join(',')})`);
+      } else if (cardCodes.length > 0) {
+        whereConditions.push(`OINV.CardCode IN (${cardCodes.map(c => `'${c}'`).join(',')})`);
+      } else {
+        return res.status(403).json({ 
+          error: 'No access: cardCodes or contactCodes not provided' 
+        });
+      }
+    }
+
+    // Add filter conditions
     if (cardCode) {
-      paramDeclarations.push("@cardCode NVARCHAR(20)");
-      paramValues.push("@cardCode");
-      params.push({ name: "cardCode", type: sql.NVarChar(20), value: cardCode });
+      whereConditions.push('OINV.CardCode = @cardCode');
+      params.push({ name: 'cardCode', type: sql.NVarChar(20), value: cardCode });
     }
     if (salesPerson) {
-      paramDeclarations.push("@salesPersonCode INT");
-      paramValues.push("@salesPersonCode");
-      params.push({ name: "salesPersonCode", type: sql.Int, value: parseInt(salesPerson, 10) });
+      whereConditions.push('OINV.SlpCode = @salesPersonCode');
+      params.push({ name: 'salesPersonCode', type: sql.Int, value: parseInt(salesPerson, 10) });
     }
     if (category) {
-      paramDeclarations.push("@categoryName NVARCHAR(100)");
-      paramValues.push("@categoryName");
-      params.push({ name: "categoryName", type: sql.NVarChar(100), value: category });
+      whereConditions.push('T4.ItmsGrpNam = @categoryName');
+      params.push({ name: 'categoryName', type: sql.NVarChar(100), value: category });
     }
     if (customer) {
-      paramDeclarations.push("@customerCode NVARCHAR(20)");
-      paramValues.push("@customerCode");
-      params.push({ name: "customerCode", type: sql.NVarChar(20), value: customer });
+      whereConditions.push('OINV.CardCode = @customerCode');
+      params.push({ name: 'customerCode', type: sql.NVarChar(20), value: customer });
     }
     if (contactPerson) {
-      paramDeclarations.push("@contactPersonCode NVARCHAR(20)");
-      paramValues.push("@contactPersonCode");
-      params.push({ name: "contactPersonCode", type: sql.NVarChar(20), value: contactPerson });
+      whereConditions.push('OINV.CntctCode = @contactPersonCode');
+      params.push({ name: 'contactPersonCode', type: sql.NVarChar(20), value: contactPerson });
     }
 
-    const paramDeclarationString = paramDeclarations.join(", ");
-    const paramValueString = paramValues.join(", ");
+    const whereClause = whereConditions.join(' AND ');
 
-    let query;
-    
-    if (paramDeclarations.length > 0) {
-      // Query with parameters - with proper chronological ordering
-      query = `
-        DECLARE @cols NVARCHAR(MAX);
-        SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY SortOrder)
-        FROM (
-          SELECT DISTINCT 
-            FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
-            YEAR(OINV.DocDate) * 100 + MONTH(OINV.DocDate) AS SortOrder
+    // Build dynamic SQL query
+    const query = `
+      DECLARE @cols NVARCHAR(MAX);
+      SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY SortOrder)
+      FROM (
+        SELECT DISTINCT 
+          FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
+          YEAR(OINV.DocDate) * 100 + MONTH(OINV.DocDate) AS SortOrder
+        FROM OINV
+        INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+        INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ${customer || contactPerson ? 'LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode' : ''}
+        WHERE ${whereClause}
+      ) AS MonthList;
+
+      DECLARE @sql NVARCHAR(MAX) = '
+        WITH CategorySales AS (
+          SELECT 
+            T4.ItmsGrpNam AS Category,
+            FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
+            SUM(INV1.LineTotal) AS Amount
           FROM OINV
-          INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-          INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-          INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+          JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+          JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+          JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
           ${customer || contactPerson ? 'LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode' : ''}
-          WHERE OINV.CANCELED = 'N'
-          ${cardCode ? 'AND OINV.CardCode = @cardCode' : ''}
-          ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
-          ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}
-          ${customer ? 'AND OINV.CardCode = @customerCode' : ''}
-          ${contactPerson ? 'AND OINV.CntctCode = @contactPersonCode' : ''}
-        ) AS MonthList;
+          WHERE ${whereClause.replace(/'/g, "''")}
+          GROUP BY T4.ItmsGrpNam, FORMAT(OINV.DocDate, ''MMM yyyy'')
+        )
+        SELECT * FROM (
+          SELECT Category, MonthYear, Amount FROM CategorySales
+        ) AS SourceData
+        PIVOT (
+          SUM(Amount) FOR MonthYear IN (' + @cols + ')
+        ) AS PivotTable
+        ORDER BY Category';
 
-        DECLARE @sql NVARCHAR(MAX) = '
-          WITH CategorySales AS (
-            SELECT 
-              T4.ItmsGrpNam AS Category,
-              FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-              SUM(INV1.LineTotal) AS Amount
-            FROM OINV
-            JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-            JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-            JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-            ${customer || contactPerson ? 'LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode' : ''}
-            WHERE OINV.CANCELED = ''N''
-            ${cardCode ? 'AND OINV.CardCode = @cardCode' : ''}
-            ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
-            ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}
-            ${customer ? 'AND OINV.CardCode = @customerCode' : ''}
-            ${contactPerson ? 'AND OINV.CntctCode = @contactPersonCode' : ''}
-            GROUP BY T4.ItmsGrpNam, FORMAT(OINV.DocDate, ''MMM yyyy'')
-          )
-          SELECT * FROM (
-            SELECT Category, MonthYear, Amount FROM CategorySales
-          ) AS SourceData
-          PIVOT (
-            SUM(Amount) FOR MonthYear IN (' + @cols + ')
-          ) AS PivotTable
-          ORDER BY Category';
+      EXEC sp_executesql @sql
+      ${params.length > 0 ? `, N'${params.map(p => `${p.name} ${p.type.name}`).join(', ')}', 
+        ${params.map(p => `@${p.name}`).join(', ')}` : ''};
+    `;
 
-        EXEC sp_executesql @sql, N'${paramDeclarationString}', ${paramValueString};
-      `;
-    } else {
-      // Query without parameters - with proper chronological ordering
-      query = `
-        DECLARE @cols NVARCHAR(MAX);
-        SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY SortOrder)
-        FROM (
-          SELECT DISTINCT 
-            FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
-            YEAR(OINV.DocDate) * 100 + MONTH(OINV.DocDate) AS SortOrder
-          FROM OINV
-          INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-          INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-          INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-          WHERE OINV.CANCELED = 'N'
-        ) AS MonthList;
-
-        DECLARE @sql NVARCHAR(MAX) = '
-          WITH CategorySales AS (
-            SELECT 
-              T4.ItmsGrpNam AS Category,
-              FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
-              SUM(INV1.LineTotal) AS Amount
-            FROM OINV
-            JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-            JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-            JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-            WHERE OINV.CANCELED = ''N''
-            GROUP BY T4.ItmsGrpNam, FORMAT(OINV.DocDate, ''MMM yyyy'')
-          )
-          SELECT * FROM (
-            SELECT Category, MonthYear, Amount FROM CategorySales
-          ) AS SourceData
-          PIVOT (
-            SUM(Amount) FOR MonthYear IN (' + @cols + ')
-          ) AS PivotTable
-          ORDER BY Category';
-
-        EXEC sp_executesql @sql;
-      `;
-    }
-
-    // const result = await queryDatabase(query, params);
+    // Execute query
     const result = await queryDatabase(query, params) || [];
 
-
-    // Get months in the order they appear in the result (which is now chronologically sorted)
-    const categories = result.map((row) => row.Category);
+    // Format response
+    const categories = result.map(row => row.Category);
     let months = [];
     
     if (result.length > 0) {
-      // Get column names excluding 'Category', preserving the order from the pivoted result
-      months = Object.keys(result[0]).filter((k) => k !== "Category");
+      months = Object.keys(result[0]).filter(k => k !== "Category");
     }
 
-    const datasets = categories.map((cat) => {
-      const data = result.find((r) => r.Category === cat);
+    const datasets = categories.map(cat => {
+      const data = result.find(r => r.Category === cat);
       return {
         label: cat,
-        data: months.map((m) => data[m] || 0),
-        backgroundColor: getCategoryColor(cat)
+        data: months.map(m => data[m] || 0),
+        backgroundColor: categoryColorMap[cat] || "#CCCCCC"
       };
     });
 
-    res.status(200).json({ labels: months, datasets });
+    return res.status(200).json({ labels: months, datasets });
+
   } catch (error) {
-    console.error("Error fetching category sales data:", error);
-    res.status(500).json({ error: "Failed to fetch category sales data" });
+    console.error("Error in category-sales API:", {
+      message: error.message,
+      stack: error.stack,
+      query: req.query
+    });
+    return res.status(500).json({ 
+      error: "Failed to fetch category sales data",
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 }
-
 
 function getCategoryColor(category) {
   return categoryColorMap[category] || "#CCCCCC";

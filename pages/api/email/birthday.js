@@ -236,9 +236,13 @@ export default async function handler(req, res) {
         const html = `
           <div style="font-family: Arial, sans-serif; line-height:1.4; color:#333;">
             <p>Dear ${emp.name},</p>
-            <p style="font-size: 18px; color:rgb(24, 155, 221);">
-              <strong>Wishing you a very Happy Birthday!</strong> 🎉🎂
-            </p>
+            <p style="font-size: 18px;">
+            <strong>
+              <span style="color: rgb(24, 86, 221);">Wishing you a very </span>
+              <span style="color: rgb(26, 180, 12);">Happy Birthday</span>! 🎉🎂
+            </strong>
+          </p>
+
             <img
                             src="https://marketing.densitypharmachem.com/assets/cake.jpg"
                             alt="Birthday"

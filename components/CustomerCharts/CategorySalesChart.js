@@ -4,6 +4,7 @@ import { Bar } from "react-chartjs-2";
 import { Card, Spinner, Button, Dropdown } from "react-bootstrap";
 import Select from "react-select";
 import debounce from "lodash/debounce";
+import { useAuth } from 'contexts/AuthContext';
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 import {
   Chart as ChartJS,
@@ -32,7 +33,7 @@ const API_ENDPOINTS = {
 };
 
 export default function CategorySalesChart({ cardCode }) {
-  /* ------------------------------ state --------------------------- */
+  const { user } = useAuth();
   const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -51,16 +52,10 @@ export default function CategorySalesChart({ cardCode }) {
     contactPerson: null,
   });
 
-  /* ------------------------------------------------------------------
-     decide which filter types are allowed on this page
-     ‣ customer page: salesPerson, category, contactPerson
-     ‣ dashboard   : all filters
-  ------------------------------------------------------------------ */
   const allowedTypes = cardCode
     ? ["salesPerson", "category", "contactPerson"]
     : ["salesPerson", "category", "customer", "contactPerson"];
 
-  /* prevent stale searchType */
   useEffect(() => {
     if (searchType && !allowedTypes.includes(searchType)) {
       setSearchType(null);
@@ -69,31 +64,45 @@ export default function CategorySalesChart({ cardCode }) {
     }
   }, [searchType, allowedTypes]);
 
-  /* ------------------------------ data fetch ---------------------- */
   const fetchData = async (activeFilters) => {
+    if (!user) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.error('No token found');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const params = new URLSearchParams();
 
       if (cardCode) {
-        // Customer-specific endpoint
         const endpoint = `/api/customers/${cardCode}/category-sales`;
         if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
         if (activeFilters.category) params.append("category", activeFilters.category);
         if (activeFilters.contactPerson) params.append("contactPerson", activeFilters.contactPerson);
 
-        const response = await fetch(`${endpoint}?${params.toString()}`);
+        const response = await fetch(`${endpoint}?${params.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!response.ok) throw new Error("Failed to fetch data");
         const data = await response.json();
         setChartData(data);
       } else {
-        // Dashboard endpoint
         if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
         if (activeFilters.category) params.append("category", activeFilters.category);
         if (activeFilters.customer) params.append("customer", activeFilters.customer);
         if (activeFilters.contactPerson) params.append("contactPerson", activeFilters.contactPerson);
 
-        const response = await fetch(`/api/dashboard/category-sales?${params.toString()}`);
+        const response = await fetch(`/api/dashboard/category-sales?${params.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         if (!response.ok) throw new Error("Failed to fetch data");
         const data = await response.json();
         setChartData(data);
@@ -111,19 +120,25 @@ export default function CategorySalesChart({ cardCode }) {
 
   useEffect(() => {
     fetchData(filters);
-  }, [cardCode, filters]);
+  }, [cardCode, filters, user]);
 
-  /* ------------------------------ suggestions --------------------- */
   const getSuggestions = async (q = "", initial = false) => {
     if (!searchType || !allowedTypes.includes(searchType)) return;
     if (!initial && !q) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
     const key = `${searchType}_${q}`;
     if (cache.current[key]) return setSuggestions(cache.current[key]);
 
     setLS(true);
     try {
-      const res = await fetch(`${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(q)}`);
+      const res = await fetch(`${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(q)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 
@@ -168,7 +183,6 @@ export default function CategorySalesChart({ cardCode }) {
 
   const debouncedFetch = useCallback(debounce(getSuggestions, 500), [searchType]);
 
-  /* ------------------------------ handlers ------------------------ */
   const chooseType = async (type) => {
     if (!allowedTypes.includes(type)) return;
     setSearchType(type);
@@ -178,24 +192,14 @@ export default function CategorySalesChart({ cardCode }) {
     await getSuggestions("", true);
   };
 
-  // const chooseOption = (opt) => {
-  //   setSelectedValue(opt);
-  //   setInputValue(opt ? opt.label : "");
-  //   setFilters((prev) => ({
-  //     ...prev,
-  //     [searchType]: opt ? opt.value : null,
-  //   }));
-  // };
-
   const chooseOption = (opt) => {
-  setSelectedValue(opt);
-  setInputValue(opt ? opt.label : ""); // Add this line to show the selected text
-  setFilters((prev) => ({
-    ...prev,
-    [searchType]: opt ? opt.value : null,
-  }));
-};
-
+    setSelectedValue(opt);
+    setInputValue(opt ? opt.label : "");
+    setFilters((prev) => ({
+      ...prev,
+      [searchType]: opt ? opt.value : null,
+    }));
+  };
 
   const resetAll = () => {
     setSearchType(null);
@@ -210,7 +214,6 @@ export default function CategorySalesChart({ cardCode }) {
     });
   };
 
-  /* ------------------------------ chart options ------------------- */
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -228,16 +231,14 @@ export default function CategorySalesChart({ cardCode }) {
           label: function (context) {
             const value = context.parsed.y;
             if (value === 0) {
-              return null; // skip tooltip if value is 0
+              return null;
             }
             
-            // Calculate total for the current data point
             const dataIndex = context.dataIndex;
             const total = context.chart.data.datasets.reduce((sum, dataset) => {
               return sum + (dataset.data[dataIndex] || 0);
             }, 0);
             
-            // Calculate percentage
             const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
             
             let label = context.dataset.label || "";
@@ -279,7 +280,6 @@ export default function CategorySalesChart({ cardCode }) {
     },
   };
 
-  /* ------------------------------ render -------------------------- */
   const labelMap = {
     salesPerson: "Sales Person",
     category: "Category",
@@ -288,6 +288,10 @@ export default function CategorySalesChart({ cardCode }) {
   };
 
   const anyActive = Object.values(filters).some(Boolean);
+
+  if (!user) {
+    return null;
+  }
 
   if (error) {
     return (
@@ -321,7 +325,7 @@ export default function CategorySalesChart({ cardCode }) {
                 {allowedTypes.includes("category") && (
                   <Dropdown.Item eventKey="category">Category</Dropdown.Item>
                 )}
-                {allowedTypes.includes("customer") && (
+                {allowedTypes.includes("customer") && !cardCode && (
                   <Dropdown.Item eventKey="customer">Customer</Dropdown.Item>
                 )}
                 {allowedTypes.includes("contactPerson") && (
