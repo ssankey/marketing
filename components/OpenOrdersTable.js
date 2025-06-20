@@ -57,149 +57,278 @@ const OpenOrdersTable = ({
     }));
   }, [isLoading, orders]);
 
-  const columns = [
-    {
-      field: "DocumentNumber",
-      label: "Order#",
-      render: (value, row) => (
-        <Link
-          href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
-          className="text-blue-600 hover:text-blue-800"
-        >
-          {value}
-        </Link>
-      ),
-    },
-    {
-      field: "PostingDate",
-      label: "Posting Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "CustomerPONo",
-      label: "Customer PO No",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "PODate",
-      label: "PO Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "CustomerVendorName",
-      label: "Customer/Vendor",
-      render: (value) => truncateText(value, 20),
-    },
-    {
-      field: "ItemGroup",
-      label: "Item Group",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "ItemNo",
-      label: "Item No.",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "MfrCatalogNo",
-      label: "Mfr Catalog No.",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "ItemName",
-      label: "Item Name",
-      render: (value) => truncateText(value, 25),
-    },
-    {
-      field: "CasNo",
-      label: "CAS No",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "LineStatus",
-      label: "Line Status",
-      render: (value) => (
-        <span className={`badge ${value === "Open" ? "bg-primary" : value === "Closed" ? "bg-secondary" : "bg-info"}`}>
-          {value}
-        </span>
-      ),
-    },
-    {
-      field: "Quantity",
-      label: "Quantity",
-      render: (value) => value || "0",
-    },
-    {
-      field: "UOMName",
-      label: "UOM",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "OpenQty",
-      label: "Open Qty",
-      render: (value) => value || "0",
-    },
-    {
-      field: "StockStatus",
-      label: "Stock Status",
-      render: (value) => (
-        <span className={`badge ${value === "In Stock" ? "bg-success" : "bg-danger"}`}>
-          {value}
-        </span>
-      ),
-    },
-    {
-      field: "Timeline",
-      label: "Timeline",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "MktFeedback",
-      label: "Mkt Feedback",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "DeliveredQuantity",
-      label: "Delivered Qty",
-      render: (value) => value || "0",
-    },
-    {
-      field: "DeliveryDate",
-      label: "Delivery Date",
-      render: (value) => formatDate(value),
-    },
-    {
-      field: "PlantLocation",
-      label: "Plant Location",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Price",
-      label: "Price",
-      render: (value, row) => formatCurrency(value, row.PriceCurrency),
-    },
-    {
-      field: "PriceCurrency",
-      label: "Currency",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "OpenAmount",
-      label: "Open Amount",
-      render: (value, row) => formatCurrency(value, row.PriceCurrency),
-    },
+  // const columns = [
+  //   {
+  //     field: "DocumentNumber",
+  //     label: "Order#",
+  //     render: (value, row) => (
+  //       <Link
+  //         href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
+  //         className="text-blue-600 hover:text-blue-800"
+  //       >
+  //         {value}
+  //       </Link>
+  //     ),
+  //   },
+  //   {
+  //     field: "PostingDate",
+  //     label: "Posting Date",
+  //     render: (value) => formatDate(value),
+  //   },
+  //   {
+  //     field: "CustomerPONo",
+  //     label: "Customer PO No",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "PODate",
+  //     label: "PO Date",
+  //     render: (value) => formatDate(value),
+  //   },
+  //   {
+  //     field: "CustomerVendorName",
+  //     label: "Customer/Vendor",
+  //     render: (value) => truncateText(value, 20),
+  //   },
+  //   {
+  //     field: "ItemGroup",
+  //     label: "Item Group",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "ItemNo",
+  //     label: "Item No.",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "MfrCatalogNo",
+  //     label: "Mfr Catalog No.",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "ItemName",
+  //     label: "Item Name",
+  //     render: (value) => truncateText(value, 25),
+  //   },
+  //   {
+  //     field: "CasNo",
+  //     label: "CAS No",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "LineStatus",
+  //     label: "Line Status",
+  //     render: (value) => (
+  //       <span className={`badge ${value === "Open" ? "bg-primary" : value === "Closed" ? "bg-secondary" : "bg-info"}`}>
+  //         {value}
+  //       </span>
+  //     ),
+  //   },
+  //   {
+  //     field: "Quantity",
+  //     label: "Quantity",
+  //     render: (value) => value || "0",
+  //   },
+  //   {
+  //     field: "UOMName",
+  //     label: "UOM",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "OpenQty",
+  //     label: "Open Qty",
+  //     render: (value) => value || "0",
+  //   },
+  //   {
+  //     field: "StockStatus",
+  //     label: "Stock Status",
+  //     render: (value) => (
+  //       <span className={`badge ${value === "In Stock" ? "bg-success" : "bg-danger"}`}>
+  //         {value}
+  //       </span>
+  //     ),
+  //   },
+  //   {
+  //     field: "Timeline",
+  //     label: "Timeline",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "MktFeedback",
+  //     label: "Mkt Feedback",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "DeliveredQuantity",
+  //     label: "Delivered Qty",
+  //     render: (value) => value || "0",
+  //   },
+  //   {
+  //     field: "DeliveryDate",
+  //     label: "Delivery Date",
+  //     render: (value) => formatDate(value),
+  //   },
+  //   {
+  //     field: "PlantLocation",
+  //     label: "Plant Location",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Price",
+  //     label: "Price",
+  //     render: (value, row) => formatCurrency(value, row.PriceCurrency),
+  //   },
+  //   {
+  //     field: "PriceCurrency",
+  //     label: "Currency",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "OpenAmount",
+  //     label: "Open Amount",
+  //     render: (value, row) => formatCurrency(value, row.PriceCurrency),
+  //   },
 
-    {
-      field: "SalesEmployee",
-      label: "Sales Employee",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "ContactPerson",
-      label: "Contact Person",
-      render: (value) => value || "N/A",
-    },
-  ];
+  //   {
+  //     field: "SalesEmployee",
+  //     label: "Sales Employee",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "ContactPerson",
+  //     label: "Contact Person",
+  //     render: (value) => value || "N/A",
+  //   },
+  // ];
+
+
+  const columns = [
+  {
+    field: "LineStatus",
+    label: "Document Status",
+    render: (value) => (
+      <span className={`badge ${value === "Open" ? "bg-primary" : value === "Closed" ? "bg-secondary" : "bg-info"}`}>
+        {value}
+      </span>
+    ),
+  },
+  {
+    field: "DocumentNumber",
+    label: "SO Number Date",
+    render: (value, row) => (
+      <Link
+        href={`/orderdetails?d=${value}&e=${row.DocEntry}`}
+        className="text-blue-600 hover:text-blue-800"
+      >
+        {value}
+      </Link>
+    ),
+  },
+  {
+    field: "PostingDate",
+    label: "Posting Date",
+    render: (value) => formatDate(value),
+  },
+  {
+    field: "CustomerPONo",
+    label: "Customer PO No",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "PODate",
+    label: "PO Date",
+    render: (value) => formatDate(value),
+  },
+  {
+    field: "CustomerVendorName",
+    label: "Customer/Vendor Name",
+    render: (value) => truncateText(value, 20),
+  },
+  {
+    field: "ContactPerson",
+    label: "Contact Person",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "ItemNo",
+    label: "Item No.",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "MfrCatalogNo",
+    label: "Mfr Catalog No.",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "UOMName",
+    label: "PKZ",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "ItemName",
+    label: "Item Name",
+    render: (value) => truncateText(value, 25),
+  },
+  {
+    field: "CasNo",
+    label: "Cas No",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "Quantity",
+    label: "Quantity Order",
+    render: (value) => value || "0",
+  },
+  {
+    field: "OpenQty",
+    label: "Open Qty",
+    render: (value) => value || "0",
+  },
+  {
+    field: "DeliveredQuantity",
+    label: "Delivered Quantity",
+    render: (value) => value || "0",
+  },
+  {
+    field: "StockStatus",
+    label: "Stock Status-In hyd",
+    render: (value) => (
+      <span className={`badge ${value === "In Stock" ? "bg-success" : "bg-danger"}`}>
+        {value}
+      </span>
+    ),
+  },
+  {
+    field: "DeliveryDate",
+    label: "Delivery Date",
+    render: (value) => formatDate(value),
+  },
+  {
+    field: "Timeline",
+    label: "Timeline",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "MktFeedback",
+    label: "Mkt_Feedback",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "Price",
+    label: "Price",
+    render: (value, row) => formatCurrency(value, row.PriceCurrency),
+  },
+  {
+    field: "OpenAmount",
+    label: "OPEN AMOUNT",
+    render: (value, row) => formatCurrency(value, row.PriceCurrency),
+  },
+  {
+    field: "SalesEmployee",
+    label: "Sales Employee",
+    render: (value) => value || "N/A",
+  },
+];
 
 
 

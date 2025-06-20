@@ -28,14 +28,7 @@ import InvoicesTable from "components/HeaderInvoiceTable"; // Changed to use Hea
           >
             {value}
           </Link>
-          &nbsp;
-          <Link
-            href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            target="_blank"
-          >
-            <Printer />
-          </Link>
+         
         </>
       ),
       sortable: true,

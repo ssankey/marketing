@@ -64,6 +64,9 @@ export default async function handler(req, res) {
       }
     }
 
+    
+
+
     if (year) {
       whereClauses.push(`YEAR(T0.DocDate) = @year`);
       params.push({ name: "year", type: sql.Int, value: parseInt(year) });

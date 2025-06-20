@@ -1,20 +1,20 @@
+ 
 // pages/invoices/index.js
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
 import InvoicesTable from "components/HeaderInvoiceTable";
+import InvoiceDetailsModal from "components/modal/InvoiceDetailsModal";
 import { Download, FileText, FlaskConical, Sparkles } from "lucide-react";
+import downloadExcel from "utils/exporttoexcel";
+import { Printer } from "react-bootstrap-icons";
+import StatusBadge from "components/StatusBadge";
+import { formatDate } from "utils/formatDate";
+import Link from "next/link";
+import { formatCurrency } from "utils/formatCurrency";
 
-
-  import downloadExcel from "utils/exporttoexcel";
-  import { Printer } from "react-bootstrap-icons";
-  import StatusBadge from "components/StatusBadge";
-  import { formatDate } from "utils/formatDate";
-  import Link from "next/link";
-  import { formatCurrency } from "utils/formatCurrency";
-
-  import msdsMap from "public/data/msds-map.json"; // Adjust path if needed
+import msdsMap from "public/data/msds-map.json"; // Adjust path if needed
 
 
 const handleCOADownload = async (docEntry, docNum) => {
@@ -34,7 +34,8 @@ const handleCOADownload = async (docEntry, docNum) => {
     for (const item of invoice.LineItems) {
       const raw = item.ItemCode?.trim() || "";
       const code = raw.includes("-") ? raw.split("-")[0] : raw;
-      const batch = item.BatchNum?.trim();
+      const batch = item.VendorBatchNum?.trim(); // This should be FGDOREAV/OM8HRV4H
+      
       if (code && batch) {
         coaUrls.add(
           `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`
@@ -60,7 +61,6 @@ const handleCOADownload = async (docEntry, docNum) => {
         const blobUrl = URL.createObjectURL(blob);
 
         const a = document.createElement("a");
-        // derive a nice file name from the url
         const filename = url.split("/").pop();
         a.href = blobUrl;
         a.download = filename;
@@ -70,7 +70,6 @@ const handleCOADownload = async (docEntry, docNum) => {
         URL.revokeObjectURL(blobUrl);
 
         downloadedAny = true;
-        // slight pause so downloads don’t stomp each other
         await new Promise((r) => setTimeout(r, 300));
       } catch (e) {
         console.error("Failed to download COA from", url, e);
@@ -85,7 +84,6 @@ const handleCOADownload = async (docEntry, docNum) => {
     alert("Failed to download COA files.");
   }
 };
-
 const handleMSDSDownload = async (docEntry, docNum) => {
   try {
     const res = await fetch(
@@ -135,13 +133,21 @@ const handleMSDSDownload = async (docEntry, docNum) => {
   }
 };
 
-  
+
 export default function InvoicesPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
+
+
   const [invoices, setInvoices] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [invoiceDetails, setInvoiceDetails] = useState([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [error, setError] = useState(null);
+
   
   const [fetchState, setFetchState] = useState({
     isInitialLoad: true,
@@ -159,6 +165,61 @@ export default function InvoicesPage() {
     fromDate,
     toDate,
   } = router.query;
+
+    const fetchInvoiceDetails = async (invoiceNo) => {
+    setLoadingDetails(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No token found in localStorage");
+      }
+
+      const response = await fetch(`/api/modal/invoiceDetails?invoiceNo=${invoiceNo}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format - expected array');
+      }
+      
+      if (data.length === 0) {
+        setError('No records found for this invoice');
+      }
+      
+      setInvoiceDetails(data);
+      setShowDetailsModal(true);
+      
+    } catch (error) {
+      console.error("Error fetching invoice details:", error);
+      setError(`Failed to load invoice details: ${error.message}`);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+
+    const handleInvoiceClick = (invoiceNo, e) => {
+    e.preventDefault();
+    if (!invoiceNo) {
+      setError('Invoice number is required');
+      return;
+    }
+    
+    setSelectedInvoice(invoiceNo);
+    fetchInvoiceDetails(invoiceNo);
+  };
+
 
   // Memoize fetchInvoices to prevent unnecessary recreations
   const fetchInvoices = useCallback(async () => {
@@ -190,314 +251,413 @@ export default function InvoicesPage() {
     return response.json();
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
 
+  // const columns = [
+  // {
+  //     field: "DocNum",
+  //     label: "Invoice#",
+  //     render: (value, row) => {
+  //       const [loadingCOA, setLoadingCOA] = useState(false);
+  //       const [loadingMSDS, setLoadingMSDS] = useState(false);
+
+  //       const handleCOAClick = async (e) => {
+  //         e.stopPropagation();
+  //         setLoadingCOA(true);
+  //         await handleCOADownload(row.DocEntry, value);
+  //         setLoadingCOA(false);
+  //       };
+
+  //       const handleMSDSClick = async (e) => {
+  //         e.stopPropagation();
+  //         setLoadingMSDS(true);
+  //         await handleMSDSDownload(row.DocEntry, value);
+  //         setLoadingMSDS(false);
+  //       };
+
+  //       return (
+  //         <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 space-y-1 sm:space-y-0">
+  //           {/* <button
+  //             onClick={(e) => handleInvoiceClick(value, e)}
+  //             className="text-blue-700 hover:text-blue-900 font-semibold text-sm underline bg-transparent border-none p-0 cursor-pointer text-left"
+  //           >
+  //             {value}
+  //           </button> */}
+  //            <a
+  //               href="#"
+  //               onClick={(e) => {
+  //                 e.preventDefault();
+  //                 fetchInvoiceDetails(value, row.DocEntry);
+  //               }}
+  //               className="text-blue-600 hover:text-blue-800"
+  //               style={{ textDecoration: "none", fontWeight: 500 }}
+  //             >
+  //               {value}
+  //             </a>
+
+  //           <button
+  //             onClick={handleMSDSClick}
+  //             className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-200 text-blue-900 hover:bg-blue-300 rounded-md border border-blue-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
+  //             title="Download MSDS"
+  //             disabled={loadingMSDS}
+  //           >
+  //             {loadingMSDS ? (
+  //               <Spinner animation="border" size="sm" />
+  //             ) : (
+  //               <FlaskConical size={12} />
+  //             )}
+  //             <span className="hidden sm:inline font-medium">MSDS</span>
+  //           </button>
+
+  //           <button
+  //             onClick={handleCOAClick}
+  //             className="flex items-center gap-2 px-3 py-1.5 text-xs bg-green-200 text-green-900 hover:bg-green-300 rounded-md border border-green-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
+  //             title="Download COA"
+  //             disabled={loadingCOA}
+  //           >
+  //             {loadingCOA ? (
+  //               <Spinner animation="border" size="sm" />
+  //             ) : (
+  //               <FileText size={12} />
+  //             )}
+  //             <span className="hidden sm:inline font-medium">COA</span>
+  //           </button>
+  //         </div>
+  //       );
+  //     },
+  //     sortable: true,
+  //   },
+  //   {
+  //     field: "DocStatusDisplay",
+  //     label: "Status",
+  //     render: (value) => (
+  //       <span
+  //         className={`badge ${
+  //           value === "Closed"
+  //             ? "bg-success"
+  //             : value === "Cancelled"
+  //               ? "bg-warning"
+  //               : "bg-danger"
+  //         }`}
+  //       >
+  //         {value}
+  //       </span>
+  //     ),
+  //   },
+  //   {
+  //     field: "LineItemCount",
+  //     label: "Items",
+  //     render: (value) => value ?? 0,
+  //   },
+  //   {
+  //     field: "DocDate",
+  //     label: "Invoice Date",
+  //     render: (value) => formatDate(value),
+  //     sortable: true,
+  //   },
+  //   {
+  //     field: "DocDueDate",
+  //     label: "Due Date",
+  //     render: (value) => formatDate(value),
+  //     sortable: true,
+  //   },
+  //   {
+  //     field: "U_DispatchDate",
+  //     label: "Dispatch Date",
+  //     render: (value) => (value ? formatDate(value) : "Pending"),
+  //   },
+  //   {
+  //     field: "CardCode",
+  //     label: "Customer Code",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "CardName",
+  //     label: "Customer Name",
+  //     render: (value) => value || "N/A",
+  //     sortable: true,
+  //   },
+ 
+  //   {
+  //     field: "DocTotal",
+  //     label: "Total Amount",
+  //     render: (value) => formatCurrency(value),
+  //     sortable: true,
+  //   },
+  //   {
+  //     field: "DocCur",
+  //     label: "Currency",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "VatSum",
+  //     label: "Tax Amount",
+  //     render: (value) => formatCurrency(value),
+  //   },
+  //   {
+  //     field: "TaxDate",
+  //     label: "Tax Date",
+  //     render: (value) => formatDate(value),
+  //   },
+    
+  //   {
+  //     field: "TrackNo",
+  //     label: "Tracking #",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "TransportName",
+  //     label: "Transport",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "PaymentGroup",
+  //     label: "Payment Terms",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "Country",
+  //     label: "Country",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "SalesEmployee",
+  //     label: "Sales Person",
+  //     render: (value) => value || "N/A",
+  //   },
+  //   {
+  //     field: "ContactPerson",
+  //     label: "Contact Person",
+  //     render: (value) => value || "N/A",
+  //   },
+    
+  //   {
+  //     field: "U_EmailSentDT",
+  //     label: "Mail Sent",
+  //     render: (_, row) => {
+  //       if (row.U_EmailSentDT) {
+  //         const dt = new Date(row.U_EmailSentDT);
+
+  //         // Check if time is exactly 00:00
+  //         const isMidnight =
+  //           dt.getUTCHours() === 0 &&
+  //           dt.getUTCMinutes() === 0 &&
+  //           dt.getUTCSeconds() === 0;
+
+  //         // Also fallback to Send Mail button if it's midnight
+  //         if (isMidnight) {
+  //           return (
+  //             <button
+  //               className="btn btn-sm btn-primary"
+  //               onClick={() => sendInvoiceMail(row)}
+  //             >
+  //               Send Mail
+  //             </button>
+  //           );
+  //         }
+
+  //         const day = String(dt.getUTCDate()).padStart(2, "0");
+  //         const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  //         const year = dt.getUTCFullYear();
+
+  //         const h = Math.floor((row.U_EmailSentTM || 0) / 60);
+  //         const m = (row.U_EmailSentTM || 0) % 60;
+
+  //         return (
+  //           <>
+  //             {`${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
+  //           </>
+  //         );
+  //       }
+
+  //       // Fallback if no date
+  //       return (
+  //         <button
+  //           className="btn btn-sm btn-primary"
+  //           onClick={() => sendInvoiceMail(row)}
+  //         >
+  //           Send Mail
+  //         </button>
+  //       );
+  //     },
+  //   },
+  // ];
+   
+
   const columns = [
-    // {
-    //   field: "DocNum",
-    //   label: "Invoice#",
-    //   render: (value, row) => (
-    //     <>
-    //       <Link
-    //         href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-    //         className="text-blue-600 hover:text-blue-800"
-    //       >
-    //         {value}
-    //       </Link>
-    //       &nbsp;
-    //       <Link
-    //         href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
-    //         className="text-blue-600 hover:text-blue-800"
-    //         target="_blank"
-    //       >
-    //         <Printer />
-    //       </Link>
-    //     </>
-    //   ),
-    //   sortable: true,
-    // },
-    // {
-    //   field: "DocNum",
-    //   label: "Invoice#",
-    //   render: (value, row) => (
-    //     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 space-y-1 sm:space-y-0">
-    //       {/* Invoice Number Link */}
-    //       <Link
-    //         href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-    //         className="text-blue-700 hover:text-blue-900 font-semibold text-sm underline"
-    //       >
-    //         {value}
-    //       </Link>
+  {
+    field: "DocNum",
+    label: "Invoice#",
+    render: (value, row) => {
+      const [loadingCOA, setLoadingCOA] = useState(false);
+      const [loadingMSDS, setLoadingMSDS] = useState(false);
 
-    //       {/* MSDS Button */}
-    //       <button
-    //         onClick={(e) => {
-    //           e.stopPropagation();
-    //           handleMSDSDownload(row.DocEntry, value);
-    //         }}
-    //         className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md border border-blue-300 shadow-sm hover:shadow-md transition-all duration-150"
-    //         title="Download MSDS"
-    //       >
-    //         <FlaskConical size={12} />
-    //         <span className="hidden sm:inline font-medium">MSDS</span>
-    //       </button>
+      const handleCOAClick = async (e) => {
+        e.stopPropagation();
+        setLoadingCOA(true);
+        await handleCOADownload(row.DocEntry, value);
+        setLoadingCOA(false);
+      };
 
-    //       {/* COA Button */}
-    //       <button
-    //         onClick={(e) => {
-    //           e.stopPropagation();
-    //           handleCOADownload(row.DocEntry, value);
-    //         }}
-    //         className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-green-100 text-green-800 hover:bg-green-200 rounded-md border border-green-300 shadow-sm hover:shadow-md transition-all duration-150"
-    //         title="Download COA"
-    //       >
-    //         <FileText size={12} />
-    //         <span className="hidden sm:inline font-medium">COA</span>
-    //       </button>
-    //     </div>
-    //   ),
-    //   sortable: true,
-    // },
-    {
-      field: "DocNum",
-      label: "Invoice#",
-      render: (value, row) => (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 space-y-1 sm:space-y-0">
-          {/* Invoice Number Link */}
-          <Link
-            href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-700 hover:text-blue-900 font-semibold text-sm underline"
+      const handleMSDSClick = async (e) => {
+        e.stopPropagation();
+        setLoadingMSDS(true);
+        await handleMSDSDownload(row.DocEntry, value);
+        setLoadingMSDS(false);
+      };
+
+      return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 space-y-1 sm:space-y-0">
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              fetchInvoiceDetails(value, row.DocEntry);
+            }}
+            className="text-blue-600 hover:text-blue-800"
+            style={{ textDecoration: "none", fontWeight: 500 }}
           >
             {value}
-          </Link>
+          </a>
 
-          {/* MSDS Button */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMSDSDownload(row.DocEntry, value);
-            }}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-md border border-blue-300 shadow-sm hover:shadow-md transition-all duration-150"
+            onClick={handleMSDSClick}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-200 text-blue-900 hover:bg-blue-300 rounded-md border border-blue-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
             title="Download MSDS"
+            disabled={loadingMSDS}
           >
-            <FlaskConical size={12} />
+            {loadingMSDS ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              <FlaskConical size={12} />
+            )}
             <span className="hidden sm:inline font-medium">MSDS</span>
           </button>
 
-          {/* COA Button */}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCOADownload(row.DocEntry, value);
-            }}
-            className="flex items-center gap-1 px-2.5 py-1.5 text-xs bg-green-100 text-green-800 hover:bg-green-200 rounded-md border border-green-300 shadow-sm hover:shadow-md transition-all duration-150"
+            onClick={handleCOAClick}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-green-200 text-green-900 hover:bg-green-300 rounded-md border border-green-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
             title="Download COA"
+            disabled={loadingCOA}
           >
-            <FileText size={12} />
+            {loadingCOA ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              <FileText size={12} />
+            )}
             <span className="hidden sm:inline font-medium">COA</span>
           </button>
         </div>
-      ),
-      sortable: true,
+      );
     },
-    {
-      field: "DocStatusDisplay",
-      label: "Status",
-      render: (value) => (
-        <span
-          className={`badge ${
-            value === "Closed"
-              ? "bg-success"
-              : value === "Cancelled"
-                ? "bg-warning"
-                : "bg-danger"
-          }`}
-        >
-          {value}
-        </span>
-      ),
-    },
-    {
-      field: "LineItemCount",
-      label: "Items",
-      render: (value) => value ?? 0,
-    },
-    {
-      field: "DocDate",
-      label: "Invoice Date",
-      render: (value) => formatDate(value),
-      sortable: true,
-    },
-    {
-      field: "DocDueDate",
-      label: "Due Date",
-      render: (value) => formatDate(value),
-      sortable: true,
-    },
-    {
-      field: "U_DispatchDate",
-      label: "Dispatch Date",
-      render: (value) => (value ? formatDate(value) : "Pending"),
-    },
-    {
-      field: "CardCode",
-      label: "Customer Code",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "CardName",
-      label: "Customer Name",
-      render: (value) => value || "N/A",
-      sortable: true,
-    },
-    // {
-    //   field: "CustomerGroup",
-    //   label: "Customer Group",
-    //   render: (value) => value || "N/A",
-    // },
-    //   {
-    //     field: "NumAtCard",
-    //     label: "Customer PO#",
-    //     render: (value) => value || "N/A"
-    //   },
-    {
-      field: "DocTotal",
-      label: "Total Amount",
-      render: (value) => formatCurrency(value),
-      sortable: true,
-    },
-    {
-      field: "DocCur",
-      label: "Currency",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "VatSum",
-      label: "Tax Amount",
-      render: (value) => formatCurrency(value),
-    },
-    {
-      field: "TaxDate",
-      label: "Tax Date",
-      render: (value) => formatDate(value),
-    },
-    //   {
-    //     field: "U_DispatchDate",
-    //     label: "Dispatch Date",
-    //     render: (value) => (value ? formatDate(value) : "Pending")
-    //   },
-    {
-      field: "TrackNo",
-      label: "Tracking #",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "TransportName",
-      label: "Transport",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "PaymentGroup",
-      label: "Payment Terms",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Country",
-      label: "Country",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "SalesEmployee",
-      label: "Sales Person",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "ContactPerson",
-      label: "Contact Person",
-      render: (value) => value || "N/A",
-    },
-    // {
-    //   field: "U_EmailSentDT",
-    //   label: "Mail Sent",
-    //   render: (_, row) => {
-    //     if (row.U_EmailSentDT) {
-    //       const dt = new Date(row.U_EmailSentDT);
+    sortable: true,
+  },
+  {
+    field: "DocDate",
+    label: "Invoice Date",
+    render: (value) => formatDate(value),
+    sortable: true,
+  },
+  {
+    field: "ContactPerson",
+    label: "Contact Person",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "DocDueDate",
+    label: "Due Date",
+    render: (value) => formatDate(value),
+    sortable: true,
+  },
+  {
+    field: "CardCode",
+    label: "Customer Code",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "CardName",
+    label: "Customer Name",
+    render: (value) => value || "N/A",
+    sortable: true,
+  },
+  {
+    field: "LineItemCount",
+    label: "Total Lines",
+    render: (value) => value ?? 0,
+  },
+  {
+    field: "DocTotal",
+    label: "Total Amount",
+    render: (value) => formatCurrency(value),
+    sortable: true,
+  },
+  {
+    field: "DocCur",
+    label: "Currency",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "U_DispatchDate",
+    label: "Dispatch Date",
+    render: (value) => (value ? formatDate(value) : "Pending"),
+  },
+  {
+    field: "TrackNo",
+    label: "Tracking #",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "TransportName",
+    label: "Transport",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "SalesEmployee",
+    label: "Sales Person",
+    render: (value) => value || "N/A",
+  },
+  {
+    field: "U_EmailSentDT",
+    label: "Mail Sent",
+    render: (_, row) => {
+      if (row.U_EmailSentDT) {
+        const dt = new Date(row.U_EmailSentDT);
+        const isMidnight =
+          dt.getUTCHours() === 0 &&
+          dt.getUTCMinutes() === 0 &&
+          dt.getUTCSeconds() === 0;
 
-    //       // Extract using UTC methods to avoid timezone offset
-    //       const day = String(dt.getUTCDate()).padStart(2, "0");
-    //       const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
-    //       const year = dt.getUTCFullYear();
-
-    //       const h = Math.floor((row.U_EmailSentTM || 0) / 60);
-    //       const m = (row.U_EmailSentTM || 0) % 60;
-
-    //       return (
-    //         <>
-    //           {`${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
-    //         </>
-    //       );
-    //     }
-
-    //     return (
-    //       <button
-    //         className="btn btn-sm btn-primary"
-    //         onClick={() => sendInvoiceMail(row)}
-    //       >
-    //         Send Mail
-    //       </button>
-    //     );
-    //   },
-    // },
-    {
-      field: "U_EmailSentDT",
-      label: "Mail Sent",
-      render: (_, row) => {
-        if (row.U_EmailSentDT) {
-          const dt = new Date(row.U_EmailSentDT);
-
-          // Check if time is exactly 00:00
-          const isMidnight =
-            dt.getUTCHours() === 0 &&
-            dt.getUTCMinutes() === 0 &&
-            dt.getUTCSeconds() === 0;
-
-          // Also fallback to Send Mail button if it's midnight
-          if (isMidnight) {
-            return (
-              <button
-                className="btn btn-sm btn-primary"
-                onClick={() => sendInvoiceMail(row)}
-              >
-                Send Mail
-              </button>
-            );
-          }
-
-          const day = String(dt.getUTCDate()).padStart(2, "0");
-          const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
-          const year = dt.getUTCFullYear();
-
-          const h = Math.floor((row.U_EmailSentTM || 0) / 60);
-          const m = (row.U_EmailSentTM || 0) % 60;
-
+        if (isMidnight) {
           return (
-            <>
-              {`${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`}
-            </>
+            <button
+              className="btn btn-sm btn-primary"
+              onClick={() => sendInvoiceMail(row)}
+            >
+              Send Mail
+            </button>
           );
         }
 
-        // Fallback if no date
-        return (
-          <button
-            className="btn btn-sm btn-primary"
-            onClick={() => sendInvoiceMail(row)}
-          >
-            Send Mail
-          </button>
-        );
-      },
+        const day = String(dt.getUTCDate()).padStart(2, "0");
+        const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+        const year = dt.getUTCFullYear();
+        const h = Math.floor((row.U_EmailSentTM || 0) / 60);
+        const m = (row.U_EmailSentTM || 0) % 60;
+
+        return `${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+      }
+      return (
+        <button
+          className="btn btn-sm btn-primary"
+          onClick={() => sendInvoiceMail(row)}
+        >
+          Send Mail
+        </button>
+      );
     },
-  ];
-   
+  },
+];
+
+
+
 const sendInvoiceMail = async (row) => {
   try {
     const res = await fetch("/api/email/sendInvoiceEmail", {
@@ -723,7 +883,8 @@ const sendInvoiceMail = async (row) => {
   }
 
   return (
-    <InvoicesTable
+    <>
+     <InvoicesTable
       invoices={invoices}
       totalItems={totalItems}
       isLoading={fetchState.isInitialLoad || fetchState.isLoading}
@@ -731,6 +892,43 @@ const sendInvoiceMail = async (row) => {
       onExcelDownload={handleExcelDownload}
       columns={columns}
     />
+
+      {showDetailsModal && (
+        <InvoiceDetailsModal
+          invoiceData={invoiceDetails}
+          onClose={() => {
+            setShowDetailsModal(false);
+            setError(null);
+          }}
+          title={`Invoice #${selectedInvoice} Details`}
+        />
+      )}
+
+      {/* Loading Spinner for Details */}
+      {loadingDetails && (
+        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50" style={{zIndex: 1050}}>
+          <div className="bg-white p-4 rounded shadow">
+            <Spinner animation="border" variant="primary" />
+            <span className="ms-2">Loading invoice details...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error Alert */}
+      {error && (
+        <div className="position-fixed top-20 end-20 z-50">
+          <Alert 
+            variant="danger" 
+            dismissible 
+            onClose={() => setError(null)}
+            className="mb-3"
+          >
+            {error}
+          </Alert>
+        </div>
+      )}
+      </>
+   
   );
 }
 

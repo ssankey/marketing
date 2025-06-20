@@ -235,14 +235,13 @@ const NavbarVertical = (props) => {
             )}
 
             {/* Outstanding Payments (Hidden for Admin) */}
-            {(isAdmin || isSalesPerson) && (
-              <>
+            
                 <li className="nav-item mb-3">
                   <Link
                     href="/customer-balance"
                     className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}
                   >
-                    <FaMoneyBillWave className="me-2" /> Customer Balance
+                    <FaMoneyBillWave className="me-2" />  Balance
                   </Link>
                 </li>
 
@@ -251,8 +250,7 @@ const NavbarVertical = (props) => {
                     <FaMoneyBillWave className="me-2" /> Vendor Payments
                   </Link>
                 </li> */}
-              </>
-            )}
+
             {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link

@@ -140,43 +140,7 @@ export default function CustomerBalTable({
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  // Reset to page 1 when filters change
-//   useEffect(() => {
-//     if (
-//       (globalFilter || fromDate || toDate || overdueFilter !== "All") &&
-//       page !== 1
-//     ) {
-//       onPageChange(1);
-//     }
-//   }, [globalFilter, fromDate, toDate, overdueFilter, onPageChange, page]);
 
-  // Format data for Excel export to match UI exactly
-//   const handleExportExcel = () => {
-//     const exportData = pageData.map((row) => {
-//       const formattedRow = {};
-
-//       // Map each column in the exact order and format as shown in UI
-//       columns.forEach((column) => {
-//         const value = row[column.accessorKey];
-
-//         // Apply formatting based on column type
-//         if (
-//           column.accessorKey.includes("Date") ||
-//           column.accessorKey === "Dispatch Date"
-//         ) {
-//           formattedRow[column.header] = formatDate(value);
-//         } else if (column.accessorKey === "BalanceDue") {
-//           formattedRow[column.header] = formatCurrency(value).slice(1); // Remove currency symbol
-//         } else {
-//           formattedRow[column.header] = value;
-//         }
-//       });
-
-//       return formattedRow;
-//     });
-
-//     downloadExcel(exportData, "Customer_Balance_Report");
-//   };
 
 useEffect(() => {
   // Whenever any filter (globalFilter, fromDate, toDate, overdueFilter) changes,
