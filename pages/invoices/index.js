@@ -38,7 +38,7 @@ const CLIENT_CACHE_TTL = 300000; // 5 minutes
   { field: "Vendor Catalog No.", label: "Vendor Catalog No.", render: (v) => v || "N/A" },
   { field: "Packsize", label: "PKZ", render: (v) => v || "N/A" },
   { field: "Qty.", label: "Qty", render: (v) => (v != null ? v : "N/A") },
-  { field: "Document Status", label: "STATU", render: (v) => v || "N/A" },
+  { field: "Document Status", label: "STATUS", render: (v) => v || "N/A" },
   { field: "Tracking Number", label: "Tracking Number", render: (v) => v || "N/A" },
   { field: "Dispatch Date", label: "Dispatch Date", render: (v) => formatDate(v) },
   { field: "Unit Sales Price", label: "Unit Sales Price", render: (v) => formatCurrency(v) },

@@ -68,7 +68,7 @@ const InvoiceDetailsModal = ({ invoiceData, onClose, title }) => {
         cell: ({ getValue }) => getValue() !== null ? getValue() : "-",
       },
       {
-        accessorFn: row => row["STATU"],
+        accessorFn: row => row["STATUS"],
         header: "Status",
         cell: ({ getValue }) => getValue() || "-",
       },
@@ -154,7 +154,7 @@ const InvoiceDetailsModal = ({ invoiceData, onClose, title }) => {
         <div className="d-flex align-items-center justify-content-between w-100">
           {/* <Modal.Title className="fs-5 m-0">{title}</Modal.Title> */}
           <Modal.Title className="fs-5 m-0">
-            Invoice #{invoiceData?.[0]?.["Inv#"] || invoiceData?.[0]?.["Invoice No"] || "N/A"} Details
+            Invoice # {invoiceData?.[0]?.["Inv#"] || invoiceData?.[0]?.["Invoice No"] || "N/A"} Details
         </Modal.Title>
 
           <div className="d-flex align-items-center gap-2">

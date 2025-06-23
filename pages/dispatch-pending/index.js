@@ -234,61 +234,172 @@ export default function PendingDispatchInvoicesPage() {
     return response.json();
   }, [page, search, status, sortField, sortDir, fromDate, toDate]);
 
+//   const handleExcelDownload = useCallback(async () => {
+//     try {
+//       const token = localStorage.getItem("token");
+//       if (!token) {
+//         console.error("No token found");
+//         return;
+//       }
+
+//       // Build query params with getAll=true
+//       const queryParams = {
+//         status: router.query.status || "all",
+//         search: router.query.search || "",
+//         sortField: router.query.sortField || "DocDate",
+//         sortDir: router.query.sortDir || "desc",
+//         fromDate: router.query.fromDate || "",
+//         toDate: router.query.toDate || "",
+//         getAll: "true",
+//       };
+
+//       const url = `/api/invoices/pendingDispatch?${new URLSearchParams(
+//         queryParams
+//       )}`;
+
+//       const response = await fetch(url, {
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+
+//       if (!response.ok) {
+//         throw new Error(`Failed to fetch: ${response.status}`);
+//       }
+
+//       const { invoices: allInvoices } = await response.json();
+
+//       if (allInvoices && allInvoices.length > 0) {
+//         // Prepare data for Excel export matching the table columns
+//         // const excelData = allInvoices.map((invoice) => {
+//         //   const row = {};
+
+//         //   columns.forEach((column) => {
+//         //     const value = invoice[column.field];
+//         //     row[column.label] = value || "N/A";
+//         //   });
+
+//         //   return row;
+//         // });
+//         const excelData = allInvoices.map((invoice) => {
+//   const row = {};
+
+//   columns.forEach((column) => {
+//     const rawValue = invoice[column.field];
+//     const label = column.label.toLowerCase();
+
+//     if (
+//       label.includes("amount") ||
+//       label.includes("price") ||
+//       label.includes("total") ||
+//       label.includes("tax")
+//     ) {
+//       row[column.label] = formatCurrency(rawValue || 0);
+//     } else if (
+//       label.includes("date") ||
+//       column.field.toLowerCase().includes("date")
+//     ) {
+//       row[column.label] = rawValue ? formatDate(rawValue) : "N/A";
+//     } else {
+//       row[column.label] = rawValue ?? "N/A";
+//     }
+//   });
+
+//   return row;
+// });
+
+
+//         downloadExcel(excelData, `Invoices_${queryParams.status}`);
+//       } else {
+//         alert("No data available to export.");
+//       }
+//     } catch (error) {
+//       console.error("Failed to export to Excel:", error);
+//       alert("Failed to export data. Please try again.");
+//     }
+//   }, [router.query]);
+
   const handleExcelDownload = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
 
-      // Build query params with getAll=true
-      const queryParams = {
-        status: router.query.status || "all",
-        search: router.query.search || "",
-        sortField: router.query.sortField || "DocDate",
-        sortDir: router.query.sortDir || "desc",
-        fromDate: router.query.fromDate || "",
-        toDate: router.query.toDate || "",
-        getAll: "true",
-      };
+    // Define which fields are currency and which are dates
+    const currencyFields = new Set(["DocTotal", "VatSum"]);
+    const dateFields = new Set(["DocDate", "DocDueDate", "U_DispatchDate", "TaxDate"]);
 
-      const url = `/api/invoices/pendingDispatch?${new URLSearchParams(
-        queryParams
-      )}`;
+    // Build query params with getAll=true
+    const queryParams = {
+      status: router.query.status || "all",
+      search: router.query.search || "",
+      sortField: router.query.sortField || "DocDate",
+      sortDir: router.query.sortDir || "desc",
+      fromDate: router.query.fromDate || "",
+      toDate: router.query.toDate || "",
+      getAll: "true",
+    };
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+    const url = `/api/invoices/pendingDispatch?${new URLSearchParams(queryParams)}`;
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
-      }
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      const { invoices: allInvoices } = await response.json();
+    if (!response.ok) {
+      throw new Error(`Failed to fetch: ${response.status}`);
+    }
 
-      if (allInvoices && allInvoices.length > 0) {
-        // Prepare data for Excel export matching the table columns
-        const excelData = allInvoices.map((invoice) => {
-          const row = {};
+    const { invoices: allInvoices } = await response.json();
 
-          columns.forEach((column) => {
-            const value = invoice[column.field];
+    if (allInvoices && allInvoices.length > 0) {
+      // Prepare data for Excel export matching the table columns
+      const excelData = allInvoices.map((invoice) => {
+        const row = {};
+
+        columns.forEach((column) => {
+          const value = invoice[column.field];
+          
+          // Apply formatting based on field type
+          if (currencyFields.has(column.field) && value) {
+            row[column.label] = formatCurrency(value);
+          } else if (dateFields.has(column.field) && value) {
+            row[column.label] = formatDate(value);
+          } else {
             row[column.label] = value || "N/A";
-          });
-
-          return row;
+          }
         });
 
-        downloadExcel(excelData, `Invoices_${queryParams.status}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to export to Excel:", error);
-      alert("Failed to export data. Please try again.");
+        return row;
+      });
+
+      // Define column styles for Excel
+      const columnStyles = columns.map(column => {
+        const style = {};
+        
+        if (currencyFields.has(column.field)) {
+          style.cellFormat = '#,##0.00;[Red]-#,##0.00'; // Excel currency format
+        } else if (dateFields.has(column.field)) {
+          style.cellFormat = 'dd/mm/yyyy'; // Excel date format
+        }
+        
+        return style;
+      });
+
+      // Download with formatting
+      downloadExcel(
+        excelData, 
+        `PendingDispatchInvoices`,
+        columnStyles
+      );
+    } else {
+      alert("No data available to export.");
     }
-  }, [router.query]);
+  } catch (error) {
+    console.error("Failed to export to Excel:", error);
+    alert("Failed to export data. Please try again.");
+  }
+}, [router.query]);
 
   useEffect(() => {
     let isMounted = true;
