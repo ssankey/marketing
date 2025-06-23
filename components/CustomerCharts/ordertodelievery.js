@@ -1,10 +1,10 @@
 
-// // components/CustomerCharts/ordertodelivery.js
 // import React, { useState, useEffect, useRef, useCallback } from "react";
 // import { Bar } from "react-chartjs-2";
-// import { Card, Spinner, Table, Button, Dropdown } from "react-bootstrap";
+// import { Card, Spinner, Table, Button } from "react-bootstrap";
 // import Select from "react-select";
 // import debounce from "lodash/debounce";
+// import { useAuth } from 'contexts/AuthContext';
 // import {
 //   Chart as ChartJS,
 //   CategoryScale,
@@ -17,74 +17,57 @@
 
 // ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-// /* ------------------------------------------------------------------ */
-// /* helper APIs                                                         */
-// /* ------------------------------------------------------------------ */
 // const API_ENDPOINTS = {
-//   salesPerson: "/api/dashboard/sales-person/distinct-salesperson",
-//   category: "/api/products/categories",
-//   customer: "/api/customers/distinct-customer",
-//   product: "/api/products/distinct-product",
 //   contactPerson: "/api/dashboard/contact-person/distinct-contact-person",
 // };
 
 // export default function DeliveryPerformanceChart({ customerId }) {
-//   /* ------------------------------ state --------------------------- */
 //   const [data, setData] = useState([]);
 //   const [loading, setLoading] = useState(true);
+//   const { user } = useAuth();
+//   const [error, setError] = useState(null);
 
-//   const [searchType, setSearchType] = useState(null);
 //   const [suggestions, setSuggestions] = useState([]);
-//   const [loadingSuggestions, setLS] = useState(false);
+//   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 //   const [selectedValue, setSelectedValue] = useState(null);
 //   const [inputValue, setInputValue] = useState("");
 //   const cache = useRef({});
 
 //   const [filters, setFilters] = useState({
-//     salesPerson: null,
-//     category: null,
-//     customer: null,
-//     product: null,
 //     contactPerson: null,
 //   });
 
-//   /* ------------------------------------------------------------------
-//      decide which filter types are allowed on this page
-//      ‣ dashboard   : 4 filters
-//      ‣ customer page: only salesPerson & category
-//   ------------------------------------------------------------------ */
-//   const allowedTypes = customerId
-//     ? ["salesPerson", "category", "contactPerson"]
-//     : ["salesPerson", "category", "customer", "product", "contactPerson"];
-
-//   /* prevent stale searchType after navigation */
-//   useEffect(() => {
-//     if (searchType && !allowedTypes.includes(searchType)) {
-//       setSearchType(null);
-//       setSelectedValue(null);
-//       setInputValue("");
-//     }
-//   }, [searchType, allowedTypes]);
-
 //   const fetchData = async (active) => {
+//     if (!user) return;
+    
+//     const token = localStorage.getItem('token');
+//     if (!token) {
+//       console.error('No token found');
+//       setLoading(false);
+//       return;
+//     }
+
 //     setLoading(true);
 //     try {
 //       const params = new URLSearchParams();
-//       if (active.salesPerson) params.append("salesPerson", active.salesPerson);
-//       if (active.category) params.append("category", active.category);
-//       if (active.customer) params.append("customer", active.customer);
-//       if (active.product) params.append("product", active.product);
 //       if (active.contactPerson) params.append("contactPerson", active.contactPerson);
 
 //       const url = customerId
 //         ? `/api/customers/${customerId}/delivery-performance?${params}`
 //         : `/api/customers/all-delivery-performance?${params}`;
 
-//       const res = await fetch(url);
+//       const res = await fetch(url, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`
+//         }
+//       });
+      
 //       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 //       setData(await res.json());
+//       setError(null);
 //     } catch (err) {
 //       console.error("fetch error:", err);
+//       setError(err.message);
 //       setData([]);
 //     } finally {
 //       setLoading(false);
@@ -92,91 +75,62 @@
 //   };
 
 //   useEffect(() => {
+//     if (!user) return;
 //     fetchData(filters);
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, [customerId, filters]);
+//   }, [customerId, filters, user]);
 
-//   /* ------------------------------ suggestions --------------------- */
-//   const getSuggestions = async (q = "", initial = false) => {
-//     if (!searchType || !allowedTypes.includes(searchType)) return;
-//     if (!initial && !q) return;
+//   const getSuggestions = useCallback(debounce(async (q = "", initial = false) => {
+//     if (!q && !initial) return;
 
-//     const key = `${searchType}_${q}`;
+//     const token = localStorage.getItem('token');
+//     if (!token) return;
+
+//     const key = `contactPerson_${q}`;
 //     if (cache.current[key]) return setSuggestions(cache.current[key]);
 
-//     setLS(true);
+//     setLoadingSuggestions(true);
 //     try {
-//       const res = await fetch(`${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(q)}`);
+//       const res = await fetch(`${API_ENDPOINTS.contactPerson}?search=${encodeURIComponent(q)}`, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`
+//         }
+//       });
+      
 //       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 //       const json = await res.json();
 
-//       let opts = [];
-//       switch (searchType) {
-//         case "salesPerson":
-//           opts =
-//             json.salesEmployees?.map((e) => ({ value: e.value, label: `${e.value} - ${e.label}` })) ?? [];
-//           break;
-//         case "category":
-//           opts = json.categories?.map((c) => ({ value: c.value ?? c, label: c.label ?? c })) ?? [];
-//           break;
-//         case "customer":
-//           opts = json.customers?.map((c) => ({ value: c.value, label: c.label })) ?? [];
-//           break;
-//         case "product":
-//           opts = json.products?.map((p) => ({ value: p.value, label: p.label })) ?? [];
-//           break;
-//         case "contactPerson":
-//           opts = json.contactPersons?.map((c) => ({ value: c.value, label: c.label })) ?? [];
-//           break;
-//         default:
-//           break;
-//       }
+//       const opts = json.contactPersons?.map((c) => ({ 
+//         value: c.value, 
+//         label: c.label 
+//       })) ?? [];
+      
 //       cache.current[key] = opts;
 //       setSuggestions(opts);
 //     } catch (err) {
 //       console.error("suggestion error:", err);
 //       setSuggestions([]);
 //     } finally {
-//       setLS(false);
+//       setLoadingSuggestions(false);
 //     }
-//   };
-//   const debouncedFetch = useCallback(debounce(getSuggestions, 500), [searchType]);
+//   }, 500), []);
 
-//   /* ------------------------------ handlers ------------------------ */
-//   const chooseType = async (type) => {
-//     if (!allowedTypes.includes(type)) return; // guard
-//     setSearchType(type);
-//     setSelectedValue(null);
-//     setInputValue("");
-//     setSuggestions([]);
-//     await getSuggestions("", true);
-//   };
-
-//   // Fixed: Properly handle option selection
 //   const chooseOption = (opt) => {
 //     setSelectedValue(opt);
-//     // Clear input value when an option is selected to show the selected value properly
-//     setInputValue("");
+//     setInputValue(opt ? opt.label : "");
 //     setFilters((prev) => ({
 //       ...prev,
-//       [searchType]: opt ? opt.value : null,
+//       contactPerson: opt ? opt.value : null,
 //     }));
 //   };
 
 //   const resetAll = () => {
-//     setSearchType(null);
 //     setSelectedValue(null);
 //     setInputValue("");
 //     setFilters({
-//       salesPerson: null,
-//       category: null,
-//       customer: null,
-//       product: null,
-//       contactPerson: null, // Added this missing field
+//       contactPerson: null,
 //     });
 //   };
 
-//   /* ------------------------------ chart --------------------------- */
 //   const chartData = {
 //     labels: data.map((d) => d.month),
 //     datasets: [
@@ -212,15 +166,21 @@
 //     },
 //   };
 
-//   /* ------------------------------ render -------------------------- */
-//   const labelMap = {
-//     salesPerson: "Sales Person",
-//     category: "Category",
-//     customer: "Customer",
-//     product: "Product",
-//     contactPerson: "Contact Person",
-//   };
-//   const anyActive = Object.values(filters).some(Boolean);
+//   const anyActive = filters.contactPerson !== null;
+
+//   if (!user) {
+//     return null;
+//   }
+
+//   if (error) {
+//     return (
+//       <Card className="shadow-sm border-0 mb-4">
+//         <Card.Body>
+//           <div className="alert alert-danger">Error: {error}</div>
+//         </Card.Body>
+//       </Card>
+//     );
+//   }
 
 //   return (
 //     <Card className="shadow-sm border-0 mb-4">
@@ -232,30 +192,11 @@
 //           >
 //             Order → Invoice Performance
 //           </h4>
+          
 //           <div className="ms-auto d-flex gap-2 align-items-center">
-//             <Dropdown onSelect={chooseType}>
-//               <Dropdown.Toggle variant="outline-secondary" id="filter-type">
-//                 {searchType ? labelMap[searchType] : "Order By"}
-//               </Dropdown.Toggle>
-//               <Dropdown.Menu>
-//                 {allowedTypes.includes("salesPerson") && (
-//                   <Dropdown.Item eventKey="salesPerson">Sales Person</Dropdown.Item>
-//                 )}
-//                 {allowedTypes.includes("category") && (
-//                   <Dropdown.Item eventKey="category">Category</Dropdown.Item>
-//                 )}
-//                 {allowedTypes.includes("customer") && (
-//                   <Dropdown.Item eventKey="customer">Customer</Dropdown.Item>
-//                 )}
-//                 {allowedTypes.includes("product") && (
-//                   <Dropdown.Item eventKey="product">Product</Dropdown.Item>
-//                 )}
-//                 {allowedTypes.includes("contactPerson") && (
-//                   <Dropdown.Item eventKey="contactPerson">Contact Person</Dropdown.Item>
-//                 )}
-//               </Dropdown.Menu>
-//             </Dropdown>
-
+//             <Button variant="outline-secondary" disabled style={{ color: "#000", fontWeight: 500 }}>
+//               Order Placed By
+//             </Button>
 //             <div style={{ width: 300 }}>
 //               <Select
 //                 value={selectedValue}
@@ -264,19 +205,17 @@
 //                 onInputChange={(v, { action }) => {
 //                   if (action === "input-change") {
 //                     setInputValue(v);
-//                     debouncedFetch(v);
+//                     getSuggestions(v);
 //                   }
 //                 }}
-//                 onFocus={() => searchType && getSuggestions(inputValue, true)}
+//                 onFocus={() => getSuggestions(inputValue, true)}
 //                 options={suggestions}
 //                 isLoading={loadingSuggestions}
 //                 isClearable
-//                 isDisabled={!searchType}
-//                 placeholder={searchType ? `Search ${labelMap[searchType]}` : "Select filter type"}
+//                 placeholder="Search Contact Person"
 //               />
 //             </div>
-
-//             <Button variant="primary" onClick={resetAll} disabled={!anyActive && !searchType}>
+//             <Button variant="primary" onClick={resetAll} disabled={!anyActive}>
 //               Reset
 //             </Button>
 //           </div>
@@ -336,13 +275,291 @@
 //   );
 // }
 
-// components/CustomerCharts/ordertodelivery.js
+// import React, { useState, useEffect, useRef, useCallback } from "react";
+// import { Bar } from "react-chartjs-2";
+// import { Card, Spinner, Table, Button } from "react-bootstrap";
+// import Select from "react-select";
+// import debounce from "lodash/debounce";
+// import { useAuth } from 'contexts/AuthContext';
+// import {
+//   Chart as ChartJS,
+//   CategoryScale,
+//   LinearScale,
+//   BarElement,
+//   Title,
+//   Tooltip,
+//   Legend,
+// } from "chart.js";
+
+// ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+// const API_ENDPOINTS = {
+//   contactPerson: "/api/dashboard/contact-person/distinct-contact-person",
+// };
+
+// export default function DeliveryPerformanceChart({ customerId }) {
+//   const [data, setData] = useState([]);
+//   const [loading, setLoading] = useState(true);
+//   const { user } = useAuth();
+//   const [error, setError] = useState(null);
+
+//   const [suggestions, setSuggestions] = useState([]);
+//   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+//   const [selectedValue, setSelectedValue] = useState(null);
+//   // Remove inputValue state - let React Select handle it internally
+//   const cache = useRef({});
+
+//   const [filters, setFilters] = useState({
+//     contactPerson: null,
+//   });
+
+//   const fetchData = async (active) => {
+//     if (!user) return;
+    
+//     const token = localStorage.getItem('token');
+//     if (!token) {
+//       console.error('No token found');
+//       setLoading(false);
+//       return;
+//     }
+
+//     setLoading(true);
+//     try {
+//       const params = new URLSearchParams();
+//       if (active.contactPerson) params.append("contactPerson", active.contactPerson);
+
+//       const url = customerId
+//         ? `/api/customers/${customerId}/delivery-performance?${params}`
+//         : `/api/customers/all-delivery-performance?${params}`;
+
+//       const res = await fetch(url, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`
+//         }
+//       });
+      
+//       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//       setData(await res.json());
+//       setError(null);
+//     } catch (err) {
+//       console.error("fetch error:", err);
+//       setError(err.message);
+//       setData([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (!user) return;
+//     fetchData(filters);
+//   }, [customerId, filters, user]);
+
+//   const getSuggestions = useCallback(debounce(async (q = "", initial = false) => {
+//     if (!q && !initial) return;
+
+//     const token = localStorage.getItem('token');
+//     if (!token) return;
+
+//     const key = `contactPerson_${q}`;
+//     if (cache.current[key]) return setSuggestions(cache.current[key]);
+
+//     setLoadingSuggestions(true);
+//     try {
+//       const res = await fetch(`${API_ENDPOINTS.contactPerson}?search=${encodeURIComponent(q)}`, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`
+//         }
+//       });
+      
+//       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+//       const json = await res.json();
+
+//       const opts = json.contactPersons?.map((c) => ({ 
+//         value: c.value, 
+//         label: c.label 
+//       })) ?? [];
+      
+//       cache.current[key] = opts;
+//       setSuggestions(opts);
+//     } catch (err) {
+//       console.error("suggestion error:", err);
+//       setSuggestions([]);
+//     } finally {
+//       setLoadingSuggestions(false);
+//     }
+//   }, 500), []);
+
+//   const chooseOption = (opt) => {
+//     setSelectedValue(opt);
+//     setFilters((prev) => ({
+//       ...prev,
+//       contactPerson: opt ? opt.value : null,
+//     }));
+//   };
+
+//   const resetAll = () => {
+//     setSelectedValue(null);
+//     setFilters({
+//       contactPerson: null,
+//     });
+//   };
+
+//   // Handle input changes for search
+//   const handleInputChange = (inputValue, actionMeta) => {
+//     // Only trigger search when user is typing
+//     if (actionMeta.action === 'input-change') {
+//       getSuggestions(inputValue);
+//     }
+//   };
+
+//   const chartData = {
+//     labels: data.map((d) => d.month),
+//     datasets: [
+//       { label: "0–3 days", backgroundColor: "#4CAF50", data: data.map((d) => d.green) },
+//       { label: "4–5 days", backgroundColor: "#FF9800", data: data.map((d) => d.orange) },
+//       { label: "6–8 days", backgroundColor: "#2196F3", data: data.map((d) => d.blue) },
+//       { label: "9–10 days", backgroundColor: "#9C27B0", data: data.map((d) => d.purple) },
+//       { label: ">10 days", backgroundColor: "#F44336", data: data.map((d) => d.red) },
+//     ],
+//   };
+
+//   const chartOptions = {
+//     responsive: true,
+//     maintainAspectRatio: false,
+//     interaction: { mode: "index", intersect: false },
+//     plugins: {
+//       datalabels: { display: false },
+//       tooltip: {
+//         mode: "index",
+//         intersect: false,
+//         padding: 12,
+//         titleFont: { size: 16, weight: "bold" },
+//         bodyFont: { size: 14, weight: "bold" },
+//       },
+//       legend: { position: "top" },
+//     },
+//     scales: {
+//       x: { grid: { display: false } },
+//       y: {
+//         beginAtZero: true,
+//         title: { display: true, text: "Number of Orders" },
+//       },
+//     },
+//   };
+
+//   const anyActive = filters.contactPerson !== null;
+
+//   if (!user) {
+//     return null;
+//   }
+
+//   if (error) {
+//     return (
+//       <Card className="shadow-sm border-0 mb-4">
+//         <Card.Body>
+//           <div className="alert alert-danger">Error: {error}</div>
+//         </Card.Body>
+//       </Card>
+//     );
+//   }
+
+//   return (
+//     <Card className="shadow-sm border-0 mb-4">
+//       <Card.Header className="bg-white py-3">
+//         <div className="d-flex justify-content-between align-items-center">
+//           <h4
+//             className="mb-3 mb-md-0"
+//             style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+//           >
+//             Order → Invoice Performance
+//           </h4>
+          
+//           <div className="ms-auto d-flex gap-2 align-items-center">
+//             <Button variant="outline-secondary" disabled style={{ color: "#000", fontWeight: 500 }}>
+//               Order Placed By
+//             </Button>
+//             <div style={{ width: 300 }}>
+//               <Select
+//                 value={selectedValue}
+//                 onChange={chooseOption}
+//                 onInputChange={handleInputChange}
+//                 onFocus={() => getSuggestions("", true)}
+//                 options={suggestions}
+//                 isLoading={loadingSuggestions}
+//                 isClearable
+//                 placeholder="Search Contact Person"
+//                 // Additional props to ensure proper behavior
+//                 isSearchable={true}
+//                 filterOption={null} // Disable built-in filtering since we're doing server-side search
+//               />
+//             </div>
+//             <Button variant="primary" onClick={resetAll} disabled={!anyActive}>
+//               Reset
+//             </Button>
+//           </div>
+//         </div>
+//       </Card.Header>
+
+//       <Card.Body>
+//         {loading ? (
+//           <div
+//             className="d-flex justify-content-center align-items-center"
+//             style={{ height: 500 }}
+//           >
+//             <Spinner animation="border" role="status" className="me-2" />
+//             <span>Loading chart data...</span>
+//           </div>
+//         ) : data.length ? (
+//           <>
+//             <div className="chart-container" style={{ height: 500 }}>
+//               <Bar data={chartData} options={chartOptions} />
+//             </div>
+
+//             {/* Summary Table */}
+//             <div className="mt-4">
+//               <Table striped bordered hover responsive>
+//                 <thead>
+//                   <tr>
+//                     <th>Range / Month</th>
+//                     {data.map((d, i) => (
+//                       <th key={i}>{d.month}</th>
+//                     ))}
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   {[
+//                     ["0–3 Days", "green"],
+//                     ["4–5 Days", "orange"],
+//                     ["6–8 Days", "blue"],
+//                     ["9–10 Days", "purple"],
+//                     [">10 Days", "red"],
+//                   ].map(([lbl, key]) => (
+//                     <tr key={key}>
+//                       <td>{lbl}</td>
+//                       {data.map((d, i) => (
+//                         <td key={i}>{d[key]}</td>
+//                       ))}
+//                     </tr>
+//                   ))}
+//                 </tbody>
+//               </Table>
+//             </div>
+//           </>
+//         ) : (
+//           <p className="text-center m-0">No delivery performance data available</p>
+//         )}
+//       </Card.Body>
+//     </Card>
+//   );
+// }
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
 import { Card, Spinner, Table, Button, Dropdown } from "react-bootstrap";
 import Select from "react-select";
 import debounce from "lodash/debounce";
-import { useAuth } from 'contexts/AuthContext'; // Add this import
+import { useAuth } from 'contexts/AuthContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -355,58 +572,50 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-/* ------------------------------------------------------------------ */
-/* helper APIs                                                         */
-/* ------------------------------------------------------------------ */
 const API_ENDPOINTS = {
   salesPerson: "/api/dashboard/sales-person/distinct-salesperson",
   category: "/api/products/categories",
   customer: "/api/customers/distinct-customer",
-  product: "/api/products/distinct-product",
   contactPerson: "/api/dashboard/contact-person/distinct-contact-person",
 };
 
 export default function DeliveryPerformanceChart({ customerId }) {
-  /* ------------------------------ state --------------------------- */
+  const { user } = useAuth();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth(); // Add this line
+  const [error, setError] = useState(null);
 
-  const [searchType, setSearchType] = useState(null);
+  const isCustomer = user?.role === "contact_person";
+
+  // For customer view
   const [suggestions, setSuggestions] = useState([]);
   const [loadingSuggestions, setLS] = useState(false);
   const [selectedValue, setSelectedValue] = useState(null);
   const [inputValue, setInputValue] = useState("");
   const cache = useRef({});
 
+  // For non-customer view
+  const [searchType, setSearchType] = useState(null);
   const [filters, setFilters] = useState({
     salesPerson: null,
     category: null,
     customer: null,
-    product: null,
     contactPerson: null,
   });
 
-  /* ------------------------------------------------------------------
-     decide which filter types are allowed on this page
-     ‣ dashboard   : 4 filters
-     ‣ customer page: only salesPerson & category
-  ------------------------------------------------------------------ */
   const allowedTypes = customerId
     ? ["salesPerson", "category", "contactPerson"]
-    : ["salesPerson", "category", "customer", "product", "contactPerson"];
+    : ["salesPerson", "category", "customer", "contactPerson"];
 
-  /* prevent stale searchType after navigation */
   useEffect(() => {
-    if (searchType && !allowedTypes.includes(searchType)) {
+    if (!isCustomer && searchType && !allowedTypes.includes(searchType)) {
       setSearchType(null);
       setSelectedValue(null);
       setInputValue("");
     }
-  }, [searchType, allowedTypes]);
+  }, [searchType, allowedTypes, isCustomer]);
 
-  const fetchData = async (active) => {
-    // Early return if no user or token
+  const fetchData = async (activeFilters) => {
     if (!user) return;
     
     const token = localStorage.getItem('token');
@@ -416,29 +625,40 @@ export default function DeliveryPerformanceChart({ customerId }) {
       return;
     }
 
-    setLoading(true);
     try {
+      setLoading(true);
       const params = new URLSearchParams();
-      if (active.salesPerson) params.append("salesPerson", active.salesPerson);
-      if (active.category) params.append("category", active.category);
-      if (active.customer) params.append("customer", active.customer);
-      if (active.product) params.append("product", active.product);
-      if (active.contactPerson) params.append("contactPerson", active.contactPerson);
 
-      const url = customerId
-        ? `/api/customers/${customerId}/delivery-performance?${params}`
-        : `/api/customers/all-delivery-performance?${params}`;
+      if (isCustomer) {
+        // Customer view - only contact person filter
+        if (activeFilters.contactPerson) {
+          params.append("contactPerson", activeFilters.contactPerson);
+        }
+      } else {
+        // Non-customer view - multiple filters
+        if (activeFilters.salesPerson) params.append("salesPerson", activeFilters.salesPerson);
+        if (activeFilters.category) params.append("category", activeFilters.category);
+        if (!customerId && activeFilters.customer) params.append("customer", activeFilters.customer);
+        if (activeFilters.contactPerson) params.append("contactPerson", activeFilters.contactPerson);
+      }
 
-      const res = await fetch(url, {
+      const endpoint = customerId
+        ? `/api/customers/${customerId}/delivery-performance`
+        : `/api/customers/all-delivery-performance`;
+
+      const response = await fetch(`${endpoint}?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${token}` // Add authorization header
+          'Authorization': `Bearer ${token}`
         }
       });
       
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setData(await res.json());
+      if (!response.ok) throw new Error("Failed to fetch data");
+      const data = await response.json();
+      setData(data);
+      setError(null);
     } catch (err) {
-      console.error("fetch error:", err);
+      console.error("Error fetching data:", err);
+      setError(err.message);
       setData([]);
     } finally {
       setLoading(false);
@@ -446,51 +666,56 @@ export default function DeliveryPerformanceChart({ customerId }) {
   };
 
   useEffect(() => {
-    if (!user) return; // Don't fetch if no user
-    
     fetchData(filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [customerId, filters, user]); // Add user dependency
+  }, [customerId, filters, user]);
 
-  /* ------------------------------ suggestions --------------------- */
   const getSuggestions = async (q = "", initial = false) => {
-    if (!searchType || !allowedTypes.includes(searchType)) return;
-    if (!initial && !q) return;
+    if (!q && !initial) return;
 
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const key = `${searchType}_${q}`;
+    const type = isCustomer ? "contactPerson" : searchType;
+    if (!type) return;
+
+    const key = `${type}_${q}`;
     if (cache.current[key]) return setSuggestions(cache.current[key]);
 
     setLS(true);
     try {
-      const res = await fetch(`${API_ENDPOINTS[searchType]}?search=${encodeURIComponent(q)}`, {
+      const res = await fetch(`${API_ENDPOINTS[type]}?search=${encodeURIComponent(q)}`, {
         headers: {
-          'Authorization': `Bearer ${token}` // Add authorization header
+          'Authorization': `Bearer ${token}`
         }
       });
-      
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
 
       let opts = [];
-      switch (searchType) {
+      switch (type) {
         case "salesPerson":
-          opts =
-            json.salesEmployees?.map((e) => ({ value: e.value, label: `${e.value} - ${e.label}` })) ?? [];
+          opts = json.salesEmployees?.map((e) => ({ 
+            value: e.value, 
+            label: `${e.value} - ${e.label}` 
+          })) ?? [];
           break;
         case "category":
-          opts = json.categories?.map((c) => ({ value: c.value ?? c, label: c.label ?? c })) ?? [];
+          opts = json.categories?.map((c) => ({ 
+            value: c.value ?? c, 
+            label: c.label ?? c 
+          })) ?? [];
           break;
         case "customer":
-          opts = json.customers?.map((c) => ({ value: c.value, label: c.label })) ?? [];
-          break;
-        case "product":
-          opts = json.products?.map((p) => ({ value: p.value, label: p.label })) ?? [];
+          opts = json.customers?.map((c) => ({ 
+            value: c.value, 
+            label: c.label 
+          })) ?? [];
           break;
         case "contactPerson":
-          opts = json.contactPersons?.map((c) => ({ value: c.value, label: c.label })) ?? [];
+          opts = json.contactPersons?.map((c) => ({ 
+            value: c.value, 
+            label: c.label 
+          })) ?? [];
           break;
         default:
           break;
@@ -504,11 +729,31 @@ export default function DeliveryPerformanceChart({ customerId }) {
       setLS(false);
     }
   };
-  const debouncedFetch = useCallback(debounce(getSuggestions, 500), [searchType]);
 
-  /* ------------------------------ handlers ------------------------ */
+  const debouncedFetch = useCallback(debounce(getSuggestions, 500), [isCustomer, searchType]);
+
+  // For customer view
+  const chooseOption = (opt) => {
+    setSelectedValue(opt);
+    setInputValue(opt ? opt.label : "");
+    
+    if (isCustomer) {
+      setFilters(prev => ({
+        ...prev,
+        contactPerson: opt ? opt.value : null
+      }));
+    } else {
+      // For non-customer view, update the appropriate filter based on searchType
+      setFilters(prev => ({
+        ...prev,
+        [searchType]: opt ? opt.value : null
+      }));
+    }
+  };
+
+  // For non-customer view
   const chooseType = async (type) => {
-    if (!allowedTypes.includes(type)) return; // guard
+    if (!allowedTypes.includes(type)) return;
     setSearchType(type);
     setSelectedValue(null);
     setInputValue("");
@@ -516,31 +761,32 @@ export default function DeliveryPerformanceChart({ customerId }) {
     await getSuggestions("", true);
   };
 
-  // Fixed: Properly handle option selection
-  const chooseOption = (opt) => {
-    setSelectedValue(opt);
-    // Clear input value when an option is selected to show the selected value properly
-    setInputValue("");
-    setFilters((prev) => ({
-      ...prev,
-      [searchType]: opt ? opt.value : null,
-    }));
-  };
-
   const resetAll = () => {
-    setSearchType(null);
-    setSelectedValue(null);
-    setInputValue("");
-    setFilters({
-      salesPerson: null,
-      category: null,
-      customer: null,
-      product: null,
-      contactPerson: null,
-    });
+    if (isCustomer) {
+      setSelectedValue(null);
+      setInputValue("");
+      setFilters({ contactPerson: null });
+    } else {
+      setSearchType(null);
+      setSelectedValue(null);
+      setInputValue("");
+      setFilters({
+        salesPerson: null,
+        category: null,
+        customer: null,
+        contactPerson: null,
+      });
+    }
   };
 
-  /* ------------------------------ chart --------------------------- */
+  // Handle input changes for search
+  const handleInputChange = (inputValue, actionMeta) => {
+    if (actionMeta.action === 'input-change') {
+      setInputValue(inputValue);
+      debouncedFetch(inputValue);
+    }
+  };
+
   const chartData = {
     labels: data.map((d) => d.month),
     datasets: [
@@ -576,19 +822,27 @@ export default function DeliveryPerformanceChart({ customerId }) {
     },
   };
 
-  /* ------------------------------ render -------------------------- */
   const labelMap = {
     salesPerson: "Sales Person",
     category: "Category",
     customer: "Customer",
-    product: "Product",
     contactPerson: "Contact Person",
   };
-  const anyActive = Object.values(filters).some(Boolean);
 
-  // Don't render anything if no user
-  if (!user) {
-    return null;
+  const anyActive = isCustomer 
+    ? filters.contactPerson !== null
+    : Object.values(filters).some(Boolean);
+
+  if (!user) return null;
+
+  if (error) {
+    return (
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Body>
+          <div className="alert alert-danger">Error: {error}</div>
+        </Card.Body>
+      </Card>
+    );
   }
 
   return (
@@ -601,49 +855,71 @@ export default function DeliveryPerformanceChart({ customerId }) {
           >
             Order → Invoice Performance
           </h4>
+          
           <div className="ms-auto d-flex gap-2 align-items-center">
-            <Dropdown onSelect={chooseType}>
-              <Dropdown.Toggle variant="outline-secondary" id="filter-type">
-                {searchType ? labelMap[searchType] : "Order By"}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                {allowedTypes.includes("salesPerson") && (
-                  <Dropdown.Item eventKey="salesPerson">Sales Person</Dropdown.Item>
-                )}
-                {allowedTypes.includes("category") && (
-                  <Dropdown.Item eventKey="category">Category</Dropdown.Item>
-                )}
-                {allowedTypes.includes("customer") && (
-                  <Dropdown.Item eventKey="customer">Customer</Dropdown.Item>
-                )}
-                {allowedTypes.includes("product") && (
-                  <Dropdown.Item eventKey="product">Product</Dropdown.Item>
-                )}
-                {allowedTypes.includes("contactPerson") && (
-                  <Dropdown.Item eventKey="contactPerson">Contact Person</Dropdown.Item>
-                )}
-              </Dropdown.Menu>
-            </Dropdown>
+            {isCustomer ? (
+              <>
+                <Button variant="outline-secondary" disabled style={{ color: "#000", fontWeight: 500 }}>
+                  Order Placed By
+                </Button>
+                <div style={{ width: 300 }}>
+                  <Select
+                    value={selectedValue}
+                    onChange={chooseOption}
+                    onInputChange={(v, { action }) => {
+                      if (action === "input-change") debouncedFetch(v);
+                    }}
+                    onFocus={() => getSuggestions("", true)}
+                    options={suggestions}
+                    isLoading={loadingSuggestions}
+                    isClearable
+                    placeholder="Search Contact Person"
+                    isSearchable={true}
+                    filterOption={null}
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <Dropdown onSelect={chooseType}>
+                  <Dropdown.Toggle variant="outline-secondary" id="filter-type">
+                    {searchType ? labelMap[searchType] : "Order By"}
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu>
+                    {allowedTypes.includes("salesPerson") && (
+                      <Dropdown.Item eventKey="salesPerson">Sales Person</Dropdown.Item>
+                    )}
+                    {allowedTypes.includes("category") && (
+                      <Dropdown.Item eventKey="category">Category</Dropdown.Item>
+                    )}
+                    {allowedTypes.includes("customer") && !customerId && (
+                      <Dropdown.Item eventKey="customer">Customer</Dropdown.Item>
+                    )}
+                    {allowedTypes.includes("contactPerson") && (
+                      <Dropdown.Item eventKey="contactPerson">Contact Person</Dropdown.Item>
+                    )}
+                  </Dropdown.Menu>
+                </Dropdown>
 
-            <div style={{ width: 300 }}>
-              <Select
-                value={selectedValue}
-                inputValue={inputValue}
-                onChange={chooseOption}
-                onInputChange={(v, { action }) => {
-                  if (action === "input-change") {
-                    setInputValue(v);
-                    debouncedFetch(v);
-                  }
-                }}
-                onFocus={() => searchType && getSuggestions(inputValue, true)}
-                options={suggestions}
-                isLoading={loadingSuggestions}
-                isClearable
-                isDisabled={!searchType}
-                placeholder={searchType ? `Search ${labelMap[searchType]}` : "Select filter type"}
-              />
-            </div>
+                <div style={{ width: 300 }}>
+                  <Select
+                    value={selectedValue}
+                    onChange={chooseOption}
+                    onInputChange={(v, { action }) => {
+                      if (action === "input-change") debouncedFetch(v);
+                    }}
+                    onFocus={() => searchType && getSuggestions("", true)}
+                    options={suggestions}
+                    isLoading={loadingSuggestions}
+                    isClearable
+                    isDisabled={!searchType}
+                    placeholder={searchType ? `Search ${labelMap[searchType]}` : "Select filter type"}
+                    isSearchable={true}
+                    filterOption={null}
+                  />
+                </div>
+              </>
+            )}
 
             <Button variant="primary" onClick={resetAll} disabled={!anyActive && !searchType}>
               Reset
@@ -661,7 +937,7 @@ export default function DeliveryPerformanceChart({ customerId }) {
             <Spinner animation="border" role="status" className="me-2" />
             <span>Loading chart data...</span>
           </div>
-        ) : data.length ? (
+        ) : data.length > 0 ? (
           <>
             <div className="chart-container" style={{ height: 500 }}>
               <Bar data={chartData} options={chartOptions} />

@@ -1,6 +1,3 @@
-
-// // pages/api/monthly-orders.js
-
 // import { verify } from 'jsonwebtoken';
 // import sql from 'mssql';
 // import { queryDatabase } from '../../lib/db';
@@ -8,7 +5,7 @@
 
 // export default async function handler(req, res) {
 //     try {
-//         const { year, slpCode, itmsGrpCod, itemCode } = req.query;
+//         const { year, slpCode, itmsGrpCod, itemCode, cardCode, contactPerson } = req.query;
 //         const authHeader = req.headers.authorization;
 
 //         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -27,12 +24,9 @@
 //         const isAdmin = decoded.role === 'admin';
 //         const contactCodes = decoded.contactCodes || [];
 //         const cardCodes = decoded.cardCodes || [];
-        
 
-//         // Create a cache key based on the request parameters and user access
-//         const cacheKey = `monthly-orders:${year || 'all'}:${slpCode || 'all'}:${itmsGrpCod || 'all'}:${itemCode || 'all'}:${isAdmin ? 'admin' : contactCodes.join(',')}`;
-        
-//         // Try to get data from cache first
+//         const cacheKey = `monthly-orders:${year || 'all'}:${slpCode || 'all'}:${itmsGrpCod || 'all'}:${itemCode || 'all'}:${cardCode || 'all'}:${contactPerson || 'all'}:${isAdmin ? 'admin' : contactCodes.join(',')}`;
+
 //         const cachedData = await getCache(cacheKey);
 //         if (cachedData) {
 //             return res.status(200).json(cachedData);
@@ -64,7 +58,6 @@
 //         }
 
 //         if (itmsGrpCod) {
-//             // Use an EXISTS subquery to filter by item group name
 //             whereClauses.push(`EXISTS (
 //                 SELECT 1 FROM RDR1 T1 
 //                 INNER JOIN OITM T2 ON T1.ItemCode = T2.ItemCode 
@@ -76,7 +69,6 @@
 //         }
 
 //         if (itemCode) {
-//             // Use an EXISTS subquery to filter by item code
 //             whereClauses.push(`EXISTS (
 //                 SELECT 1 FROM RDR1 T1 
 //                 WHERE T1.DocEntry = T0.DocEntry 
@@ -85,28 +77,29 @@
 //             params.push({ name: 'itemCode', type: sql.VarChar, value: itemCode });
 //         }
 
-//         if (!isAdmin) {
-//           if (contactCodes.length > 0) {
-//             whereClauses.push(
-//               `T0.SlpCode IN (${contactCodes
-//                 .map((code) => `'${code}'`)
-//                 .join(",")})`
-//             );
-//           } else if (cardCodes.length > 0) {
-//             whereClauses.push(
-//               `T0.CardCode IN (${cardCodes
-//                 .map((code) => `'${code}'`)
-//                 .join(",")})`
-//             );
-//           }
+//         if (cardCode) {
+//             whereClauses.push(`T0.CardCode = @cardCode`);
+//             params.push({ name: 'cardCode', type: sql.VarChar, value: cardCode });
 //         }
 
-  
+//         if (contactPerson) {
+//             whereClauses.push(`T0.CntctCode = @contactPerson`);
+//             params.push({ name: 'contactPerson', type: sql.Int, value: parseInt(contactPerson) });
+//         }
 
-//         // Add base WHERE clause
+//         if (!isAdmin) {
+//             if (contactCodes.length > 0) {
+//                 whereClauses.push(
+//                     `T0.SlpCode IN (${contactCodes.map((code) => `'${code}'`).join(",")})`
+//                 );
+//             } else if (cardCodes.length > 0) {
+//                 whereClauses.push(
+//                     `T0.CardCode IN (${cardCodes.map((code) => `'${code}'`).join(",")})`
+//                 );
+//             }
+//         }
+
 //         whereClauses.push(`T0.CANCELED = 'N'`);
-
-//         // Combine all WHERE clauses
 //         baseQuery += ` WHERE ${whereClauses.join(' AND ')}`;
 
 //         const fullQuery = `
@@ -131,11 +124,10 @@
 //             closedSales: parseFloat(row.closedSales) || 0,
 //         }));
 
-//         // Get available years for filtering - also cache this separately with longer expiration
 //         let availableYears;
 //         const yearsKey = 'monthly-orders:available-years';
 //         const cachedYears = await getCache(yearsKey);
-        
+
 //         if (cachedYears) {
 //             availableYears = cachedYears;
 //         } else {
@@ -147,16 +139,11 @@
 //             `;
 //             const yearsResult = await queryDatabase(yearsQuery);
 //             availableYears = yearsResult.map(row => row.year);
-            
-//             // Cache available years for 24 hours (86400 seconds)
 //             await setCache(yearsKey, availableYears, 86400);
 //         }
 
 //         const responseData = { data, availableYears };
-        
-//         // Cache the response - using different TTLs based on query type
-//         // Year-specific queries are cached for longer since historical data rarely changes
-//         const cacheTTL = year ? 3600 : 1800; // 1 hour for year queries, 30 minutes for current/all data
+//         const cacheTTL = year ? 3600 : 1800;
 //         await setCache(cacheKey, responseData, cacheTTL);
 
 //         return res.status(200).json(responseData);
@@ -204,16 +191,57 @@ export default async function handler(req, res) {
             return res.status(200).json(cachedData);
         }
 
+        // Build the base query with CTE to pre-calculate order status
         let baseQuery = `
-            SELECT 
-                YEAR(T0.DocDate) AS year,
-                DATENAME(MONTH, T0.DocDate) AS month,
-                MONTH(T0.DocDate) AS monthNumber,
-                SUM(CASE WHEN T0.DocStatus = 'O' THEN 1 ELSE 0 END) AS openOrders,
-                SUM(CASE WHEN T0.DocStatus = 'C' THEN 1 ELSE 0 END) AS closedOrders,
-                SUM(CASE WHEN T0.DocStatus = 'O' THEN T0.DocTotal ELSE 0 END) AS openSales,
-                SUM(CASE WHEN T0.DocStatus = 'C' THEN T0.DocTotal ELSE 0 END) AS closedSales
-            FROM ORDR T0
+            WITH OrderStatusCTE AS (
+                SELECT 
+                    T0.DocEntry,
+                    T0.DocDate,
+                    T0.DocTotal,
+                    CASE 
+                        WHEN (
+                            T0.DocStatus = 'O'
+                            AND EXISTS (
+                                SELECT 1
+                                FROM RDR1 T1
+                                LEFT JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry
+                                               AND T1.LineNum = DLN1.BaseLine
+                                               AND DLN1.BaseType = 17
+                                LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry
+                                               AND DLN1.LineNum = INV1.BaseLine
+                                               AND INV1.BaseType = 15
+                                LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry
+                                               AND OINV.CANCELED = 'N'
+                                WHERE T1.DocEntry = T0.DocEntry
+                                  AND OINV.DocNum IS NOT NULL
+                                  AND CAST(OINV.DocNum AS VARCHAR) <> 'N/A'
+                            )
+                            AND EXISTS (
+                                SELECT 1
+                                FROM RDR1 T1
+                                LEFT JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry
+                                               AND T1.LineNum = DLN1.BaseLine
+                                               AND DLN1.BaseType = 17
+                                LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry
+                                               AND DLN1.LineNum = INV1.BaseLine
+                                               AND INV1.BaseType = 15
+                                LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry
+                                               AND OINV.CANCELED = 'N'
+                                WHERE T1.DocEntry = T0.DocEntry
+                                  AND (
+                                    OINV.DocNum IS NULL
+                                    OR CAST(OINV.DocNum AS VARCHAR) = 'N/A'
+                                  )
+                            )
+                        )
+                        THEN 'Partial'
+                        WHEN (T0.DocStatus='C' AND T0.CANCELED='N') THEN 'Closed'
+                        WHEN (T0.DocStatus='C' AND T0.CANCELED='Y') THEN 'Cancelled'
+                        WHEN T0.DocStatus='O' THEN 'Open'
+                        ELSE 'NA'
+                    END AS OrderStatus
+                FROM ORDR T0
+                WHERE T0.CANCELED = 'N'
         `;
 
         let whereClauses = [];
@@ -260,28 +288,44 @@ export default async function handler(req, res) {
         }
 
         if (!isAdmin) {
-            if (contactCodes.length > 0) {
-                whereClauses.push(
-                    `T0.SlpCode IN (${contactCodes.map((code) => `'${code}'`).join(",")})`
-                );
-            } else if (cardCodes.length > 0) {
+            // Use cardCodes for customer login
+            if (cardCodes.length > 0) {
                 whereClauses.push(
                     `T0.CardCode IN (${cardCodes.map((code) => `'${code}'`).join(",")})`
+                );
+            } 
+            // Use contactCodes for salesperson login (only if no cardCodes)
+            else if (contactCodes.length > 0) {
+                whereClauses.push(
+                    `T0.SlpCode IN (${contactCodes.map((code) => `'${code}'`).join(",")})`
                 );
             }
         }
 
-        whereClauses.push(`T0.CANCELED = 'N'`);
-        baseQuery += ` WHERE ${whereClauses.join(' AND ')}`;
+        // Add additional WHERE clauses to the CTE
+        if (whereClauses.length > 0) {
+            baseQuery += ` AND ${whereClauses.join(' AND ')}`;
+        }
 
+        // Complete the query with the main SELECT
         const fullQuery = `
             ${baseQuery}
+            )
+            SELECT 
+                YEAR(DocDate) AS year,
+                DATENAME(MONTH, DocDate) AS month,
+                MONTH(DocDate) AS monthNumber,
+                SUM(CASE WHEN OrderStatus = 'Open' THEN 1 ELSE 0 END) AS openOrders,
+                SUM(CASE WHEN OrderStatus = 'Closed' THEN 1 ELSE 0 END) AS closedOrders,
+                SUM(CASE WHEN OrderStatus = 'Open' THEN DocTotal ELSE 0 END) AS openSales,
+                SUM(CASE WHEN OrderStatus = 'Closed' THEN DocTotal ELSE 0 END) AS closedSales
+            FROM OrderStatusCTE
             GROUP BY 
-                YEAR(T0.DocDate),
-                DATENAME(MONTH, T0.DocDate),
-                MONTH(T0.DocDate)
+                YEAR(DocDate),
+                DATENAME(MONTH, DocDate),
+                MONTH(DocDate)
             ORDER BY 
-                YEAR(T0.DocDate), MONTH(T0.DocDate)
+                YEAR(DocDate), MONTH(DocDate)
         `;
 
         const results = await queryDatabase(fullQuery, params);

@@ -27,12 +27,11 @@ export default async function handler(req, res) {
         T1.VendorNum                     AS [Vendor Catalog No.],
         T1.U_Packsize                    AS [PKZ],
         T4.Quantity                      AS [Qty],
-        CASE 
-          WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-          WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'Y' THEN 'Cancelled'
-          WHEN T0.DocStatus = 'O' THEN 'Open'
-          ELSE 'NA'
-        END                              AS [STATU],
+         CASE 
+                WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'Y' THEN 'Cancelled'
+                WHEN T0.DocNum IS NOT NULL THEN 'Closed'
+                ELSE 'Open'
+                END AS "STATUS",
         T0.DocNum                        AS [Inv#],
         T0.DocDate                       AS [Invoice Posting Dt.],
         T0.TrackNo                       AS [Tracking Number],
