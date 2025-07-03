@@ -1,6 +1,3 @@
-
-
-
 // OrdersChart.js
 import React, { useState, useEffect, useRef } from "react";
 import { Bar } from "react-chartjs-2";
@@ -65,11 +62,20 @@ const OrdersChart = () => {
 
   // Filters and search query
   const [searchQuery, setSearchQuery] = useState("");
+  // const [filters, setFilters] = useState({
+  //   salesPerson: null,
+  //   category: null,
+  //   product: null,
+  // });
+
   const [filters, setFilters] = useState({
-    salesPerson: null,
-    category: null,
-    product: null,
-  });
+  salesPerson: null,
+  contactPerson: null,
+  category: null,
+  product: null,
+  customer: null,
+});
+
 
   // ----------------------------------
   // Refs and other hooks
@@ -80,55 +86,106 @@ const OrdersChart = () => {
   // ----------------------------------
   // Fetch data
   // ----------------------------------
+  // const fetchOrdersData = async () => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+
+  //     const token = localStorage.getItem("token");
+  //     const queryParams = new URLSearchParams();
+
+  //     if (filters.salesPerson?.value) {
+  //       queryParams.append("slpCode", filters.salesPerson.value);
+  //     }
+  //     if (filters.category?.value) {
+  //       queryParams.append("itmsGrpCod", filters.category.value);
+  //     }
+  //     if (filters.product?.value) {
+  //       queryParams.append("itemCode", filters.product.value);
+  //     }
+
+  //     const response = await fetch(`/api/monthly-orders?${queryParams}`, {
+  //       headers: { Authorization: `Bearer ${token}` },
+  //     });
+
+  //     // if (!response.ok) {
+  //     //   throw new Error("Failed to fetch orders data");
+  //     // }
+
+  //     if (!response.ok) {
+  //       const text = await response.text();
+  //       console.error("Failed response text:", text); // 🪵 This will show the backend error
+  //       throw new Error("Failed to fetch orders data");
+  //     }
+
+  //     const { data } = await response.json();
+  //     // Sort data chronologically
+  //     const sortedData = data.sort((a, b) => {
+  //       const dateA = new Date(a.year, monthMapping[a.month]);
+  //       const dateB = new Date(b.year, monthMapping[b.month]);
+  //       return dateA - dateB;
+  //     });
+
+  //     setOrdersData(sortedData);
+  //   } catch (err) {
+  //     console.error("Error fetching orders data:", err);
+  //     setError(err.message);
+  //     setOrdersData([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchOrdersData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  try {
+    setLoading(true);
+    setError(null);
 
-      const token = localStorage.getItem("token");
-      const queryParams = new URLSearchParams();
+    const token = localStorage.getItem("token");
+    const queryParams = new URLSearchParams();
 
-      if (filters.salesPerson?.value) {
-        queryParams.append("slpCode", filters.salesPerson.value);
-      }
-      if (filters.category?.value) {
-        queryParams.append("itmsGrpCod", filters.category.value);
-      }
-      if (filters.product?.value) {
-        queryParams.append("itemCode", filters.product.value);
-      }
-
-      const response = await fetch(`/api/monthly-orders?${queryParams}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      // if (!response.ok) {
-      //   throw new Error("Failed to fetch orders data");
-      // }
-
-      if (!response.ok) {
-        const text = await response.text();
-        console.error("Failed response text:", text); // 🪵 This will show the backend error
-        throw new Error("Failed to fetch orders data");
-      }
-
-      const { data } = await response.json();
-      // Sort data chronologically
-      const sortedData = data.sort((a, b) => {
-        const dateA = new Date(a.year, monthMapping[a.month]);
-        const dateB = new Date(b.year, monthMapping[b.month]);
-        return dateA - dateB;
-      });
-
-      setOrdersData(sortedData);
-    } catch (err) {
-      console.error("Error fetching orders data:", err);
-      setError(err.message);
-      setOrdersData([]);
-    } finally {
-      setLoading(false);
+    if (filters.salesPerson?.value) {
+      queryParams.append("slpCode", filters.salesPerson.value);
     }
-  };
+    if (filters.contactPerson?.value) {
+      queryParams.append("contactPerson", filters.contactPerson.value);
+    }
+    if (filters.category?.value) {
+      queryParams.append("itmsGrpCod", filters.category.value);
+    }
+    if (filters.product?.value) {
+      queryParams.append("itemCode", filters.product.value);
+    }
+    if (filters.customer?.value) {
+      queryParams.append("cardCode", filters.customer.value);
+    }
+
+    const response = await fetch(`/api/monthly-orders?${queryParams}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("Failed response text:", text);
+      throw new Error("Failed to fetch orders data");
+    }
+
+    const { data } = await response.json();
+    const sortedData = data.sort((a, b) => {
+      const dateA = new Date(a.year, monthMapping[a.month]);
+      const dateB = new Date(b.year, monthMapping[b.month]);
+      return dateA - dateB;
+    });
+
+    setOrdersData(sortedData);
+  } catch (err) {
+    console.error("Error fetching orders data:", err);
+    setError(err.message);
+    setOrdersData([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Re-fetch data whenever filters change
   useEffect(() => {
@@ -180,7 +237,6 @@ const OrdersChart = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      // Turn off data labels display on the bars
       datalabels: {
         display: false,
       },
@@ -188,13 +244,10 @@ const OrdersChart = () => {
         backgroundColor: "#212529",
         callbacks: {
           label: (context) => {
-            // We have just one dataset, so context.dataset.label is "Open Orders"
             const datasetLabel = context.dataset.label;
-            const numOrders = context.raw; // the raw bar value (openOrders)
+            const numOrders = context.raw;
             const dataIndex = context.dataIndex;
             const dataPoint = ordersData[dataIndex];
-
-            // Show openOrders and openSales in the tooltip
             return `${datasetLabel}: ${numOrders} (Sales: ${formatCurrency(
               dataPoint.openSales
             )})`;
@@ -206,11 +259,11 @@ const OrdersChart = () => {
       },
     },
     hover: {
-      onHover: (event, elements) => {
-        if (elements.length > 0) {
-          event.native.target.style.cursor = "pointer";
-        } else {
-          event.native.target.style.cursor = "default";
+      mode: "nearest",
+      intersect: true,
+      onHover: (event, elements, chart) => {
+        if (chart && chart.canvas) {
+          chart.canvas.style.cursor = elements.length ? "pointer" : "default";
         }
       },
     },
@@ -219,12 +272,15 @@ const OrdersChart = () => {
         const dataIndex = elements[0].index;
         const { year, month } = ordersData[dataIndex];
         const status = "open";
-
-        // Convert month name to numeric index
         const monthIndex =
           new Date(Date.parse(`${month} 1, ${year}`)).getMonth() + 1;
         const fromDate = `${year}-${String(monthIndex).padStart(2, "0")}-01`;
-        const toDate = new Date(year, monthIndex, 0).toISOString().split("T")[0];
+        // const toDate = new Date(year, monthIndex, 0)
+        //   .toISOString()
+        //   .split("T")[0];
+        const toDate = new Date(year, monthIndex, 0)
+  .toLocaleDateString("en-CA");  // "2025-06-30"
+
 
         router.push({
           pathname: "/orders",
@@ -238,10 +294,7 @@ const OrdersChart = () => {
       }
     },
   };
-
-  // ----------------------------------
-  // CSV Export (unchanged, optional)
-  // ----------------------------------
+ 
   const exportToCSV = () => {
     if (!ordersData.length) return;
     const csvData = [
@@ -267,75 +320,125 @@ const OrdersChart = () => {
   // Render
   // ----------------------------------
   return (
-    <Card className="shadow-sm border-0 mb-4">
-      <Card.Header className="bg-white py-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-          <h4
-            className="mb-3 mb-md-0"
-            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
-          >
-            Monthly Open Orders
-          </h4>
-          <div className="ms-auto">
+    <>
+      <style jsx global>{`
+        .ordersChartWrapper canvas:hover {
+          cursor: pointer !important;
+        }
+      `}</style>
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Header className="bg-white py-3">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <h4
+              className="mb-3 mb-md-0"
+              style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
+            >
+              Monthly Open Orders
+            </h4>
+            <div className="ms-auto">
+              {/* <AllFilter
+                searchQuery={searchQuery}
+                setSearchQuery={(value) => {
+                  if (value) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      [value.type === "sales-person"
+                        ? "salesPerson"
+                        : value.type]: {
+                        value: value.value,
+                        label: value.label,
+                      },
+                    }));
+                  } else {
+                    // Reset all filters when cleared
+                    setFilters({
+                      salesPerson: null,
+                      category: null,
+                      product: null,
+                    });
+                  }
+                }}
+              /> */}
+               
             <AllFilter
-              searchQuery={searchQuery}
+              allowedTypes={["sales-person", "contact-person", "product", "category", "customer"]}
               setSearchQuery={(value) => {
                 if (value) {
                   setFilters((prev) => ({
                     ...prev,
-                    [value.type === "sales-person" ? "salesPerson" : value.type]:
-                      {
+                    [value.type === "sales-person" ? "salesPerson" : 
+                    value.type === "contact-person" ? "contactPerson" : 
+                    value.type === "customer" ? "customer" : value.type]: 
+                      value.value ? {
                         value: value.value,
                         label: value.label,
-                      },
+                      } : null
                   }));
                 } else {
                   // Reset all filters when cleared
                   setFilters({
                     salesPerson: null,
+                    contactPerson: null,
                     category: null,
                     product: null,
+                    customer: null,
                   });
                 }
               }}
             />
-          </div>
-        </div>
-      </Card.Header>
-
-      <Card.Body>
-        {/* Show error if any */}
-        {error && <p className="text-danger mb-3">Error: {error}</p>}
-
-        {/* Show loading spinner */}
-        {loading ? (
-          <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "500px" }}
-          >
-            <Spinner animation="border" role="status" className="me-2">
-              <span className="visually-hidden">Loading...</span>
-            </Spinner>
-            <span>Loading chart data...</span>
-          </div>
-        ) : ordersData.length ? (
-          <>
-            <div
-              className="chart-container"
-              style={{ height: "500px", width: "100%" }}
-            >
-              <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
             </div>
-            {/* Example button for CSV export, if desired */}
-            {/* <Button variant="outline-primary" className="mt-3" onClick={exportToCSV}>
+          </div>
+        </Card.Header>
+
+        <Card.Body>
+          {/* Show error if any */}
+          {error && <p className="text-danger mb-3">Error: {error}</p>}
+
+          {/* Show loading spinner */}
+          {loading ? (
+            <div
+              className="d-flex justify-content-center align-items-center"
+              style={{ height: "500px" }}
+            >
+              <Spinner animation="border" role="status" className="me-2">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+              <span>Loading chart data...</span>
+            </div>
+          ) : ordersData.length ? (
+            <>
+              <div
+                className="chart-container"
+                style={{ height: "500px", width: "100%" }}
+              >
+                {/* <Bar
+                  ref={chartRef}
+                  data={ordersChartData}
+                  options={ordersChartOptions}
+                /> */}
+                <div
+                  className="ordersChartWrapper"
+                  style={{ height: 500, width: "100%" }}
+                >
+                  <Bar
+                    ref={chartRef}
+                    data={ordersChartData}
+                    options={ordersChartOptions}
+                  />
+                </div>
+              </div>
+              {/* Example button for CSV export, if desired */}
+              {/* <Button variant="outline-primary" className="mt-3" onClick={exportToCSV}>
               Export CSV
             </Button> */}
-          </>
-        ) : (
-          <p className="text-center mt-4">No data available.</p>
-        )}
-      </Card.Body>
-    </Card>
+            </>
+          ) : (
+            <p className="text-center mt-4">No data available.</p>
+          )}
+        </Card.Body>
+      </Card>
+    </>
+    
   );
 };
 
