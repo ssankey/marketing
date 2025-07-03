@@ -29,7 +29,7 @@ export default async function handler(req, res) {
         T4.Quantity                      AS [Qty],
          CASE 
                 WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'Y' THEN 'Cancelled'
-                WHEN T0.DocNum IS NOT NULL THEN 'Closed'
+                WHEN T0.DocNum IS NOT NULL THEN 'Invoiced'
                 ELSE 'Open'
                 END AS "STATUS",
         T0.DocNum                        AS [Inv#],

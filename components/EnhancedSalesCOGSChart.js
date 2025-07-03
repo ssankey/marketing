@@ -169,7 +169,7 @@ const EnhancedSalesCOGSChart = () => {
   };
 
   let finalDatasets = [salesDataset, invoiceCountDataset];
-  if (user?.role === 'admin') {
+  if (user?.role === 'admin'  || user?.role === 'sales_person') {
     finalDatasets = [
       invoiceCountDataset,
       salesDataset,

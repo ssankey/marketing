@@ -1,6 +1,3 @@
-
-
-
 // OrdersChart.js
 import React, { useState, useEffect, useRef } from "react";
 import { Bar } from "react-chartjs-2";
@@ -278,9 +275,12 @@ const OrdersChart = () => {
         const monthIndex =
           new Date(Date.parse(`${month} 1, ${year}`)).getMonth() + 1;
         const fromDate = `${year}-${String(monthIndex).padStart(2, "0")}-01`;
+        // const toDate = new Date(year, monthIndex, 0)
+        //   .toISOString()
+        //   .split("T")[0];
         const toDate = new Date(year, monthIndex, 0)
-          .toISOString()
-          .split("T")[0];
+  .toLocaleDateString("en-CA");  // "2025-06-30"
+
 
         router.push({
           pathname: "/orders",
@@ -438,75 +438,7 @@ const OrdersChart = () => {
         </Card.Body>
       </Card>
     </>
-    // <Card className="shadow-sm border-0 mb-4">
-    //   <Card.Header className="bg-white py-3">
-    //     <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-    //       <h4
-    //         className="mb-3 mb-md-0"
-    //         style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
-    //       >
-    //         Monthly Open Orders
-    //       </h4>
-    //       <div className="ms-auto">
-    //         <AllFilter
-    //           searchQuery={searchQuery}
-    //           setSearchQuery={(value) => {
-    //             if (value) {
-    //               setFilters((prev) => ({
-    //                 ...prev,
-    //                 [value.type === "sales-person" ? "salesPerson" : value.type]:
-    //                   {
-    //                     value: value.value,
-    //                     label: value.label,
-    //                   },
-    //               }));
-    //             } else {
-    //               // Reset all filters when cleared
-    //               setFilters({
-    //                 salesPerson: null,
-    //                 category: null,
-    //                 product: null,
-    //               });
-    //             }
-    //           }}
-    //         />
-    //       </div>
-    //     </div>
-    //   </Card.Header>
-
-    //   <Card.Body>
-    //     {/* Show error if any */}
-    //     {error && <p className="text-danger mb-3">Error: {error}</p>}
-
-    //     {/* Show loading spinner */}
-    //     {loading ? (
-    //       <div
-    //         className="d-flex justify-content-center align-items-center"
-    //         style={{ height: "500px" }}
-    //       >
-    //         <Spinner animation="border" role="status" className="me-2">
-    //           <span className="visually-hidden">Loading...</span>
-    //         </Spinner>
-    //         <span>Loading chart data...</span>
-    //       </div>
-    //     ) : ordersData.length ? (
-    //       <>
-    //         <div
-    //           className="chart-container"
-    //           style={{ height: "500px", width: "100%" }}
-    //         >
-    //           <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
-    //         </div>
-    //         {/* Example button for CSV export, if desired */}
-    //         {/* <Button variant="outline-primary" className="mt-3" onClick={exportToCSV}>
-    //           Export CSV
-    //         </Button> */}
-    //       </>
-    //     ) : (
-    //       <p className="text-center mt-4">No data available.</p>
-    //     )}
-    //   </Card.Body>
-    // </Card>
+    
   );
 };
 
