@@ -10,8 +10,8 @@ import {
   Card
 } from "react-bootstrap";
 import { useReactTable, getCoreRowModel, getFilteredRowModel, flexRender } from "@tanstack/react-table";
-import OpenOrdersFilters from "./OpenOrdersFilters";
-import OpenOrdersPagination from "./OpenOrdersPagination";
+import OpenOrdersFilters from "./openOrdersFilters";
+import OpenOrdersPagination from "./openOrdersPagination";
 import { tableColumns } from "./openOrdersColumns";
 import { 
   useOpenOrdersData,
