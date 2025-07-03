@@ -271,7 +271,9 @@ export default async function handler(req, res) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               from: "gurpreet@densitypharmachem.com",
+              // from: "prakash@densitypharmachem.com",
               to: [email],
+              // to: ["chandraprakashyadav1110@gmail.com"],
               bcc: ["chandraprakashyadav1110@gmail.com"], // BCC to HR for records
               subject: subject,
               body: html,

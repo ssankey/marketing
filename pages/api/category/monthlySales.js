@@ -1,4 +1,4 @@
-
+// pages/api/category/monthlySales.js
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
 

@@ -8,11 +8,19 @@ import {
 } from "@tanstack/react-table";
 import downloadExcel from "utils/exporttoexcel";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
+import DailySalesModal from "./DailySalesModal";
 
-export default function MonthlyLineItemsTable({ data = [], columns: initialColumns }) {
+export default function MonthlyLineItemsTable({ 
+  data = [], 
+  columns: initialColumns,
+  type, // 'category', 'customer', or 'salesperson'
+  categoryFilter // current category filter value
+}) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [page, setPage] = useState(1);
   const pageSize = 12;
+  const [showModal, setShowModal] = useState(false);
+  const [selectedCell, setSelectedCell] = useState(null);
 
   // Ensure data is always an array
   const safeData = Array.isArray(data) ? data : [];
@@ -44,6 +52,114 @@ export default function MonthlyLineItemsTable({ data = [], columns: initialColum
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
   });
+
+  const handleCellClick = (cell) => {
+  const value = cell.getValue();
+  const columnId = cell.column.id;
+  
+  if (typeof value === 'number' && columnId !== table.getAllColumns()[0].id) {
+    try {
+      const columnHeader = cell.column.columnDef.header;
+      const monthName = String(columnHeader).split(' ')[0];
+      const year = parseInt(String(columnHeader).split(' ')[1]);
+      
+      if (!monthName || !year) return;
+      
+      const monthNumber = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
+      
+      let filterValue = '';
+      const rowData = cell.row.original;
+      
+      if (type === 'category' && rowData.Category) {
+        filterValue = rowData.Category;
+      } else if (type === 'customer' && rowData['Customer Name']) {
+        filterValue = rowData['Customer Name'];
+      } else if (type === 'salesperson' && rowData['Sales Person Name']) {
+        filterValue = rowData['Sales Person Name'];
+      }
+      
+      setSelectedCell({
+        month: monthNumber,
+        year,
+        monthName,
+        type,
+        filterValue,
+        rowData,
+        categoryFilter
+      });
+      
+      setShowModal(true);
+    } catch (error) {
+      console.error('Error handling cell click:', error);
+    }
+  }
+};
+
+//   const handleCellClick = (cell) => {
+//   console.log('Cell clicked:', cell); // Debug log
+  
+//   // Check if this is a month cell (numeric value)
+//   const value = cell.getValue();
+//   const columnId = cell.column.id;
+  
+//   // Debug what we're getting
+//   console.log('Value:', value, 'Column ID:', columnId);
+  
+//   // Check if this is a numeric cell and not the first column
+//   if (typeof value === 'number' && columnId !== table.getAllColumns()[0].id) {
+//     try {
+//       // Try to parse month and year from column header
+//       const columnHeader = cell.column.columnDef.header;
+//       console.log('Column header:', columnHeader);
+      
+//       // Parse month and year - adjust this based on your actual header format
+//       const monthName = String(columnHeader).split(' ')[0]; // e.g., "Jun 2024" -> "Jun"
+//       const year = parseInt(String(columnHeader).split(' ')[1]); // e.g., "Jun 2024" -> 2024
+      
+//       if (!monthName || !year) {
+//         console.error('Could not parse month/year from header:', columnHeader);
+//         return;
+//       }
+      
+//       // Map month name to number (1-12)
+//       const monthNumber = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
+      
+//       // Determine filter value based on type and row data
+//       let filterValue = '';
+//       const rowData = cell.row.original;
+      
+//       if (type === 'category' && categoryFilter) {
+//         filterValue = categoryFilter;
+//       } else if (type === 'customer' && rowData.Customer) {
+//         filterValue = rowData.Customer;
+//       } else if (type === 'salesperson' && rowData.SalesPerson) {
+//         filterValue = rowData.SalesPerson;
+//       }
+      
+//       console.log('Setting selected cell:', {
+//         month: monthNumber,
+//         year,
+//         monthName,
+//         type,
+//         filterValue,
+//         rowData
+//       });
+      
+//       setSelectedCell({
+//         month: monthNumber,
+//         year,
+//         monthName,
+//         type,
+//         filterValue,
+//         rowData
+//       });
+      
+//       setShowModal(true);
+//     } catch (error) {
+//       console.error('Error handling cell click:', error);
+//     }
+//   }
+// };
 
   const handleExportExcel = () => {
     const exportData = filteredData.map((row) => {
@@ -84,7 +200,7 @@ export default function MonthlyLineItemsTable({ data = [], columns: initialColum
           style={{ maxWidth: "300px" }}
         />
         <button onClick={handleExportExcel} className="btn btn-success">
-          Export Excel
+          Excel
         </button>
       </div>
 
@@ -94,19 +210,12 @@ export default function MonthlyLineItemsTable({ data = [], columns: initialColum
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id}>
                 {hg.headers.map((header) => (
-                  //   <th key={header.id} className="border px-2 py-1 text-center">
-                  //     {flexRender(
-                  //       header.column.columnDef.header,
-                  //       header.getContext()
-                  //     )}
-                  //   </th>
                   <th
                     key={header.id}
                     className="border px-2 py-1 text-center"
                     style={{
                       whiteSpace: "nowrap",
                       overflow: "hidden",
-                      //   textOverflow: "ellipsis",
                     }}
                     title={String(header.column.columnDef.header)}
                   >
@@ -124,27 +233,24 @@ export default function MonthlyLineItemsTable({ data = [], columns: initialColum
               table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50">
                   {row.getVisibleCells().map((cell) => (
-                    // <td
-                    //   key={cell.id}
-                    //   className="border px-2 py-1 text-sm text-center"
-                    //   style={{
-                    //     whiteSpace: "nowrap", // Prevent line break
-                    //     overflow: "hidden", // Hide overflow
-                    //     // textOverflow: "ellipsis", // Show ellipsis if text is too long
-
-                    //   }}
-                    //   title={String(cell.getValue())} // Optional: full value on hover
-                    // >
-                    //   {formatCellValue(cell.getValue(), cell.column.columnDef)}
-                    // </td>
                     <td
                       key={cell.id}
-                      className={`border px-2 py-1 text-sm ${cell.column.id === table.getAllColumns()[0].id ? "text-start" : "text-center"}`}
+                      className={`border px-2 py-1 text-sm ${
+                        cell.column.id === table.getAllColumns()[0].id 
+                          ? "text-start" 
+                          : "text-center"
+                      }`}
                       style={{
                         whiteSpace: "nowrap",
                         overflow: "hidden",
+                        cursor: typeof cell.getValue() === 'number' && cell.column.id !== 'Category' ? 'pointer' : 'default',
                       }}
-                      title={String(cell.getValue())}
+                      onClick={() => handleCellClick(cell)}
+                      title={
+                        typeof cell.getValue() === 'number' && cell.column.id !== 'Category'
+                          ? 'Click to view daily breakdown' 
+                          : String(cell.getValue())
+                      }
                     >
                       {formatCellValue(cell.getValue(), cell.column.columnDef)}
                     </td>
@@ -195,6 +301,22 @@ export default function MonthlyLineItemsTable({ data = [], columns: initialColum
           Last
         </button>
       </div>
+
+      {/* Daily Sales Modal */}
+      {selectedCell && (
+        <DailySalesModal
+          show={showModal}
+          onHide={() => setShowModal(false)}
+          month={selectedCell.month}
+          year={selectedCell.year}
+          monthName={selectedCell.monthName}
+          type={selectedCell.type}
+          filterValue={selectedCell.filterValue}
+          categoryFilter={selectedCell.categoryFilter}
+          rowData={selectedCell.rowData}
+
+        />
+      )}
     </div>
   );
 }

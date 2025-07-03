@@ -1,0 +1,197 @@
+
+// components/openOrders/openOrdersFunctions.js
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { debounce } from "lodash";
+import downloadExcel from "utils/exporttoexcel";
+import { formatCurrency } from "utils/formatCurrency";
+import { formatDate } from "utils/formatDate";
+
+export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) => {
+  const [allData, setAllData] = useState(orders);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  // Add debounced search with proper cleanup
+  const debouncedSearch = useMemo(
+    () => debounce((searchTerm) => {
+      setDebouncedGlobalFilter(searchTerm);
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSearch(globalFilter);
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [globalFilter, debouncedSearch]);
+
+  useEffect(() => {
+    setAllData(orders);
+  }, [orders]);
+
+  const filteredData = useMemo(() => {
+    let filtered = [...allData];
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(order => 
+        statusFilter === "instock" 
+          ? order.StockStatus === "In Stock"
+          : order.StockStatus === "Out of Stock"
+      );
+    }
+
+    // Global search filter - Enhanced with better null checking
+    if (debouncedGlobalFilter) {
+      const searchTerm = debouncedGlobalFilter.toLowerCase().trim();
+      filtered = filtered.filter(order => {
+        // Helper function to safely check if a value contains the search term
+        const containsSearchTerm = (value) => {
+          if (value === null || value === undefined) return false;
+          return value.toString().toLowerCase().includes(searchTerm);
+        };
+
+        return (
+          containsSearchTerm(order.DocumentNumber) ||
+          containsSearchTerm(order.CustomerVendorName) ||
+          containsSearchTerm(order.ItemNo) ||
+          containsSearchTerm(order.ItemName) ||
+          containsSearchTerm(order.CasNo) ||
+          containsSearchTerm(order.MfrCatalogNo) ||
+          containsSearchTerm(order.UOMName) ||
+          containsSearchTerm(order.ContactPerson) ||
+          containsSearchTerm(order.Timeline) ||
+          containsSearchTerm(order.MktFeedback) ||
+          containsSearchTerm(order.SalesEmployee) ||
+          containsSearchTerm(order.CustomerPONo) ||
+          containsSearchTerm(order.LineStatus)
+        );
+      });
+    }
+
+    // Date range filter
+    if (fromDate || toDate) {
+      filtered = filtered.filter(order => {
+        if (!order.PostingDate) return false;
+        
+        const orderDate = new Date(order.PostingDate);
+        const from = fromDate ? new Date(fromDate) : null;
+        const to = toDate ? new Date(toDate) : null;
+        
+        if (from && to) {
+          return orderDate >= from && orderDate <= to;
+        } else if (from) {
+          return orderDate >= from;
+        } else if (to) {
+          return orderDate <= to;
+        }
+        return true;
+      });
+    }
+
+    return filtered;
+  }, [allData, statusFilter, debouncedGlobalFilter, fromDate, toDate]);
+
+  const pageCount = Math.ceil(filteredData.length / pageSize);
+  const pageData = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredData.slice(start, start + pageSize);
+  }, [filteredData, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedGlobalFilter, statusFilter, fromDate, toDate]);
+
+  const handleReset = () => {
+    setGlobalFilter("");
+    setDebouncedGlobalFilter("");
+    setStatusFilter("all");
+    setFromDate("");
+    setToDate("");
+    setCurrentPage(1);
+  };
+
+  // Enhanced search handler with immediate feedback
+  const handleSearch = useCallback((searchTerm) => {
+    setGlobalFilter(searchTerm);
+    setCurrentPage(1); // Reset to first page when searching
+  }, []);
+
+  return {
+    allData,
+    filteredData,
+    pageData,
+    pageCount,
+    currentPage,
+    setCurrentPage,
+    globalFilter,
+    setGlobalFilter: handleSearch, // Use the enhanced search handler
+    statusFilter,
+    setStatusFilter,
+    fromDate,
+    setFromDate,
+    toDate,
+    setToDate,
+    handleReset,
+    setAllData,
+    debouncedGlobalFilter // Expose this for debugging
+  };
+};
+
+export const useExportHandler = () => {
+  const handleExportExcel = (filteredData, columns) => {
+    const exportData = filteredData.map((row) => {
+      const formattedRow = {};
+      
+      columns.forEach((column) => {
+        const value = row[column.accessorKey];
+        
+        if (column.accessorKey === "Price" || column.accessorKey === "OpenAmount") {
+          formattedRow[column.header] = formatCurrency(value, row.PriceCurrency).slice(1);
+        } else if (column.accessorKey.includes("Date")) {
+          formattedRow[column.header] = formatDate(value);
+        } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
+          formattedRow[column.header] = value || "N/A"; // Don't truncate in Excel
+        } else {
+          formattedRow[column.header] = value || "N/A";
+        }
+      });
+      
+      return formattedRow;
+    });
+    
+    downloadExcel(exportData, "OpenOrders_Report");
+  };
+
+  return { handleExportExcel };
+};
+
+// Debug helper function - you can use this to check your data
+export const debugSearchData = (orders, searchTerm) => {
+  console.log("=== Search Debug Info ===");
+  console.log("Search term:", searchTerm);
+  console.log("Total orders:", orders.length);
+  
+  const sampleOrder = orders[0];
+  if (sampleOrder) {
+    console.log("Sample order MktFeedback:", sampleOrder.MktFeedback);
+    console.log("MktFeedback type:", typeof sampleOrder.MktFeedback);
+    console.log("MktFeedback null/undefined:", sampleOrder.MktFeedback === null || sampleOrder.MktFeedback === undefined);
+  }
+  
+  const ordersWithMktFeedback = orders.filter(order => 
+    order.MktFeedback && order.MktFeedback.toString().toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  console.log("Orders with matching MktFeedback:", ordersWithMktFeedback.length);
+  if (ordersWithMktFeedback.length > 0) {
+    console.log("First matching order:", ordersWithMktFeedback[0]);
+  }
+  
+  return ordersWithMktFeedback;
+};
