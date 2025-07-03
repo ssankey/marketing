@@ -14,7 +14,7 @@ import {
   useInvoicesData,
   useExportHandler
 } from "./invoicesFunctions";
-import OpenOrdersPagination from "../openOrders/OpenOrdersPagination";
+import OpenOrdersPagination from "../openOrders/openOrdersPagination";
 
 const InvoicesTable = ({
   invoices = [],

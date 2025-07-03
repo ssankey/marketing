@@ -73,7 +73,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
-import OrdersTable from "components/orders/OrdersTable";
+import OrdersTable from "components/orders/ordersTable";
 
 export default function OrdersPage() {
   const router = useRouter();

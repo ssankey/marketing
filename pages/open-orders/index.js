@@ -606,7 +606,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Spinner } from "react-bootstrap";
 import { useAuth } from "hooks/useAuth";
-import OpenOrdersTable from "components/openOrders/OpenOrdersTable";
+import OpenOrdersTable from "components/openOrders/openOrdersTable";
 
 export default function OpenOrdersPage() {
   const router = useRouter();
