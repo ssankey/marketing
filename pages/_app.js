@@ -438,6 +438,7 @@ function AuthenticatedApp({ Component, pageProps }) {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </Head>
       <NextSeo {...seoData} />
+      
       <Layout>
         <Component {...pageProps} />
         <Analytics
