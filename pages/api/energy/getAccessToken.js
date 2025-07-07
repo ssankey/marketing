@@ -1,7 +1,5 @@
-// https://marketing.densitypharmachem.com/api/energy/getAccessToken
 
-// File: pages/api/energy/getAccessToken.js
-
+//https://marketing.densitypharmachem.com/api/energy/getAccessToken.js
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({
@@ -11,11 +9,11 @@ export default async function handler(req, res) {
     });
   }
 
-  const username = 'prakash_434';
-  const password = '1y2a3d4a5v.@Q';
+  const username = 'product-label'; // Replace with actual username if different
+  const password = '12Qw3er!@#'; // Replace with actual password if different
 
   try {
-    const response = await fetch('https://external-api.example.com/getAccessToken', {
+    const response = await fetch('YOUR_ACCESS_TOKEN_ENDPOINT_URL', { // Replace with actual endpoint
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -24,6 +22,15 @@ export default async function handler(req, res) {
     });
 
     const result = await response.json();
+
+    // Verify the response structure matches documentation
+    if (result.code !== 200 || !result.data) {
+      return res.status(500).json({
+        code: 500,
+        message: result.message || 'Failed to obtain token',
+        data: null,
+      });
+    }
 
     return res.status(200).json(result);
   } catch (error) {

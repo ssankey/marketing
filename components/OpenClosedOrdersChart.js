@@ -83,58 +83,7 @@ const OrdersChart = () => {
   const chartRef = useRef(null);
   const router = useRouter();
 
-  // ----------------------------------
-  // Fetch data
-  // ----------------------------------
-  // const fetchOrdersData = async () => {
-  //   try {
-  //     setLoading(true);
-  //     setError(null);
-
-  //     const token = localStorage.getItem("token");
-  //     const queryParams = new URLSearchParams();
-
-  //     if (filters.salesPerson?.value) {
-  //       queryParams.append("slpCode", filters.salesPerson.value);
-  //     }
-  //     if (filters.category?.value) {
-  //       queryParams.append("itmsGrpCod", filters.category.value);
-  //     }
-  //     if (filters.product?.value) {
-  //       queryParams.append("itemCode", filters.product.value);
-  //     }
-
-  //     const response = await fetch(`/api/monthly-orders?${queryParams}`, {
-  //       headers: { Authorization: `Bearer ${token}` },
-  //     });
-
-  //     // if (!response.ok) {
-  //     //   throw new Error("Failed to fetch orders data");
-  //     // }
-
-  //     if (!response.ok) {
-  //       const text = await response.text();
-  //       console.error("Failed response text:", text); // 🪵 This will show the backend error
-  //       throw new Error("Failed to fetch orders data");
-  //     }
-
-  //     const { data } = await response.json();
-  //     // Sort data chronologically
-  //     const sortedData = data.sort((a, b) => {
-  //       const dateA = new Date(a.year, monthMapping[a.month]);
-  //       const dateB = new Date(b.year, monthMapping[b.month]);
-  //       return dateA - dateB;
-  //     });
-
-  //     setOrdersData(sortedData);
-  //   } catch (err) {
-  //     console.error("Error fetching orders data:", err);
-  //     setError(err.message);
-  //     setOrdersData([]);
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  
 
   const fetchOrdersData = async () => {
   try {
@@ -242,16 +191,36 @@ const OrdersChart = () => {
       },
       tooltip: {
         backgroundColor: "#212529",
+        bodyFont: {
+                size: 14, // Increase font size
+                weight: 'bold' // Make font bold
+            },
+            titleFont: {
+                size: 16, // Larger font for title
+                weight: 'bold'
+            },
+            padding: 16, // Increase padding
         callbacks: {
           label: (context) => {
             const datasetLabel = context.dataset.label;
             const numOrders = context.raw;
             const dataIndex = context.dataIndex;
             const dataPoint = ordersData[dataIndex];
-            return `${datasetLabel}: ${numOrders} (Sales: ${formatCurrency(
-              dataPoint.openSales
-            )})`;
+
+
+            // return `${datasetLabel}: ${numOrders} (Sales: ${formatCurrency(
+            //   dataPoint.openSales
+            // )})`;
+
+             return [
+                        `Open Orders: ${numOrders}`,
+                        `Line Items: ${dataPoint.openLineItems}`,
+                        `Value: ${formatCurrency(dataPoint.openSales)}`
+                    ];
+
+
           },
+          
         },
       },
       legend: {
