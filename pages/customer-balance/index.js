@@ -3,12 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Card, Container, Spinner } from "react-bootstrap";
+import { Row,Col,Card, Container, Spinner } from "react-bootstrap";
 import CustomerBalanceTable from "../../components/page/customer-balance/table/CustomerBalanceTable";
 import CustomerBalanceChart from "../../components/page/customer-balance/chart/CustomerBalanceChart";
 import CustomerBalTable from "../../components/page/customer-balance/table/customer-bal-table";
 import { formatDate } from "utils/formatDate";
 import { useAuth } from "contexts/AuthContext";
+
+import TokenCustomerAgingChart from "../../components/CustomerCharts/TokenCustomerAgingChart";
 
 
 export default function CustomerBalancePage() {
@@ -16,7 +18,7 @@ export default function CustomerBalancePage() {
   const { user } = useAuth();
 const userRole = user?.role;
 
-
+ const { token } = useAuth();
 
   // —— State for Filters, Chart & Details Table —— //
   const [customerData, setCustomerData] = useState([]);
@@ -51,25 +53,7 @@ const userRole = user?.role;
     fetchChartData();
   }, [currentPage, filters]);
 
-  // Fetch the summary invoices once, then paginate in-memory
-  // useEffect(() => {
-  //   const fetchAllBalances = async () => {
-  //     setIsBalanceLoading(true);
-  //     try {
-  //       const res = await fetch("/api/customer-balance");
-  //       const json = await res.json();
-  //       setBalances(json.invoices || []);
-  //       setSummaryTotal(json.totalItems || 0);
-  //     } catch (e) {
-  //       console.error(e);
-  //       setBalances([]);
-  //       setSummaryTotal(0);
-  //     } finally {
-  //       setIsBalanceLoading(false);
-  //     }
-  //   };
-  //   fetchAllBalances();
-  // }, []);
+
   useEffect(() => {
   const fetchAllBalances = async () => {
     setIsBalanceLoading(true);
@@ -254,6 +238,25 @@ const userRole = user?.role;
         </Card.Body>
       </Card>
     )}
+
+     {(userRole === "contact_person") && (
+       <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Customer Balance Report</h3>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+               
+                 <TokenCustomerAgingChart  />
+              </Row>
+            </Card.Body>
+          </Card>
+        </div>  
+    )}
+    
 
 
 
