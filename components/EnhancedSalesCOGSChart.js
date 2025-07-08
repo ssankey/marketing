@@ -844,7 +844,7 @@ const EnhancedSalesCOGSChart = () => {
                       ))}
                       <td>{formatCurrency(totalSales)}</td>
                     </tr>
-                    {user?.role === "admin" && (
+                    {  (user?.role === 'admin'  || user?.role === 'sales_person') && (
                       <>
                         <tr>
                           <td>COGS</td>

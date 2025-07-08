@@ -10,7 +10,10 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict",
   path: "/",
-  maxAge: 3600,
+  // maxAge: 3600,
+  maxAge: 6 * 60 * 60, // 6 hours
+  // maxAge: 300,
+
 };
 
 // Hardcoded test admin credentials
@@ -56,7 +59,8 @@ export default async function handler(req, res) {
         contactCodes: TEST_ADMIN.contactCodes,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "6h" }
+      //  { expiresIn: "5m" }
     );
 
     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
@@ -78,6 +82,51 @@ export default async function handler(req, res) {
       showPassword: true,
     });
   }
+
+  // -------------------- Hardcoded Saurabh Admin Login --------------------
+if (email === "saurabh.b@dbllp.co.in") {
+  if (!password) {
+    return res.status(200).json({
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "saurabh.b@dbllp.co.in") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "saurabh.b@dbllp.co.in",
+      role: "admin",
+      name: "Saurabh Admin",
+      contactCodes: ["SAURABH_ADMIN"],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
+  );
+
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+  console.log("[SAURABH_HARDCODED_LOGIN_SUCCESS]", {
+    email: "saurabh.b@dbllp.co.in",
+    role: "admin",
+  });
+
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "saurabh.b@dbllp.co.in",
+      role: "admin",
+      name: "Saurabh",
+      contactCodes: ["SAURABH_ADMIN"],
+    },
+    showPassword: true,
+  });
+}
+
 
   // -------------------- Salesperson and Admin Login --------------------
   try {
@@ -108,7 +157,8 @@ export default async function handler(req, res) {
             contactCodes: [contactCode],
           },
           process.env.JWT_SECRET,
-          { expiresIn: "1h" }
+          { expiresIn: "6h" }
+          //  { expiresIn: "5m" }
         );
 
         res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
@@ -173,7 +223,8 @@ export default async function handler(req, res) {
           contactCodes: [contactCode],
         },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "6h" }
+        //  { expiresIn: "5m" }
       );
 
       res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
@@ -232,7 +283,8 @@ export default async function handler(req, res) {
             contactCodes: [slpCode],
           },
           process.env.JWT_SECRET,
-          { expiresIn: "1h" }
+          { expiresIn: "6h" }
+          //  { expiresIn: "5m" }
         );
 
         res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
@@ -292,7 +344,8 @@ export default async function handler(req, res) {
           contactCodes: [slpCode],
         },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "6h" }
+        //  { expiresIn: "5m" }
       );
 
       res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
@@ -347,7 +400,8 @@ export default async function handler(req, res) {
           cardCodes: [cardCode],
         },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "6h" }
+        //  { expiresIn: "5m" }
       );
 
       res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
@@ -396,7 +450,8 @@ export default async function handler(req, res) {
         cardCodes: [cardCode],
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "6h" }
+      //  { expiresIn: "5m" }
     );
 
     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
