@@ -1,0 +1,5 @@
+html {
+  zoom: 0.7; /* Scales everything to 70% (Chrome, Edge, Firefox) */
+  transform: scale(0.7); /* Fallback */
+  transform-origin: 0 0;
+}
