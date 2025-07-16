@@ -345,7 +345,8 @@ function DashboardCharts({ userRole }) {
       <EnhancedSalesCOGSChart />
       
       {/* Conditionally render DeliveryPerformanceChart for admin/sales */}
-      {isAdminOrSales && <DeliveryPerformanceChart />}
+      {/* {isAdminOrSales && <DeliveryPerformanceChart />} */}
+       <DeliveryPerformanceChart />
       
       <OrdersChart />
       

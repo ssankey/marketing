@@ -39,6 +39,11 @@ export const tableColumns = [
     cell: ({ getValue }) => getValue() || "N/A",
   },
   {
+    accessorKey: "Customer/Vendor Name",
+    header: "Customer",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
+  {
     accessorKey: "ContactPerson",
     header: "Contact Person",
     cell: ({ getValue }) => getValue() || "N/A",

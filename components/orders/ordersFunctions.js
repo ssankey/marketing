@@ -6,6 +6,8 @@ import downloadExcel from "utils/exporttoexcel";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 
+
+
 // export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
 //   const [allData, setAllData] = useState(orders);
 //   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -14,9 +16,9 @@ import { formatDate } from "utils/formatDate";
 //   const [statusFilter, setStatusFilter] = useState(initialStatus);
 //   const [fromDate, setFromDate] = useState("");
 //   const [toDate, setToDate] = useState("");
-//   // Changed default sort to DocDate with desc direction for latest first
 //   const [sortField, setSortField] = useState("DocDate");
 //   const [sortDirection, setSortDirection] = useState("desc");
+//   const [filtersChanged, setFiltersChanged] = useState(false);
 
 //   const debouncedSearch = useMemo(
 //     () => debounce((searchTerm) => {
@@ -39,14 +41,12 @@ import { formatDate } from "utils/formatDate";
 //   const filteredData = useMemo(() => {
 //     let filtered = [...allData];
 
-//     // Status filter
 //     if (statusFilter !== "all") {
 //       filtered = filtered.filter(order => 
 //         order.DocStatus.toLowerCase() === statusFilter.toLowerCase()
 //       );
 //     }
 
-//     // Global search filter
 //     if (debouncedGlobalFilter) {
 //       const searchTerm = debouncedGlobalFilter.toLowerCase().trim();
 //       filtered = filtered.filter(order => {
@@ -65,7 +65,6 @@ import { formatDate } from "utils/formatDate";
 //       });
 //     }
 
-//     // Date range filter
 //     if (fromDate || toDate) {
 //       filtered = filtered.filter(order => {
 //         if (!order.DocDate) return false;
@@ -85,23 +84,19 @@ import { formatDate } from "utils/formatDate";
 //       });
 //     }
 
-//     // Sorting logic
 //     if (sortField) {
 //       filtered.sort((a, b) => {
 //         let valA = a[sortField];
 //         let valB = b[sortField];
 
-//         // Handle special cases for sorting
 //         if (sortField === "DocTotal") {
 //           valA = a.DocCur === "INR" ? valA : valA * (a.ExchangeRate || 1);
 //           valB = b.DocCur === "INR" ? valB : valB * (b.ExchangeRate || 1);
 //         }
 
-//         // For date fields, convert to timestamps for proper comparison
 //         if (sortField === "DocDate" || sortField === "DeliveryDate") {
 //           valA = new Date(valA).getTime();
 //           valB = new Date(valB).getTime();
-//           // For descending order (latest first), reverse the comparison
 //           return sortDirection === "asc" ? valA - valB : valB - valA;
 //         }
 
@@ -133,15 +128,31 @@ import { formatDate } from "utils/formatDate";
 //     setStatusFilter("all");
 //     setFromDate("");
 //     setToDate("");
-//     // Reset to default sort by DocDate desc (latest first)
 //     setSortField("DocDate");
 //     setSortDirection("desc");
 //     setCurrentPage(1);
+//     setFiltersChanged(false);
 //   };
 
 //   const handleSearch = useCallback((searchTerm) => {
 //     setGlobalFilter(searchTerm);
 //     setCurrentPage(1);
+//     setFiltersChanged(true);
+//   }, []);
+
+//   const setStatusFilterWrapper = useCallback((status) => {
+//     setStatusFilter(status);
+//     setFiltersChanged(true);
+//   }, []);
+
+//   const setFromDateWrapper = useCallback((date) => {
+//     setFromDate(date);
+//     setFiltersChanged(true);
+//   }, []);
+
+//   const setToDateWrapper = useCallback((date) => {
+//     setToDate(date);
+//     setFiltersChanged(true);
 //   }, []);
 
 //   const handleSort = useCallback((field) => {
@@ -152,6 +163,7 @@ import { formatDate } from "utils/formatDate";
 //       setSortDirection("asc");
 //     }
 //     setCurrentPage(1);
+//     setFiltersChanged(true);
 //   }, [sortField, sortDirection]);
 
 //   return {
@@ -164,21 +176,23 @@ import { formatDate } from "utils/formatDate";
 //     globalFilter,
 //     setGlobalFilter: handleSearch,
 //     statusFilter,
-//     setStatusFilter,
+//     setStatusFilter: setStatusFilterWrapper,
 //     fromDate,
-//     setFromDate,
+//     setFromDate: setFromDateWrapper,
 //     toDate,
-//     setToDate,
+//     setToDate: setToDateWrapper,
 //     sortField,
 //     sortDirection,
 //     handleSort,
 //     handleReset,
 //     setAllData,
-//     debouncedGlobalFilter
+//     debouncedGlobalFilter,
+//     filtersChanged,
+//     setFiltersChanged
 //   };
 // };
 
-
+// ... rest of the exports (useExportHandler, useOrderDetails, useEmailHandler) remain the same ...
 
 export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
   const [allData, setAllData] = useState(orders);
@@ -186,6 +200,7 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
   const [globalFilter, setGlobalFilter] = useState("");
   const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [selectedMonth, setSelectedMonth] = useState(""); // Added missing state
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [sortField, setSortField] = useState("DocDate");
@@ -213,12 +228,14 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
   const filteredData = useMemo(() => {
     let filtered = [...allData];
 
+    // Status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter(order => 
         order.DocStatus.toLowerCase() === statusFilter.toLowerCase()
       );
     }
 
+    // Global search filter
     if (debouncedGlobalFilter) {
       const searchTerm = debouncedGlobalFilter.toLowerCase().trim();
       filtered = filtered.filter(order => {
@@ -237,6 +254,24 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
       });
     }
 
+    // Month filter - Added missing month filtering logic
+    if (selectedMonth) {
+      const [year, month] = selectedMonth.split('-');
+      const filterYear = parseInt(year);
+      const filterMonth = parseInt(month);
+      
+      filtered = filtered.filter(order => {
+        if (!order.DocDate) return false;
+        
+        const orderDate = new Date(order.DocDate);
+        const orderYear = orderDate.getFullYear();
+        const orderMonth = orderDate.getMonth() + 1; // getMonth() returns 0-11
+        
+        return orderYear === filterYear && orderMonth === filterMonth;
+      });
+    }
+
+    // Date range filter
     if (fromDate || toDate) {
       filtered = filtered.filter(order => {
         if (!order.DocDate) return false;
@@ -256,6 +291,7 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
       });
     }
 
+    // Sorting logic
     if (sortField) {
       filtered.sort((a, b) => {
         let valA = a[sortField];
@@ -282,7 +318,7 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
     }
 
     return filtered;
-  }, [allData, statusFilter, debouncedGlobalFilter, fromDate, toDate, sortField, sortDirection]);
+  }, [allData, statusFilter, debouncedGlobalFilter, selectedMonth, fromDate, toDate, sortField, sortDirection]);
 
   const pageCount = Math.ceil(filteredData.length / pageSize);
   const pageData = useMemo(() => {
@@ -292,12 +328,13 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedGlobalFilter, statusFilter, fromDate, toDate, sortField, sortDirection]);
+  }, [debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate, sortField, sortDirection]);
 
   const handleReset = () => {
     setGlobalFilter("");
     setDebouncedGlobalFilter("");
     setStatusFilter("all");
+    setSelectedMonth(""); // Reset month filter
     setFromDate("");
     setToDate("");
     setSortField("DocDate");
@@ -314,6 +351,11 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
 
   const setStatusFilterWrapper = useCallback((status) => {
     setStatusFilter(status);
+    setFiltersChanged(true);
+  }, []);
+
+  const setSelectedMonthWrapper = useCallback((month) => {
+    setSelectedMonth(month);
     setFiltersChanged(true);
   }, []);
 
@@ -349,6 +391,8 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
     setGlobalFilter: handleSearch,
     statusFilter,
     setStatusFilter: setStatusFilterWrapper,
+    selectedMonth, // Added to return
+    setSelectedMonth: setSelectedMonthWrapper, // Added to return
     fromDate,
     setFromDate: setFromDateWrapper,
     toDate,
@@ -363,8 +407,6 @@ export const useOrdersData = (orders, initialStatus, initialPage, pageSize) => {
     setFiltersChanged
   };
 };
-
-// ... rest of the exports (useExportHandler, useOrderDetails, useEmailHandler) remain the same ...
 
 export const useExportHandler = () => {
   const handleExportExcel = (filteredData, columns) => {

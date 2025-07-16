@@ -39,6 +39,8 @@ const HeaderInvoicesTable = ({
     setGlobalFilter,
     statusFilter,
     setStatusFilter,
+    selectedMonth,
+    setSelectedMonth,
     fromDate,
     setFromDate,
     toDate,
@@ -141,7 +143,7 @@ const HeaderInvoicesTable = ({
         {/* Filters Card */}
         <Card className="shadow-sm border-0 mb-4" style={{background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)'}}>
           <Card.Body className="px-3 py-1">
-            <InvoiceFilters
+            {/* <InvoiceFilters
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               fromDate={fromDate}
@@ -154,7 +156,25 @@ const HeaderInvoicesTable = ({
               onReset={handleReset}
               onExport={handleExport}
               totalItems={filteredData.length}
-            />
+            /> */}
+           
+<InvoiceFilters
+  globalFilter={globalFilter}
+  statusFilter={statusFilter}
+  fromDate={fromDate}
+  toDate={toDate}
+  selectedMonth={selectedMonth}
+  invoices={allData}
+  onSearch={setGlobalFilter}
+  onStatusChange={setStatusFilter}
+  onDateChange={(type, value) => 
+    type === "from" ? setFromDate(value) : setToDate(value)
+  }
+  onMonthChange={setSelectedMonth}
+  onReset={handleReset}
+  onExport={handleExport}
+  totalItems={filteredData.length}
+/>
           </Card.Body>
         </Card>
 

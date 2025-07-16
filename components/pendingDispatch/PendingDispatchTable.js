@@ -32,6 +32,8 @@ const PendingDispatchTable = ({
     setGlobalFilter,
     statusFilter,
     setStatusFilter,
+    selectedMonth,
+    setSelectedMonth,
     fromDate,
     setFromDate,
     toDate,
@@ -71,7 +73,7 @@ const PendingDispatchTable = ({
         {/* Filters Card */}
         <Card className="shadow-sm border-0 mb-4" style={{background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)'}}>
           <Card.Body className="px-3 py-1">
-            <PendingDispatchFilters
+            {/* <PendingDispatchFilters
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               fromDate={fromDate}
@@ -83,7 +85,24 @@ const PendingDispatchTable = ({
               }
               onReset={handleReset}
               onExport={handleExport}
-            />
+            /> */}
+          
+<PendingDispatchFilters
+  globalFilter={globalFilter}
+  statusFilter={statusFilter}
+  fromDate={fromDate}
+  toDate={toDate}
+  selectedMonth={selectedMonth}
+  invoices={allData}
+  onSearch={setGlobalFilter}
+  onStatusChange={setStatusFilter}
+  onDateChange={(type, value) => 
+    type === "from" ? setFromDate(value) : setToDate(value)
+  }
+  onMonthChange={setSelectedMonth}
+  onReset={handleReset}
+  onExport={handleExport}
+/>
           </Card.Body>
         </Card>
 

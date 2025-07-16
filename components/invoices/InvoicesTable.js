@@ -34,6 +34,8 @@ const InvoicesTable = ({
     setGlobalFilter,
     statusFilter,
     setStatusFilter,
+      selectedMonth, // Added
+        setSelectedMonth, // Added
     fromDate,
     setFromDate,
     toDate,
@@ -86,7 +88,7 @@ const InvoicesTable = ({
         {/* Filters Card */}
         <Card className="shadow-sm border-0 mb-4" style={{background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)'}}>
           <Card.Body className="px-3 py-1">
-            <InvoicesFilters
+            {/* <InvoicesFilters
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               fromDate={fromDate}
@@ -98,7 +100,24 @@ const InvoicesTable = ({
               }
               onReset={handleReset}
               onExport={handleExport}
-            />
+            /> */}
+           
+<InvoicesFilters
+  globalFilter={globalFilter}
+  statusFilter={statusFilter}
+  selectedMonth={selectedMonth}
+  fromDate={fromDate}
+  toDate={toDate}
+  invoices={allData}
+  onSearch={setGlobalFilter}
+  onStatusChange={setStatusFilter}
+  onMonthChange={setSelectedMonth}
+  onDateChange={(type, value) => 
+    type === "from" ? setFromDate(value) : setToDate(value)
+  }
+  onReset={handleReset}
+  onExport={handleExport}
+/>
           </Card.Body>
         </Card>
 
