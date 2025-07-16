@@ -48,7 +48,7 @@ const queries = {
     SELECT p.[Customer Name], a.[Total Sales], a.[Total Line Items],' + @cols + '
     FROM Pivoted p
     JOIN Aggregated a ON p.[Customer Name] = a.[Customer Name]
-    ORDER BY a.[Total Line Items] DESC';
+    ORDER BY a.[Total Sales] DESC';
     `;
 
     const execQuery = categoryFilter
@@ -116,7 +116,7 @@ const queries = {
   FROM    Pivoted  p
   JOIN    Aggregated a
         ON a.[Sales Person Name] = p.[Sales Person Name]
-  ORDER BY a.[Total Line Items] DESC';
+  ORDER BY a.[Total Sales] DESC';
   `;
 
     return categoryFilter
@@ -170,7 +170,7 @@ const queries = {
     SELECT p.[State], a.[Total Sales], a.[Total Line Items],' + @cols + '
     FROM Pivoted p
     JOIN Aggregated a ON p.[State] = a.[State]
-    ORDER BY a.[Total Line Items] DESC';
+    ORDER BY a.[Total Sales] DESC';
     `;
 
     const execQuery = categoryFilter
@@ -225,7 +225,7 @@ const queries = {
         a.[Total Line Items],' + @cols + '
     FROM Pivoted p
     JOIN Aggregated a ON p.[Category] = a.[Category]
-    ORDER BY a.[Total Line Items] DESC';
+    ORDER BY a.[Total Sales] DESC';
 
     EXEC sp_executesql @sql;
   `,

@@ -127,6 +127,50 @@ if (email === "saurabh.b@dbllp.co.in") {
   });
 }
 
+// -------------------- Hardcoded Mahesh Sales Login --------------------
+if (email === "mahesh@testing.com") {
+  if (!password) {
+    return res.status(200).json({
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "Mahesh@123") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "mahesh@example.com",
+      role: "sales_person",
+      name: "Mahesh",
+      contactCodes: ["8"], // Using SlpCode 8
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
+  );
+
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+  console.log("[MAHESH_HARDCODED_LOGIN_SUCCESS]", {
+    email: "mahesh@example.com",
+    role: "sales_person",
+    slpCode: "8",
+  });
+
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "mahesh@example.com",
+      role: "sales_person",
+      name: "Mahesh",
+      contactCodes: ["8"],
+    },
+    showPassword: true,
+  });
+}
 
   // -------------------- Salesperson and Admin Login --------------------
   try {

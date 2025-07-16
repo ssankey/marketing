@@ -319,6 +319,8 @@ const Dashboard = () => {
       ) : (
         <KPISection
           kpiData={kpiResponse?.kpiData}
+          salesData={kpiResponse?.salesData}       // ✅ add this
+          ordersData={kpiResponse?.ordersData}     // ✅ add this
           dateFilter={dateFilter}
           startDate={startDate}
           endDate={endDate}

@@ -6,16 +6,154 @@ import downloadExcel from "utils/exporttoexcel";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 
+// export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) => {
+//   const [allData, setAllData] = useState(orders);
+//   const [currentPage, setCurrentPage] = useState(initialPage);
+//   const [globalFilter, setGlobalFilter] = useState("");
+//   const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState("");
+//   const [statusFilter, setStatusFilter] = useState(initialStatus);
+//   const [fromDate, setFromDate] = useState("");
+//   const [toDate, setToDate] = useState("");
+
+//   // Add debounced search with proper cleanup
+//   const debouncedSearch = useMemo(
+//     () => debounce((searchTerm) => {
+//       setDebouncedGlobalFilter(searchTerm);
+//     }, 300),
+//     []
+//   );
+
+//   useEffect(() => {
+//     debouncedSearch(globalFilter);
+//     return () => {
+//       debouncedSearch.cancel();
+//     };
+//   }, [globalFilter, debouncedSearch]);
+
+//   useEffect(() => {
+//     setAllData(orders);
+//   }, [orders]);
+
+//   const filteredData = useMemo(() => {
+//     let filtered = [...allData];
+
+//     // Status filter
+//     if (statusFilter !== "all") {
+//       filtered = filtered.filter(order => 
+//         statusFilter === "instock" 
+//           ? order.StockStatus === "In Stock"
+//           : order.StockStatus === "Out of Stock"
+//       );
+//     }
+
+//     // Global search filter - Enhanced with better null checking
+//     if (debouncedGlobalFilter) {
+//       const searchTerm = debouncedGlobalFilter.toLowerCase().trim();
+//       filtered = filtered.filter(order => {
+//         // Helper function to safely check if a value contains the search term
+//         const containsSearchTerm = (value) => {
+//           if (value === null || value === undefined) return false;
+//           return value.toString().toLowerCase().includes(searchTerm);
+//         };
+
+//         return (
+//           containsSearchTerm(order.DocumentNumber) ||
+//           containsSearchTerm(order.CustomerVendorName) ||
+//           containsSearchTerm(order.ItemNo) ||
+//           containsSearchTerm(order.ItemName) ||
+//           containsSearchTerm(order.CasNo) ||
+//           containsSearchTerm(order.MfrCatalogNo) ||
+//           containsSearchTerm(order.UOMName) ||
+//           containsSearchTerm(order.ContactPerson) ||
+//           containsSearchTerm(order.Timeline) ||
+//           containsSearchTerm(order.MktFeedback) ||
+//           containsSearchTerm(order.SalesEmployee) ||
+//           containsSearchTerm(order.CustomerPONo) ||
+//           containsSearchTerm(order.LineStatus)
+//         );
+//       });
+//     }
+
+//     // Date range filter
+//     if (fromDate || toDate) {
+//       filtered = filtered.filter(order => {
+//         if (!order.PostingDate) return false;
+        
+//         const orderDate = new Date(order.PostingDate);
+//         const from = fromDate ? new Date(fromDate) : null;
+//         const to = toDate ? new Date(toDate) : null;
+        
+//         if (from && to) {
+//           return orderDate >= from && orderDate <= to;
+//         } else if (from) {
+//           return orderDate >= from;
+//         } else if (to) {
+//           return orderDate <= to;
+//         }
+//         return true;
+//       });
+//     }
+
+//     return filtered;
+//   }, [allData, statusFilter, debouncedGlobalFilter, fromDate, toDate]);
+
+//   const pageCount = Math.ceil(filteredData.length / pageSize);
+//   const pageData = useMemo(() => {
+//     const start = (currentPage - 1) * pageSize;
+//     return filteredData.slice(start, start + pageSize);
+//   }, [filteredData, currentPage, pageSize]);
+
+//   useEffect(() => {
+//     setCurrentPage(1);
+//   }, [debouncedGlobalFilter, statusFilter, fromDate, toDate]);
+
+//   const handleReset = () => {
+//     setGlobalFilter("");
+//     setDebouncedGlobalFilter("");
+//     setStatusFilter("all");
+//     setFromDate("");
+//     setToDate("");
+//     setCurrentPage(1);
+//   };
+
+//   // Enhanced search handler with immediate feedback
+//   const handleSearch = useCallback((searchTerm) => {
+//     setGlobalFilter(searchTerm);
+//     setCurrentPage(1); // Reset to first page when searching
+//   }, []);
+
+//   return {
+//     allData,
+//     filteredData,
+//     pageData,
+//     pageCount,
+//     currentPage,
+//     setCurrentPage,
+//     globalFilter,
+//     setGlobalFilter: handleSearch, // Use the enhanced search handler
+//     statusFilter,
+//     setStatusFilter,
+//     fromDate,
+//     setFromDate,
+//     toDate,
+//     setToDate,
+//     handleReset,
+//     setAllData,
+//     debouncedGlobalFilter // Expose this for debugging
+//   };
+// };
+
 export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) => {
   const [allData, setAllData] = useState(orders);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [globalFilter, setGlobalFilter] = useState("");
   const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [selectedMonth, setSelectedMonth] = useState(""); // Added month filter state
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [filtersChanged, setFiltersChanged] = useState(false);
 
-  // Add debounced search with proper cleanup
   const debouncedSearch = useMemo(
     () => debounce((searchTerm) => {
       setDebouncedGlobalFilter(searchTerm);
@@ -46,11 +184,10 @@ export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) 
       );
     }
 
-    // Global search filter - Enhanced with better null checking
+    // Global search filter
     if (debouncedGlobalFilter) {
       const searchTerm = debouncedGlobalFilter.toLowerCase().trim();
       filtered = filtered.filter(order => {
-        // Helper function to safely check if a value contains the search term
         const containsSearchTerm = (value) => {
           if (value === null || value === undefined) return false;
           return value.toString().toLowerCase().includes(searchTerm);
@@ -71,6 +208,23 @@ export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) 
           containsSearchTerm(order.CustomerPONo) ||
           containsSearchTerm(order.LineStatus)
         );
+      });
+    }
+
+    // Month filter - Added month filtering logic
+    if (selectedMonth) {
+      const [year, month] = selectedMonth.split('-');
+      const filterYear = parseInt(year);
+      const filterMonth = parseInt(month);
+      
+      filtered = filtered.filter(order => {
+        if (!order.PostingDate) return false;
+        
+        const orderDate = new Date(order.PostingDate);
+        const orderYear = orderDate.getFullYear();
+        const orderMonth = orderDate.getMonth() + 1;
+        
+        return orderYear === filterYear && orderMonth === filterMonth;
       });
     }
 
@@ -95,7 +249,7 @@ export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) 
     }
 
     return filtered;
-  }, [allData, statusFilter, debouncedGlobalFilter, fromDate, toDate]);
+  }, [allData, statusFilter, debouncedGlobalFilter, selectedMonth, fromDate, toDate]);
 
   const pageCount = Math.ceil(filteredData.length / pageSize);
   const pageData = useMemo(() => {
@@ -105,21 +259,43 @@ export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) 
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedGlobalFilter, statusFilter, fromDate, toDate]);
+  }, [debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate]);
 
   const handleReset = () => {
     setGlobalFilter("");
     setDebouncedGlobalFilter("");
     setStatusFilter("all");
+    setSelectedMonth("");
     setFromDate("");
     setToDate("");
     setCurrentPage(1);
+    setFiltersChanged(false);
   };
 
-  // Enhanced search handler with immediate feedback
   const handleSearch = useCallback((searchTerm) => {
     setGlobalFilter(searchTerm);
-    setCurrentPage(1); // Reset to first page when searching
+    setCurrentPage(1);
+    setFiltersChanged(true);
+  }, []);
+
+  const setStatusFilterWrapper = useCallback((status) => {
+    setStatusFilter(status);
+    setFiltersChanged(true);
+  }, []);
+
+  const setSelectedMonthWrapper = useCallback((month) => {
+    setSelectedMonth(month);
+    setFiltersChanged(true);
+  }, []);
+
+  const setFromDateWrapper = useCallback((date) => {
+    setFromDate(date);
+    setFiltersChanged(true);
+  }, []);
+
+  const setToDateWrapper = useCallback((date) => {
+    setToDate(date);
+    setFiltersChanged(true);
   }, []);
 
   return {
@@ -130,16 +306,20 @@ export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) 
     currentPage,
     setCurrentPage,
     globalFilter,
-    setGlobalFilter: handleSearch, // Use the enhanced search handler
+    setGlobalFilter: handleSearch,
     statusFilter,
-    setStatusFilter,
+    setStatusFilter: setStatusFilterWrapper,
+    selectedMonth, // Added to return
+    setSelectedMonth: setSelectedMonthWrapper, // Added to return
     fromDate,
-    setFromDate,
+    setFromDate: setFromDateWrapper,
     toDate,
-    setToDate,
+    setToDate: setToDateWrapper,
     handleReset,
     setAllData,
-    debouncedGlobalFilter // Expose this for debugging
+    debouncedGlobalFilter,
+    filtersChanged,
+    setFiltersChanged
   };
 };
 
