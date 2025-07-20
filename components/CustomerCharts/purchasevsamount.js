@@ -1,6 +1,4 @@
-
-
-
+// components/CustomerCharts/purchasevsamount.js
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Bar } from "react-chartjs-2";
 import { Spinner, Dropdown, Button,Table } from "react-bootstrap";

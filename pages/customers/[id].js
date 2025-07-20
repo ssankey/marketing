@@ -576,13 +576,13 @@ export default function CustomerDetails({
           >
             Back to Customers
           </button>
-          <button
+          {/* <button
             id="print-pdf-btn"
             className="btn btn-primary"
             onClick={handlePrintPDF}
           >
             <i className="bi bi-file-earmark-pdf me-2"></i> Print PDF
-          </button>
+          </button> */}
         </div>
         {/* First Card - Customer Details */}
         <div className="pdf-section">
