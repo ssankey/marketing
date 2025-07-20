@@ -1,4 +1,4 @@
-// components/KPI-modal/OrdersModal.js
+// components/OrderDetailsModal.js
 import React, { useState, useMemo } from "react";
 import {
   useReactTable,
@@ -11,162 +11,135 @@ import {
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Badge from "react-bootstrap/Badge";
-import Spinner from "react-bootstrap/Spinner";
-import Alert from "react-bootstrap/Alert";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 import downloadExcel from "utils/exporttoexcel";
-import OrderDetailsModal from "components/modal/OrderDetailsModal";
 
-const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) => {
+const OrderDetailsModal = ({ orderData, onClose, title = "Order Details" }) => {
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 12,
   });
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [orderDetails, setOrderDetails] = useState([]);
-  const [loadingDetails, setLoadingDetails] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [error, setError] = useState(null);
 
-  const fetchOrderDetails = async (orderNo) => {
-    setLoadingDetails(true);
-    setError(null);
-    
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("No token found in localStorage");
-      }
-
-      const response = await fetch(`/api/modal/orderDetails?orderNo=${orderNo}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid response format - expected array');
-      }
-      
-      if (data.length === 0) {
-        setError('No records found for this order');
-      }
-      
-      setOrderDetails(data);
-      setShowDetailsModal(true);
-      
-    } catch (error) {
-      console.error("Error fetching order details:", error);
-      setError(`Failed to load order details: ${error.message}`);
-    } finally {
-      setLoadingDetails(false);
-    }
-  };
-
-  const handleOrderClick = (orderNo) => {
-    if (!orderNo) {
-      setError('Order number is required');
-      return;
-    }
-    
-    setSelectedOrder(orderNo);
-    fetchOrderDetails(orderNo);
-  };
+  // Initial sorting state - sort by SO_Date in descending order (latest first)
+  const [sorting, setSorting] = useState([
+    {
+      id: "SO_Date",
+      desc: true, // true for descending (latest first)
+    },
+  ]);
 
   const columns = useMemo(
     () => [
       {
-        accessorKey: "DocNum",
-        header: "Order#",
-        cell: ({ getValue }) => (
-          <span 
-            className="text-primary"
-            style={{ 
-              cursor: 'pointer',
-              '&:hover': {
-                textDecoration: 'none'
-              }
-            }}
-            onClick={() => handleOrderClick(getValue())}
-          >
-            {getValue() || "-"}
-          </span>
-        ),
-      },
-      {
-        accessorKey: "DocStatus",
-        header: "Order Status",
-        cell: ({ getValue }) => {
-          const status = getValue();
-          let variant = "secondary";
-          
-          switch (status) {
-            case "Open":
-              variant = "danger";
-              break;
-            case "Closed":
-              variant = "success";
-              break;
-            case "Cancelled":
-              variant = "danger";
-              break;
-            case "Partial":
-              variant = "warning";
-              break;
-            default:
-              variant = "secondary";
-          }
-          
-          return (
-            <Badge bg={variant} className="fw-normal">
-              {status || "-"}
-            </Badge>
-          );
-        },
-      },
-      {
-        accessorKey: "CustomerPONo",
-        header: "Customer PO No",
+        accessorKey: "SO_No",
+        header: "SO No",
         cell: ({ getValue }) => getValue() || "-",
       },
       {
-        accessorKey: "CardName",
+        accessorKey: "SO_Date",
+        header: "SO Date",
+        cell: ({ getValue }) => formatDate(getValue()) || "-",
+        sortingFn: (rowA, rowB) => {
+          const dateA = new Date(rowA.getValue("SO_Date"));
+          const dateB = new Date(rowB.getValue("SO_Date"));
+          return dateA.getTime() - dateB.getTime();
+        },
+      },
+      {
+        accessorKey: "Customer_Ref_No",
+        header: "Customer Ref. No",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Customer",
         header: "Customer",
         cell: ({ getValue }) => getValue() || "-",
       },
       {
-        accessorKey: "DocDate",
-        header: "Order Date",
-        cell: ({ getValue }) => formatDate(getValue()) || "-",
-      },
-      {
-        accessorKey: "DeliveryDate",
-        header: "Delivery Date",
-        cell: ({ getValue }) => formatDate(getValue()) || "-",
-      },
-      {
-        accessorKey: "DocTotal",
-        header: "Total Amount",
-        cell: ({ getValue }) => getValue() !== null ? formatCurrency(getValue()) : "-",
-      },
-      {
-        accessorKey: "SalesEmployee",
-        header: "Sales Employee",
+        accessorKey: "Sales_Person",
+        header: "Sales Person",
         cell: ({ getValue }) => getValue() || "-",
       },
       {
-        accessorKey: "ContactPerson",
+        accessorKey: "Contact_Person",
         header: "Contact Person",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Item_No",
+        header: "Item No.",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Item_Service_Description",
+        header: "Description",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Cas_No",
+        header: "Cas No",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Vendor_Catalog_No",
+        header: "Vendor Cat. No.",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "PKZ",
+        header: "PKZ",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Quantity",
+        header: "Qty",
+        cell: ({ getValue }) => getValue() !== null ? getValue() : "-",
+      },
+      {
+        accessorKey: "Status_Line",
+        header: "Status",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Invoice_No",
+        header: "Invoice No",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Batch_No",
+        header: "Batch No",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Unit_Price",
+        header: "Unit Price",
+        cell: ({ getValue }) => getValue() !== null ? formatCurrency(getValue()) : "-",
+        sortingFn: (rowA, rowB) => {
+          const priceA = parseFloat(rowA.original["Unit_Price"]) || 0;
+          const priceB = parseFloat(rowB.original["Unit_Price"]) || 0;
+          return priceA - priceB;
+        },
+      },
+      {
+        accessorKey: "Total_Price",
+        header: "Total Value",
+        cell: ({ getValue }) => getValue() !== null ? formatCurrency(getValue()) : "-",
+        sortingFn: (rowA, rowB) => {
+          const totalA = parseFloat(rowA.original["Total_Price"]) || 0;
+          const totalB = parseFloat(rowB.original["Total_Price"]) || 0;
+          return totalA - totalB;
+        },
+      },
+      {
+        accessorKey: "MKT_Feedback",
+        header: "Mkt Feedback",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
+        accessorKey: "Category",
+        header: "Category",
         cell: ({ getValue }) => getValue() || "-",
       },
     ],
@@ -174,14 +147,16 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
   );
 
   const table = useReactTable({
-    data: ordersData || [],
+    data: orderData || [],
     columns,
     state: {
       globalFilter,
       pagination,
+      sorting,
     },
     onGlobalFilterChange: setGlobalFilter,
     onPaginationChange: setPagination,
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -189,12 +164,21 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
     globalFilterFn: (row, columnId, filterValue) => {
       const searchValue = filterValue.toLowerCase();
       return Object.values(row.original).some(value =>
-        String(value).toLowerCase().includes(searchValue))
+        String(value).toLowerCase().includes(searchValue)
+      );
     },
+    // Enable sorting for all columns
+    enableSorting: true,
+    // Default sort state - sort by SO_Date descending (newest first)
+    initialState: {
+      sorting: [
+        { id: 'SO_Date', desc: true }
+      ]
+    }
   });
 
   const handleExportExcel = () => {
-    const exportData = (ordersData || []).map((row) => {
+    const exportData = (orderData || []).map((row) => {
       const formattedRow = {};
       columns.forEach((column) => {
         const header = column.header;
@@ -202,7 +186,7 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
 
         if (header.includes("Date")) {
           formattedRow[header] = value ? formatDate(value) : "-";
-        } else if (header === "Total Amount") {
+        } else if (header === "Unit Price" || header === "Total Value") {
           formattedRow[header] = value !== null ? formatCurrency(value).slice(1) : "-";
         } else {
           formattedRow[header] = value || "-";
@@ -211,24 +195,7 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
       return formattedRow;
     });
 
-    const dateRange = getDateRangeText();
-    downloadExcel(exportData, `Sales_Orders_${dateRange}`);
-  };
-
-  const getDateRangeText = () => {
-    const today = new Date();
-    switch (dateFilter) {
-      case "today": return "Today";
-      case "thisWeek": return "This_Week";
-      case "thisMonth": return "This_Month";
-      case "custom": return `${startDate}_to_${endDate}`;
-      default: return "Data";
-    }
-  };
-
-  const getModalTitle = () => {
-    const dateRange = getDateRangeText().replace(/_/g, " ");
-    return `Sales Orders - ${dateRange}`;
+    downloadExcel(exportData, "Order_Details");
   };
 
   return (
@@ -236,7 +203,7 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
       <Modal.Header className="py-3 px-4 bg-dark">
         <div className="d-flex align-items-center justify-content-between w-100">
           <Modal.Title className="fs-4 m-0 text-white">
-            {getModalTitle()}
+            {title}
           </Modal.Title>
           <div className="d-flex align-items-center gap-3">
             <Form.Control
@@ -286,11 +253,13 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
                       }}
                       onClick={header.column.getToggleSortingHandler()}
                     >
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {{
-                        asc: " 🔼",
-                        desc: " 🔽",
-                      }[header.column.getIsSorted()] ?? null}
+                      <div className="d-flex align-items-center">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {{
+                          asc: <span className="ms-2">↑</span>,
+                          desc: <span className="ms-2">↓</span>,
+                        }[header.column.getIsSorted()] ?? null}
+                      </div>
                     </th>
                   ))}
                 </tr>
@@ -310,7 +279,7 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
               ) : (
                 <tr>
                   <td colSpan={columns.length} className="p-4 text-center">
-                    No orders data available for the selected period
+                    No order data available
                   </td>
                 </tr>
               )}
@@ -392,42 +361,8 @@ const OrdersModal = ({ ordersData, onClose, dateFilter, startDate, endDate }) =>
           </div>
         </div>
       </Modal.Body>
-
-      {/* Order Details Modal */}
-      {showDetailsModal && (
-        <OrderDetailsModal
-          orderData={orderDetails}
-          onClose={() => {
-            setShowDetailsModal(false);
-            setError(null);
-          }}
-          title={`Order #${selectedOrder} Details`}
-        />
-      )}
-
-      {loadingDetails && (
-        <div className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center bg-dark bg-opacity-50" style={{zIndex: 1050}}>
-          <div className="bg-white p-4 rounded shadow">
-            <Spinner animation="border" variant="primary" />
-            <span className="ms-2">Loading order details...</span>
-          </div>
-        </div>
-      )}
-
-      {error && (
-        <div className="position-fixed top-20 end-20 z-50">
-          <Alert 
-            variant="danger" 
-            dismissible 
-            onClose={() => setError(null)}
-            className="mb-3"
-          >
-            {error}
-          </Alert>
-        </div>
-      )}
     </Modal>
   );
 };
 
-export default OrdersModal;
+export default OrderDetailsModal;

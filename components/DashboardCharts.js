@@ -255,6 +255,9 @@ import VendorPaymentsChart from './VendorPaymentsChart';
 import CustomerAgingChart from "./CustomerCharts/customeragingreport";
 import DeliveryPerformanceChart from "./CustomerCharts/ordertodelievery";
 import CategorySalesChart from "./CustomerCharts/CategorySalesChart";
+import OrdersChartArray from "./OpenClosedOrdersChartArray";
+import OrdersChartArrayMerged from "./open-partial-chart/OpenClosedOrdersChartArray";
+
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -342,13 +345,16 @@ function DashboardCharts({ userRole }) {
 
   return (
     <div className="g-4">
-      <EnhancedSalesCOGSChart />
+    <EnhancedSalesCOGSChart />
+    <OrdersChartArrayMerged/>
       
       {/* Conditionally render DeliveryPerformanceChart for admin/sales */}
       {/* {isAdminOrSales && <DeliveryPerformanceChart />} */}
        <DeliveryPerformanceChart />
       
-      <OrdersChart />
+      {/* <OrdersChart />
+      <OrdersChartArray/> */}
+      {/* <OrdersChartArrayMerged/> */}
       
       {/* Conditionally render CategorySalesChart for admin/sales */}
       {isAdminOrSales && <CategorySalesChart />}
