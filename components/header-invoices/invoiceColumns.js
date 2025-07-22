@@ -2,7 +2,7 @@
 import React, { useState } from "react";  
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
-import { FlaskConical, FileText } from "lucide-react";
+import { FlaskConical, FileText, Download } from "lucide-react";
 import { Spinner ,Badge} from "react-bootstrap";
 import msdsMap from "public/data/msds-map.json";
 import { useAuth } from 'contexts/AuthContext';
@@ -141,9 +141,39 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
   const { user } = useAuth(); 
   const [loadingCOA, setLoadingCOA] = useState(false);
   const [loadingMSDS, setLoadingMSDS] = useState(false);
+  const [loadingPDF, setLoadingPDF] = useState(false);
 
   const isAdminOrSales = ['admin', 'sales_person'].includes(user?.role);
 
+  const handleInvoicePDFDownload = async (docNum) => {
+    try {
+      const response = await fetch(`/api/invoices/download-pdf/${docNum}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Invoice_${docNum}(Signed).pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error downloading invoice PDF:', error);
+      alert('Failed to download invoice PDF. Please try again.');
+    }
+  };
 
   const handleCOADownload = async (docEntry, docNum) => {
     try {
@@ -280,6 +310,16 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     }
   };
 
+  const handlePDFClick = async (e) => {
+    e.stopPropagation();
+    setLoadingPDF(true);
+    try {
+      await handleInvoicePDFDownload(docNum);
+    } finally {
+      setLoadingPDF(false);
+    }
+  };
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3 space-y-1 sm:space-y-0">
       <a
@@ -295,34 +335,6 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
         {docNum}
       </a>
 
-        
-      {/* <button
-        onClick={handleMSDSClick}
-        className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-200 text-blue-900 hover:bg-blue-300 rounded-md border border-blue-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
-        title="Download MSDS"
-        disabled={loadingMSDS}
-      >
-        {loadingMSDS ? (
-          <Spinner animation="border" size="sm" />
-        ) : (
-          <FlaskConical size={12} />
-        )}
-        <span className="hidden sm:inline font-medium">MSDS</span>
-      </button>
-
-      <button
-        onClick={handleCOAClick}
-        className="flex items-center gap-2 px-3 py-1.5 text-xs bg-green-200 text-green-900 hover:bg-green-300 rounded-md border border-green-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
-        title="Download COA"
-        disabled={loadingCOA}
-      >
-        {loadingCOA ? (
-          <Spinner animation="border" size="sm" />
-        ) : (
-          <FileText size={12} />
-        )}
-        <span className="hidden sm:inline font-medium">COA</span>
-      </button> */}
       {/* Conditionally render MSDS button */}
       {isAdminOrSales && (
         <button
@@ -354,6 +366,23 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
             <FileText size={12} />
           )}
           <span className="hidden sm:inline font-medium">COA</span>
+        </button>
+      )}
+
+      {/* Invoice PDF Download button */}
+      {isAdminOrSales && (
+        <button
+          onClick={handlePDFClick}
+          className="flex items-center gap-2 px-3 py-1.5 text-xs bg-orange-200 text-orange-900 hover:bg-orange-300 rounded-md border border-orange-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
+          title="Download Invoice PDF"
+          disabled={loadingPDF}
+        >
+          {loadingPDF ? (
+            <Spinner animation="border" size="sm" />
+          ) : (
+            <Download size={12} />
+          )}
+          <span className="hidden sm:inline font-medium">PDF</span>
         </button>
       )}
     </div>
