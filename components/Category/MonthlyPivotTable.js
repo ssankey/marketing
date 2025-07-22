@@ -97,7 +97,7 @@ export default function MonthlyLineItemsTable({
               className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
               style={{ backgroundColor: '#e8f5e8', color: '#2e7d32' }}
             >
-              {formatNumberWithIndianCommas(lines)} items
+              {formatNumberWithIndianCommas(lines)} Lines
             </div>
             <div 
               className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
@@ -270,8 +270,10 @@ export default function MonthlyLineItemsTable({
         </button>
       </div>
 
+      
+
       {/* Container with fixed header and first column */}
-      <div className="relative">
+      <div className="relative w-full max-w-[calc(100vw-32px)] mx-auto">
         {/* Horizontal scroll container */}
         <div className="overflow-x-auto">
           {/* Vertical scroll container */}
@@ -285,10 +287,10 @@ export default function MonthlyLineItemsTable({
           >
             <table className="w-full border-collapse">
               {/* Fixed header */}
-              <thead className="sticky top-0 z-10">
+              <thead>
                 {table.getHeaderGroups().map((hg) => (
                   <tr key={hg.id}>
-                    {hg.headers.map((header) => (
+                    {hg.headers.map((header, headerIndex) => (
                       <th
                         key={header.id}
                         className="px-4 py-3 text-center font-semibold text-sm text-white border border-black"
@@ -296,9 +298,10 @@ export default function MonthlyLineItemsTable({
                           backgroundColor: '#4caf50',
                           minWidth: header.column.columnDef.isTotal || header.column.columnDef.isMonthly ? "140px" : "auto",
                           whiteSpace: 'nowrap',
-                          position: header.column.id === transformedColumns[0]?.id ? 'sticky' : 'static',
-                          left: header.column.id === transformedColumns[0]?.id ? 0 : 'auto',
-                          zIndex: header.column.id === transformedColumns[0]?.id ? 20 : 10
+                          position: 'sticky',
+                          top: 0,
+                          zIndex: headerIndex === 0 ? 30 : 20, // First column header gets highest z-index
+                          left: headerIndex === 0 ? 0 : 'auto', // Only first column is sticky horizontally
                         }}
                       >
                         {flexRender(
@@ -314,19 +317,23 @@ export default function MonthlyLineItemsTable({
                 {table.getRowModel().rows.length > 0 ? (
                   table.getRowModel().rows.map((row) => (
                     <tr key={row.id} className="border border-black">
-                      {row.getVisibleCells().map((cell) => (
+                      {row.getVisibleCells().map((cell, cellIndex) => (
                         <td
                           key={cell.id}
                           className={`
-                            ${cell.column.id === transformedColumns[0]?.id ? 
-                              "text-left px-4 py-3 bg-white border border-black sticky left-0 z-10" : 
+                            ${cellIndex === 0 ? 
+                              "text-left px-4 py-3 bg-white border border-black" : 
                               "text-center p-0 bg-white border border-black"}
                           `}
                           style={{
                             minWidth: cell.column.columnDef.isTotal || cell.column.columnDef.isMonthly ? "140px" : "auto",
                             verticalAlign: "top",
                             height: cell.column.columnDef.isTotal || cell.column.columnDef.isMonthly ? "120px" : "auto",
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            position: cellIndex === 0 ? 'sticky' : 'static',
+                            left: cellIndex === 0 ? 0 : 'auto',
+                            zIndex: cellIndex === 0 ? 10 : 'auto',
+                            backgroundColor: cellIndex === 0 ? 'white' : 'transparent'
                           }}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}

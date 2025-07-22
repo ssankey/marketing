@@ -1,127 +1,3 @@
-// // pages/api/monthly-open-partial-array.js
-// import { queryDatabase } from '../../lib/db';
-
-// export default async function handler(req, res) {
-//   if (req.method !== 'GET') {
-//     return res.status(405).json({ error: 'Method Not Allowed' });
-//   }
-
-//   try {
-//     const query = `
-//       WITH OrderStatusCTE AS (
-//         -- Determine the overall status of each order based on line item invoice status
-//         SELECT 
-//             T0.DocEntry,
-//             T0.DocNum,
-//             T0.DocDate,
-//             T0.NumAtCard,
-//             T0.CntctCode,
-//             T0.CardCode,
-//             T0.SlpCode,
-//             CASE 
-//                 -- All line items invoiced
-//                 WHEN NOT EXISTS (
-//                     SELECT 1
-//                     FROM RDR1 T1
-//                     LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
-//                     LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-//                     LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
-//                     WHERE T1.DocEntry = T0.DocEntry
-//                         AND V.DocEntry IS NULL
-//                 ) THEN 'Closed'
-
-//                 -- Some line items invoiced, some not
-//                 WHEN EXISTS (
-//                     SELECT 1
-//                     FROM RDR1 T1
-//                     LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
-//                     LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-//                     LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
-//                     WHERE T1.DocEntry = T0.DocEntry
-//                         AND V.DocEntry IS NOT NULL
-//                 ) AND EXISTS (
-//                     SELECT 1
-//                     FROM RDR1 T1
-//                     LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
-//                     LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-//                     LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
-//                     WHERE T1.DocEntry = T0.DocEntry
-//                         AND V.DocEntry IS NULL
-//                 ) THEN 'Partial'
-
-//                 -- No line items invoiced
-//                 ELSE 'Open'
-//             END AS OrderStatus
-//         FROM ORDR T0
-//         WHERE T0.CANCELED = 'N'
-//       )
-
-//       SELECT 
-//           YEAR(T0.DocDate) AS [Year],
-//           DATENAME(MONTH, T0.DocDate) AS [Month],
-//           MONTH(T0.DocDate) AS [MonthNumber],
-//           T5.SlpName AS [Sales_Person],
-//           T0.CardName AS [Customer],
-//           T0.CardCode AS [Customer_Ref_No],
-//           T6.Name AS [Contact_Person],
-//           CTE.OrderStatus AS [Status_Header],
-//           T0.DocNum AS [SO_No],
-//           T0.DocDate AS [SO_Date],
-//           CASE 
-//               WHEN OINV.DocNum IS NULL THEN 'Open'
-//               ELSE 'Closed'
-//           END AS [Status_Line],
-//           T1.ItemCode AS [Item_No],
-//           T1.Dscription AS [Item_Service_Description],
-//           ISNULL(T1.U_CasNo, T3.U_CasNo) AS [Cas_No],
-//           ISNULL(T15.U_vendorbatchno, '') AS [Batch_No],
-//           T3.SuppCatNum AS [Vendor_Catalog_No],
-//           T1.UnitMsr AS [PKZ],
-//           T1.U_mkt_feedback AS [MKT_Feedback],
-//           T1.Price AS [Unit_Price],
-//           T1.Quantity AS [Quantity],
-//           T1.LineTotal AS [Total_Price],
-//           T4.ItmsGrpNam AS [Category],
-//           CASE 
-//               WHEN OINV.DocNum IS NULL THEN 'N/A'
-//               ELSE CAST(OINV.DocNum AS VARCHAR(20))
-//           END AS [Invoice_No]
-//       FROM ORDR T0
-//       INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
-//       INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
-//       INNER JOIN OCPR T6 ON T0.CntctCode = T6.CntctCode
-//       LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
-//       LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-//       LEFT JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry 
-//                      AND T1.LineNum = DLN1.BaseLine 
-//                      AND DLN1.BaseType = 17
-//       LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry 
-//                      AND DLN1.LineNum = INV1.BaseLine 
-//                      AND INV1.BaseType = 15
-//       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry 
-//                      AND OINV.CANCELED = 'N'
-//       LEFT JOIN IBT1 T4_batch ON T4_batch.BaseEntry = DLN1.DocEntry 
-//                               AND T4_batch.BaseType = 15 
-//                               AND T4_batch.BaseLinNum = DLN1.LineNum 
-//                               AND T4_batch.ItemCode = T1.ItemCode
-//       LEFT JOIN OIBT T15 ON T4_batch.ItemCode = T15.ItemCode 
-//                          AND T4_batch.BatchNum = T15.BatchNum
-//       INNER JOIN OrderStatusCTE CTE ON T0.DocEntry = CTE.DocEntry
-//       WHERE T0.CANCELED = 'N'
-//       ORDER BY T0.DocDate ASC, T0.DocNum DESC, T1.LineNum;
-//     `;
-
-//     const results = await queryDatabase(query);
-    
-//     // Return the plain array of objects
-//     res.status(200).json(results || []);
-
-//   } catch (error) {
-//     console.error('Database error:', error);
-//     res.status(500).json({ error: 'Internal Server Error' });
-//   }
-// }
-
 // pages/api/monthly-open-partial-array.js
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
@@ -216,8 +92,8 @@ export default async function handler(req, res) {
     }
 
     if (itmsGrpCod) {
-      whereClauses.push(`T4.ItmsGrpNam = @itmsGrpCod`);
-      params.push({ name: "itmsGrpCod", type: sql.VarChar, value: itmsGrpCod });
+      whereClauses.push(`T3.ItmsGrpCod = @itmsGrpCod`);
+      params.push({ name: "itmsGrpCod", type: sql.Int, value: parseInt(itmsGrpCod) });
     }
 
     if (cardCode) {
@@ -233,106 +109,85 @@ export default async function handler(req, res) {
     const whereSQL = whereClauses.length > 0 ? `AND ${whereClauses.join(" AND ")}` : "";
 
     const query = `
-      WITH OrderStatusCTE AS (
-        -- Determine the overall status of each order based on line item invoice status
-        SELECT 
-            T0.DocEntry,
-            T0.DocNum,
-            T0.DocDate,
-            T0.NumAtCard,
-            T0.CntctCode,
-            T0.CardCode,
-            T0.SlpCode,
-            CASE 
-                -- All line items invoiced
-                WHEN NOT EXISTS (
-                    SELECT 1
-                    FROM RDR1 T1
-                    LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
-                    LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-                    LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
-                    WHERE T1.DocEntry = T0.DocEntry
-                        AND V.DocEntry IS NULL
-                ) THEN 'Closed'
-
-                -- Some line items invoiced, some not
-                WHEN EXISTS (
-                    SELECT 1
-                    FROM RDR1 T1
-                    LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
-                    LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-                    LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
-                    WHERE T1.DocEntry = T0.DocEntry
-                        AND V.DocEntry IS NOT NULL
-                ) AND EXISTS (
-                    SELECT 1
-                    FROM RDR1 T1
-                    LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
-                    LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-                    LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
-                    WHERE T1.DocEntry = T0.DocEntry
-                        AND V.DocEntry IS NULL
-                ) THEN 'Partial'
-
-                -- No line items invoiced
-                ELSE 'Open'
-            END AS OrderStatus
-        FROM ORDR T0
-        WHERE T0.CANCELED = 'N'
-      )
-
       SELECT 
           YEAR(T0.DocDate) AS [Year],
           DATENAME(MONTH, T0.DocDate) AS [Month],
           MONTH(T0.DocDate) AS [MonthNumber],
           T5.SlpName AS [Sales_Person],
           T0.CardName AS [Customer],
-          T0.CardCode AS [Customer_Ref_No],
+          T0.CardCode AS [CardCode],
+          T0.NumAtCard AS [CustomerRefNo],
           T6.Name AS [Contact_Person],
-          CTE.OrderStatus AS [Status_Header],
+          CASE 
+              WHEN T0.DocStatus = 'O' AND 
+                   EXISTS (SELECT 1 FROM RDR1 WHERE DocEntry = T0.DocEntry AND LineStatus = 'O') AND
+                   EXISTS (SELECT 1 FROM RDR1 WHERE DocEntry = T0.DocEntry AND LineStatus = 'C')
+              THEN 'Partial'
+              WHEN T0.DocStatus = 'O' THEN 'Open'
+              WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'N') THEN 'Closed'
+              WHEN (T0.DocStatus = 'C' AND T0.CANCELED = 'Y') THEN 'Cancelled'
+              ELSE 'NA'
+          END AS [Status_Header],
           T0.DocNum AS [SO_No],
           T0.DocDate AS [SO_Date],
           CASE 
-              WHEN OINV.DocNum IS NULL THEN 'Open'
-              ELSE 'Closed'
+              WHEN T1.LineStatus = 'O' THEN 'Open'
+              WHEN T1.LineStatus = 'C' THEN 'Closed'
+              ELSE 'NA'
           END AS [Status_Line],
           T1.ItemCode AS [Item_No],
+          T3.SuppCatNum AS [Vendor_Catalog_No],
+          T1.UnitMsr AS [PKZ],
           T1.Dscription AS [Item_Service_Description],
           ISNULL(T1.U_CasNo, T3.U_CasNo) AS [Cas_No],
           ISNULL(T15.U_vendorbatchno, '') AS [Batch_No],
-          T3.SuppCatNum AS [Vendor_Catalog_No],
-          T1.UnitMsr AS [PKZ],
-          T1.U_mkt_feedback AS [MKT_Feedback],
-          T1.Price AS [Unit_Price],
+          ROUND(T1.OpenQty, 2) AS [Open Qty],
+          T1.DelivrdQty AS [Delivered Quantity],
+          CASE 
+              WHEN T3.OnHand >= T1.OpenQty THEN 'In Stock'
+              ELSE 'Out of Stock'
+          END AS [Stock Status-In hyd],
+          T1.ShipDate AS [Delivery Date],
+          T1.U_timeline AS [Timeline],
           T1.Quantity AS [Quantity],
+          T1.Price AS [Unit_Price],
           T1.LineTotal AS [Total_Price],
           T4.ItmsGrpNam AS [Category],
           CASE 
               WHEN OINV.DocNum IS NULL THEN 'N/A'
               ELSE CAST(OINV.DocNum AS VARCHAR(20))
-          END AS [Invoice_No]
+          END AS [Invoice_No],
+          T1.U_mkt_feedback AS [MKT_Feedback]
       FROM ORDR T0
       INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
       INNER JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
       INNER JOIN OCPR T6 ON T0.CntctCode = T6.CntctCode
       LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
       LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+      LEFT JOIN OLCT T2 ON T1.LocCode = T2.Code
       LEFT JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry 
-                     AND T1.LineNum = DLN1.BaseLine 
-                     AND DLN1.BaseType = 17
+                    AND T1.LineNum = DLN1.BaseLine 
+                    AND DLN1.BaseType = 17
       LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry 
-                     AND DLN1.LineNum = INV1.BaseLine 
-                     AND INV1.BaseType = 15
+                    AND DLN1.LineNum = INV1.BaseLine 
+                    AND INV1.BaseType = 15
       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry 
-                     AND OINV.CANCELED = 'N'
+                    AND OINV.CANCELED = 'N'
       LEFT JOIN IBT1 T4_batch ON T4_batch.BaseEntry = DLN1.DocEntry 
-                              AND T4_batch.BaseType = 15 
-                              AND T4_batch.BaseLinNum = DLN1.LineNum 
-                              AND T4_batch.ItemCode = T1.ItemCode
+                             AND T4_batch.BaseType = 15 
+                             AND T4_batch.BaseLinNum = DLN1.LineNum 
+                             AND T4_batch.ItemCode = T1.ItemCode
       LEFT JOIN OIBT T15 ON T4_batch.ItemCode = T15.ItemCode 
                          AND T4_batch.BatchNum = T15.BatchNum
-      INNER JOIN OrderStatusCTE CTE ON T0.DocEntry = CTE.DocEntry
       WHERE T0.CANCELED = 'N'
+      AND (
+          T0.DocStatus = 'O' OR -- Include Open documents
+          (
+              T0.DocStatus = 'O' AND -- Include Partial documents
+              EXISTS (SELECT 1 FROM RDR1 WHERE DocEntry = T0.DocEntry AND LineStatus = 'O') AND
+              EXISTS (SELECT 1 FROM RDR1 WHERE DocEntry = T0.DocEntry AND LineStatus = 'C')
+          )
+      )
       ${whereSQL}
       ORDER BY T0.DocDate ASC, T0.DocNum DESC, T1.LineNum;
     `;

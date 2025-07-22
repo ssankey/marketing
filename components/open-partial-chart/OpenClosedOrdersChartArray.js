@@ -95,48 +95,14 @@ const OpenPartialOrdersChart = () => {
     });
   };
 
-  // const handleExportAllData = () => {
-  //   // Apply current filters to the raw data
-  //   const filteredData = applyFilters(rawData, filters);
-
-  //   // Only export records where Status_Line is "Open"
-  //   const exportData = filteredData.filter(record => record.Status_Line === "Open");
-
-  //   downloadExcel(exportData, "Monthly_Open_Orders_Complete");
-  // };
-
-  
   const handleExportAllData = () => {
     // Apply current filters to the raw data
-    const filteredData = applyFilters(rawData, filters);
+    // const filteredData = applyFilters(rawData, filters);
 
     // Only export records where Status_Line is "Open"
-    const exportData = filteredData
-      .filter(record => record.Status_Line === "Open")
-      .map(record => ({
-        "Year": record.Year,
-        "Month": record.Month,
-        "Sales Person": record.Sales_Person,
-        "Customer": record.Customer,
-        "Customer Ref No": record.Customer_Ref_No,
-        "Contact Person": record.Contact_Person,
-        "Status Header": record.Status_Header,
-        "SO No": record.SO_No,
-        "SO Date": formatDate(record.SO_Date),
-        "Status Line": record.Status_Line,
-        "Item No": record.Item_No,
-        "Item/Service Description": record.Item_Service_Description,
-        "Cas No": record.Cas_No,
-        "Batch No": record.Batch_No,
-        "Vendor Catalog No": record.Vendor_Catalog_No,
-        "PKZ": record.PKZ,
-        "MKT Feedback": record.MKT_Feedback,
-        "Unit Price": formatCurrency(record.Unit_Price).slice(1), // Remove currency symbol
-        "Quantity": record.Quantity,
-        "Total Price": formatCurrency(record.Total_Price).slice(1), // Remove currency symbol
-        "Category": record.Category,
-        "Invoice No": record.Invoice_No
-      }));
+    // Export data in the exact same format as received from API
+    // const exportData = filteredData.filter(record => record.Status_Line === "Open");
+    const exportData = rawData.filter(record => record.Status_Line === "Open");
 
     downloadExcel(exportData, "Monthly_Open_Orders_Complete");
   };

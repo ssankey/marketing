@@ -25,9 +25,10 @@ const useOpenPartialOrdersData = () => {
       const data = await response.json();
       
       // Filter out records where Invoice_No is not "N/A"
-      const filteredData = data.filter(record => record.Invoice_No === "N/A");
+      // const filteredData = data.filter(record => record.Invoice_No === "N/A");
       
-      setRawData(filteredData);
+      // setRawData(filteredData);
+      setRawData(data);
     } catch (err) {
       console.error("Error fetching data:", err);
       setError(err.message);
@@ -135,7 +136,7 @@ const useOpenPartialOrdersData = () => {
     if (filters.salesPerson) {
       filteredData = filteredData.filter(record => record.Sales_Person === filters.salesPerson);
     }
-    if (filters.contactPerson) {
+    if (filters.contactPerson) {  
       filteredData = filteredData.filter(record => record.Contact_Person === filters.contactPerson);
     }
     if (filters.category) {
