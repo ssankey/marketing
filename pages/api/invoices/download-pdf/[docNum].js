@@ -20,8 +20,11 @@ export default async function handler(req, res) {
 
   try {
     // Configuration
-    const sharePath = process.env.SHARE_BASE_PATH || '\\\\172.50.10.9\\SAP-Attachments';
-    const signedPath = path.join(sharePath, 'Digital Signature New', 'Signed', docNum);
+    // const sharePath = process.env.SHARE_BASE_PATH || '\\\\172.50.10.9\\SAP-Attachments';
+    // const signedPath = path.join(sharePath, 'Digital Signature New', 'Signed', docNum);
+
+    const basePath = process.env.INVOICE_PDF_NETWORK_PATH;
+const signedPath = path.join(basePath, docNum);
 
     console.log(`Attempting to access: ${signedPath}`);
 
