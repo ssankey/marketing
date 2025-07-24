@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        Query to get recent invoices with tracking info updated yesterday
+      
         const recentInvoicesQuery = `SELECT 
             DocEntry,
             DocNum                         AS InvoiceNo,
