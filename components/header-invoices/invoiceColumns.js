@@ -382,7 +382,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
           ) : (
             <Download size={12} />
           )}
-          <span className="hidden sm:inline font-medium">PDF</span>
+          <span className="hidden sm:inline font-medium">INV Copy</span>
         </button>
       )}
     </div>
