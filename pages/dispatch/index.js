@@ -28,58 +28,7 @@ export default function InvoiceDetailsPage() {
   useEffect(() => {
     if (!docEntry || !docNum) return;
 
-    // const fetchInvoiceDetails = async () => {
-    //   try {
-    //     setLoading(true);
-    //     setError(null);
-        
-    //     const response = await fetch(
-    //       `/api/invoices/public-detail?docEntry=${docEntry}&docNum=${docNum}${refNo ? `&refNo=${encodeURIComponent(refNo)}` : ''}`
-    //     );
-
-    //     if (!response.ok) {
-    //       if (response.status === 404) {
-    //         const errorData = await response.json();
-    //         throw new Error(errorData.message || 'No dispatch details found');
-    //       }
-    //       throw new Error(`Failed to fetch invoice: ${response.status}`);
-    //     }
-
-    //     const data = await response.json();
-        
-    //     if (!data || !data.LineItems) {
-    //       throw new Error('No dispatch details found');
-    //     }
-
-    //     const headerInfo = {
-    //       InvoiceNo: data.InvoiceNo,
-    //       InvoiceDate: data.InvoiceDate,
-    //       CustomerName: data.CustomerName,
-    //       CustomerCode: data.CustomerCode,
-    //       SalesPersonName: data.SalesPersonName,
-    //       PaymentTerms: data.PaymentTerms,
-    //       CustomerPONo: data.CustomerPONo,
-    //       TrackingNumber: "25020250021531",
-    //       TransportName: "Shree Maruti Courier",
-    //       TrackingUpdatedDate: data.InvoiceDate,
-    //       DeliveryDate: null,
-    //     };
-
-    //     setHeaderData(headerInfo);
-    //     setInvoiceData(data.LineItems);
-        
-    //     // Check PDF availability immediately after setting header data
-    //     checkPdfAvailability(headerInfo.InvoiceNo);
-        
-    //     // Pre-check COA availability for all items
-    //     checkAllCoas(data.LineItems);
-    //   } catch (error) {
-    //     setError(error.message);
-    //   } finally {
-    //     setLoading(false);
-    //   }
-    // };
-
+ 
     const fetchInvoiceDetails = async () => {
   try {
     setLoading(true);
@@ -152,68 +101,116 @@ export default function InvoiceDetailsPage() {
   }, [docEntry, docNum, refNo]);
 
   // Pre-check COA availability for all items using the corrected approach
-  const checkAllCoas = async (lineItems) => {
-    const availabilityMap = {};
+  // const checkAllCoas = async (lineItems) => {
+  //   const availabilityMap = {};
     
-    // First, get detailed invoice data to access VendorBatchNum
-    try {
-      const detailResponse = await fetch(
-        `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
-      );
+  //   // First, get detailed invoice data to access VendorBatchNum
+  //   try {
+  //     const detailResponse = await fetch(
+  //       `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
+  //     );
       
-      if (detailResponse.ok) {
-        const invoiceDetail = await detailResponse.json();
+  //     if (detailResponse.ok) {
+  //       const invoiceDetail = await detailResponse.json();
         
-        if (invoiceDetail?.LineItems) {
-          // Check COAs in batches to avoid overwhelming the server
-          const batchSize = 5;
-          const itemsToCheck = invoiceDetail.LineItems.filter(item => item.ItemCode && item.VendorBatchNum);
+  //       if (invoiceDetail?.LineItems) {
+  //         // Check COAs in batches to avoid overwhelming the server
+  //         const batchSize = 5;
+  //         const itemsToCheck = invoiceDetail.LineItems.filter(item => item.ItemCode && item.VendorBatchNum);
           
-          for (let i = 0; i < itemsToCheck.length; i += batchSize) {
-            const batch = itemsToCheck.slice(i, i + batchSize);
-            await Promise.all(batch.map(async (item) => {
-              try {
-                const coaCheckResponse = await fetch('/api/invoices/check-coa-availability', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ 
-                    itemCode: item.ItemCode, 
-                    vendorBatchNum: item.VendorBatchNum 
-                  }),
-                });
+  //         for (let i = 0; i < itemsToCheck.length; i += batchSize) {
+  //           const batch = itemsToCheck.slice(i, i + batchSize);
+  //           await Promise.all(batch.map(async (item) => {
+  //             try {
+  //               const coaCheckResponse = await fetch('/api/invoices/check-coa-availability', {
+  //                 method: 'POST',
+  //                 headers: { 'Content-Type': 'application/json' },
+  //                 body: JSON.stringify({ 
+  //                   itemCode: item.ItemCode, 
+  //                   vendorBatchNum: item.VendorBatchNum 
+  //                 }),
+  //               });
                 
-                if (coaCheckResponse.ok) {
-                  const result = await coaCheckResponse.json();
-                  availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = result.available;
-                } else {
-                  availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = false;
-                }
-              } catch (error) {
-                console.error('COA check error:', error);
-                availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = false;
-              }
-            }));
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch detailed invoice data for COA checks:', error);
-    }
-    
-    setCoaAvailability(availabilityMap);
-  };
-
-  // const generateTrackingLink = (transportName, trackingNumber) => {
-  //   const lowerTransportName = transportName.toLowerCase();
-    
-  //   if (lowerTransportName.includes('shree maruti')) {
-  //     return `https://trackcourier.io/track-and-trace/shree-maruti-courier/${trackingNumber}`;
-  //   } else if (lowerTransportName.includes('bluedart') || lowerTransportName.includes('blue dart')) {
-  //     return `https://trackcourier.io/track-and-trace/blue-dart-courier/${trackingNumber}`;
+  //               if (coaCheckResponse.ok) {
+  //                 const result = await coaCheckResponse.json();
+  //                 availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = result.available;
+  //               } else {
+  //                 availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = false;
+  //               }
+  //             } catch (error) {
+  //               console.error('COA check error:', error);
+  //               availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = false;
+  //             }
+  //           }));
+  //         }
+  //       }
+  //     }
+  //   } catch (error) {
+  //     console.error('Failed to fetch detailed invoice data for COA checks:', error);
   //   }
     
-  //   return null;
+  //   setCoaAvailability(availabilityMap);
   // };
+  const checkAllCoas = async (lineItems) => {
+  const availabilityMap = {};
+  
+  try {
+    const detailResponse = await fetch(
+      `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
+    );
+    
+    if (detailResponse.ok) {
+      const invoiceDetail = await detailResponse.json();
+      
+      if (invoiceDetail?.LineItems) {
+        const batchSize = 5;
+        const itemsToCheck = invoiceDetail.LineItems.filter(item => item.ItemCode && item.VendorBatchNum);
+        
+        for (let i = 0; i < itemsToCheck.length; i += batchSize) {
+          const batch = itemsToCheck.slice(i, i + batchSize);
+          await Promise.all(batch.map(async (item) => {
+            try {
+              const coaCheckResponse = await fetch('/api/invoices/check-coa-availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                  itemCode: item.ItemCode, 
+                  vendorBatchNum: item.VendorBatchNum 
+                }),
+              });
+              
+              if (coaCheckResponse.ok) {
+                const result = await coaCheckResponse.json();
+                // Store both availability and download URL
+                availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = {
+                  available: result.available,
+                  downloadUrl: result.downloadUrl
+                };
+              } else {
+                availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = {
+                  available: false,
+                  downloadUrl: null
+                };
+              }
+            } catch (error) {
+              console.error('COA check error:', error);
+              availabilityMap[`${item.ItemCode}-${item.VendorBatchNum}`] = {
+                available: false,
+                downloadUrl: null
+              };
+            }
+          }));
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch detailed invoice data for COA checks:', error);
+  }
+  
+  setCoaAvailability(availabilityMap);
+};
+
+ 
   const generateTrackingLink = (transportName, trackingNumber) => {
   if (!transportName || !trackingNumber) return null;
   
@@ -301,42 +298,84 @@ export default function InvoiceDetailsPage() {
       header: "Total Sales Price",
       cell: ({ getValue }) => formatCurrency(getValue()) || "-",
     },
+    // {
+    //   accessorKey: "VendorBatchNum",
+    //   header: "COA",
+    //   cell: ({ row }) => {
+    //     const itemCode = row.original.ItemNo;
+    //     const vendorBatchNum = row.original.VendorBatchNum;
+        
+    //     if (!itemCode || !vendorBatchNum) {
+    //       return null;
+    //     }
+
+    //     const coaKey = `${itemCode}-${vendorBatchNum}`;
+    //     const isAvailable = coaAvailability[coaKey];
+        
+    //     if (isAvailable === undefined) {
+    //       return <Spinner animation="border" size="sm" />;
+    //     }
+
+    //     if (!isAvailable) {
+    //       return null;
+    //     }
+
+    //     return (
+    //       <Button
+    //         variant="link"
+    //         size="sm"
+    //         className="p-0 text-primary"
+    //         onClick={() => {
+    //           window.open(`/api/invoices/get-coa?itemCode=${itemCode}&batchNum=${vendorBatchNum}`, '_blank');
+    //         }}
+    //       >
+    //         COA
+    //       </Button>
+    //     );
+    //   },
+    // }
     {
-      accessorKey: "VendorBatchNum",
-      header: "COA",
-      cell: ({ row }) => {
-        const itemCode = row.original.ItemNo;
-        const vendorBatchNum = row.original.VendorBatchNum;
-        
-        if (!itemCode || !vendorBatchNum) {
-          return null;
-        }
-
-        const coaKey = `${itemCode}-${vendorBatchNum}`;
-        const isAvailable = coaAvailability[coaKey];
-        
-        if (isAvailable === undefined) {
-          return <Spinner animation="border" size="sm" />;
-        }
-
-        if (!isAvailable) {
-          return null;
-        }
-
-        return (
-          <Button
-            variant="link"
-            size="sm"
-            className="p-0 text-primary"
-            onClick={() => {
-              window.open(`/api/invoices/get-coa?itemCode=${itemCode}&batchNum=${vendorBatchNum}`, '_blank');
-            }}
-          >
-            COA
-          </Button>
-        );
-      },
+  accessorKey: "VendorBatchNum",
+  header: "COA",
+  cell: ({ row }) => {
+    const itemCode = row.original.ItemNo;
+    const vendorBatchNum = row.original.VendorBatchNum;
+    
+    if (!itemCode || !vendorBatchNum) {
+      return null;
     }
+
+    const coaKey = `${itemCode}-${vendorBatchNum}`;
+    const isAvailable = coaAvailability[coaKey];
+    
+    if (isAvailable === undefined) {
+      return <Spinner animation="border" size="sm" />;
+    }
+
+    if (!isAvailable) {
+      return null;
+    }
+
+    // Get the download URL from coaAvailability if available
+    const coaInfo = coaAvailability[coaKey];
+    const downloadUrl = typeof coaInfo === 'object' ? coaInfo.downloadUrl : null;
+
+    return (
+      <Button
+        variant="link"
+        size="sm"
+        className="p-0 text-primary"
+        onClick={() => {
+          if (downloadUrl) {
+            window.open(downloadUrl, '_blank');
+          }
+        }}
+      >
+        COA
+      </Button>
+    );
+  },
+}
   ];
 
   const table = useReactTable({
@@ -350,101 +389,196 @@ export default function InvoiceDetailsPage() {
     onGlobalFilterChange: setGlobalFilter,
   });
 
-  const handleExportExcel = async () => {
-    setIsExporting(true);
+  // const handleExportExcel = async () => {
+  //   setIsExporting(true);
     
-    try {
-      // Dynamically import ExcelJS only when needed
-      const ExcelJS = (await import('exceljs')).default;
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Invoice Details');
+  //   try {
+  //     // Dynamically import ExcelJS only when needed
+  //     const ExcelJS = (await import('exceljs')).default;
+  //     const workbook = new ExcelJS.Workbook();
+  //     const worksheet = workbook.addWorksheet('Invoice Details');
 
-      // Add headers
-      worksheet.columns = [
-        { header: 'No.', key: 'serialNo', width: 10 },
-        { header: 'Item No.', key: 'itemNo', width: 15 },
-        { header: 'Item/Service Description', key: 'description', width: 30 },
-        { header: 'CAS No.', key: 'casNo', width: 15 },
-        { header: 'Unit', key: 'unit', width: 10 },
-        { header: 'Pack Size', key: 'packSize', width: 10 },
-        { header: 'Unit Sales Price', key: 'unitPrice', width: 15 },
-        { header: 'QTY', key: 'quantity', width: 10 },
-        { header: 'Total Sales Price', key: 'totalPrice', width: 15 },
-        { header: 'COA', key: 'coa', width: 10 }
-      ];
+  //     // Add headers
+  //     worksheet.columns = [
+  //       { header: 'No.', key: 'serialNo', width: 10 },
+  //       { header: 'Item No.', key: 'itemNo', width: 15 },
+  //       { header: 'Item/Service Description', key: 'description', width: 30 },
+  //       { header: 'CAS No.', key: 'casNo', width: 15 },
+  //       { header: 'Unit', key: 'unit', width: 10 },
+  //       { header: 'Pack Size', key: 'packSize', width: 10 },
+  //       { header: 'Unit Sales Price', key: 'unitPrice', width: 15 },
+  //       { header: 'QTY', key: 'quantity', width: 10 },
+  //       { header: 'Total Sales Price', key: 'totalPrice', width: 15 },
+  //       { header: 'COA', key: 'coa', width: 10 }
+  //     ];
 
-      // Add data rows
-      invoiceData.forEach((row, index) => {
-        const newRow = {
-          serialNo: index + 1,
-          itemNo: row.ItemNo || '-',
-          description: row.ItemDescription || '-',
-          casNo: row.CasNo || '-',
-          unit: row.Unit || '-',
-          packSize: row.PackSize || '-',
-          unitPrice: row.UnitSalesPrice ? formatCurrency(row.UnitSalesPrice).slice(1) : '-',
-          quantity: row.Qty || '-',
-          totalPrice: row.TotalSalesPrice ? formatCurrency(row.TotalSalesPrice).slice(1) : '-',
-          coa: ''
-        };
+  //     // Add data rows
+  //     invoiceData.forEach((row, index) => {
+  //       const newRow = {
+  //         serialNo: index + 1,
+  //         itemNo: row.ItemNo || '-',
+  //         description: row.ItemDescription || '-',
+  //         casNo: row.CasNo || '-',
+  //         unit: row.Unit || '-',
+  //         packSize: row.PackSize || '-',
+  //         unitPrice: row.UnitSalesPrice ? formatCurrency(row.UnitSalesPrice).slice(1) : '-',
+  //         quantity: row.Qty || '-',
+  //         totalPrice: row.TotalSalesPrice ? formatCurrency(row.TotalSalesPrice).slice(1) : '-',
+  //         coa: ''
+  //       };
 
-        // Use pre-checked COA availability
-        if (row.ItemNo && row.VendorBatchNum) {
-          const coaKey = `${row.ItemNo}-${row.VendorBatchNum}`;
-          if (coaAvailability[coaKey]) {
-            newRow.coa = {
-              text: 'COA',
-              hyperlink: `/api/invoices/get-coa?itemCode=${row.ItemNo}&batchNum=${row.VendorBatchNum}`
-            };
-          }
-        }
+  //       // Use pre-checked COA availability
+  //       if (row.ItemNo && row.VendorBatchNum) {
+  //         const coaKey = `${row.ItemNo}-${row.VendorBatchNum}`;
+  //         if (coaAvailability[coaKey]) {
+  //           newRow.coa = {
+  //             text: 'COA',
+  //             hyperlink: `/api/invoices/get-coa?itemCode=${row.ItemNo}&batchNum=${row.VendorBatchNum}`
+  //           };
+  //         }
+  //       }
 
-        const excelRow = worksheet.addRow(newRow);
+  //       const excelRow = worksheet.addRow(newRow);
         
-        // Format COA cell if available
-        if (newRow.coa && typeof newRow.coa === 'object') {
-          excelRow.getCell('coa').value = newRow.coa;
-          excelRow.getCell('coa').font = { 
-            color: { argb: 'FF0000FF' }, 
-            underline: true 
+  //       // Format COA cell if available
+  //       if (newRow.coa && typeof newRow.coa === 'object') {
+  //         excelRow.getCell('coa').value = newRow.coa;
+  //         excelRow.getCell('coa').font = { 
+  //           color: { argb: 'FF0000FF' }, 
+  //           underline: true 
+  //         };
+  //       }
+  //     });
+
+  //     // Style the header row
+  //     worksheet.getRow(1).eachCell((cell) => {
+  //       cell.font = { bold: true };
+  //       cell.fill = {
+  //         type: 'pattern',
+  //         pattern: 'solid',
+  //         fgColor: { argb: 'FF343A40' }
+  //       };
+  //       cell.font = { color: { argb: 'FFFFFFFF' } };
+  //     });
+
+  //     // Generate Excel file
+  //     const buffer = await workbook.xlsx.writeBuffer();
+  //     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  //     const url = URL.createObjectURL(blob);
+  //     const a = document.createElement('a');
+  //     a.href = url;
+  //     a.download = `Invoice_${headerData?.InvoiceNo || 'Details'}.xlsx`;
+  //     document.body.appendChild(a);
+  //     a.click();
+      
+  //     // Clean up
+  //     setTimeout(() => {
+  //       document.body.removeChild(a);
+  //       URL.revokeObjectURL(url);
+  //     }, 100);
+  //   } catch (error) {
+  //     console.error('Export failed:', error);
+  //     alert('Export failed. Please try again.');
+  //   } finally {
+  //     setIsExporting(false);
+  //   }
+  // };
+
+  const handleExportExcel = async () => {
+  setIsExporting(true);
+  
+  try {
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Invoice Details');
+
+    // Add headers
+    worksheet.columns = [
+      { header: 'No.', key: 'serialNo', width: 10 },
+      { header: 'Item No.', key: 'itemNo', width: 15 },
+      { header: 'Item/Service Description', key: 'description', width: 30 },
+      { header: 'CAS No.', key: 'casNo', width: 15 },
+      { header: 'Unit', key: 'unit', width: 10 },
+      { header: 'Pack Size', key: 'packSize', width: 10 },
+      { header: 'Unit Sales Price', key: 'unitPrice', width: 15 },
+      { header: 'QTY', key: 'quantity', width: 10 },
+      { header: 'Total Sales Price', key: 'totalPrice', width: 15 },
+      { header: 'COA', key: 'coa', width: 10 }
+    ];
+
+    // Add data rows
+    invoiceData.forEach((row, index) => {
+      const newRow = {
+        serialNo: index + 1,
+        itemNo: row.ItemNo || '-',
+        description: row.ItemDescription || '-',
+        casNo: row.CasNo || '-',
+        unit: row.Unit || '-',
+        packSize: row.PackSize || '-',
+        unitPrice: row.UnitSalesPrice ? formatCurrency(row.UnitSalesPrice).slice(1) : '-',
+        quantity: row.Qty || '-',
+        totalPrice: row.TotalSalesPrice ? formatCurrency(row.TotalSalesPrice).slice(1) : '-',
+        coa: ''
+      };
+
+      // Use pre-checked COA availability
+      if (row.ItemNo && row.VendorBatchNum) {
+        const coaKey = `${row.ItemNo}-${row.VendorBatchNum}`;
+        const coaInfo = coaAvailability[coaKey];
+        
+        if (coaInfo?.available && coaInfo.downloadUrl) {
+          newRow.coa = {
+            text: 'COA',
+            hyperlink: coaInfo.downloadUrl // Use the direct download URL
           };
         }
-      });
+      }
 
-      // Style the header row
-      worksheet.getRow(1).eachCell((cell) => {
-        cell.font = { bold: true };
-        cell.fill = {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { argb: 'FF343A40' }
-        };
-        cell.font = { color: { argb: 'FFFFFFFF' } };
-      });
-
-      // Generate Excel file
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Invoice_${headerData?.InvoiceNo || 'Details'}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
+      const excelRow = worksheet.addRow(newRow);
       
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
+      // Format COA cell if available
+      if (newRow.coa && typeof newRow.coa === 'object') {
+        excelRow.getCell('coa').value = newRow.coa;
+        excelRow.getCell('coa').font = { 
+          color: { argb: 'FF0000FF' }, 
+          underline: true 
+        };
+      }
+    });
 
+    // Style the header row
+    worksheet.getRow(1).eachCell((cell) => {
+      cell.font = { bold: true };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF343A40' }
+      };
+      cell.font = { color: { argb: 'FFFFFFFF' } };
+    });
+
+    // Generate Excel file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Invoice_${headerData?.InvoiceNo || 'Details'}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  } catch (error) {
+    console.error('Export failed:', error);
+    alert('Export failed. Please try again.');
+  } finally {
+    setIsExporting(false);
+  }
+};
   const handleDownloadInvoicePdf = async () => {
     if (!isPdfAvailable) return;
     
@@ -526,19 +660,7 @@ export default function InvoiceDetailsPage() {
               <p className="mb-3" style={{ fontSize: '0.95rem' }}>
                 <strong>Tracking Number:</strong> {headerData.TrackingNumber} – Dated # {formatDate(headerData.TrackingUpdatedDate)}
               </p>
-              {/* {headerData.TransportName && headerData.TrackingNumber && (
-                <p className="mb-3" style={{ fontSize: '0.95rem' }}>
-                  <strong>Click to Track shipment:</strong>{' '}
-                  <a 
-                    href={generateTrackingLink(headerData.TransportName, headerData.TrackingNumber)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary"
-                  >
-                    {generateTrackingLink(headerData.TransportName, headerData.TrackingNumber)}
-                  </a>
-                </p>
-              )} */}
+            
               {generateTrackingLink(headerData.TransportName, headerData.TrackingNumber) && (
                 <p className="mb-3" style={{ fontSize: '0.95rem' }}>
                   <strong>Click to Track shipment:</strong>{' '}
