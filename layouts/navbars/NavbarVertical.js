@@ -261,6 +261,16 @@ const NavbarVertical = (props) => {
                 </Link>
               </li>
             )}
+             {(isAdmin || isSalesPerson) && (
+              <li className="nav-item mb-3">
+                <Link
+                  href="/dispatch"
+                  className={`nav-link d-flex align-items-center ${router === "/dispatch" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Dispatch Details
+                </Link>
+              </li>
+            )}
             {/* {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link

@@ -1,10 +1,10 @@
-
 // pages/api/email/dispatch-testing.js
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
 
 import { formatDate } from "utils/formatDate";
-import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
+
+import {formatCurrency} from "utils/formatCurrency";
 
 export default async function handler(req, res) {
     // Only allow POST requests
@@ -14,28 +14,56 @@ export default async function handler(req, res) {
     }
 
     try {
-      
-        const recentInvoicesQuery = `SELECT 
-            DocEntry,
-            DocNum                         AS InvoiceNo,
-            TrackNo                        AS TrackingNumber,
-            U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
-            U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
-            U_DispatchDate                 AS DispatchDate,
-            U_DeliveryDate                 AS DeliveryDate,
-            OINV.CardCode,
-            U_EmailSentDT,
-            U_EmailSentTM
-        FROM OINV
-        WHERE
-            TrackNo IS NOT NULL
-            AND U_TrackingNoUpdateDT IS NOT NULL
-            AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(DATEADD(DAY, -1, GETDATE()) AS DATE)
-            AND OINV.CardCode NOT IN ('C000021', 'C000020')
-        `;
+        //  const recentInvoicesQuery = `
+        //     SELECT 
+        //     DocEntry,
+        //     DocNum                         AS InvoiceNo,
+        //     TrackNo                        AS TrackingNumber,
+        //     U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
+        //     U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
+        //     U_DispatchDate                 AS DispatchDate,
+        //     U_DeliveryDate                 AS DeliveryDate,
+        //     OINV.CardCode,
+        //     U_EmailSentDT,
+        //     U_EmailSentTM
+        // FROM OINV
+        // WHERE
+        //     TrackNo IS NOT NULL
+        //     AND U_TrackingNoUpdateDT IS NOT NULL
+        //     AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(DATEADD(DAY, -2, GETDATE()) AS DATE)
+        //     AND OINV.CardCode NOT IN ('C000021', 'C000020');
+        //         `;
+        
+        //     const invoices = await queryDatabase(recentInvoicesQuery);
 
-        // Execute the query to get invoices
-        const invoices = await queryDatabase(recentInvoicesQuery);
+        const invoices = [
+        {
+            DocEntry: 2156,
+            InvoiceNo: 25220020,
+            TrackingNumber: "555-4274 4984",
+            TrackingUpdatedDate: "2025-07-17 00:00:00.000",
+            TrackingUpdatedTime: null,
+            DispatchDate: "2025-07-15 00:00:00.000",
+            DeliveryDate: "2025-07-18 00:00:00.000",
+            CardCode: "C000011",
+            U_EmailSentDT: "2025-07-17 12:49:41.960",
+            U_EmailSentTM: "440"
+        },
+         {
+            DocEntry: 3346,
+            InvoiceNo: 25212363,
+            TrackingNumber: "25020250021531",
+            TrackingUpdatedDate: "2025-07-24 00:00:00.000",
+            TrackingUpdatedTime: null,
+            DispatchDate: "2025-07-24 00:00:00.000",
+            DeliveryDate: null,
+            CardCode: "C000048",
+            U_EmailSentDT: "2025-07-24 19:49:55.353",
+            U_EmailSentTM: "860"
+        },
+
+        ];
+
 
         // Return early if no invoices found
         if (!invoices.length) {
@@ -47,7 +75,25 @@ export default async function handler(req, res) {
             failure = 0;
 
         // Get the base URL from environment or construct it
-        const baseUrl = process.env.API_BASE_URL ;
+        const baseUrl = process.env.API_BASE_URL;
+
+        // Function to generate tracking link based on transport name
+        const generateTrackingLink = (transportName, trackingNumber) => {
+
+            if (!transportName) {
+                return null;
+            }
+
+            const lowerTransportName = transportName.toLowerCase() ;
+            
+            if (lowerTransportName.includes('shree maruti')) {
+                return `https://trackcourier.io/track-and-trace/shree-maruti-courier/${trackingNumber}`;
+            } else if (lowerTransportName.includes('bluedart') || lowerTransportName.includes('blue dart')) {
+                return `https://trackcourier.io/track-and-trace/blue-dart-courier/${trackingNumber}`;
+            }
+            
+            return null; // Return null for unsupported carriers
+        };
 
         // Process each invoice
         for (const inv of invoices) {
@@ -63,7 +109,7 @@ export default async function handler(req, res) {
             try {
                 // Query to get detailed invoice information
                 const detailQuery = `
-                    SELECT
+                    SELECT TOP 6
                         T0.DocNum                AS InvoiceNo,
                         T0.DocDate               AS InvoiceDate,
                         T4.DocNum                AS OrderNo,
@@ -144,6 +190,7 @@ export default async function handler(req, res) {
 
                 // Check if invoice PDF is available
                 let pdfLinkHtml = '';
+                let isPdfAvailable = false;
                 try {
                     console.log(`🔍 Checking PDF availability for invoice ${InvoiceNo}...`);
                     console.log(`📡 API URL: ${baseUrl}/api/invoices/check-pdf-availability`);
@@ -164,23 +211,21 @@ export default async function handler(req, res) {
                         console.log(`📋 PDF check result for invoice ${InvoiceNo}:`, pdfResult);
 
                         if (pdfResult.available) {
+                            isPdfAvailable = true;
                             // Construct PDF download link
                             const hardcodedBaseUrl = "https://marketing.densitypharmachem.com";
                             const fullPdfUrl = `${hardcodedBaseUrl}${pdfResult.downloadUrl}?download=true`;
-                            // const fullPdfUrl = `https://marketing.densitypharmachem.com${pdfResult.downloadUrl}?download=true`;
-                            pdfLinkHtml = ` - <a href="${fullPdfUrl}" style="color: #007bff; text-decoration: underline;">PDF</a>`;
+                            pdfLinkHtml = ` - <a href="${fullPdfUrl}" style="color: #007bff; text-decoration: underline;">INV</a>`;
                             console.log(`✅ PDF link generated for invoice ${InvoiceNo}:`, pdfLinkHtml);
                         }
                         else {
                             console.log(`❌ PDF not available for invoice ${InvoiceNo}:`, pdfResult.message);
                         }
                     }
-                     else {
+                    else {
                         const errorText = await pdfCheckResponse.text();
                         console.error(`🚨 PDF check failed for invoice ${InvoiceNo}:`, pdfCheckResponse.status, errorText);
                     }
-                    
-                    
                 }
                 catch (pdfError) {
                     console.error(`💥 Could not check PDF availability for invoice ${InvoiceNo}:`, pdfError);
@@ -188,9 +233,17 @@ export default async function handler(req, res) {
 
                 // Check COA availability for each item and build table rows
                 const htmlRows = [];
- 
-                // Create HTML bullet points for shipment details
+
+                // Generate tracking link
+                const trackingLink = generateTrackingLink(TranspportName, TrackingNumber);
                 
+                // Create tracking link HTML if supported carrier
+                let trackingLinkHtml = '';
+                if (trackingLink) {
+                    trackingLinkHtml = `<li><strong>Click to Track shipment:</strong> <a href="${trackingLink}" style="color: #007bff; text-decoration: underline;" target="_blank">${trackingLink}</a></li>`;
+                }
+
+                // Process all rows for COA links and HTML generation
                 for (const r of rows) {
                     let coaLinkHtml = '';
                     
@@ -228,13 +281,10 @@ export default async function handler(req, res) {
                                             // Create filename for COA
                                             const coaFilename = `COA_${r.ItemNo}_${matchingItem.VendorBatchNum}.pdf`;
                                             
-                                            // Use download proxy instead of direct link
-                                            const hardcodedBaseUrl = "https://marketing.densitypharmachem.com";
-                                            const proxyDownloadUrl = `${baseUrl}/api/invoices/download-coa?url=${encodeURIComponent(coaResult.downloadUrl)}&filename=${encodeURIComponent(coaFilename)}`;
+                                            // Directly link to the actual COA file
+                                            coaLinkHtml = `<a href="${coaResult.downloadUrl}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: underline;">COA</a>`;
                                             
-                                            coaLinkHtml = `<a href="${proxyDownloadUrl}" style="color: #007bff; text-decoration: underline;">COA</a>`;
-                                            
-                                            console.log(`✅ COA proxy link generated for ${r.ItemNo}:`, proxyDownloadUrl);
+                                            console.log(`✅ COA link generated for ${r.ItemNo}:`, coaResult.downloadUrl);
                                         }
                                     }
                                 }
@@ -244,7 +294,7 @@ export default async function handler(req, res) {
                         }
                     }
 
-                    // Add row to HTML table (rest remains the same)
+                    // Add row to HTML table
                     htmlRows.push(`
                         <tr>
                             <td style="border:1px solid #ccc; padding:4px;">${r.InvoiceNo}</td>
@@ -254,22 +304,88 @@ export default async function handler(req, res) {
                             <td style="border:1px solid #ccc; padding:4px;">${r.CasNo || ""}</td>
                             <td style="border:1px solid #ccc; padding:4px;">${r.Unit}</td>
                             <td style="border:1px solid #ccc; padding:4px;">${r.PackSize || ""}</td>
-                            <td style="border:1px solid #ccc; padding:4px; text-align:right;">${formatNumberWithIndianCommas(r.UnitSalesPrice)}</td>
+                            <td style="border:1px solid #ccc; padding:4px; text-align:right;">${formatCurrency(r.UnitSalesPrice)}</td>
                             <td style="border:1px solid #ccc; padding:4px; text-align:center;">${r.Qty}</td>
-                            <td style="border:1px solid #ccc; padding:4px; text-align:right;">${formatNumberWithIndianCommas(r.TotalSalesPrice)}</td>
+                            <td style="border:1px solid #ccc; padding:4px; text-align:right;">${formatCurrency(r.TotalSalesPrice)}</td>
                             <td style="border:1px solid #ccc; padding:4px; text-align:center;">${coaLinkHtml}</td>
                         </tr>
                     `);
                 }
 
+                // Create HTML bullet points for shipment details
                 const bulletsHtml = `
                     <ul>
+                        <li><strong>Our Invoice Number:</strong> ${InvoiceNo} – Dated # ${formatDate(InvoiceDate)}</li>
                         <li><strong>Carrier name:</strong> ${TranspportName}</li>
                         <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
+                        ${trackingLinkHtml}
                         <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
-                        <li><strong>Our Invoice Number:</strong> ${InvoiceNo}${pdfLinkHtml}</li>
                     </ul>
                 `;
+
+                // Create PDF download section - only show if PDF is available
+                const pdfDownloadSection = isPdfAvailable 
+                    ? `<p><strong>Click here to download the Invoice PDF ${pdfLinkHtml}</strong></p>`
+                    : '';
+
+                // Limit table rows to first 5 items and create "see all items" link if needed
+                const totalItems = htmlRows.length;
+                const displayRows = htmlRows.slice(0, 5); // Show only first 5 items
+                const showSeeAllLink = totalItems > 5;
+
+                // Create simple table HTML that shows limited records
+                const tableHtml = `
+                    <table style="border-collapse:collapse; width:100%; margin-top:8px; margin-bottom:16px;">
+                        <thead>
+                            <tr style="background:#f7f7f7;">
+                                <th style="border:1px solid #ccc; padding:6px; text-align:left;">Inv#</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:left;">INV Date</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:left;">Item No.</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:left;">Item/Service Description</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:left;">CAS No.</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:left;">Unit</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:left;">Packsize</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:right;">Unit Sales Price</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:center;">QTY</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:right;">Total Sales Price</th>
+                                <th style="border:1px solid #ccc; padding:6px; text-align:center;">COA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${displayRows.join('')}
+                        </tbody>
+                    </table>
+                `;
+
+                // Create "Click to see all items" link section if there are more than 5 items
+                // const seeAllItemsSection = showSeeAllLink 
+                //     ? `<p style="margin-top: 10px; margin-bottom: 20px;">
+                //          <a href="http://localhost:3000/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}" 
+                //             style="color: #007bff; text-decoration: underline; font-weight: bold;" 
+                //             target="_blank">
+                //             Click to see all items (${totalItems} total)
+                //          </a>
+                //        </p>` 
+                //     : '';
+
+                // const seeAllItemsSection = showSeeAllLink 
+                // ? `<p style="margin-top: 10px; margin-bottom: 20px;">
+                //     <a href="http://localhost:3000/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}" 
+                //         style="color: #007bff; text-decoration: underline; font-weight: bold;" 
+                //         target="_blank">
+                //         Click to see all items (${totalItems} total)
+                //     </a>
+                // </p>` 
+                // : '';
+                const seeAllItemsSection = showSeeAllLink 
+                ? `<p style="margin-top: 10px; margin-bottom: 20px;">
+                    <a href="https://marketing.densitypharmachem.com/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}" 
+                        style="color: #007bff; text-decoration: underline; font-weight: bold;" 
+                        target="_blank">
+                        Click to see all items 
+                    </a>
+                </p>` 
+                : '';
 
                 // Construct full HTML email content
                 const html = `
@@ -278,27 +394,10 @@ export default async function handler(req, res) {
                         <p>Your order <strong>${CustomerPONo}</strong> has been shipped.</p>
                         <p><strong>Here are the tracking details:</strong></p>
                         ${bulletsHtml}
+                        ${pdfDownloadSection}
                         <p><strong>Items Shipped:</strong></p>
-                        <table style="border-collapse:collapse; width:100%; margin-top:8px; margin-bottom:16px;">
-                            <thead>
-                                <tr style="background:#f7f7f7;">
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:left;">Inv#</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:left;">INV Date</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:left;">Item No.</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:left;">Item/Service Description</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:left;">CAS No.</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:left;">Unit</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:left;">Packsize</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:right;">Unit Sales Price</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:center;">QTY</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:right;">Total Sales Price</th>
-                                    <th style="border:1px solid #ccc; padding:6px; text-align:center;">COA</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${htmlRows.join('')}
-                            </tbody>
-                        </table>
+                        ${tableHtml}
+                        ${seeAllItemsSection}
                         <p>
                             If you have any questions or need assistance, please don't hesitate to reach out to us at sales@densitypharmachem.com.
                         </p>
@@ -312,7 +411,6 @@ export default async function handler(req, res) {
                         alt="Density Pharmachem" 
                         width="180" 
                         style="height:60px; width:auto; max-width:180px; margin-top:10px; border:0; display:block;">
-
                     </div>
                 `;
 

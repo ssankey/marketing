@@ -372,6 +372,7 @@ const publicRoutes = [
   "/forgot-password",
   "/otp-verification",
   "/set-password",
+  "/dispatch" ,
 ];
 
 function AuthenticatedApp({ Component, pageProps }) {
