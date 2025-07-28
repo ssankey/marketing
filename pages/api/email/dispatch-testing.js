@@ -119,7 +119,7 @@ export default async function handler(req, res) {
                         T0.U_DispatchDate        AS DispatchDate,
                         T0.U_DeliveryDate        AS DeliveryDate,
                         T0.U_AirlineName         AS ShippingMethod,
-                        SHP.TrnspName            AS TranspportName,
+                        SHP.TrnspName            AS TransportName,
                         T0.CardName              AS CustomerName,
                         T0.CardCode              AS CustomerCode,
                         T7.Name                  AS ContactPerson,
@@ -170,7 +170,7 @@ export default async function handler(req, res) {
                     CustomerName,
                     CustomerEmail,
                     ShippingMethod,
-                    TranspportName,
+                    TransportName,
                     CustomerPONo,
                     SalesPersonName,
                     SalesPersonEmail,
@@ -235,7 +235,7 @@ export default async function handler(req, res) {
                 const htmlRows = [];
 
                 // Generate tracking link
-                const trackingLink = generateTrackingLink(TranspportName, TrackingNumber);
+                const trackingLink = generateTrackingLink(TransportName, TrackingNumber);
                 
                 // Create tracking link HTML if supported carrier
                 let trackingLinkHtml = '';
@@ -316,7 +316,7 @@ export default async function handler(req, res) {
                 const bulletsHtml = `
                     <ul>
                         <li><strong>Our Invoice Number:</strong> ${InvoiceNo} – Dated # ${formatDate(InvoiceDate)}</li>
-                        <li><strong>Carrier name:</strong> ${TranspportName}</li>
+                        <li><strong>Carrier name:</strong> ${TransportName}</li>
                         <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
                         ${trackingLinkHtml}
                         <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
