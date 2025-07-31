@@ -238,10 +238,37 @@ export default async function handler(req, res) {
                 const trackingLink = generateTrackingLink(TransportName, TrackingNumber);
                 
                 // Create tracking link HTML if supported carrier
-                let trackingLinkHtml = '';
-                if (trackingLink) {
-                    trackingLinkHtml = `<li><strong>Click to Track shipment:</strong> <a href="${trackingLink}" style="color: #007bff; text-decoration: underline;" target="_blank">${trackingLink}</a></li>`;
-                }
+                // let trackingLinkHtml = '';
+                // if (trackingLink) {
+                //     trackingLinkHtml = `<li><strong>Click to Track shipment:</strong> <a href="${trackingLink}" style="color: #007bff; text-decoration: underline;" target="_blank">${trackingLink}</a></li>`;
+                // }
+
+              let trackingLinkHtml = '';
+if (trackingLink) {
+    trackingLinkHtml = `<li><strong>Click to Track shipment:</strong> 
+        <table cellpadding="0" cellspacing="0" style="display: inline-table; margin-left: 8px;">
+            <tr>
+                <td style="
+                    background-color: #007bff;
+                    padding: 4px 12px;
+                    border-radius: 4px;
+                ">
+                    <a href="${trackingLink}" 
+                    target="_blank" 
+                    style="
+                        color: white !important;
+                        text-decoration: none !important;
+                        font-size: 14px;
+                        font-weight: bold;
+                        display: block;
+                    ">
+                    Track Shipment
+                    </a>
+                </td>
+            </tr>
+        </table>
+    </li>`;
+}
 
                 // Process all rows for COA links and HTML generation
                 for (const r of rows) {
@@ -313,15 +340,81 @@ export default async function handler(req, res) {
                 }
 
                 // Create HTML bullet points for shipment details
-                const bulletsHtml = `
-                    <ul>
-                        <li><strong>Our Invoice Number:</strong> ${InvoiceNo} – Dated # ${formatDate(InvoiceDate)}</li>
-                        <li><strong>Carrier name:</strong> ${TransportName}</li>
-                        <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
-                        ${trackingLinkHtml}
-                        <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
-                    </ul>
-                `;
+                // const bulletsHtml = `
+                //     <ul>
+                //         <li><strong>Our Invoice Number:</strong> ${InvoiceNo} – Dated # ${formatDate(InvoiceDate)}</li>
+                //         <li><strong>Carrier name:</strong> ${TransportName}</li>
+                //         <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
+                //         ${trackingLinkHtml}
+                //         <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
+                //     </ul>
+                // `;
+                // Create HTML bullet points for shipment details
+// const bulletsHtml = `
+//     <ul>
+//         <li><strong>Our Invoice Number:</strong> ${InvoiceNo} – Dated # ${formatDate(InvoiceDate)}</li>
+//         <li><strong>Carrier name:</strong> ${TransportName}</li>
+//         <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
+//         <li>
+//             <strong>Click to Track shipment:</strong>
+//             <a href="${trackingLink}" 
+//             target="_blank" 
+//             style="
+//                 display: inline-block;
+//                 background-color: #007bff;
+//                 color: white !important;
+//                 padding: 4px 12px;
+//                 font-size: 14px;
+//                 text-decoration: none !important;
+//                 border-radius: 4px;
+//                 font-weight: bold;
+//                 margin-left: 8px;
+//                 vertical-align: middle;
+//                 border: none;
+//             ">
+//             Track Shipment
+//             </a>
+//         </li>
+//         <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
+//     </ul>
+// `;
+// Create HTML bullet points for shipment details
+const bulletsHtml = `
+    <ul>
+        <li><strong>Our Invoice Number:</strong> ${InvoiceNo} – Dated # ${formatDate(InvoiceDate)}</li>
+        <li><strong>Carrier name:</strong> ${TransportName}</li>
+        <li><strong>Tracking Number:</strong> ${TrackingNumber} – Dated # ${formatDate(TrackingUpdatedDate)}</li>
+        <li>
+            <strong>Click to Track shipment:</strong>
+            <!--[if mso]>
+            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${trackingLink}" style="height:32px;v-text-anchor:middle;width:130px;margin-left:8px;" arcsize="12%" stroke="f" fillcolor="#007bff">
+                <w:anchorlock/>
+                <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:13px;font-weight:bold;line-height:32px;">Track Shipment</center>
+            </v:roundrect>
+            <![endif]-->
+            <!--[if !mso]><!-->
+            <a href="${trackingLink}" 
+            target="_blank" 
+            style="
+                display: inline-block;
+                background-color: #007bff;
+                color: white !important;
+                padding: 4px 12px;
+                font-size: 14px;
+                text-decoration: none !important;
+                border-radius: 4px;
+                font-weight: bold;
+                margin-left: 8px;
+                vertical-align: middle;
+                mso-hide: all;
+            ">
+            Track Shipment
+            </a>
+            <!--<![endif]-->
+        </li>
+        <li><strong>Estimated Delivery Date:</strong> ${formatDate(DeliveryDate)}</li>
+    </ul>
+`;
 
                 // Create PDF download section - only show if PDF is available
                 const pdfDownloadSection = isPdfAvailable 
