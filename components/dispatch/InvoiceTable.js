@@ -11,37 +11,63 @@ import { formatCurrency } from "utils/formatCurrency";
 export default function InvoiceTable({ 
   invoiceData, 
   loading, 
-  coaAvailability, 
   globalFilter, 
   setGlobalFilter, 
   onExportExcel, 
   isExporting 
 }) {
-  const handleCOADownload = async (downloadUrl, itemCode, batchNum) => {
-    try {
-      const fileRes = await fetch(downloadUrl);
-      if (!fileRes.ok) {
-        alert("COA file not available for download.");
-        return;
-      }
+  // const handleCOADownload = async (coaUrl, itemNo, vendorBatchNum) => {
+  //   try {
+  //     // Create a filename based on item code and batch number
+  //     const filename = `COA_${itemNo}_${vendorBatchNum}.pdf`;
       
-      const blob = await fileRes.blob();
-      const blobUrl = URL.createObjectURL(blob);
+  //     // Create a temporary link and trigger download
+  //     const a = document.createElement("a");
+  //     a.href = coaUrl;
+  //     a.download = filename;
+  //     a.target = "_blank"; // Open in new tab as fallback
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     document.body.removeChild(a);
+  //   } catch (e) {
+  //     console.error("Failed to download COA:", e);
+  //     alert("Failed to download COA file.");
+  //   }
+  // };
 
-      const a = document.createElement("a");
-      const filename = `COA_${itemCode}_${batchNum}.pdf`;
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-    } catch (e) {
-      console.error("Failed to download COA:", e);
-      alert("Failed to download COA file.");
+  const handleCOADownload = async (coaUrl, itemNo, vendorBatchNum) => {
+  try {
+    // Fetch the COA file as a blob
+    const response = await fetch(coaUrl);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch COA: ${response.status}`);
     }
-  };
 
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    
+    // Create a filename based on item code and batch number
+    const filename = `COA_${itemNo}_${vendorBatchNum}.pdf`;
+    
+    // Create a temporary link and trigger download
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    setTimeout(() => {
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    }, 100);
+    
+  } catch (e) {
+    console.error("Failed to download COA:", e);
+    alert("Failed to download COA file.");
+  }
+};
   const columns = [
     {
       accessorKey: "serialNo",
@@ -89,35 +115,22 @@ export default function InvoiceTable({
       cell: ({ getValue }) => formatCurrency(getValue()) || "-",
     },
     {
-      accessorKey: "VendorBatchNum",
+      accessorKey: "COA",
       header: "COA",
       cell: ({ row }) => {
-        // const itemCode = row.original.ItemNo;
-        const itemCode = row.original.ItemCode || row.original.ItemNo;
+        const itemNo = row.original.ItemNo;
         const vendorBatchNum = row.original.VendorBatchNum;
+        const coaUrl = row.original.COA;
         
-        // Don't show anything if no item code or batch number
-        if (!itemCode || !vendorBatchNum) {
-          return null;
-        }
-
-        const coaKey = `${itemCode}-${vendorBatchNum}`;
-        const coaInfo = coaAvailability[coaKey];
-        
-        // Show nothing if COA availability hasn't been checked yet or is not available
-        if (!coaInfo || !coaInfo.available) {
-          return null;
-        }
-
-        // Only show COA button if it's available and has a download URL
-        if (coaInfo.available && coaInfo.downloadUrl) {
+        // Only show COA button if URL exists and is not empty
+        if (coaUrl && coaUrl.trim() !== '') {
           return (
             <Button
               variant="link"
               size="sm"
               className="p-0 text-primary"
               style={{ textDecoration: 'underline' }}
-              onClick={() => handleCOADownload(coaInfo.downloadUrl, itemCode, vendorBatchNum)}
+              onClick={() => handleCOADownload(coaUrl, itemNo, vendorBatchNum)}
             >
               COA
             </Button>
