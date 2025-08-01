@@ -1,4 +1,6 @@
-// pages/api/invoices/check-coa-availability.js
+
+
+// pages/api/invoices/check-coa-availability.js - Optimized version
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
@@ -27,8 +29,21 @@ export default async function handler(req, res) {
     const coaUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${baseCode}_${batch}.pdf`;
     
     try {
-      // Check if COA exists by making a HEAD request
-      const response = await fetch(coaUrl, { method: 'HEAD' });
+      // Use AbortController for timeout control
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      // Check if COA exists by making a HEAD request with timeout
+      const response = await fetch(coaUrl, { 
+        method: 'HEAD',
+        signal: controller.signal,
+        // Add headers to potentially speed up the request
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         return res.status(200).json({ 
@@ -43,6 +58,12 @@ export default async function handler(req, res) {
         });
       }
     } catch (fetchError) {
+      if (fetchError.name === 'AbortError') {
+        return res.status(200).json({ 
+          available: false, 
+          message: 'COA check timed out'
+        });
+      }
       return res.status(200).json({ 
         available: false, 
         message: 'Unable to verify COA availability'
