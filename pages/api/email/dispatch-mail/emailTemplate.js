@@ -1,3 +1,4 @@
+
 // api/email/dispatch-mail/emailTemplate.js
 
 import { formatDate } from "utils/formatDate";
@@ -19,13 +20,51 @@ const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl, customerPON
     let hasCOA = false;
 
     for (const r of rows) {
-        const coaAvailable = await checkCoaAvailability(r.ItemNo, docEntry, invoiceNo, baseUrl);
-        if (coaAvailable) hasCOA = true;
+        let coaLinkDisplay = '';
         
-        const coaSpecialUrl = `${baseUrl}/dispatch?docEntry=${docEntry}&docNum=${invoiceNo}&refNo=${encodeURIComponent(customerPONo)}&COAdownload=true`;
-        const coaLinkDisplay = coaAvailable 
-            ? `<a href="${coaSpecialUrl}" style="color: #007bff; text-decoration: underline;">COA</a>`
-            : '';
+        // Get VendorBatchNum from invoice detail API
+        if (r.ItemNo) {
+            try {
+                const detailResponse = await fetch(
+                    `${baseUrl}/api/invoices/detail?docEntry=${docEntry}&docNum=${invoiceNo}`
+                );
+                
+                if (detailResponse.ok) {
+                    const invoiceDetail = await detailResponse.json();
+                    
+                    // Find the matching line item
+                    const matchingItem = invoiceDetail?.LineItems?.find(item => 
+                        item.ItemCode === r.ItemNo
+                    );
+                    
+                    if (matchingItem && matchingItem.VendorBatchNum) {
+                        const coaCheckResponse = await fetch(
+                            `${baseUrl}/api/invoices/check-coa-availability`,
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ 
+                                    itemCode: r.ItemNo, 
+                                    vendorBatchNum: matchingItem.VendorBatchNum 
+                                }),
+                            }
+                        );
+                        
+                        if (coaCheckResponse.ok) {
+                            const coaResult = await coaCheckResponse.json();
+                            if (coaResult.available) {
+                                hasCOA = true;
+                                // Create direct download link to the actual COA file
+                                coaLinkDisplay = `<a href="${coaResult.downloadUrl}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: underline;">COA</a>`;
+                                console.log(`✅ COA direct link generated for ${r.ItemNo}:`, coaResult.downloadUrl);
+                            }
+                        }
+                    }
+                }
+            } catch (coaError) {
+                console.warn(`Could not check COA availability for item ${r.ItemNo}:`, coaError);
+            }
+        }
 
         htmlRows.push(`
             <tr>
@@ -61,50 +100,32 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
     const trackingLink = generateTrackingLink(TransportName, TrackingNumber);
     const trackingLinkHtml = generateTrackingLinkHtml(trackingLink);
 
-    // // Create download links section
-    // let downloadLinksHtml = '';
-    // if (isPdfAvailable && hasCOA) {
-    //     downloadLinksHtml = `<p><strong>Click here to download:</strong> 
-    //         <a href="${baseUrl}/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}&COAdownload=true" style="color: #007bff; text-decoration: underline;">Invoice and COA</a>
-    //     </p>`;
-    // } else if (isPdfAvailable) {
-    //     downloadLinksHtml = `<p><strong>Click here to download:</strong> 
-    //         <a href="${baseUrl}/api/invoices/download-pdf?docNum=${InvoiceNo}" style="color: #007bff; text-decoration: underline;">Invoice</a>
-    //     </p>`;
-    // } else if (hasCOA) {
-    //     downloadLinksHtml = `<p><strong>Click here to download:</strong> 
-    //         <a href="${baseUrl}/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}&COAdownload=true" style="color: #007bff; text-decoration: underline;">COA</a>
-    //     </p>`;
-    // }
-
     // Create download links section
-let downloadLinksHtml = '';
-if (isPdfAvailable && hasCOA) {
-    downloadLinksHtml = `
-        <p><strong>Click here to download:</strong> 
-            <a href="${pdfLinkHtml}" 
-               style="color: #007bff; text-decoration: underline;">Invoice</a> and 
-            <a href="${baseUrl}/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}&COAdownload=true" 
-               style="color: #007bff; text-decoration: underline;">COA</a>
-        </p>
-    `;
-} else if (isPdfAvailable) {
-    downloadLinksHtml = `
-        <p><strong>Click here to download:</strong> 
-            <a href="${pdfLinkHtml}" 
-               style="color: #007bff; text-decoration: underline;">Invoice</a>
-        </p>
-    `;
-} else if (hasCOA) {
-    downloadLinksHtml = `
-        <p><strong>Click here to download:</strong> 
-            <a href="${baseUrl}/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}&COAdownload=true" 
-               style="color: #007bff; text-decoration: underline;">COA</a>
-        </p>
-    `;
-}
-
-    
+    let downloadLinksHtml = '';
+    if (isPdfAvailable && hasCOA) {
+        downloadLinksHtml = `
+            <p><strong>Click here to download:</strong> 
+                <a href="${pdfLinkHtml}" 
+                   style="color: #007bff; text-decoration: underline;">Invoice</a> and 
+                <a href="https://marketing.densitypharmachem.com/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}&COAdownload=true" 
+                   style="color: #007bff; text-decoration: underline;">COA</a>
+            </p>
+        `;
+    } else if (isPdfAvailable) {
+        downloadLinksHtml = `
+            <p><strong>Click here to download:</strong> 
+                <a href="${pdfLinkHtml}" 
+                   style="color: #007bff; text-decoration: underline;">Invoice</a>
+            </p>
+        `;
+    } else if (hasCOA) {
+        downloadLinksHtml = `
+            <p><strong>Click here to download:</strong> 
+                <a href="https://marketing.densitypharmachem.com/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}&COAdownload=true" 
+                   style="color: #007bff; text-decoration: underline;">COA</a>
+            </p>
+        `;
+    }
 
     const html = `
     <div style="font-family: Arial, sans-serif;font-size: 14px; line-height:1.4; color:#333;">
@@ -142,14 +163,16 @@ if (isPdfAvailable && hasCOA) {
         </table>
         ${htmlRows.length > 5 ? `
         <p style="margin-top: 10px; margin-bottom: 20px;">
-            <a href="${baseUrl}/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}" 
+            <a href="https://marketing.densitypharmachem.com/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}" 
                 style="color: #007bff; text-decoration: underline; font-weight: bold;" 
                 target="_blank">
                 Click to see all items 
             </a>
         </p>` : ''}
-        <p>If you have any questions, please contact us at sales@densitypharmachem.com.</p>
-        <p>Thank you for your business!</p>
+        <p>
+          If you have any questions or need assistance, please don't hesitate to reach out to us at sales@densitypharmachem.com.
+        </p>
+        <p>Thank you for your purchase and support!</p>
         <strong>Website: www.densitypharmachem.com</strong><br/><br/>
         DENSITY PHARMACHEM PRIVATE LIMITED<br/>
         Sy No 615/A & 624/2/1, Pudur Village<br/>
@@ -161,6 +184,6 @@ if (isPdfAvailable && hasCOA) {
              style="height:auto; width:180px; max-width:100%; margin-top:10px; border:0;">
     </div>
 `;
-    const subject = `Shipment tracking details for order ${CustomerPONo}`;
+    const subject = `Shipment tracking details# for order- ${CustomerPONo}`;
     return { subject, html };
 };

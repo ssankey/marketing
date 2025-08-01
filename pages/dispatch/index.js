@@ -10,9 +10,13 @@
 
 // export default function InvoiceDetailsPage() {
 //   const router = useRouter();
-//   const { docEntry, docNum, refNo } = router.query;
+//   const { docEntry, docNum, refNo, COAdownload } = router.query;
 //   const [globalFilter, setGlobalFilter] = useState("");
 //   const [isExporting, setIsExporting] = useState(false);
+//   const [isDownloadingCOA, setIsDownloadingCOA] = useState(false);
+
+//   // Check if COA download mode is enabled
+//   const isCOADownloadMode = COAdownload === 'true' || COAdownload === '1';
 
 //   const {
 //     invoiceData,
@@ -165,41 +169,51 @@
 //       return;
 //     }
 
+//     setIsDownloadingCOA(true);
 //     let downloadedAny = false;
     
-//     // Download all available COAs
-//     for (const [key, coaInfo] of Object.entries(coaAvailability)) {
-//       if (coaInfo?.available && coaInfo.downloadUrl) {
-//         try {
-//           const fileRes = await fetch(coaInfo.downloadUrl);
-//           if (!fileRes.ok) {
-//             console.warn("COA not found at", coaInfo.downloadUrl);
-//             continue;
+//     try {
+//       // Download all available COAs
+//       for (const [key, coaInfo] of Object.entries(coaAvailability)) {
+//         if (coaInfo?.available && coaInfo.downloadUrl) {
+//           try {
+//             const fileRes = await fetch(coaInfo.downloadUrl);
+//             if (!fileRes.ok) {
+//               console.warn("COA not found at", coaInfo.downloadUrl);
+//               continue;
+//             }
+            
+//             const blob = await fileRes.blob();
+//             const blobUrl = URL.createObjectURL(blob);
+
+//             const a = document.createElement("a");
+//             const filename = coaInfo.downloadUrl.split("/").pop() || `COA_${key}.pdf`;
+//             a.href = blobUrl;
+//             a.download = filename;
+//             document.body.appendChild(a);
+//             a.click();
+//             document.body.removeChild(a);
+//             URL.revokeObjectURL(blobUrl);
+
+//             downloadedAny = true;
+//             // Small delay between downloads
+//             await new Promise((r) => setTimeout(r, 300));
+//           } catch (e) {
+//             console.error("Failed to download COA from", coaInfo.downloadUrl, e);
 //           }
-          
-//           const blob = await fileRes.blob();
-//           const blobUrl = URL.createObjectURL(blob);
-
-//           const a = document.createElement("a");
-//           const filename = coaInfo.downloadUrl.split("/").pop() || `COA_${key}.pdf`;
-//           a.href = blobUrl;
-//           a.download = filename;
-//           document.body.appendChild(a);
-//           a.click();
-//           document.body.removeChild(a);
-//           URL.revokeObjectURL(blobUrl);
-
-//           downloadedAny = true;
-//           // Small delay between downloads
-//           await new Promise((r) => setTimeout(r, 300));
-//         } catch (e) {
-//           console.error("Failed to download COA from", coaInfo.downloadUrl, e);
 //         }
 //       }
-//     }
 
-//     if (!downloadedAny) {
-//       alert("None of the COA files were available for download.");
+//       if (!downloadedAny) {
+//         alert("None of the COA files were available for download.");
+//       } else {
+//         alert(`Successfully downloaded ${Object.entries(coaAvailability).filter(([, coaInfo]) => coaInfo?.available).length} COA file(s).`);
+//       }
+//     } catch (error) {
+//       console.error("COA download process failed:", error);
+//       alert("Failed to download COA files. Please try again.");
+//     } finally {
+//       setIsDownloadingCOA(false);
 //     }
 //   };
 
@@ -232,6 +246,109 @@
 //     );
 //   }
 
+//   // COA Download Mode - Show only the download button
+//   if (isCOADownloadMode) {
+//     return (
+//       <div className="container-fluid d-flex justify-content-center align-items-center" style={{ 
+//         backgroundColor: '#f8f9fa', 
+//         minHeight: '100vh',
+//         padding: '2rem'
+//       }}>
+//         <div className="text-center">
+//           <div className="mb-4">
+//             <h2 className="text-primary mb-3">COA Download</h2>
+//             <p className="text-muted mb-4">
+//               {headerData?.InvoiceNo && `Invoice: ${headerData.InvoiceNo}`}
+//             </p>
+//           </div>
+          
+//           {loading ? (
+//             <div className="spinner-border text-primary" role="status">
+//               <span className="sr-only">Loading...</span>
+//             </div>
+//           ) : !coaCheckCompleted ? (
+//             <div className="text-muted">
+//               <div className="spinner-border spinner-border-sm me-2" role="status"></div>
+//               Checking COA availability...
+//             </div>
+//           ) : !isCOAAvailable ? (
+//             <Alert variant="warning" className="text-center">
+//               <Alert.Heading>No COA Available</Alert.Heading>
+//               <p>No Certificate of Analysis files are available for this invoice.</p>
+//             </Alert>
+//           ) : (
+//             <div>
+//               <Button 
+//                 variant="primary" 
+//                 size="lg"
+//                 onClick={handleDownloadCOA}
+//                 disabled={isDownloadingCOA}
+//                 className="px-5 py-3"
+//                 style={{
+//                   fontSize: '1.2rem',
+//                   fontWeight: '600',
+//                   borderRadius: '10px',
+//                   boxShadow: '0 4px 15px rgba(13, 110, 253, 0.3)',
+//                   border: 'none',
+//                   background: 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
+//                   transition: 'all 0.3s ease'
+//                 }}
+//                 onMouseEnter={(e) => {
+//                   e.target.style.transform = 'translateY(-2px)';
+//                   e.target.style.boxShadow = '0 6px 20px rgba(13, 110, 253, 0.4)';
+//                 }}
+//                 onMouseLeave={(e) => {
+//                   e.target.style.transform = 'translateY(0)';
+//                   e.target.style.boxShadow = '0 4px 15px rgba(13, 110, 253, 0.3)';
+//                 }}
+//               >
+//                 {isDownloadingCOA ? (
+//                   <>
+//                     <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+//                     Downloading COAs...
+//                   </>
+//                 ) : (
+//                   <>
+//                     <i className="fas fa-download me-2"></i>
+//                     Download All COA
+//                   </>
+//                 )}
+//               </Button>
+              
+//               <div className="mt-3 text-muted small">
+//                 {Object.entries(coaAvailability || {}).filter(([, coaInfo]) => coaInfo?.available).length} COA file(s) available
+//               </div>
+//             </div>
+//           )}
+          
+//           <div className="mt-4">
+//             {/* <Button 
+//               variant="outline-secondary" 
+//               onClick={() => router.back()}
+//               className="me-2"
+//             >
+//               Go Back
+//             </Button> */}
+//             <Button 
+//               variant="outline-primary" 
+//               onClick={() => {
+//                 const newQuery = { ...router.query };
+//                 delete newQuery.COAdownload;
+//                 router.push({
+//                   pathname: router.pathname,
+//                   query: newQuery
+//                 });
+//               }}
+//             >
+//               View Full Invoice
+//             </Button>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   // Normal Mode - Show the regular invoice interface
 //   return (
 //     <div className="container-fluid p-2 p-md-4" style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
 //       <InvoiceHeader 
@@ -242,7 +359,6 @@
 //         isCOAAvailable={isCOAAvailable}
 //         coaCheckCompleted={coaCheckCompleted}
 //         onDownloadCOA={handleDownloadCOA}
-        
 //       />
       
 //       <InvoiceTable 
@@ -279,7 +395,6 @@ export default function InvoiceDetailsPage() {
   const { docEntry, docNum, refNo, COAdownload } = router.query;
   const [globalFilter, setGlobalFilter] = useState("");
   const [isExporting, setIsExporting] = useState(false);
-  const [isDownloadingCOA, setIsDownloadingCOA] = useState(false);
 
   // Check if COA download mode is enabled
   const isCOADownloadMode = COAdownload === 'true' || COAdownload === '1';
@@ -429,13 +544,13 @@ export default function InvoiceDetailsPage() {
     }
   };
 
+  // This is the reliable COA download function from InvoiceHeader
   const handleDownloadCOA = async () => {
     if (!coaAvailability) {
       alert("No COA information available.");
       return;
     }
 
-    setIsDownloadingCOA(true);
     let downloadedAny = false;
     
     try {
@@ -472,14 +587,10 @@ export default function InvoiceDetailsPage() {
 
       if (!downloadedAny) {
         alert("None of the COA files were available for download.");
-      } else {
-        alert(`Successfully downloaded ${Object.entries(coaAvailability).filter(([, coaInfo]) => coaInfo?.available).length} COA file(s).`);
       }
     } catch (error) {
       console.error("COA download process failed:", error);
       alert("Failed to download COA files. Please try again.");
-    } finally {
-      setIsDownloadingCOA(false);
     }
   };
 
@@ -512,7 +623,7 @@ export default function InvoiceDetailsPage() {
     );
   }
 
-  // COA Download Mode - Show only the download button
+  // COA Download Mode - Show the centered UI with the reliable COA download button
   if (isCOADownloadMode) {
     return (
       <div className="container-fluid d-flex justify-content-center align-items-center" style={{ 
@@ -532,69 +643,24 @@ export default function InvoiceDetailsPage() {
             <div className="spinner-border text-primary" role="status">
               <span className="sr-only">Loading...</span>
             </div>
-          ) : !coaCheckCompleted ? (
-            <div className="text-muted">
-              <div className="spinner-border spinner-border-sm me-2" role="status"></div>
-              Checking COA availability...
-            </div>
-          ) : !isCOAAvailable ? (
-            <Alert variant="warning" className="text-center">
-              <Alert.Heading>No COA Available</Alert.Heading>
-              <p>No Certificate of Analysis files are available for this invoice.</p>
-            </Alert>
           ) : (
             <div>
-              <Button 
-                variant="primary" 
-                size="lg"
-                onClick={handleDownloadCOA}
-                disabled={isDownloadingCOA}
-                className="px-5 py-3"
-                style={{
-                  fontSize: '1.2rem',
-                  fontWeight: '600',
-                  borderRadius: '10px',
-                  boxShadow: '0 4px 15px rgba(13, 110, 253, 0.3)',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #007bff 0%, #0056b3 100%)',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 6px 20px rgba(13, 110, 253, 0.4)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 15px rgba(13, 110, 253, 0.3)';
-                }}
-              >
-                {isDownloadingCOA ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status"></span>
-                    Downloading COAs...
-                  </>
-                ) : (
-                  <>
-                    <i className="fas fa-download me-2"></i>
-                    Download All COA
-                  </>
-                )}
-              </Button>
-              
-              <div className="mt-3 text-muted small">
-                {Object.entries(coaAvailability || {}).filter(([, coaInfo]) => coaInfo?.available).length} COA file(s) available
-              </div>
+              {/* Use the InvoiceHeader component but render only the COA download button in centered style */}
+              <InvoiceHeader 
+                headerData={headerData}
+                isPdfAvailable={false} // Hide PDF download in COA mode
+                pdfCheckCompleted={true}
+                onDownloadPdf={() => {}} // No-op
+                isCOAAvailable={isCOAAvailable}
+                coaCheckCompleted={coaCheckCompleted}
+                onDownloadCOA={handleDownloadCOA}
+                coaOnlyMode={true} // Pass a prop to indicate COA-only mode
+                centeredStyle={true} // Pass a prop for centered styling
+              />
             </div>
           )}
           
           <div className="mt-4">
-            {/* <Button 
-              variant="outline-secondary" 
-              onClick={() => router.back()}
-              className="me-2"
-            >
-              Go Back
-            </Button> */}
             <Button 
               variant="outline-primary" 
               onClick={() => {
