@@ -107,7 +107,7 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
             <p><strong>Click here to download:</strong> 
                 <a href="${pdfLinkHtml}" 
                    style="color: #007bff; text-decoration: underline;">Invoice</a> and 
-                <a href="https://marketing.densitypharmachem.com/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}&COAdownload=true" 
+                <a href="https://marketing.densitypharmachem.com/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}" 
                    style="color: #007bff; text-decoration: underline;">COA</a>
             </p>
         `;
