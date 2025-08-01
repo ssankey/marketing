@@ -1,397 +1,296 @@
-
-
-
-// pages/invoices/pendingDispatch.js
-import { useState, useEffect, useCallback } from "react";
+// pages/dispatch-pending/index.js
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Spinner } from "react-bootstrap";
-import { useAuth } from "hooks/useAuth";
-import InvoicesTable from "components/HeaderInvoiceTable"; // Changed to use HeaderInvoiceTable
+import { Spinner, Alert, Button, Badge, Row, Col } from "react-bootstrap";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+} from "@tanstack/react-table";
+import { formatCurrency } from "utils/formatCurrency";
+import { formatDate } from "utils/formatDate";
+import downloadExcel from "utils/exporttoexcel";
+import Link from "next/link";
 
+export default function DispatchInvoicePage() {
+  const router = useRouter();
+  const { docEntry, docNum } = router.query;
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  import downloadExcel from "utils/exporttoexcel";
-  import { Printer } from "react-bootstrap-icons";
-  import StatusBadge from "components/StatusBadge";
-  import { formatDate } from "utils/formatDate";
-  import Link from "next/link";
-  import { formatCurrency } from "utils/formatCurrency";
+  useEffect(() => {
+    if (!docEntry || !docNum) return;
+
+    const fetchInvoiceDetails = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch invoice data without authentication
+        const response = await fetch(`/api/invoices/public-detail?docEntry=${docEntry}&docNum=${docNum}`);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch invoice: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data || !data.LineItems || data.LineItems.length === 0) {
+          throw new Error('No invoice found with these details');
+        }
+
+        // Process line items to include COA links using the public endpoint
+        const processedLineItems = await Promise.all(
+          data.LineItems.map(async (item) => {
+            if (item.ItemCode && item.VendorBatchNum) {
+              try {
+                const coaResponse = await fetch('/api/invoices/check-coa-availability', {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ 
+                    itemCode: item.ItemCode, 
+                    vendorBatchNum: item.VendorBatchNum 
+                  }),
+                });
+                
+                if (coaResponse.ok) {
+                  const coaResult = await coaResponse.json();
+                  return {
+                    ...item,
+                    coaAvailable: coaResult.available,
+                    coaUrl: coaResult.downloadUrl
+                  };
+                }
+              } catch (coaError) {
+                console.warn(`Could not check COA for item ${item.ItemCode}:`, coaError);
+              }
+            }
+            return item;
+          })
+        );
+
+        setInvoiceData({
+          ...data,
+          LineItems: processedLineItems
+        });
+      } catch (error) {
+        console.error("Error fetching invoice:", error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInvoiceDetails();
+  }, [docEntry, docNum]);
 
   const columns = [
     {
-      field: "DocNum",
-      label: "Invoice#",
-      render: (value, row) => (
-        <>
-          <Link
-            href={`/invoicedetails?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-          >
-            {value}
-          </Link>
-          &nbsp;
-          <Link
-            href={`/printInvoice?d=${value}&e=${row.DocEntry}`}
-            className="text-blue-600 hover:text-blue-800"
-            target="_blank"
-          >
-            <Printer />
-          </Link>
-        </>
-      ),
-      sortable: true,
+      accessorKey: "InvoiceNo",
+      header: "Inv#",
+      cell: ({ row }) => row.original.InvoiceNo || "-"
     },
     {
-      field: "DocStatusDisplay",
-      label: "Status",
-      render: (value) => (
-        <span
-          className={`badge ${
-            value === "Closed"
-              ? "bg-success"
-              : value === "Cancelled"
-              ? "bg-warning"
-              : "bg-danger"
-          }`}
-        >
-          {value}
-        </span>
-      ),
+      accessorKey: "InvoiceDate",
+      header: "INV Date",
+      cell: ({ row }) => formatDate(row.original.InvoiceDate) || "-"
     },
     {
-      field: "DocDate",
-      label: "Invoice Date",
-      render: (value) => formatDate(value),
-      sortable: true,
+      accessorKey: "ItemNo",
+      header: "Item No.",
+      cell: ({ row }) => row.original.ItemCode || "-"
     },
     {
-      field: "DocDueDate",
-      label: "Due Date",
-      render: (value) => formatDate(value),
-      sortable: true,
+      accessorKey: "ItemDescription",
+      header: "Item/Service Description",
+      cell: ({ row }) => row.original.Description || "-"
     },
     {
-      field: "U_DispatchDate",
-      label: "Dispatch Date",
-      render: (value) => (value ? formatDate(value) : "Pending"),
+      accessorKey: "CasNo",
+      header: "CAS No.",
+      cell: ({ row }) => row.original.CasNo || "-"
     },
     {
-      field: "CardCode",
-      label: "Customer Code",
-      render: (value) => value || "N/A",
+      accessorKey: "Unit",
+      header: "Unit",
+      cell: ({ row }) => row.original.UnitMsr || "-"
     },
     {
-      field: "CardName",
-      label: "Customer Name",
-      render: (value) => value || "N/A",
-      sortable: true,
+      accessorKey: "PackSize",
+      header: "Packsize",
+      cell: ({ row }) => row.original.PackSize || "-"
     },
     {
-      field: "CustomerGroup",
-      label: "Customer Group",
-      render: (value) => value || "N/A",
-    },
-    //   {
-    //     field: "NumAtCard",
-    //     label: "Customer PO#",
-    //     render: (value) => value || "N/A"
-    //   },
-    {
-      field: "DocTotal",
-      label: "Total Amount",
-      render: (value) => formatCurrency(value),
-      sortable: true,
+      accessorKey: "UnitSalesPrice",
+      header: "Unit Sales Price",
+      cell: ({ row }) => formatCurrency(row.original.Price) || "-"
     },
     {
-      field: "DocCur",
-      label: "Currency",
-      render: (value) => value || "N/A",
+      accessorKey: "Qty",
+      header: "QTY",
+      cell: ({ row }) => row.original.Quantity || "-"
     },
     {
-      field: "VatSum",
-      label: "Tax Amount",
-      render: (value) => formatCurrency(value),
+      accessorKey: "TotalSalesPrice",
+      header: "Total Sales Price",
+      cell: ({ row }) => formatCurrency(row.original.LineTotal) || "-"
     },
     {
-      field: "TaxDate",
-      label: "Tax Date",
-      render: (value) => formatDate(value),
-    },
-    //   {
-    //     field: "U_DispatchDate",
-    //     label: "Dispatch Date",
-    //     render: (value) => (value ? formatDate(value) : "Pending")
-    //   },
-    {
-      field: "TrackNo",
-      label: "Tracking #",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "TransportName",
-      label: "Transport",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "PaymentGroup",
-      label: "Payment Terms",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "Country",
-      label: "Country",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "SalesEmployee",
-      label: "Sales Person",
-      render: (value) => value || "N/A",
-    },
-    {
-      field: "ContactPerson",
-      label: "Contact Person",
-      render: (value) => value || "N/A",
-    },
+      accessorKey: "COA",
+      header: "COA",
+      cell: ({ row }) => {
+        if (row.original.coaAvailable && row.original.coaUrl) {
+          return (
+            <Link 
+              href={row.original.coaUrl} 
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary text-decoration-none"
+            >
+              COA
+            </Link>
+          );
+        }
+        return "-";
+      }
+    }
   ];
 
-export default function PendingDispatchInvoicesPage() {
-  const router = useRouter();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-
-  const [invoices, setInvoices] = useState([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [fetchState, setFetchState] = useState({
-    isInitialLoad: true,
-    isLoading: false,
-    error: null,
+  const table = useReactTable({
+    data: invoiceData?.LineItems || [],
+    columns,
+    getCoreRowModel: getCoreRowModel(),
   });
 
-  const {
-    page = 1,
-    search = "",
-    status = "all",
-    sortField = "DocDate",
-    sortDir = "desc",
-    fromDate,
-    toDate,
-  } = router.query;
+  const handleExportExcel = () => {
+    if (!invoiceData) return;
 
-  // Fetch all pending dispatch invoices for Excel export
-  const fetchAllInvoices = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      throw new Error("No token found in localStorage");
-    }
+    const exportData = invoiceData.LineItems.map(item => ({
+      "Inv#": invoiceData.DocNum,
+      "INV Date": formatDate(invoiceData.DocDate),
+      "Item No.": item.ItemCode,
+      "Item/Service Description": item.Description,
+      "CAS No.": item.CasNo || "-",
+      "Unit": item.UnitMsr,
+      "Packsize": item.PackSize || "-",
+      "Unit Sales Price": formatCurrency(item.Price).slice(1),
+      "QTY": item.Quantity,
+      "Total Sales Price": formatCurrency(item.LineTotal).slice(1),
+      "COA": item.coaAvailable ? "Available" : "-"
+    }));
 
-    const queryParams = new URLSearchParams({
-      page: 1,
-      search,
-      status,
-      sortField,
-      sortDir,
-      fromDate: fromDate || "",
-      toDate: toDate || "",
-      getAll: "true",
-    });
-
-    const response = await fetch(`/api/invoices/pendingDispatch?${queryParams}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch invoices. Status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.invoices || [];
+    downloadExcel(exportData, `Invoice_${invoiceData.DocNum}_Details`);
   };
 
-  const fetchInvoices = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      throw new Error("No token found in localStorage");
-    }
-
-    const queryParams = new URLSearchParams({
-      page,
-      search,
-      status,
-      sortField,
-      sortDir,
-    });
-    if (fromDate) queryParams.set("fromDate", fromDate);
-    if (toDate) queryParams.set("toDate", toDate);
-
-    const response = await fetch(`/api/invoices/pendingDispatch?${queryParams}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch invoices. Status: ${response.status}`);
-    }
-
-    return response.json();
-  }, [page, search, status, sortField, sortDir, fromDate, toDate]);
-
-  const handleExcelDownload = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
-
-      // Build query params with getAll=true
-      const queryParams = {
-        status: router.query.status || "all",
-        search: router.query.search || "",
-        sortField: router.query.sortField || "DocDate",
-        sortDir: router.query.sortDir || "desc",
-        fromDate: router.query.fromDate || "",
-        toDate: router.query.toDate || "",
-        getAll: "true",
-      };
-
-      const url = `/api/invoices/pendingDispatch?${new URLSearchParams(
-        queryParams
-      )}`;
-
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status}`);
-      }
-
-      const { invoices: allInvoices } = await response.json();
-
-      if (allInvoices && allInvoices.length > 0) {
-        // Prepare data for Excel export matching the table columns
-        const excelData = allInvoices.map((invoice) => {
-          const row = {};
-
-          columns.forEach((column) => {
-            const value = invoice[column.field];
-            row[column.label] = value || "N/A";
-          });
-
-          return row;
-        });
-
-        downloadExcel(excelData, `Invoices_${queryParams.status}`);
-      } else {
-        alert("No data available to export.");
-      }
-    } catch (error) {
-      console.error("Failed to export to Excel:", error);
-      alert("Failed to export data. Please try again.");
-    }
-  }, [router.query]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadData = async () => {
-      setFetchState((prev) => ({
-        ...prev,
-        isLoading: prev.isInitialLoad || invoices.length === 0,
-        error: null,
-      }));
-
-      try {
-        const { invoices: newInvoices, totalItems: newTotalItems } = await fetchInvoices();
-        
-        if (isMounted) {
-          setInvoices(newInvoices || []);
-          setTotalItems(newTotalItems || 0);
-          setFetchState({
-            isInitialLoad: false,
-            isLoading: false,
-            error: null,
-          });
-        }
-      } catch (error) {
-        if (isMounted) {
-          setFetchState({
-            isInitialLoad: false,
-            isLoading: false,
-            error: error.message,
-          });
-        }
-      }
-    };
-
-    if (isAuthenticated) {
-      loadData();
-    }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [isAuthenticated, fetchInvoices]);
-
-  useEffect(() => {
-    const handleRouteStart = () => {
-      if (invoices.length === 0) {
-        setFetchState((prev) => ({ ...prev, isLoading: true }));
-      }
-    };
-
-    const handleRouteEnd = () => {
-      setFetchState((prev) => ({ ...prev, isLoading: false }));
-    };
-
-    router.events.on("routeChangeStart", handleRouteStart);
-    router.events.on("routeChangeComplete", handleRouteEnd);
-    router.events.on("routeChangeError", handleRouteEnd);
-
-    return () => {
-      router.events.off("routeChangeStart", handleRouteStart);
-      router.events.off("routeChangeComplete", handleRouteEnd);
-      router.events.off("routeChangeError", handleRouteEnd);
-    };
-  }, [router, invoices.length]);
-
-  if (authLoading) {
+  if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner animation="border" role="status" variant="primary" />
-        <span className="ml-3">Checking authentication...</span>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  if (fetchState.error) {
-    return (
-      <div className="text-center py-8">
-        <p className="text-red-600">Error loading invoices: {fetchState.error}</p>
+      <div className="container mt-5">
+        <Alert variant="danger">
+          <Alert.Heading>Error loading invoice</Alert.Heading>
+          <p>{error}</p>
+          <Button variant="outline-danger" onClick={() => router.back()}>
+            Go Back
+          </Button>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <InvoicesTable
-      invoices={invoices}
-      totalItems={totalItems}
-      isLoading={fetchState.isInitialLoad || fetchState.isLoading}
-      status={status}
-      fetchAllInvoices={fetchAllInvoices}
-      onExcelDownload={handleExcelDownload}
-      columns={columns}
-    />
+    <div className="container-fluid p-4">
+      {invoiceData && (
+        <>
+          <div className="mb-4 p-3 border rounded bg-light">
+            <Row>
+              <Col md={4}>
+                <p><strong>Invoice #:</strong> {invoiceData.DocNum}</p>
+                <p><strong>Date:</strong> {formatDate(invoiceData.DocDate)}</p>
+                <p><strong>Status:</strong> 
+                  <Badge 
+                    bg={
+                      invoiceData.DocStatusDisplay === 'Closed' ? 'success' : 
+                      invoiceData.DocStatusDisplay === 'Cancelled' ? 'danger' : 
+                      'primary'
+                    } 
+                    className="ms-2"
+                  >
+                    {invoiceData.DocStatusDisplay}
+                  </Badge>
+                </p>
+                <p><strong>Customer PO #:</strong> {invoiceData.CustomerPONo || '-'}</p>
+              </Col>
+              <Col md={4}>
+                <p><strong>Customer:</strong> {invoiceData.CardName} ({invoiceData.CardCode})</p>
+                <p><strong>Sales Person:</strong> {invoiceData.SalesEmployee}</p>
+                <p><strong>Payment Terms:</strong> {invoiceData.PaymentTerms}</p>
+              </Col>
+              <Col md={4}>
+                <p><strong>Total Amount:</strong> {formatCurrency(invoiceData.DocTotal)}</p>
+                <p><strong>Subtotal:</strong> {formatCurrency(invoiceData.Subtotal)}</p>
+                <p><strong>Tax:</strong> {formatCurrency(invoiceData.TaxTotal)}</p>
+              </Col>
+            </Row>
+          </div>
+
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h2>Invoice Line Items</h2>
+            <div>
+              <Button variant="outline-secondary" onClick={() => router.back()} className="me-2">
+                Back
+              </Button>
+              <Button variant="success" onClick={handleExportExcel}>
+                Export to Excel
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {loading ? (
+        <div className="d-flex justify-content-center my-5">
+          <Spinner animation="border" variant="primary" />
+        </div>
+      ) : (
+        <div className="table-responsive" style={{ height: 'calc(100vh - 250px)' }}>
+          <table className="table table-striped table-hover">
+            <thead className="table-dark sticky-top">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th key={header.id} className="px-3 py-2">
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className="px-3 py-2">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
-PendingDispatchInvoicesPage.seo = {
-  title: "Pending Dispatch Invoices | Density",
-  description: "View and manage invoices pending dispatch.",
-  keywords: "invoices, pending dispatch, density",
+DispatchInvoicePage.seo = {
+  title: "Invoice Details | Dispatch",
+  description: "View detailed invoice information for dispatch",
+  keywords: "invoice, dispatch, details, sales",
 };
