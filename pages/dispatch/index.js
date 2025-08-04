@@ -131,50 +131,6 @@ export default function InvoiceDetailsPage() {
     }
   };
 
-  // const handleDownloadCOA = async () => {
-  //   if (!invoiceData || invoiceData.length === 0) {
-  //     alert("No invoice data available.");
-  //     return;
-  //   }
-
-  //   setIsDownloadingCOA(true);
-    
-  //   try {
-  //     // Get all COAs from the invoice data
-  //     const coasToDownload = invoiceData
-  //       .filter(item => item.COA && item.COA.trim() !== '')
-  //       .map(item => ({
-  //         url: item.COA,
-  //         itemNo: item.ItemNo,
-  //         vendorBatchNum: item.VendorBatchNum
-  //       }));
-
-  //     if (coasToDownload.length === 0) {
-  //       alert("No COA files available for download.");
-  //       return;
-  //     }
-
-  //     // Download each COA
-  //     coasToDownload.forEach((coa, index) => {
-  //       setTimeout(() => {
-  //         const filename = `COA_${coa.itemNo}_${coa.vendorBatchNum}.pdf`;
-  //         const a = document.createElement("a");
-  //         a.href = coa.url;
-  //         a.download = filename;
-  //         a.target = "_blank";
-  //         document.body.appendChild(a);
-  //         a.click();
-  //         document.body.removeChild(a);
-  //       }, index * 300); // Stagger downloads by 300ms
-  //     });
-      
-  //   } catch (error) {
-  //     console.error("COA download process failed:", error);
-  //     alert("Failed to initiate COA download. Please try again.");
-  //   } finally {
-  //     setIsDownloadingCOA(false);
-  //   }
-  // };
   const handleDownloadCOA = async () => {
   if (!invoiceData || invoiceData.length === 0) {
     alert("No invoice data available.");
