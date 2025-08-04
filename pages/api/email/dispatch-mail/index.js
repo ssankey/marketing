@@ -13,55 +13,55 @@ export default async function handler(req, res) {
     }
 
     try {
-         const recentInvoicesQuery = `
-            SELECT 
-            DocEntry,
-            DocNum                         AS InvoiceNo,
-            TrackNo                        AS TrackingNumber,
-            U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
-            U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
-            U_DispatchDate                 AS DispatchDate,
-            U_DeliveryDate                 AS DeliveryDate,
-            OINV.CardCode,
-            U_EmailSentDT,
-            U_EmailSentTM
-        FROM OINV
-        WHERE
-            TrackNo IS NOT NULL
-            AND U_TrackingNoUpdateDT IS NOT NULL
-            AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(DATEADD(DAY, -2, GETDATE()) AS DATE)
-            AND OINV.CardCode NOT IN ('C000021', 'C000020');
-                `;
+        //  const recentInvoicesQuery = `
+        //     SELECT 
+        //     DocEntry,
+        //     DocNum                         AS InvoiceNo,
+        //     TrackNo                        AS TrackingNumber,
+        //     U_TrackingNoUpdateDT           AS TrackingUpdatedDate,
+        //     U_TrackingNoUpdateTM           AS TrackingUpdatedTime,
+        //     U_DispatchDate                 AS DispatchDate,
+        //     U_DeliveryDate                 AS DeliveryDate,
+        //     OINV.CardCode,
+        //     U_EmailSentDT,
+        //     U_EmailSentTM
+        // FROM OINV
+        // WHERE
+        //     TrackNo IS NOT NULL
+        //     AND U_TrackingNoUpdateDT IS NOT NULL
+        //     AND CAST(U_TrackingNoUpdateDT AS DATE) = CAST(DATEADD(DAY, -2, GETDATE()) AS DATE)
+        //     AND OINV.CardCode NOT IN ('C000021', 'C000020');
+        //         `;
         
-            const invoices = await queryDatabase(recentInvoicesQuery);
+        //     const invoices = await queryDatabase(recentInvoicesQuery);
 
-        // const invoices = [
-        // {
-        //     DocEntry: 2156,
-        //     InvoiceNo: 25220020,
-        //     TrackingNumber: "555-4274 4984",
-        //     TrackingUpdatedDate: "2025-07-17 00:00:00.000",
-        //     TrackingUpdatedTime: null,
-        //     DispatchDate: "2025-07-15 00:00:00.000",
-        //     DeliveryDate: "2025-07-18 00:00:00.000",
-        //     CardCode: "C000011",
-        //     U_EmailSentDT: "2025-07-17 12:49:41.960",
-        //     U_EmailSentTM: "440"
-        // },
-        //  {
-        //     DocEntry: 3346,
-        //     InvoiceNo: 25212363,
-        //     TrackingNumber: "25020250021531",
-        //     TrackingUpdatedDate: "2025-07-24 00:00:00.000",
-        //     TrackingUpdatedTime: null,
-        //     DispatchDate: "2025-07-24 00:00:00.000",
-        //     DeliveryDate: null,
-        //     CardCode: "C000048",
-        //     U_EmailSentDT: "2025-07-24 19:49:55.353",
-        //     U_EmailSentTM: "860"
-        // },
+        const invoices = [
+        {
+            DocEntry: 2156,
+            InvoiceNo: 25220020,
+            TrackingNumber: "555-4274 4984",
+            TrackingUpdatedDate: "2025-07-17 00:00:00.000",
+            TrackingUpdatedTime: null,
+            DispatchDate: "2025-07-15 00:00:00.000",
+            DeliveryDate: "2025-07-18 00:00:00.000",
+            CardCode: "C000011",
+            U_EmailSentDT: "2025-07-17 12:49:41.960",
+            U_EmailSentTM: "440"
+        },
+         {
+            DocEntry: 3346,
+            InvoiceNo: 25212363,
+            TrackingNumber: "25020250021531",
+            TrackingUpdatedDate: "2025-07-24 00:00:00.000",
+            TrackingUpdatedTime: null,
+            DispatchDate: "2025-07-24 00:00:00.000",
+            DeliveryDate: null,
+            CardCode: "C000048",
+            U_EmailSentDT: "2025-07-24 19:49:55.353",
+            U_EmailSentTM: "860"
+        },
 
-        // ];
+        ];
 
         // Return early if no invoices found
         if (!invoices.length) {
