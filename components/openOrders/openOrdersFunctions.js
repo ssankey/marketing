@@ -325,16 +325,30 @@ export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) 
 
 export const useExportHandler = () => {
   const handleExportExcel = (filteredData, columns) => {
+    // Define which fields should be treated as currency/number fields
+    const numberFields = new Set(["Price", "OpenAmount"]);
+    const dateFields = new Set(["DueDate", "DocDate"]); // Add all date fields here
+
     const exportData = filteredData.map((row) => {
       const formattedRow = {};
       
       columns.forEach((column) => {
         const value = row[column.accessorKey];
         
-        if (column.accessorKey === "Price" || column.accessorKey === "OpenAmount") {
-          formattedRow[column.header] = formatCurrency(value, row.PriceCurrency).slice(1);
-        } else if (column.accessorKey.includes("Date")) {
-          formattedRow[column.header] = formatDate(value);
+        if (numberFields.has(column.accessorKey)) {
+          // Convert to number and ensure Excel recognizes it as numeric
+          const numericValue = Number(value) || 0;
+          formattedRow[column.header] = +numericValue.toFixed(2); // The + ensures it's a number
+          
+        } else if (dateFields.has(column.accessorKey)) {
+          // Convert to Excel-friendly date format
+          if (value) {
+            const date = new Date(value);
+            // Use Excel's preferred format: MM/DD/YYYY
+            formattedRow[column.header] = date.toLocaleDateString('en-US');
+          } else {
+            formattedRow[column.header] = "";
+          }
         } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
           formattedRow[column.header] = value || "N/A"; // Don't truncate in Excel
         } else {
@@ -344,12 +358,45 @@ export const useExportHandler = () => {
       
       return formattedRow;
     });
-    
-    downloadExcel(exportData, "OpenOrders_Report");
+
+    // Generate filename with current date
+    const today = new Date().toISOString().split('T')[0];
+    const fileName = `OpenOrders_Report_${today}`;
+
+    // Call downloadExcel - numbers should now be properly formatted
+    downloadExcel(exportData, fileName);
   };
 
   return { handleExportExcel };
 };
+
+// export const useExportHandler = () => {
+//   const handleExportExcel = (filteredData, columns) => {
+//     const exportData = filteredData.map((row) => {
+//       const formattedRow = {};
+      
+//       columns.forEach((column) => {
+//         const value = row[column.accessorKey];
+        
+//         if (column.accessorKey === "Price" || column.accessorKey === "OpenAmount") {
+//           formattedRow[column.header] = formatCurrency(value, row.PriceCurrency).slice(1);
+//         } else if (column.accessorKey.includes("Date")) {
+//           formattedRow[column.header] = formatDate(value);
+//         } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
+//           formattedRow[column.header] = value || "N/A"; // Don't truncate in Excel
+//         } else {
+//           formattedRow[column.header] = value || "N/A";
+//         }
+//       });
+      
+//       return formattedRow;
+//     });
+    
+//     downloadExcel(exportData, "OpenOrders_Report");
+//   };
+
+//   return { handleExportExcel };
+// };
 
 // Debug helper function - you can use this to check your data
 export const debugSearchData = (orders, searchTerm) => {
