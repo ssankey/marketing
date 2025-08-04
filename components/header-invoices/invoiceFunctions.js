@@ -517,94 +517,6 @@ export const useInvoiceDetails = () => {
   };
 };
 
-// export const useExportHandler = () => {
-//   const router = useRouter();
-
-//   const handleExportExcel = useCallback(async () => {
-//     try {
-//       const token = localStorage.getItem("token");
-//       if (!token) {
-//         console.error("No token found");
-//         return;
-//       }
-
-//       const queryParams = {
-//         status: router.query.status || "all",
-//         search: router.query.search || "",
-//         sortField: router.query.sortField || "DocDate",
-//         sortDir: router.query.sortDir || "desc",
-//         fromDate: router.query.fromDate || "",
-//         toDate: router.query.toDate || "",
-//         getAll: "true",
-//       };
-
-//       const url = `/api/invoices/header-invoice?${new URLSearchParams(queryParams)}`;
-
-//       const response = await fetch(url, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-
-//       if (!response.ok) {
-//         throw new Error(`Failed to fetch: ${response.status}`);
-//       }
-
-//       const { invoices: allInvoices } = await response.json();
-
-//       if (allInvoices && allInvoices.length > 0) {
-//         const dateFields = new Set([
-//           "DocDate",
-//           "DocDueDate",
-//           "U_DispatchDate",
-//           "TaxDate",
-//         ]);
-//         const currencyFields = new Set(["DocTotal", "VatSum"]);
-
-//         const excelData = allInvoices.map((invoice) => {
-//           const row = {};
-          
-//           columns.forEach((column) => {
-//             const value = invoice[column.field];
-            
-//             if (currencyFields.has(column.field) && value) {
-//               row[column.label] = formatCurrency(value);
-//             } else if (dateFields.has(column.field) && value) {
-//               row[column.label] = formatDate(value);
-//             } else {
-//               row[column.label] = value || "N/A";
-//             }
-//           });
-
-//           return row;
-//         });
-
-//         const columnStyles = columns.map(column => {
-//           const style = {};
-          
-//           if (dateFields.has(column.field)) {
-//             style.cellFormat = 'dd/mm/yyyy';
-//           } else if (currencyFields.has(column.field)) {
-//             style.cellFormat = '#,##0.00;[Red]-#,##0.00';
-//           }
-          
-//           return style;
-//         });
-
-//         downloadExcel(
-//           excelData, 
-//           `Invoices_${queryParams.status}`,
-//           columnStyles
-//         );
-//       } else {
-//         alert("No data available to export.");
-//       }
-//     } catch (error) {
-//       console.error("Failed to export to Excel:", error);
-//       alert("Failed to export data. Please try again.");
-//     }
-//   }, [router.query]);
-
-//   return { handleExportExcel };
-// };
 
 // export const useExportHandler = () => {
 //   const router = useRouter();
@@ -679,7 +591,8 @@ export const useInvoiceDetails = () => {
 //             const value = invoice[column.field];
             
 //             if (currencyFields.has(column.field) && value) {
-//               row[column.label] = formatCurrency(value);
+//               // Remove rupee symbol by slicing the first character
+//               row[column.label] = formatCurrency(value).slice(1);
 //             } else if (dateFields.has(column.field) && value) {
 //               row[column.label] = formatDate(value);
 //             } else {
@@ -720,120 +633,101 @@ export const useInvoiceDetails = () => {
 //   return { handleExportExcel };
 // };
 
-export const useExportHandler = () => {
-  const router = useRouter();
+// export const useExportHandler = () => {
+//   const handleExportExcel = useCallback((filteredData, columns) => {
+//     try {
+//       // Prepare the data for export
+//       const exportData = filteredData.map(row => {
+//         const formattedRow = {};
+        
+//         columns.forEach(column => {
+//           // Get the value from the row
+//           const value = row[column.accessorKey || column.id];
+          
+//           // Apply formatting based on column type
+//           if (column.accessorKey === "DocTotal" || column.accessorKey === "VatSum") {
+//             formattedRow[column.header] = formatCurrency(value).slice(1);
+//           } else if (column.accessorKey.includes("Date") || column.accessorKey.includes("Dt")) {
+//             formattedRow[column.header] = formatDate(value);
+//           } else {
+//             formattedRow[column.header] = value || "N/A";
+//           }
+//         });
+        
+//         return formattedRow;
+//       });
 
-  const handleExportExcel = useCallback(async (filteredData, tableColumns) => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        console.error("No token found");
-        return;
-      }
-
-      // Define the columns for Excel export
-      const columns = [
-        { field: "DocNum", label: "Invoice #" },
-        { field: "DocDate", label: "Invoice Date" },
-        { field: "ContactPerson", label: "Contact Person" },
-        { field: "DocDueDate", label: "Due Date" },
-        { field: "CardCode", label: "Customer Code" },
-        { field: "CardName", label: "Customer Name" },
-        { field: "LineItemCount", label: "Total Lines" },
-        { field: "DocTotal", label: "Total Amount" },
-        { field: "DocCur", label: "Currency" },
-        { field: "U_DispatchDate", label: "Dispatch Date" },
-        { field: "TrackNo", label: "Tracking #" },
-        { field: "TransportName", label: "Transport" },
-        { field: "SalesEmployee", label: "Sales Person" },
-        { field: "DocStatusDisplay", label: "Status" }
-      ];
-
-      // Use filtered data if available, otherwise fetch all data
-      let dataToExport = filteredData;
+//       // Generate filename with current date
+//       const today = new Date().toISOString().split('T')[0];
+//       const fileName = `Header_invoice_${today}`;
       
-      if (!dataToExport || dataToExport.length === 0) {
-        const queryParams = {
-          status: router.query.status || "all",
-          search: router.query.search || "",
-          sortField: router.query.sortField || "DocDate",
-          sortDir: router.query.sortDir || "desc",
-          fromDate: router.query.fromDate || "",
-          toDate: router.query.toDate || "",
-          getAll: "true",
-        };
+//       // Call the export function
+//       downloadExcel(exportData, fileName);
+      
+//     } catch (error) {
+//       console.error("Export failed:", error);
+//       alert("Failed to export data. Please check console for details.");
+//     }
+//   }, []);
 
-        const url = `/api/invoices/header-invoice?${new URLSearchParams(queryParams)}`;
+//   return { handleExportExcel };
+// };
 
-        const response = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-
-        const { invoices: allInvoices } = await response.json();
-        dataToExport = allInvoices;
-      }
-
-      if (dataToExport && dataToExport.length > 0) {
-        const dateFields = new Set([
-          "DocDate",
-          "DocDueDate",
-          "U_DispatchDate",
-          "TaxDate",
-        ]);
-        const currencyFields = new Set(["DocTotal", "VatSum"]);
-
-        const excelData = dataToExport.map((invoice) => {
-          const row = {};
+export const useExportHandler = () => {
+  const handleExportExcel = useCallback((filteredData, columns) => {
+    try {
+      const currencyFields = new Set(["DocTotal", "VatSum"]);
+      const dateFields = new Set(["Date", "Dt"]); // Will match any field containing these terms
+      
+      // Prepare the data for export
+      const exportData = filteredData.map(row => {
+        const formattedRow = {};
+        
+        columns.forEach(column => {
+          // Get the value from the row
+          const value = row[column.accessorKey || column.id];
           
-          columns.forEach((column) => {
-            const value = invoice[column.field];
+          // Apply formatting based on column type
+          if (currencyFields.has(column.accessorKey)) {
+            // Convert to number and round to 2 decimal places
+            const cleanNumber = Math.round((Number(value) || 0) * 100) / 100;
             
-            if (currencyFields.has(column.field) && value) {
-              // Remove rupee symbol by slicing the first character
-              row[column.label] = formatCurrency(value).slice(1);
-            } else if (dateFields.has(column.field) && value) {
-              row[column.label] = formatDate(value);
+            // Force Excel to recognize as number by ensuring it's a proper number
+            formattedRow[column.header] = +cleanNumber; // The + operator ensures it's a number
+            
+          } else if (column.accessorKey.includes("Date") || column.accessorKey.includes("Dt")) {
+            // Convert to Excel-friendly date format
+            if (value) {
+              const date = new Date(value);
+              // Use Excel's preferred format: MM/DD/YYYY  
+              formattedRow[column.header] = date.toLocaleDateString('en-US');
             } else {
-              row[column.label] = value || "N/A";
+              formattedRow[column.header] = "";
             }
-          });
-
-          return row;
-        });
-
-        const columnStyles = columns.map(column => {
-          const style = {};
-          
-          if (dateFields.has(column.field)) {
-            style.cellFormat = 'dd/mm/yyyy';
-          } else if (currencyFields.has(column.field)) {
-            style.cellFormat = '#,##0.00;[Red]-#,##0.00';
+          } else {
+            formattedRow[column.header] = value || "N/A";
           }
-          
-          return style;
         });
+        
+        return formattedRow;
+      });
 
-        const statusParam = router.query.status || "all";
-        downloadExcel(
-          excelData, 
-          `Invoices_${statusParam}`,
-          columnStyles
-        );
-      } else {
-        alert("No data available to export.");
-      }
+      // Generate filename with current date
+      const today = new Date().toISOString().split('T')[0];
+      const fileName = `Header_invoice_${today}`;
+      
+      // Call the export function - let Excel auto-detect the formats
+      downloadExcel(exportData, fileName);
+      
     } catch (error) {
-      console.error("Failed to export to Excel:", error);
-      alert("Failed to export data. Please try again.");
+      console.error("Export failed:", error);
+      alert("Failed to export data. Please check console for details.");
     }
-  }, [router.query]);
+  }, []);
 
   return { handleExportExcel };
 };
+
 
 export const useSendMail = (setInvoices) => {
   const sendInvoiceMail = async (row) => {
