@@ -1,10 +1,11 @@
+
 // pages/api/email/dispatch-mail/invoiceService.js
 import { queryDatabase } from "../../../../lib/db";
 import sql from "mssql";
 
 // Function to get detailed invoice information
 export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
-    // Query to get detailed invoice information
+    // Query to get detailed invoice information with direct COA URL generation
     const detailQuery = `
       SELECT TOP 6
             T0.DocNum                AS InvoiceNo,
@@ -34,7 +35,17 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
             T1.Price                 AS UnitSalesPrice,
             T1.Quantity              AS Qty,
             T1.LineTotal             AS TotalSalesPrice,
-            T9.E_Mail                AS CustomerEmail
+            T9.E_Mail                AS CustomerEmail,
+            ISNULL(T15.U_vendorbatchno, '') AS VendorBatchNum,
+            
+            -- Direct COA URL generation (same logic as in your first example)
+            CASE 
+              WHEN ISNULL(T15.U_vendorbatchno, '') <> '' AND T1.ItemCode <> '' 
+              THEN 'https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/' + 
+                    LEFT(T1.ItemCode, CHARINDEX('-', T1.ItemCode + '-') - 1) + '_' + T15.U_vendorbatchno + '.pdf'
+              ELSE ''
+            END AS COA_URL
+            
             FROM OINV T0
             LEFT JOIN OSHP SHP ON T0.TrnspCode = SHP.TrnspCode
             INNER JOIN INV1 T1 ON T1.DocEntry = T0.DocEntry
@@ -108,9 +119,6 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
     };
 };
 
-
-
-
 export const generateTrackingLink = (transportName, trackingNumber) => {
     if (!transportName || !trackingNumber) return null;
     
@@ -154,39 +162,10 @@ export const checkPdfAvailability = async (invoiceNo, baseUrl) => {
     return { pdfLinkHtml, isPdfAvailable };
 };
 
+// This function is now simplified since we get COA URL directly from the query
 export const checkCoaAvailability = async (itemNo, docEntry, invoiceNo, baseUrl) => {
-    try {
-        const detailResponse = await fetch(
-            `${baseUrl}/api/invoices/detail?docEntry=${docEntry}&docNum=${invoiceNo}`
-        );
-        
-        if (detailResponse.ok) {
-            const invoiceDetail = await detailResponse.json();
-            const matchingItem = invoiceDetail?.LineItems?.find(item => 
-                item.ItemCode === itemNo
-            );
-            
-            if (matchingItem?.VendorBatchNum) {
-                const coaCheckResponse = await fetch(
-                    `${baseUrl}/api/invoices/check-coa-availability`,
-                    {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ 
-                            itemCode: itemNo, 
-                            vendorBatchNum: matchingItem.VendorBatchNum 
-                        }),
-                    }
-                );
-                
-                if (coaCheckResponse.ok) {
-                    const coaResult = await coaCheckResponse.json();
-                    return coaResult.available;
-                }
-            }
-        }
-    } catch (error) {
-        console.warn(`Could not check COA availability for item ${itemNo}:`, error);
-    }
+    // This function is kept for backward compatibility but is no longer needed
+    // since we now get COA URLs directly from the main query
+    console.warn('checkCoaAvailability is deprecated - COA URLs are now retrieved directly from the main query');
     return false;
 };
