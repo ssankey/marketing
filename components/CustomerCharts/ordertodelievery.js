@@ -99,6 +99,9 @@ export default function DeliveryPerformanceChart({ customerId }) {
       
       if (!response.ok) throw new Error("Failed to fetch data");
       const data = await response.json();
+
+       console.log('Data from /api/customers/all-delivery-performance:', data);
+       
       setData(data);
       setError(null);
     } catch (err) {
