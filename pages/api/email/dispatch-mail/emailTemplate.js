@@ -3,89 +3,96 @@
 
 import { formatDate } from "utils/formatDate";
 import { formatCurrency } from "utils/formatCurrency";
-import { generateTrackingLink, checkPdfAvailability } from "./invoiceService";
+import { generateTrackingLink, checkPdfAvailability, generateAndCheckCoaUrl } from "./invoiceService";
 
 const generateTrackingLinkHtml = (trackingLink) => {
     if (!trackingLink) return '';
     return `<li>
         <strong>Click to Track shipment:</strong>
         <a href="${trackingLink}" target="_blank" style="display: inline-block; background-color: #007bff; color: white !important; padding: 4px 12px; font-size: 14px; text-decoration: none !important; border-radius: 4px; font-weight: bold; margin-left: 8px; vertical-align: middle;">
-            Track Shipment
+            🚚 Track Shipment
         </a>
     </li>`;
 };
 
-const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl, customerPONo) => {
-    const htmlRows = [];
-    let hasCOA = false;
+// Updated table row generation with COA availability checking
+const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl) => {
+  const htmlRows = [];
+  let hasCOA = false;
 
-    // console.log(`\n=== Generating table rows for Invoice ${invoiceNo} ===`);
-    // console.log(`Total rows received: ${rows.length}`);
+  console.log(`Generating table rows for ${rows.length} items`);
 
-    for (let i = 0; i < rows.length; i++) {
-        const r = rows[i];
-        let coaLinkDisplay = '';
-        
-        // Debug logging for each row
-        // console.log(`\nRow ${i + 1}:`);
-        // console.log(`  ItemNo: ${r.ItemNo}`);
-        // console.log(`  COA_URL: "${r.COA_URL}"`);
-        // console.log(`  COA_URL type: ${typeof r.COA_URL}`);
-        // console.log(`  COA_URL length: ${r.COA_URL ? r.COA_URL.length : 'null/undefined'}`);
-        
-        // More robust COA URL validation
-        if (r.COA_URL && 
-            typeof r.COA_URL === 'string' && 
-            r.COA_URL.trim() !== '' && 
-            r.COA_URL.trim() !== 'null' && 
-            r.COA_URL.trim() !== 'undefined') {
-            
-            const cleanUrl = r.COA_URL.trim();
-            hasCOA = true;
-            coaLinkDisplay = `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: underline;">COA</a>`;
-            console.log(`  ✅ COA link generated: ${cleanUrl}`);
-        } else {
-            console.log(`  ❌ No valid COA URL for this item`);
-        }
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    let coaLink = '';
+    let coaText = '';
+    
+    console.log(`Processing row ${i + 1} - ItemNo: ${row.ItemNo}`);
+    console.log(`  LocalCOAFilename: "${row.LocalCOAFilename}"`);
+    console.log(`  EnergyCoaUrl: "${row.EnergyCoaUrl}"`);
+    console.log(`  CoaSource: "${row.CoaSource}"`);
 
-        htmlRows.push(`
-            <tr>
-                <td style="border:1px solid #ccc; padding:4px;">${r.InvoiceNo}</td>
-                <td style="border:1px solid #ccc; padding:4px;">${formatDate(r.InvoiceDate)}</td>
-                <td style="border:1px solid #ccc; padding:4px;">${r.ItemNo}</td>
-                <td style="border:1px solid #ccc; padding:4px;">${r.ItemDescription}</td>
-                <td style="border:1px solid #ccc; padding:4px;">${r.CasNo || ""}</td>
-                <td style="border:1px solid #ccc; padding:4px;">${r.Unit}</td>
-                <td style="border:1px solid #ccc; padding:4px;">${r.PackSize || ""}</td>
-                <td style="border:1px solid #ccc; padding:4px; text-align:right;">${formatCurrency(r.UnitSalesPrice)}</td>
-                <td style="border:1px solid #ccc; padding:4px; text-align:center;">${r.Qty}</td>
-                <td style="border:1px solid #ccc; padding:4px; text-align:right;">${formatCurrency(r.TotalSalesPrice)}</td>
-                <td style="border:1px solid #ccc; padding:4px; text-align:center;">${coaLinkDisplay}</td>
-            </tr>
-        `);
+    // NEW: Use generateAndCheckCoaUrl to both generate URL and verify availability
+    coaLink = await generateAndCheckCoaUrl(row, baseUrl);
+    
+    if (coaLink) {
+      // Determine text based on COA source
+      if (row.CoaSource === 'LOCAL') {
+        coaText = 'COA';
+      } else if (row.CoaSource === 'ENERGY') {
+        coaText = 'COA';
+      } else {
+        coaText = 'View COA'; // fallback
+      }
+      hasCOA = true;
+      console.log(`  Using ${row.CoaSource} COA: ${coaLink}`);
+    } else {
+      console.log(`  No COA available for this item`);
     }
 
-    // console.log(`\nSummary for Invoice ${invoiceNo}:`);
-    // console.log(`  Total items: ${rows.length}`);
-    // console.log(`  Has COA: ${hasCOA}`);
-    // console.log(`=== End table rows generation ===\n`);
+    // Generate complete table row with all columns
+    htmlRows.push(`
+      <tr>
+        <td style="border:1px solid #ccc; padding:6px; text-align:left;">${row.InvoiceNo || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:left;">${formatDate(row.InvoiceDate) || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:left;">${row.ItemNo || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:left;">${row.ItemDescription || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:left;">${row.CasNo || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:left;">${row.Unit || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:left;">${row.PackSize || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:right;">${formatCurrency(row.UnitSalesPrice) || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:center;">${row.Qty || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:right;">${formatCurrency(row.TotalSalesPrice) || ''}</td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:center;">
+          ${coaLink ? 
+            `<a href="${coaLink}" target="_blank" style="color: #007bff; text-decoration: underline; font-size: 12px;">
+              ${coaText}
+            </a>` 
+            : '<span style="font-size: 0.75rem; color: #6c757d;"> </span>'}
+        </td>
+      </tr>
+    `);
+  }
 
-    return { htmlRows, hasCOA };
+  console.log(`Generated ${htmlRows.length} table rows, hasCOA: ${hasCOA}`);
+  return { htmlRows, hasCOA };
 };
 
 export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl) => {
     const { rows, InvoiceDate, TransportName, CustomerPONo } = invoiceDetails;
     const { TrackingNumber, TrackingUpdatedDate, DeliveryDate, DocEntry, InvoiceNo } = trackingData;
 
-    // console.log(`\n=== Starting email generation for Invoice ${InvoiceNo} ===`);
-    // console.log(`Total invoice rows: ${rows.length}`);
+    console.log(`\n=== Starting email generation for Invoice ${InvoiceNo} ===`);
+    console.log(`Total invoice rows: ${rows.length}`);
     
     // Debug: Log first few rows to see structure
     console.log('Sample of first 2 rows:');
     rows.slice(0, 2).forEach((row, index) => {
         console.log(`Row ${index + 1}:`, {
             ItemNo: row.ItemNo,
-            COA_URL: row.COA_URL,
+            CoaSource: row.CoaSource,
+            LocalCOAFilename: row.LocalCOAFilename ? `"${row.LocalCOAFilename}"` : 'null/empty',
+            EnergyCoaUrl: row.EnergyCoaUrl ? `"${row.EnergyCoaUrl}"` : 'null/empty',
             ItemDescription: row.ItemDescription
         });
     });
@@ -93,8 +100,8 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
     // Check PDF availability
     const { pdfLinkHtml, isPdfAvailable } = await checkPdfAvailability(InvoiceNo, baseUrl);
     
-    // Generate table rows and check for COA availability
-    const { htmlRows, hasCOA } = await generateTableRows(rows, DocEntry, InvoiceNo, baseUrl, CustomerPONo);
+    // Generate table rows and check for COA availability (NOW WITH ACTUAL AVAILABILITY CHECKING)
+    const { htmlRows, hasCOA } = await generateTableRows(rows, DocEntry, InvoiceNo, baseUrl);
 
     // Generate tracking link
     const trackingLink = generateTrackingLink(TransportName, TrackingNumber);
@@ -131,7 +138,6 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
     const displayRows = htmlRows.slice(0, 5).join('');
     const showMoreLink = htmlRows.length > 5 ? `
         <p style="margin-top: 10px; margin-bottom: 20px;">
-           
             <a href="https://marketing.densitypharmachem.com/dispatch?docEntry=${DocEntry}&docNum=${InvoiceNo}&refNo=${encodeURIComponent(CustomerPONo)}" 
                 style="color: #007bff; text-decoration: underline; font-weight: bold;" 
                 target="_blank">
@@ -192,9 +198,9 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
 
     const subject = `Shipment tracking details# for order- ${CustomerPONo}`;
     
-    // console.log(`Email generation completed for Invoice ${InvoiceNo}`);
-    // console.log(`Final hasCOA status: ${hasCOA}`);
-    // console.log(`=== End email generation ===\n`);
+    console.log(`Email generation completed for Invoice ${InvoiceNo}`);
+    console.log(`Final hasCOA status: ${hasCOA}`);
+    console.log(`=== End email generation ===\n`);
     
     return { subject, html };
 };

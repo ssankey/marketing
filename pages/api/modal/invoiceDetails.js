@@ -27,6 +27,7 @@ export default async function handler(req, res) {
         T1.VendorNum                     AS [Vendor Catalog No.],
         T1.U_Packsize                    AS [PKZ],
         T4.Quantity                      AS [Qty],
+        T15.U_COA                       AS [COA Filename],
          CASE 
                 WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'Y' THEN 'Cancelled'
                 WHEN T0.DocNum IS NOT NULL THEN 'Invoiced'

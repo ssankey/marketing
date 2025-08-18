@@ -453,6 +453,12 @@ const OrderDetailsModal = ({ orderData, onClose, title = "Order Details" }) => {
         header: "Status Line",
         cell: ({ getValue }) => getValue() || "-",
       },
+      
+      {
+        accessorKey: "Invoice_Date",
+        header: "Invoice Date",
+        cell: ({ getValue }) => formatDate(getValue()) || "-",
+      },
       {
         accessorKey: "Item_No",
         header: "Item No",
@@ -463,6 +469,7 @@ const OrderDetailsModal = ({ orderData, onClose, title = "Order Details" }) => {
         header: "Vendor Catalog No",
         cell: ({ getValue }) => getValue() || "-",
       },
+      
       {
         accessorKey: "PKZ",
         header: "PKZ",
