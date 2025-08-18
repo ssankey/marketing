@@ -1,8 +1,8 @@
 // pages/api/supply-chain/supply-management.js
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
-import { queryDatabase } from '../../lib/db';
-import { getCache, setCache } from "../../lib/redis";
+import { queryDatabase } from '../../../lib/db';
+import { getCache, setCache } from "../../../lib/redis";
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
