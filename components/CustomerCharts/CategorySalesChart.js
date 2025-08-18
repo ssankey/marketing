@@ -94,11 +94,12 @@ export default function CategorySalesChart({ cardCode }) {
         if (!cardCode && activeFilters.customer) params.append("customer", activeFilters.customer);
         if (activeFilters.contactPerson) params.append("contactPerson", activeFilters.contactPerson);
       }
-
+      
       const endpoint = cardCode
         ? `/api/customers/${cardCode}/category-sales`
         : `/api/dashboard/category-sales`;
 
+        console.log("Fetching data from:", endpoint, "with params:", params.toString());
       const response = await fetch(`${endpoint}?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`

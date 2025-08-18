@@ -27,6 +27,7 @@ import CategorySalesChart from "./CustomerCharts/CategorySalesChart";
 import OrdersChartArray from "./OpenClosedOrdersChartArray";
 import OrdersChartArrayMerged from "./open-partial-chart/OpenClosedOrdersChartArray";
 import DailyReportChart from './daily-report/DailyReportChart';
+import OrderToInvoiceChart from 'components/main-page/order-to-invoice/OrderToInvoiceChart';
 
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
@@ -118,10 +119,11 @@ function DashboardCharts({ userRole }) {
     <EnhancedSalesCOGSChart />
     <OrdersChartArrayMerged/>
       <DailyReportChart />
+      <OrderToInvoiceChart />
       
       {/* Conditionally render DeliveryPerformanceChart for admin/sales */}
       {/* {isAdminOrSales && <DeliveryPerformanceChart />} */}
-       <DeliveryPerformanceChart />
+       {/* <DeliveryPerformanceChart /> */}
       
       {/* <OrdersChart />
       <OrdersChartArray/> */}

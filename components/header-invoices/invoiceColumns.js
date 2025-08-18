@@ -175,71 +175,174 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     }
   };
 
-  const handleCOADownload = async (docEntry, docNum) => {
-    try {
-      const res = await fetch(
-        `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
-      );
-      const invoice = await res.json();
+  // const handleCOADownload = async (docEntry, docNum) => {
+  //   try {
+  //     const res = await fetch(
+  //       `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
+  //     );
+  //     const invoice = await res.json();
 
-      if (!invoice?.LineItems?.length) {
-        alert("No line items found for this invoice.");
-        return;
-      }
+  //     if (!invoice?.LineItems?.length) {
+  //       alert("No line items found for this invoice.");
+  //       return;
+  //     }
 
-      const coaUrls = new Set();
-      for (const item of invoice.LineItems) {
-        const raw = item.ItemCode?.trim() || "";
-        const code = raw.includes("-") ? raw.split("-")[0] : raw;
-        const batch = item.VendorBatchNum?.trim();
+  //     const coaUrls = new Set();
+  //     for (const item of invoice.LineItems) {
+
+  //         console.log("ItemCode:", item.ItemCode, "U_COA:", item.COAUrl);
+
+
+  //       const raw = item.ItemCode?.trim() || "";
+  //       const code = raw.includes("-") ? raw.split("-")[0] : raw;
+  //       const batch = item.VendorBatchNum?.trim();
         
-        if (code && batch) {
-          coaUrls.add(
-            `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`
-          );
-        }
-      }
+  //       if (code && batch) {
+  //         coaUrls.add(
+  //           `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`
+  //         );
+  //       }
+  //     }
 
-      if (!coaUrls.size) {
-        alert("No valid COA URLs could be constructed.");
-        return;
-      }
+  //     if (!coaUrls.size) {
+  //       alert("No valid COA URLs could be constructed.");
+  //       return;
+  //     }
 
-      let downloadedAny = false;
-      for (const url of coaUrls) {
-        try {
-          const fileRes = await fetch(url);
-          if (!fileRes.ok) {
-            console.warn("COA not found at", url);
-            continue;
-          }
-          const blob = await fileRes.blob();
-          const blobUrl = URL.createObjectURL(blob);
+  //     let downloadedAny = false;
+  //     for (const url of coaUrls) {
+  //       try {
+  //         const fileRes = await fetch(url);
+  //         if (!fileRes.ok) {
+  //           console.warn("COA not found at", url);
+  //           continue;
+  //         }
+  //         const blob = await fileRes.blob();
+  //         const blobUrl = URL.createObjectURL(blob);
 
-          const a = document.createElement("a");
-          const filename = url.split("/").pop();
-          a.href = blobUrl;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(blobUrl);
+  //         const a = document.createElement("a");
+  //         const filename = url.split("/").pop();
+  //         a.href = blobUrl;
+  //         a.download = filename;
+  //         document.body.appendChild(a);
+  //         a.click();
+  //         document.body.removeChild(a);
+  //         URL.revokeObjectURL(blobUrl);
 
-          downloadedAny = true;
-          await new Promise((r) => setTimeout(r, 300));
-        } catch (e) {
-          console.error("Failed to download COA from", url, e);
-        }
-      }
+  //         downloadedAny = true;
+  //         await new Promise((r) => setTimeout(r, 300));
+  //       } catch (e) {
+  //         console.error("Failed to download COA from", url, e);
+  //       }
+  //     }
 
-      if (!downloadedAny) {
-        alert("None of the COA files were available.");
-      }
-    } catch (err) {
-      console.error("Error in COA download:", err);
-      alert("Failed to download COA files.");
+  //     if (!downloadedAny) {
+  //       alert("None of the COA files were available.");
+  //     }
+  //   } catch (err) {
+  //     console.error("Error in COA download:", err);
+  //     alert("Failed to download COA files.");
+  //   }
+  // };
+  const handleCOADownload = async (docEntry, docNum) => {
+  try {
+    const res = await fetch(
+      `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
+    );
+    const invoice = await res.json();
+
+    if (!invoice?.LineItems?.length) {
+      alert("No line items found for this invoice.");
+      return;
     }
-  };
+
+    const coaUrls = new Set();
+    const baseUrl = window.location.origin; // Get current domain
+
+    for (const item of invoice.LineItems) {
+      console.log("ItemCode:", item.ItemCode, "U_COA:", item.COAUrl);
+
+      const itemCode = item.ItemCode?.trim() || "";
+      const coaUrl = item.COAUrl?.trim();
+      const batch = item.VendorBatchNum?.trim();
+
+      // Priority 1: Check if COAUrl is present and valid
+      if (coaUrl && coaUrl !== '') {
+        // Extract filename from the COA URL path
+        let filename = coaUrl;
+        
+        // Handle Windows paths - extract filename after last backslash
+        if (filename.includes('\\')) {
+          const pathParts = filename.split('\\');
+          filename = pathParts[pathParts.length - 1];
+        }
+        
+        // Handle Unix paths - extract filename after last forward slash
+        if (filename.includes('/')) {
+          const pathParts = filename.split('/');
+          filename = pathParts[pathParts.length - 1];
+        }
+
+        // Use the same COA API endpoint as in your reference code
+        const encodedFilename = encodeURIComponent(filename);
+        const localCoaUrl = `${baseUrl}/api/coa/download/${encodedFilename}`;
+        coaUrls.add(localCoaUrl);
+        
+        console.log("Using LOCAL COA URL:", localCoaUrl);
+      } 
+      // Priority 2: Fallback to energy URL construction if no COAUrl
+      else if (itemCode && batch) {
+        const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
+        const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
+        coaUrls.add(energyUrl);
+        
+        console.log("Using ENERGY COA URL:", energyUrl);
+      }
+    }
+
+    if (!coaUrls.size) {
+      alert("No valid COA URLs could be constructed.");
+      return;
+    }
+
+    let downloadedAny = false;
+    for (const url of coaUrls) {
+      try {
+        const fileRes = await fetch(url);
+        if (!fileRes.ok) {
+          console.warn("COA not found at", url);
+          continue;
+        }
+        const blob = await fileRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        const filename = url.includes('/api/coa/download/') 
+          ? decodeURIComponent(url.split('/').pop()) 
+          : url.split("/").pop();
+          
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(blobUrl);
+
+        downloadedAny = true;
+        await new Promise((r) => setTimeout(r, 300));
+      } catch (e) {
+        console.error("Failed to download COA from", url, e);
+      }
+    }
+
+    if (!downloadedAny) {
+      alert("None of the COA files were available.");
+    }
+  } catch (err) {
+    console.error("Error in COA download:", err);
+    alert("Failed to download COA files.");
+  }
+};
 
   const handleMSDSDownload = async (docEntry, docNum) => {
     try {
