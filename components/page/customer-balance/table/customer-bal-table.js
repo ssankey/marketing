@@ -152,6 +152,13 @@ useEffect(() => {
 }, [globalFilter, fromDate, toDate, overdueFilter]);
 
 const handleExportExcel = () => {
+  // Helper function to convert formatted currency/number string to actual number
+  const parseFormattedNumber = (value) => {
+    if (!value && value !== 0) return 0;
+    // Remove currency symbols, commas, and convert to number
+    return parseFloat(value.toString().replace(/[$₹,\s]/g, '')) || 0;
+  };
+
   const exportData = uniqueData.map((row) => {
     const formattedRow = {};
 
@@ -164,7 +171,16 @@ const handleExportExcel = () => {
       ) {
         formattedRow[column.header] = formatDate(value);
       } else if (column.accessorKey === "BalanceDue") {
-        formattedRow[column.header] = formatCurrency(value).slice(1); // remove currency symbol
+        // Convert to numeric value instead of formatted string
+        formattedRow[column.header] = parseFormattedNumber(value);
+      } else if (
+        // Add other numeric columns that should be treated as numbers
+        column.accessorKey.includes("Total") ||
+        column.accessorKey.includes("Amount") ||
+        column.accessorKey.includes("Price") ||
+        column.accessorKey.includes("Value")
+      ) {
+        formattedRow[column.header] = parseFormattedNumber(value);
       } else {
         formattedRow[column.header] = value;
       }
@@ -175,6 +191,32 @@ const handleExportExcel = () => {
 
   downloadExcel(exportData, "Customer_Balance_Report");
 };
+
+
+// const handleExportExcel = () => {
+//   const exportData = uniqueData.map((row) => {
+//     const formattedRow = {};
+
+//     columns.forEach((column) => {
+//       const value = row[column.accessorKey];
+
+//       if (
+//         column.accessorKey.includes("Date") ||
+//         column.accessorKey === "Dispatch Date"
+//       ) {
+//         formattedRow[column.header] = formatDate(value);
+//       } else if (column.accessorKey === "BalanceDue") {
+//         formattedRow[column.header] = formatCurrency(value).slice(1); // remove currency symbol
+//       } else {
+//         formattedRow[column.header] = value;
+//       }
+//     });
+
+//     return formattedRow;
+//   });
+
+//   downloadExcel(exportData, "Customer_Balance_Report");
+// };
 
   // Reset all filters
   const handleReset = () => {
