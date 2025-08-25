@@ -42,6 +42,8 @@ export default async function handler(req, res) {
         
                 `;
         
+    
+
             const invoices = await queryDatabase(recentInvoicesQuery);
         // const invoices = [
         // {
