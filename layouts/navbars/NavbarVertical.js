@@ -274,10 +274,10 @@ const NavbarVertical = (props) => {
             
             <li className="nav-item mb-3">
                 <Link
-                  href="/stock-check"
-                  className={`nav-link d-flex align-items-center ${router === "/stock-check" ? "active" : ""}`}
+                  href="/quick-quote"
+                  className={`nav-link d-flex align-items-center ${router === "/quick-quote" ? "active" : ""}`}
                 >
-                  <FaBox className="me-2" /> Stock Check
+                  <FaBox className="me-2" /> Quick Quote
                 </Link>
               </li>
             {/* {(isAdmin || isSalesPerson) && (
