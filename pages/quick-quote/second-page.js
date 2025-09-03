@@ -177,7 +177,7 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Stock Check Results</h2>
+                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Quick Stock Results</h2>
                 <p style={{ fontSize: '16px', color: '#2563eb', marginTop: '8px', margin: '8px 0 0 0' }}>Review and confirm your stock items</p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>

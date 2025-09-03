@@ -521,7 +521,7 @@ export default function ThreeColumnTable({ onTransmit, onBack, firstPageData, on
                   </button>
                 )}
                 <div>
-                  <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Quick Stock Check</h2>
+                  <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Quick Quote</h2>
                   <p style={{ fontSize: '16px', color: '#2563eb', marginTop: '8px', margin: '8px 0 0 0' }}>Paste the CAS entries, Ref no and Discount</p>
                 </div>
               </div>
