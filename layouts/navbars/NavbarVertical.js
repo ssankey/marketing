@@ -272,14 +272,14 @@ const NavbarVertical = (props) => {
               </li>
             )}
             
-            {/* <li className="nav-item mb-3">
+            <li className="nav-item mb-3">
                 <Link
-                  href="/stock-change"
-                  className={`nav-link d-flex align-items-center ${router === "/stock-change" ? "active" : ""}`}
+                  href="/stock-check"
+                  className={`nav-link d-flex align-items-center ${router === "/stock-check" ? "active" : ""}`}
                 >
                   <FaBox className="me-2" /> Stock Check
                 </Link>
-              </li> */}
+              </li>
             {/* {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link

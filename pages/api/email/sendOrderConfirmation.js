@@ -134,6 +134,7 @@ export default async function handler(req, res) {
               from: "sales@densitypharmachem.com",
               to: [toEmail], // replace with toEmail in prod
               cc: [SalesPerson_Email],
+              bcc: ["chandraprakashyadav1110@gmail.com"],
               // from: "prakash@densitypharmachem.com",
               // to: ["chandraprakashyadav1110@gmail.com"], // replace with toEmail in prod
               subject: `Order confirmation- SO # ${details.DocNum}`,
