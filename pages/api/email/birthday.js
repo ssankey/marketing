@@ -67,6 +67,13 @@ export default async function handler(req, res) {
         email: "pratik@densitypharmachem.com",
       },
       {
+        code: "1111",
+        name: "Babu",
+        dob: "01-09-1987",
+        branch: "MUMBAI",
+        email: "prakash@densitypharmachem.com",
+      },
+      {
         code: "1008",
         name: "Mahesh Shegar",
         dob: "07-05-1990",

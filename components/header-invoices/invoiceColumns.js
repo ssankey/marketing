@@ -183,76 +183,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     return new Blob([u8arr], { type: mime });
   };
 
-  // // Function to download QR codes for all Energy COA links
-  // const handleQRDownload = async (docEntry, docNum) => {
-  //   try {
-  //     const res = await fetch(
-  //       `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
-  //     );
-  //     const invoice = await res.json();
-
-  //     if (!invoice?.LineItems?.length) {
-  //       alert("No line items found for this invoice.");
-  //       return;
-  //     }
-
-  //     const qrCodes = [];
-
-  //     for (const item of invoice.LineItems) {
-  //       console.log("ItemCode:", item.ItemCode, "Batch:", item.VendorBatchNum);
-
-  //       const itemCode = item.ItemCode?.trim() || "";
-  //       const batch = item.VendorBatchNum?.trim();
-
-  //       // Only generate QR codes for Energy COA links (not local COA)
-  //       if (itemCode && batch) {
-  //         const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
-  //         const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
-          
-  //         const qrDataURL = await generateQRCode(energyUrl);
-  //         if (qrDataURL) {
-  //           qrCodes.push({
-  //             dataURL: qrDataURL,
-  //             filename: `${itemCode}_${batch}.png`
-  //           });
-  //         }
-          
-  //         console.log("Generated QR for Energy COA URL:", energyUrl);
-  //       }
-  //     }
-
-  //     if (!qrCodes.length) {
-  //       alert("No valid items found to generate QR codes.");
-  //       return;
-  //     }
-
-  //     // Download all QR codes
-  //     for (const qr of qrCodes) {
-  //       try {
-  //         const blob = dataURLToBlob(qr.dataURL);
-  //         const blobUrl = URL.createObjectURL(blob);
-
-  //         const a = document.createElement("a");
-  //         a.href = blobUrl;
-  //         a.download = qr.filename;
-  //         document.body.appendChild(a);
-  //         a.click();
-  //         document.body.removeChild(a);
-  //         URL.revokeObjectURL(blobUrl);
-
-  //         // Small delay between downloads
-  //         await new Promise((r) => setTimeout(r, 300));
-  //       } catch (e) {
-  //         console.error("Failed to download QR code", qr.filename, e);
-  //       }
-  //     }
-
-  //     console.log(`Downloaded ${qrCodes.length} QR code(s)`);
-  //   } catch (err) {
-  //     console.error("Error in QR download:", err);
-  //     alert("Failed to generate QR codes.");
-  //   }
-  // };
+ 
   // Add this function in your InvoiceActions component
 const handleLabelDownload = async (docEntry, docNum) => {
   setLoadingLabel(true);
@@ -360,7 +291,66 @@ const handleLabelClick = async (e) => {
 };
 
 
-  // Improved handleQRDownload function with better debugging
+// Updated generateQRCodeWithLabels function
+const generateQRCodeWithLabels = async (url, itemCode, batch) => {
+  try {
+    // First generate the QR code
+    const qrDataURL = await generateQRCode(url);
+    if (!qrDataURL) return null;
+
+    // Create a canvas to combine QR code with labels
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Create image from QR code data URL
+    const qrImage = new Image();
+    
+    return new Promise((resolve) => {
+      qrImage.onload = () => {
+        // Set canvas size (QR code + space for text below)
+        const qrSize = qrImage.width;
+        const textHeight = 80; // Space for two lines of text
+        const padding = 20;
+        
+        canvas.width = qrSize + (padding * 2);
+        canvas.height = qrSize + textHeight + (padding * 2);
+        
+        // Fill background with white
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw QR code centered at top
+        ctx.drawImage(qrImage, padding, padding, qrSize, qrSize);
+        
+        // Set up text styling
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'left';
+        
+        // Calculate text position
+        const textStartY = qrSize + padding + 25;
+        const textX = padding + 10;
+        
+        // Draw CAT label
+        ctx.fillText(`CAT ${itemCode}`, textX, textStartY);
+        
+        // Draw LOT label
+        ctx.fillText(`LOT ${batch}`, textX, textStartY + 25);
+        
+        // Convert canvas to data URL
+        const finalDataURL = canvas.toDataURL('image/png');
+        resolve(finalDataURL);
+      };
+      
+      qrImage.src = qrDataURL;
+    });
+  } catch (error) {
+    console.error('Error generating QR code with labels:', error);
+    return null;
+  }
+};
+
+// Updated handleQRDownload function
 const handleQRDownload = async (docEntry, docNum) => {
   setLoadingQR(true);
   try {
@@ -391,7 +381,6 @@ const handleQRDownload = async (docEntry, docNum) => {
       console.log(`Processing item ${i + 1}:`, {
         ItemCode: item.ItemCode,
         VendorBatchNum: item.VendorBatchNum,
-        // Log all properties to see what's available
         allProperties: Object.keys(item)
       });
 
@@ -402,13 +391,17 @@ const handleQRDownload = async (docEntry, docNum) => {
         itemCode: `"${itemCode}"`,
         batch: `"${batch}"`,
         itemCodeLength: itemCode.length,
-        batchLength: batch.length,
-        itemCodeType: typeof item.ItemCode,
-        batchType: typeof item.VendorBatchNum
+        batchLength: batch.length
       });
 
+      // IMPORTANT: Skip if no batch number (as per requirement)
+      if (!batch || batch.length === 0) {
+        console.log(`Item ${i + 1} skipped - no batch number available`);
+        continue;
+      }
+
       // Check if both itemCode and batch have meaningful values
-      if (itemCode && batch && itemCode.length > 0 && batch.length > 0) {
+      if (itemCode && itemCode.length > 0) {
         console.log(`Valid item found: ${itemCode} - ${batch}`);
         
         const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
@@ -421,37 +414,37 @@ const handleQRDownload = async (docEntry, docNum) => {
           const testResponse = await fetch(energyUrl, { method: 'HEAD' });
           console.log(`URL test for ${energyUrl}: ${testResponse.status}`);
           
-          const qrDataURL = await generateQRCode(energyUrl);
+          // Generate QR code with labels
+          const qrDataURL = await generateQRCodeWithLabels(energyUrl, code, batch);
           if (qrDataURL) {
             qrCodes.push({
               dataURL: qrDataURL,
               filename: `QR_${itemCode}_${batch}.png`,
-              url: energyUrl
+              url: energyUrl,
+              itemCode: itemCode,
+              batch: batch
             });
-            console.log(`QR code generated for: ${itemCode}_${batch}`);
+            console.log(`QR code with labels generated for: ${itemCode}_${batch}`);
           } else {
-            console.error(`Failed to generate QR code for: ${itemCode}_${batch}`);
+            console.error(`Failed to generate QR code with labels for: ${itemCode}_${batch}`);
           }
         } catch (urlError) {
           console.warn(`URL not accessible: ${energyUrl}`, urlError);
           // Still generate QR code even if URL test fails
-          const qrDataURL = await generateQRCode(energyUrl);
+          const qrDataURL = await generateQRCodeWithLabels(energyUrl, itemCode, batch);
           if (qrDataURL) {
             qrCodes.push({
               dataURL: qrDataURL,
               filename: `QR_${itemCode}_${batch}.png`,
-              url: energyUrl
+              url: energyUrl,
+              itemCode: itemCode,
+              batch: batch
             });
-            console.log(`QR code generated for inaccessible URL: ${itemCode}_${batch}`);
+            console.log(`QR code with labels generated for inaccessible URL: ${itemCode}_${batch}`);
           }
         }
       } else {
-        console.log(`Item ${i + 1} skipped - missing required data:`, {
-          hasItemCode: !!itemCode,
-          hasBatch: !!batch,
-          itemCodeEmpty: itemCode.length === 0,
-          batchEmpty: batch.length === 0
-        });
+        console.log(`Item ${i + 1} skipped - missing item code`);
       }
     }
 
@@ -459,7 +452,7 @@ const handleQRDownload = async (docEntry, docNum) => {
 
     if (!qrCodes.length) {
       console.log("No valid QR codes generated");
-      alert("No valid items found to generate QR codes. Check console for details.");
+      alert("No valid items found to generate QR codes. Items must have both item code and batch number (batch cannot be empty or 'NA').");
       return;
     }
 
@@ -495,7 +488,7 @@ const handleQRDownload = async (docEntry, docNum) => {
 
     console.log(`Downloaded ${successCount}/${qrCodes.length} QR code(s)`);
     if (successCount > 0) {
-      alert(`Successfully downloaded ${successCount} QR code(s)`);
+      alert(`Successfully downloaded ${successCount} QR code(s) with labels`);
     }
   } catch (err) {
     console.error("Error in QR download:", err);
