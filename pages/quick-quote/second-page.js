@@ -261,7 +261,7 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Cat_No}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Quantity}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.UOM}</td>
-                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.StockInIndia}</td>
+                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item['Stock In India']}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.ChinaStock}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item['HAZ / Non HAZ']}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Price}</td>

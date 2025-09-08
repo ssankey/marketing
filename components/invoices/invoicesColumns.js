@@ -235,6 +235,11 @@ export const tableColumns = [
     cell: ({ getValue }) => getValue() || "N/A",
   },
   {
+    accessorKey: "Category",
+    header: "Category",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
+  {
     accessorKey: "COA Filename",
     header: "COA",
     cell: ({ row }) => <CoaCell row={row.original} />,
