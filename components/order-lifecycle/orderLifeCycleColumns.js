@@ -10,6 +10,12 @@ export const tableColumns = () => [
     header: "Reference No",
     cell: ({ getValue }) => getValue() || "N/A",
   },
+  // ✅ New columns after Dispatch Date
+  {
+    accessorKey: "PO_No",
+    header: "PO No",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
   {
     accessorKey: "Item_No",
     header: "Item Code",
@@ -54,12 +60,7 @@ export const tableColumns = () => [
     cell: ({ getValue }) => formatDate(getValue()),
   },
 
-  // ✅ New columns after Dispatch Date
-  {
-    accessorKey: "PO_No",
-    header: "PO No",
-    cell: ({ getValue }) => getValue() || "N/A",
-  },
+  
   {
     accessorKey: "Sales_Person",
     header: "Sales Person",
@@ -68,6 +69,16 @@ export const tableColumns = () => [
   {
     accessorKey: "Customer",
     header: "Customer Name",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
+  {
+    accessorKey: "Contact_Person",
+    header: "Contact_Person",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
+  {
+    accessorKey: "Category",
+    header: "Category",
     cell: ({ getValue }) => getValue() || "N/A",
   },
 ];

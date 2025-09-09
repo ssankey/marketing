@@ -74,9 +74,36 @@ export default async function handler(req, res) {
 
         const ContactPersonEmail = details.ContactPersonEmail;
 
+        // // 📧 Step 4: Prepare email body
+        // const lineItems = details.LineItems.map(
+        //   (item) => `
+        //     <tr>
+        //       <td>${item.ItemCode}</td>
+        //       <td>${item.Description}</td>
+        //       <td>${item.U_CasNo || "N/A"}</td>
+        //       <td>${item.Quantity}</td>
+        //       <td>${item.UnitMsr}</td>
+        //       <td>${formatNumberWithIndianCommas(item.Price)}</td>
+        //       <td>${formatNumberWithIndianCommas(item.LineTotal)}</td>
+        //       <td>${item.StockStatus}</td>
+        //       <td>${formatDate(item.DeliveryDate)}</td>
+        //     </tr>
+        //   `
+        // ).join("");
+
         // 📧 Step 4: Prepare email body
-        const lineItems = details.LineItems.map(
-          (item) => `
+        const lineItems = details.LineItems.map((item) => {
+          let stockDisplay = item.StockStatus;
+
+          if (item.StockStatus?.toLowerCase() === "out of stock") {
+            if (item.Timeline && item.Timeline.trim() !== "") {
+              stockDisplay = item.Timeline; // use timeline if available
+            } else {
+              stockDisplay = "Out of Stock"; // fallback
+            }
+          }
+
+          return `
             <tr>
               <td>${item.ItemCode}</td>
               <td>${item.Description}</td>
@@ -85,11 +112,12 @@ export default async function handler(req, res) {
               <td>${item.UnitMsr}</td>
               <td>${formatNumberWithIndianCommas(item.Price)}</td>
               <td>${formatNumberWithIndianCommas(item.LineTotal)}</td>
-              <td>${item.StockStatus}</td>
+              <td>${stockDisplay}</td>
               <td>${formatDate(item.DeliveryDate)}</td>
             </tr>
-          `
-        ).join("");
+          `;
+        }).join("");
+
 
         const html = `
           <div style="font-family: Arial, sans-serif;">
