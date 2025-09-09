@@ -1,4 +1,4 @@
-// // pages/stock-check/second-page.js
+// // pages/stock-check/second-page.js - Updated with pack size matching and sorting by Final Price
 // import React, { useState, useEffect } from 'react';
 
 // export default function SecondPage({ initialData, headerValues, onBack, onViewSelected }) {
@@ -31,13 +31,23 @@
 
 //         const data = await response.json();
         
-//         // Combine API data with initial data (discount and reference)
+//         // Combine API data with initial data (discount, reference, and pack size)
 //         const combinedData = data.items.map(item => {
 //           const initialItem = initialData.find(i => i.casNo === item.CAS);
+          
+//           // Check if pack size matches
+//           const packSizeMatches = checkPackSizeMatch(
+//             initialItem?.packSize,
+//             item.Quantity,
+//             item.UOM
+//           );
+          
 //           return {
 //             ...item,
 //             discount: initialItem?.discount || '',
 //             refNo: initialItem?.refNo || '',
+//             packSize: initialItem?.packSize || null,
+//             packSizeMatches: packSizeMatches,
 //             finalPrice: calculateFinalPrice(item.Price, initialItem?.discount),
 //             qty: 0,
 //             value: 0,
@@ -45,12 +55,15 @@
 //           };
 //         });
 
-//         setItemsData(combinedData);
+//         // Sort by Final Price (lowest first)
+//         const sortedData = combinedData.sort((a, b) => a.finalPrice - b.finalPrice);
+
+//         setItemsData(sortedData);
         
 //         // Initialize quantities and selected items state
 //         const initialQuantities = {};
 //         const initialSelected = {};
-//         combinedData.forEach(item => {
+//         sortedData.forEach(item => {
 //           initialQuantities[item.SLNO] = 0;
 //           initialSelected[item.SLNO] = true; // Default to Yes
 //         });
@@ -66,6 +79,25 @@
 
 //     fetchData();
 //   }, [initialData]);
+
+//   // Function to check if pack size matches with backend data
+//   const checkPackSizeMatch = (packSize, backendQuantity, backendUOM) => {
+//     if (!packSize || !packSize.quantity || !packSize.uom) {
+//       return false;
+//     }
+    
+//     // Convert customer input to numbers for comparison
+//     const customerQuantity = parseFloat(packSize.quantity);
+//     const backendQty = parseFloat(backendQuantity);
+    
+//     // Check if both quantity and UOM match
+//     return (
+//       !isNaN(customerQuantity) && 
+//       !isNaN(backendQty) &&
+//       customerQuantity === backendQty &&
+//       packSize.uom === backendUOM
+//     );
+//   };
 
 //   const calculateFinalPrice = (price, discount) => {
 //     if (!price || !discount) return price || 0;
@@ -151,7 +183,24 @@
 //   if (loading) {
 //     return (
 //       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-//         <div>Loading...</div>
+//         <div style={{ 
+//           fontSize: '18px', 
+//           color: '#2563eb', 
+//           fontWeight: '500',
+//           display: 'flex',
+//           alignItems: 'center',
+//           gap: '12px'
+//         }}>
+//           <div style={{
+//             width: '20px',
+//             height: '20px',
+//             border: '3px solid #dbeafe',
+//             borderTop: '3px solid #2563eb',
+//             borderRadius: '50%',
+//             animation: 'spin 1s linear infinite'
+//           }}></div>
+//           Loading...
+//         </div>
 //       </div>
 //     );
 //   }
@@ -159,13 +208,29 @@
 //   if (error) {
 //     return (
 //       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-//         <div>Error: {error}</div>
+//         <div style={{ 
+//           fontSize: '18px', 
+//           color: '#dc2626', 
+//           fontWeight: '500',
+//           textAlign: 'center'
+//         }}>
+//           <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚠️</div>
+//           Error: {error}
+//         </div>
 //       </div>
 //     );
 //   }
 
 //   return (
 //     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #eff6ff 100%)', padding: '24px' }}>
+//       <style>
+//         {`
+//           @keyframes spin {
+//             0% { transform: rotate(0deg); }
+//             100% { transform: rotate(360deg); }
+//           }
+//         `}
+//       </style>
 //       <div style={{ width: '100%' }}>
 //         <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #dbeafe' }}>
 //           {/* Component Header */}
@@ -178,7 +243,12 @@
 //             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 //               <div>
 //                 <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Quick Stock Results</h2>
-//                 <p style={{ fontSize: '16px', color: '#2563eb', marginTop: '8px', margin: '8px 0 0 0' }}>Review and confirm your stock items</p>
+//                 <p style={{ fontSize: '16px', color: '#2563eb', marginTop: '8px', margin: '8px 0 0 0' }}>
+//                   Review and confirm your stock items
+//                   <span style={{ display: 'block', fontSize: '14px', color: '#059669', marginTop: '4px' }}>
+//                     🟢 Green rows indicate pack size matches with your input
+//                   </span>
+//                 </p>
 //               </div>
 //               <div style={{ display: 'flex', gap: '12px' }}>
 //                 <button
@@ -238,6 +308,7 @@
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>CAS</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Description</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Cat_No</th>
+//                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Customer Pack</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Quantity</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>UOM</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Stock In India</th>
@@ -245,7 +316,16 @@
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>HAZ / Non HAZ</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Price</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Discount</th>
-//                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Final Price</th>
+//                       <th style={{ 
+//                         padding: '16px', 
+//                         textAlign: 'left', 
+//                         fontWeight: 'bold', 
+//                         color: '#1e40af', 
+//                         border: '1px solid #93c5fd',
+                        
+//                       }}>
+//                         Final Price 
+//                       </th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Reference</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Qty</th>
 //                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Value</th>
@@ -254,11 +334,31 @@
 //                   </thead>
 //                   <tbody>
 //                     {itemsData.map((item) => (
-//                       <tr key={item.SLNO} style={{ borderBottom: '1px solid #dbeafe' }}>
+//                       <tr 
+//                         key={item.SLNO} 
+//                         style={{ 
+//                           borderBottom: '1px solid #dbeafe',
+//                           backgroundColor: item.packSizeMatches ? '#dcfce7' : 'transparent'
+//                         }}
+//                       >
 //                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.SLNO}</td>
 //                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.CAS}</td>
 //                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Description}</td>
 //                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Cat_No}</td>
+//                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>
+//                           {item.packSize?.quantity && item.packSize?.uom ? (
+//                             <span style={{ 
+//                               fontSize: '14px', 
+//                               fontWeight: '500',
+//                               color: item.packSizeMatches ? '#059669' : '#6b7280'
+//                             }}>
+//                               {item.packSize.quantity} {item.packSize.uom}
+//                               {item.packSizeMatches && <span style={{ marginLeft: '8px' }}>✅</span>}
+//                             </span>
+//                           ) : (
+//                             <span style={{ color: '#9ca3af', fontSize: '14px' }}>-</span>
+//                           )}
+//                         </td>
 //                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Quantity}</td>
 //                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.UOM}</td>
 //                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item['Stock In India']}</td>
@@ -314,6 +414,7 @@
 //                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
 //                   <div style={{ fontSize: '16px', color: '#1d4ed8', fontWeight: '500' }}>
 //                     Selected Items: <span style={{ fontWeight: 'bold', color: '#1e40af' }}>{selectedData.length}</span> |
+//                     Pack Size Matches: <span style={{ fontWeight: 'bold', color: '#059669' }}>{itemsData.filter(item => item.packSizeMatches).length}</span> |
 //                     Total Value: <span style={{ fontWeight: 'bold', color: '#1e40af' }}>
 //                       {selectedData.reduce((sum, item) => sum + item.value, 0).toFixed(2)}
 //                     </span>
@@ -328,7 +429,8 @@
 //   );
 // }
 
-// pages/stock-check/second-page.js - Updated with pack size matching
+
+// pages/stock-check/second-page.js - Updated with sequential SLNO and final price sorting
 import React, { useState, useEffect } from 'react';
 
 export default function SecondPage({ initialData, headerValues, onBack, onViewSelected }) {
@@ -374,6 +476,7 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
           
           return {
             ...item,
+            originalSLNO: item.SLNO, // Keep original SLNO for reference
             discount: initialItem?.discount || '',
             refNo: initialItem?.refNo || '',
             packSize: initialItem?.packSize || null,
@@ -385,12 +488,21 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
           };
         });
 
-        setItemsData(combinedData);
+        // Sort by Final Price (lowest first)
+        const sortedData = combinedData.sort((a, b) => a.finalPrice - b.finalPrice);
+
+        // Reassign sequential SLNO after sorting
+        const dataWithSequentialSLNO = sortedData.map((item, index) => ({
+          ...item,
+          SLNO: index + 1 // Sequential SLNO starting from 1
+        }));
+
+        setItemsData(dataWithSequentialSLNO);
         
-        // Initialize quantities and selected items state
+        // Initialize quantities and selected items state using new sequential SLNO
         const initialQuantities = {};
         const initialSelected = {};
-        combinedData.forEach(item => {
+        sortedData.forEach(item => {
           initialQuantities[item.SLNO] = 0;
           initialSelected[item.SLNO] = true; // Default to Yes
         });
@@ -571,7 +683,7 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
               <div>
                 <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Quick Stock Results</h2>
                 <p style={{ fontSize: '16px', color: '#2563eb', marginTop: '8px', margin: '8px 0 0 0' }}>
-                  Review and confirm your stock items
+                  Review and confirm your stock items (sorted by lowest final price)
                   <span style={{ display: 'block', fontSize: '14px', color: '#059669', marginTop: '4px' }}>
                     🟢 Green rows indicate pack size matches with your input
                   </span>
@@ -643,7 +755,16 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>HAZ / Non HAZ</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Price</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Discount</th>
-                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Final Price</th>
+                      <th style={{ 
+                        padding: '16px', 
+                        textAlign: 'left', 
+                        fontWeight: 'bold', 
+                        color: '#1e40af', 
+                        border: '1px solid #93c5fd',
+                        
+                      }}>
+                        Final Price ↑
+                      </th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Reference</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Qty</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Value</th>
