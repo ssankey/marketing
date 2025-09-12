@@ -77,28 +77,7 @@ export default function CustomerDetails({
     toDate: "",
   });
 
-  // const handleSelectAll = async () => {
-  //   if (!isAllSelected) {
-  //     try {
-  //       const queryParams = new URLSearchParams({ getAll: "true" });
-  //       const res = await fetch(
-  //         `/api/customers/${customer.CustomerCode}/outstanding?${queryParams.toString()}`
-  //       );
-        
 
-  //       const allInvoiceNos = customerOutstandings.map(
-  //         (item) => item["Invoice No."]
-  //       );
-  //       setSelectedRows(allInvoiceNos);
-  //       setIsAllSelected(true);
-  //     } catch (error) {
-  //       console.error("Failed to fetch all rows for select all", error);
-  //     }
-  //   } else {
-  //     setSelectedRows([]);
-  //     setIsAllSelected(false);
-  //   }
-  // };
 
     const handleSelectAll = async () => {
       if (!isAllSelected) {
@@ -143,57 +122,7 @@ export default function CustomerDetails({
     fetchOutstandings(1, newFilters);
   };
 
-  // const handleExcelDownload = async (e) => {
-  //   e?.preventDefault?.();
-  //   try {
-  //     setIsExcelLoading(true);
 
-  //     // Fetch ALL records without pagination with the current filter
-  //     const queryParams = new URLSearchParams({
-  //       getAll: "true",
-  //       filterType: outstandingFilter, // Include current filter
-  //     });
-
-  //     const res = await fetch(
-  //       `/api/customers/${
-  //         customer.CustomerCode
-  //       }/outstanding?${queryParams.toString()}`
-  //     );
-  //     const { customerOutstandings } = await res.json();
-
-    
-
-  //     // Map columns exactly as they appear in the UI (from your columns array)
-  //     const formattedData = customerOutstandings.map((item) => ({
-  //       "Invoice No.": item["Invoice No."],
-  //       "Invoice Date": formatDate(item["AR Invoice Date"]),
-  //       "SO#": item["SO#"],
-  //       "SO Date": formatDate(item["SO Date"]),
-  //       "Customer Name": item["Customer Name"],
-  //       "Contact Person": item["Contact Person"],
-  //       "SO Customer Ref. No": item["CustomerPONo"],
-  //       "Invoice Total": formatNumberWithIndianCommas(item["Invoice Total"]),
-  //       "Balance Due": formatNumberWithIndianCommas(item["Balance Due"]),
-  //       Country: item["Country"],
-  //       State: item["State"],
-  //       "Overdue Days": item["Overdue Days"],
-  //       "Payment Terms": item["Payment Terms"],
-  //       "Tracking no": item["Tracking no"],
-  //       "Dispatch Date": formatDate(item["Dispatch Date"]),
-  //       "Sales Person": item["SalesEmployee"],
-  //     }));
-
-  //     downloadExcel(
-  //       formattedData,
-  //       `Customer_Outstanding_${outstandingFilter.replace(" ", "_")}`
-  //     );
-  //   } catch (error) {
-  //     console.error("Excel export failed:", error);
-  //     alert("Failed to export Excel. Please try again.");
-  //   } finally {
-  //     setIsExcelLoading(false);
-  //   }
-  // };
   const handleExcelDownload = async (e) => {
   e?.preventDefault?.();
   try {
