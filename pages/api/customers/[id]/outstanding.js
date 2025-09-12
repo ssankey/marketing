@@ -1,4 +1,5 @@
-//api/customers/[id].js/outstanding.js 
+
+// /api/customers/[id]/outstanding.js
 import { getCustomerOutstanding } from "../../../../lib/models/customers";
 
 export default async function handler(req, res) {
@@ -6,23 +7,35 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  // const { id } = req.query; // Customer ID (e.g., C000080)
-  const { id, getAll } = req.query;
-  
-  const all = getAll === "true"; // interpret the flag
+  const { id } = req.query; // Customer ID (e.g., C000080)
+  const { getAll = "false", page = 1, fromDate, toDate, filterType = "Payment Pending" } = req.query;
+
+  const all = getAll === "true";
+  const currentPage = parseInt(page, 10);
+  const itemsPerPage = 5;
+
   if (!id) {
     return res.status(400).json({ message: "Customer ID is required" });
   }
 
   try {
-    // const orders = await getCustomerOutstanding(id);
-    const orders = await getCustomerOutstanding(id, { getAll: all });
-    
+    const { results, totalItems } = await getCustomerOutstanding(id, {
+      getAll: all,
+      page: currentPage,
+      itemsPerPage,
+      fromDate,
+      toDate,
+      filterType, // Pass the filter type to the database function
+    });
 
-    console.log("API Response:", orders);
-    res.status(200).json(orders);
+    res.status(200).json({
+      customerOutstandings: results,
+      totalItems,
+      currentPage,
+      totalPages: Math.ceil(totalItems / itemsPerPage),
+    });
   } catch (error) {
-    console.error("Error fetching customer orders:", error);
-    res.status(500).json({ message: "Failed to fetch customer orders" });
+    console.error("Error fetching customer outstanding:", error);
+    res.status(500).json({ message: "Failed to fetch customer outstanding" });
   }
 }
