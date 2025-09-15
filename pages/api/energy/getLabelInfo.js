@@ -1,4 +1,5 @@
-// //https://marketing.densitypharmachem.com/api/energy/getLabelInfo.js
+
+// //pages/api/energy/getLabelInfo.js
 // export default async function handler(req, res) {
 //   if (req.method !== "POST") {
 //     return res.status(405).json({
@@ -19,18 +20,14 @@
 //   }
 
 //   try {
-//     // 1. First get the access token
+//     // 1. First get the access token from our own API
 //     const tokenResponse = await fetch(
-//       'https://marketing.densitypharmachem.com/api/energy/getAccessToken',
+//       'http://localhost:3000/api/energy/getAccessToken',
 //       {
 //         method: "POST",
 //         headers: {
-//           "Content-Type": "application/x-www-form-urlencoded",
-//         },
-//         body: new URLSearchParams({
-//           username: 'Density', // Fixed: Updated to correct username
-//           password: 'Density'   // Fixed: Updated to correct password
-//         }).toString(),
+//           "Content-Type": "application/json",
+//         }
 //       }
 //     );
 
@@ -43,16 +40,16 @@
 
 //     const token = tokenData.data;
 
-//     // 2. Now call the label info API
+//     // 2. Now call the external label info API
 //     const labelResponse = await fetch(
-//       "https://testapi.energy-chemical.com/console/api/PlatformInterfaces/external/v1/getLabelInfo.json", // Fixed: Updated to correct endpoint
+//       "https://testapi.energy-chemical.com/console/api/PlatformInterfaces/external/v1/getLabelInfo.json",
 //       {
 //         method: "POST",
 //         headers: {
 //           "Content-Type": "application/x-www-form-urlencoded",
 //         },
 //         body: new URLSearchParams({
-//           token: token, // Fixed: Token should be in body, not header
+//           token: token,
 //           jsonStr: JSON.stringify({ itemNumber }),
 //         }).toString(),
 //       }
@@ -82,7 +79,7 @@
 //   }
 // }
 
-//pages/api/energy/getLabelInfo.js
+// pages/api/energy/getLabelInfo.js
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({
@@ -103,9 +100,18 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Use environment variable for base URL
+    const baseUrl = process.env.API_BASE_URL;
+    
+    if (!baseUrl) {
+      throw new Error("API_BASE_URL environment variable is not set");
+    }
+
+    console.log("Using API base URL:", baseUrl);
+
     // 1. First get the access token from our own API
     const tokenResponse = await fetch(
-      'http://localhost:3000/api/energy/getAccessToken',
+      `${baseUrl}/api/energy/getAccessToken`,
       {
         method: "POST",
         headers: {
@@ -113,6 +119,11 @@ export default async function handler(req, res) {
         }
       }
     );
+
+    // Check if token response is successful
+    if (!tokenResponse.ok) {
+      throw new Error(`Token API responded with status: ${tokenResponse.status}`);
+    }
 
     const tokenData = await tokenResponse.json();
     

@@ -1,4 +1,4 @@
-// pages/stock-check/second-page.js - Updated with CAS not found indicator
+// pages/stock-check/second-page.js
 import React, { useState, useEffect } from 'react';
 
 export default function SecondPage({ initialData, headerValues, onBack, onViewSelected }) {
@@ -6,7 +6,7 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantities, setQuantities] = useState({});
-  const [notFoundCasNumbers, setNotFoundCasNumbers] = useState([]);
+  const [selectedItems, setSelectedItems] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,86 +31,31 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
 
         const data = await response.json();
         
-        // Find CAS numbers that were not found in the response
-        const foundCasNumbers = data.items.map(item => item.CAS);
-        const notFound = casNumbers.filter(cas => !foundCasNumbers.includes(cas));
-        setNotFoundCasNumbers(notFound);
-        
-        // Combine API data with initial data (discount, reference, and pack size)
+        // Combine API data with initial data (discount and reference)
         const combinedData = data.items.map(item => {
           const initialItem = initialData.find(i => i.casNo === item.CAS);
-          
-          // Check if pack size matches (only quantity comparison)
-          const packSizeMatches = checkPackSizeMatch(
-            initialItem?.packSize,
-            item.Quantity
-          );
-          
           return {
             ...item,
-            originalSLNO: item.SLNO, // Keep original SLNO for reference
             discount: initialItem?.discount || '',
             refNo: initialItem?.refNo || '',
-            packSize: initialItem?.packSize || null,
-            packSizeMatches: packSizeMatches,
             finalPrice: calculateFinalPrice(item.Price, initialItem?.discount),
             qty: 0,
             value: 0,
-            casFound: true // Mark as found since it's in the response
+            selected: true // Default to Yes
           };
         });
 
-        // Add entries for CAS numbers that were not found
-        const notFoundEntries = notFound.map((cas, index) => {
-          const initialItem = initialData.find(i => i.casNo === cas);
-          return {
-            SLNO: combinedData.length + index + 1,
-            CAS: cas,
-            Description: 'Not Available',
-            Cat_No: '-',
-            Quantity: '-',
-            UOM: '-',
-            'Stock In India': '-',
-            'China Stock': '-',
-            'HAZ / Non HAZ': '-',
-            Price: 0,
-            discount: initialItem?.discount || '',
-            refNo: initialItem?.refNo || '',
-            packSize: initialItem?.packSize || null,
-            packSizeMatches: false,
-            finalPrice: 0,
-            qty: 0,
-            value: 0,
-            casFound: false // Mark as not found
-          };
-        });
-
-        // Combine found and not found items
-        const allData = [...combinedData, ...notFoundEntries];
-
-        // Sort by casFound status first (found items first), then by Final Price
-        const sortedData = allData.sort((a, b) => {
-          // First sort by casFound (found items first)
-          if (a.casFound && !b.casFound) return -1;
-          if (!a.casFound && b.casFound) return 1;
-          // Then sort by final price within each group
-          return a.finalPrice - b.finalPrice;
-        });
-
-        // Reassign sequential SLNO after sorting
-        const dataWithSequentialSLNO = sortedData.map((item, index) => ({
-          ...item,
-          SLNO: index + 1 // Sequential SLNO starting from 1
-        }));
-
-        setItemsData(dataWithSequentialSLNO);
+        setItemsData(combinedData);
         
-        // Initialize quantities using new sequential SLNO
+        // Initialize quantities and selected items state
         const initialQuantities = {};
-        dataWithSequentialSLNO.forEach(item => {
+        const initialSelected = {};
+        combinedData.forEach(item => {
           initialQuantities[item.SLNO] = 0;
+          initialSelected[item.SLNO] = true; // Default to Yes
         });
         setQuantities(initialQuantities);
+        setSelectedItems(initialSelected);
         
       } catch (err) {
         setError(err.message);
@@ -122,24 +67,6 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
     fetchData();
   }, [initialData]);
 
-  // Function to check if pack size matches with backend data (only quantity comparison)
-  const checkPackSizeMatch = (packSize, backendQuantity) => {
-    if (!packSize || !packSize.quantity) {
-      return false;
-    }
-    
-    // Convert customer input to numbers for comparison
-    const customerQuantity = parseFloat(packSize.quantity);
-    const backendQty = parseFloat(backendQuantity);
-    
-    // Check if quantities match
-    return (
-      !isNaN(customerQuantity) && 
-      !isNaN(backendQty) &&
-      customerQuantity === backendQty
-    );
-  };
-
   const calculateFinalPrice = (price, discount) => {
     if (!price || !discount) return price || 0;
     
@@ -150,13 +77,6 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
   };
 
   const handleQuantityChange = (slno, value) => {
-    const item = itemsData.find(i => i.SLNO === slno);
-    
-    // Don't allow quantity changes for items not found
-    if (!item || !item.casFound) {
-      return;
-    }
-    
     // Prevent negative quantities
     let qty = parseFloat(value) || 0;
     if (qty < 0) {
@@ -166,6 +86,7 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
     setQuantities(prev => ({ ...prev, [slno]: qty }));
     
     // Update value
+    const item = itemsData.find(i => i.SLNO === slno);
     if (item) {
       const newValue = qty * item.finalPrice;
       setItemsData(prev => 
@@ -178,7 +99,7 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
 
   const handleCheckValue = (slno) => {
     const item = itemsData.find(i => i.SLNO === slno);
-    if (item && item.casFound) {
+    if (item) {
       const qty = quantities[slno] || 0;
       const newValue = qty * item.finalPrice;
       setItemsData(prev => 
@@ -189,10 +110,17 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
     }
   };
 
+  const handleSelectChange = (slno, value) => {
+    setSelectedItems(prev => ({ ...prev, [slno]: value }));
+    setItemsData(prev => 
+      prev.map(i => 
+        i.SLNO === slno ? { ...i, selected: value } : i
+      )
+    );
+  };
+
   const handleCheckAllValues = () => {
     const updatedData = itemsData.map(item => {
-      if (!item.casFound) return item; // Skip not found items
-      
       const qty = quantities[item.SLNO] || 0;
       return {
         ...item,
@@ -203,41 +131,27 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
   };
 
   const handleViewSelected = () => {
-    // Filter items that have quantity >= 1 and were found in the system
+    // Filter items that are selected as "YES" AND have quantity >= 1
     const validSelectedItems = itemsData.filter(item => 
-      item.casFound && (quantities[item.SLNO] || 0) >= 1
+      selectedItems[item.SLNO] && (quantities[item.SLNO] || 0) >= 1
     );
     
     if (validSelectedItems.length === 0) {
-      alert('Please enter quantity 1 or more for at least one available item before proceeding.');
+      alert('Please select at least one item with quantity 1 or more before proceeding.');
       return;
     }
     
-    // Pass only the valid selected items (quantity >= 1 and found)
+    // Pass only the valid selected items (quantity >= 1 AND selected = YES)
     onViewSelected(validSelectedItems, quantities);
   };
+
+  // Calculate selectedData for display
+  const selectedData = itemsData.filter(item => selectedItems[item.SLNO]);
 
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <div style={{ 
-          fontSize: '18px', 
-          color: '#2563eb', 
-          fontWeight: '500',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
-        }}>
-          <div style={{
-            width: '20px',
-            height: '20px',
-            border: '3px solid #dbeafe',
-            borderTop: '3px solid #2563eb',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          Loading...
-        </div>
+        <div>Loading...</div>
       </div>
     );
   }
@@ -245,29 +159,13 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
   if (error) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
-        <div style={{ 
-          fontSize: '18px', 
-          color: '#dc2626', 
-          fontWeight: '500',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '24px', marginBottom: '8px' }}>⚠️</div>
-          Error: {error}
-        </div>
+        <div>Error: {error}</div>
       </div>
     );
   }
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #eff6ff 0%, #ffffff 50%, #eff6ff 100%)', padding: '24px' }}>
-      <style>
-        {`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}
-      </style>
       <div style={{ width: '100%' }}>
         <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #dbeafe' }}>
           {/* Component Header */}
@@ -279,18 +177,8 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Quick Stock Results</h2>
-                <p style={{ fontSize: '16px', color: '#2563eb', marginTop: '8px', margin: '8px 0 0 0' }}>
-                  Review and confirm your stock items
-                  <span style={{ display: 'block', fontSize: '14px', marginTop: '8px' }}>
-                    <span style={{ color: '#059669', marginRight: '16px' }}>
-                      🟢 Green rows indicate PKZ matches with your input
-                    </span>
-                    <span style={{ color: '#dc2626' }}>
-                      🔴 Light red rows indicate CAS numbers not found in our database
-                    </span>
-                  </span>
-                </p>
+                <h2 style={{ fontSize: '28px', fontWeight: 'bold', color: '#1e40af', margin: 0 }}>Stock Check Results</h2>
+                <p style={{ fontSize: '16px', color: '#2563eb', marginTop: '8px', margin: '8px 0 0 0' }}>Review and confirm your stock items</p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button
@@ -350,73 +238,31 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>CAS</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Description</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Cat_No</th>
-                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>PKZ</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Quantity</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>UOM</th>
-                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Customer PKZ</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Stock In India</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>China Stock</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>HAZ / Non HAZ</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Price</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Discount</th>
-                      <th style={{ 
-                        padding: '16px', 
-                        textAlign: 'left', 
-                        fontWeight: 'bold', 
-                        color: '#1e40af', 
-                        border: '1px solid #93c5fd'
-                      }}>
-                        Final Price
-                      </th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Final Price</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Reference</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Qty</th>
                       <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Value</th>
+                      <th style={{ padding: '16px', textAlign: 'left', fontWeight: 'bold', color: '#1e40af', border: '1px solid #93c5fd' }}>Select</th>
                     </tr>
                   </thead>
                   <tbody>
                     {itemsData.map((item) => (
-                      <tr 
-                        key={item.SLNO} 
-                        style={{ 
-                          borderBottom: '1px solid #dbeafe',
-                          backgroundColor: !item.casFound ? '#fef2f2' : (item.packSizeMatches ? '#dcfce7' : 'transparent')
-                        }}
-                      >
+                      <tr key={item.SLNO} style={{ borderBottom: '1px solid #dbeafe' }}>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.SLNO}</td>
-                        <td style={{ 
-                          padding: '12px', 
-                          border: '1px solid #93c5fd',
-                          color: !item.casFound ? '#dc2626' : 'inherit'
-                        }}>
-                          {item.CAS}
-                          
-                        </td>
-                        <td style={{ 
-                          padding: '12px', 
-                          border: '1px solid #93c5fd',
-                          color: !item.casFound ? '#dc2626' : 'inherit',
-                          fontStyle: !item.casFound ? 'italic' : 'normal'
-                        }}>
-                          {item.Description}
-                        </td>
+                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.CAS}</td>
+                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Description}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Cat_No}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Quantity}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.UOM}</td>
-                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>
-                          {item.packSize?.quantity ? (
-                            <span style={{ 
-                              fontSize: '14px', 
-                              fontWeight: '500',
-                              color: item.packSizeMatches ? '#059669' : '#6b7280'
-                            }}>
-                              {item.packSize.quantity}
-                              {item.packSizeMatches && <span style={{ marginLeft: '8px' }}>✅</span>}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#9ca3af', fontSize: '14px' }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item['Stock In India']}</td>
-                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item['China Stock']}</td>
+                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.StockInIndia}</td>
+                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.ChinaStock}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item['HAZ / Non HAZ']}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.Price}</td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.discount}</td>
@@ -430,18 +276,29 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
                             value={quantities[item.SLNO] || ''}
                             onChange={(e) => handleQuantityChange(item.SLNO, e.target.value)}
                             onBlur={() => handleCheckValue(item.SLNO)}
-                            disabled={!item.casFound}
                             style={{
                               width: '80px',
                               padding: '4px 8px',
                               border: '1px solid #93c5fd',
-                              borderRadius: '4px',
-                              backgroundColor: !item.casFound ? '#f3f4f6' : 'white',
-                              cursor: !item.casFound ? 'not-allowed' : 'text'
+                              borderRadius: '4px'
                             }}
                           />
                         </td>
                         <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>{item.value.toFixed(2)}</td>
+                        <td style={{ padding: '12px', border: '1px solid #93c5fd' }}>
+                          <select
+                            value={selectedItems[item.SLNO] ? 'Yes' : 'No'}
+                            onChange={(e) => handleSelectChange(item.SLNO, e.target.value === 'Yes')}
+                            style={{
+                              padding: '4px 8px',
+                              border: '1px solid #93c5fd',
+                              borderRadius: '4px'
+                            }}
+                          >
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -456,11 +313,9 @@ export default function SecondPage({ initialData, headerValues, onBack, onViewSe
               }}>
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <div style={{ fontSize: '16px', color: '#1d4ed8', fontWeight: '500' }}>
-                    Items with Quantity: <span style={{ fontWeight: 'bold', color: '#1e40af' }}>{itemsData.filter(item => item.casFound && (quantities[item.SLNO] || 0) > 0).length}</span> |
-                    PKZ Matches: <span style={{ fontWeight: 'bold', color: '#059669' }}>{itemsData.filter(item => item.packSizeMatches).length}</span> |
-                    Not Found: <span style={{ fontWeight: 'bold', color: '#965757ff' }}>{itemsData.filter(item => !item.casFound).length}</span> |
+                    Selected Items: <span style={{ fontWeight: 'bold', color: '#1e40af' }}>{selectedData.length}</span> |
                     Total Value: <span style={{ fontWeight: 'bold', color: '#1e40af' }}>
-                      {itemsData.filter(item => item.casFound).reduce((sum, item) => sum + item.value, 0).toFixed(2)}
+                      {selectedData.reduce((sum, item) => sum + item.value, 0).toFixed(2)}
                     </span>
                   </div>
                 </div>
