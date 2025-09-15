@@ -244,15 +244,25 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
             params.append('batchNum', batchNum);
           }
           
-          const labelResponse = await fetch(
-            `/api/labels/download/${encodeURIComponent(itemCode)}?${params.toString()}`, 
-            {
+          // const labelResponse = await fetch(
+          //   `/api/labels/download/${encodeURIComponent(itemCode)}?${params.toString()}`, 
+          //   {
+          //     method: 'GET',
+          //     headers: {
+          //       'Content-Type': 'application/json',
+          //     },
+          //   }
+          // );
+          const apiPath = `/api/labels/download/${encodeURIComponent(itemCode)}?${params.toString()}`;
+          console.log("Calling Label API:", apiPath);
+
+          const labelResponse = await fetch(apiPath, {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
               },
-            }
-          );
+            });
+
 
           if (!labelResponse.ok) {
             console.warn(`Enhanced label not found for item: ${itemCode} (${labelResponse.status})`);
