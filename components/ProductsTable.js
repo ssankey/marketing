@@ -149,6 +149,11 @@ export default function ProductsTable({
   status,
   onStatusChange,
 }) {
+
+   const { user } = useAuth();
+  const is3ASenrise = user?.role === "3ASenrise";
+
+
   const ITEMS_PER_PAGE = 20;
   const DEBOUNCE_DELAY = 500;
   const router = useRouter();
@@ -178,17 +183,35 @@ export default function ProductsTable({
   }), [currentPage, searchTerm, status, selectedCategory, sortField, sortDirection]);
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await fetch("/api/products/categories");
-        if (!res.ok) throw new Error("Failed to fetch categories");
-        const data = await res.json();
-        setCategories(data.categories || []);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        setCategories([]);
+    // const fetchCategories = async () => {
+    //   try {
+    //     const res = await fetch("/api/products/categories");
+    //     if (!res.ok) throw new Error("Failed to fetch categories");
+    //     const data = await res.json();
+    //     setCategories(data.categories || []);
+    //   } catch (error) {
+    //     console.error("Error fetching categories:", error);
+    //     setCategories([]);
+    //   }
+    // };
+     const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/products/categories");
+      if (!res.ok) throw new Error("Failed to fetch categories");
+      const data = await res.json();
+      
+      // Filter categories on client side if user is 3ASenrise
+      let filteredCategories = data.categories || [];
+      if (is3ASenrise) {
+        filteredCategories = filteredCategories.filter(cat => cat === "3A Chemicals");
       }
-    };
+      
+      setCategories(filteredCategories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setCategories([]);
+    }
+  };
     fetchCategories();
   }, []);
 
