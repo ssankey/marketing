@@ -573,7 +573,7 @@ async function generateEnhancedLabelImage(fullItemCode, energyData, vendorBatchN
   const safeText = (text) => (text ? String(text).normalize("NFC") : "");
 
   const getFontString = (size, weight = "normal") =>
-    `${weight} ${size}px "DejaVu Sans", "Noto Sans CJK", "Liberation Sans", Arial, sans-serif`;
+    `${weight} ${size}px "DejaVu Sans"`;
 
   // Background
   ctx.fillStyle = "#FFF";
@@ -692,7 +692,7 @@ function drawHazardSymbol(ctx, x, y, size) {
   ctx.stroke();
 
   ctx.fillStyle = "#F00";
-  ctx.font = `bold ${Math.round(size * 0.4)}px "DejaVu Sans", "Noto Sans CJK", "Liberation Sans", Arial, sans-serif`;
+  ctx.font = `bold ${Math.round(size * 0.4)}px "DejaVu Sans"`;
   ctx.textAlign = "center";
   ctx.fillText("!", x + size / 2, y + size / 2 + size * 0.1);
   ctx.textAlign = "left";
