@@ -204,10 +204,16 @@ async function generateEnhancedLabelImage(fullItemCode, energyData, vendorBatchN
   ctx.textAlign = 'start';
 
   // Safe text function to handle encoding
+  // const safeText = (text) => {
+  //   if (!text) return '';
+  //   return String(text).normalize('NFC').replace(/[^\x00-\x7F]/g, '');
+  // };
   const safeText = (text) => {
-    if (!text) return '';
-    return String(text).normalize('NFC').replace(/[^\x00-\x7F]/g, '');
-  };
+  if (!text) return '';
+  // Allow Latin (U+0000–U+024F), symbols like °, ≤, ≥, %, and spaces
+  return String(text).normalize('NFC').replace(/[^\u0000-\u024F\u00B0\u2264\u2265% ]/g, '');
+};
+
 
   // Font stack with fallbacks
   // const getFontString = (size, weight = 'normal') => {
@@ -411,7 +417,8 @@ function drawHazardSymbol(ctx, x, y, size) {
   
   // Exclamation mark or other symbol in diamond
   ctx.fillStyle = '#FF0000';
-  ctx.font = `bold ${Math.round(size * 0.4)}px Arial, Helvetica, sans-serif`;
+  ctx.font = `bold ${Math.round(size * 0.4)}px "DejaVu Sans", "Liberation Sans", Arial, Helvetica, sans-serif`;
+
   ctx.textAlign = 'center';
   ctx.fillText('!', x + size/2, y + size/2 + size * 0.1);
   ctx.textAlign = 'left'; // Reset alignment
