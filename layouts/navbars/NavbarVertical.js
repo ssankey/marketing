@@ -598,7 +598,15 @@ const NavbarVertical = (props) => {
                 href="/order-lifecycle"
                 className={`nav-link d-flex align-items-center ${router === "/order-lifecycle" ? "active" : ""}`}
               >
-                <FaBox className="me-2" /> order lifecycle
+                <FaBox className="me-2" /> Order lifecycle
+              </Link>
+            </li>
+            <li className="nav-item mb-3">
+              <Link
+                href="/Document-downloading"
+                className={`nav-link d-flex align-items-center ${router === "/Document-downloading" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> Document Downloading
               </Link>
             </li>
           </Accordion>
