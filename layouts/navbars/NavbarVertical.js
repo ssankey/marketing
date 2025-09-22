@@ -573,7 +573,7 @@ const NavbarVertical = (props) => {
               </li>
             )}
             
-            {(isAdmin || isSalesPerson) && (
+            {/* {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link
                   href="/dispatch"
@@ -582,7 +582,7 @@ const NavbarVertical = (props) => {
                   <FaBox className="me-2" /> Dispatch Details
                 </Link>
               </li>
-            )}
+            )} */}
             
             <li className="nav-item mb-3">
               <Link
@@ -603,12 +603,31 @@ const NavbarVertical = (props) => {
             </li>
             <li className="nav-item mb-3">
               <Link
+                href="/order-lifecycle"
+                className={`nav-link d-flex align-items-center ${router === "/order-lifecycle" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> In bound Shipments
+              </Link>
+            </li>
+            <li className="nav-item mb-3">
+              <Link
                 href="/Document-downloading"
                 className={`nav-link d-flex align-items-center ${router === "/Document-downloading" ? "active" : ""}`}
               >
                 <FaBox className="me-2" /> Document Downloading
               </Link>
             </li>
+
+            {(isAdmin || isSalesPerson) && (
+              <li className="nav-item mb-3">
+                <Link
+                  href="/dispatch"
+                  className={`nav-link d-flex align-items-center ${router === "/dispatch" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Dispatch Details
+                </Link>
+              </li>
+            )}
           </Accordion>
         </SimpleBar>
       </div>
