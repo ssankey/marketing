@@ -1,50 +1,64 @@
-
-
-import React, { useState } from 'react';
+ import React, { useState } from 'react';
 import { Download, Loader, AlertCircle } from 'lucide-react';
 import msdsMap from 'public/data/msds-map.json';
 
 const VerticalCards = () => {
   const [inputs, setInputs] = useState({
-    '3A Label': { itemcode: '', batchnum: '' },
-    'Density Label': { itemcode: '', batchnum: '' },
-    'QR': { itemcode: '', batchnum: '' },
+    '3A Label': { itemcode: '', packsize: '', batchnum: '' },
+    'Density Label': { itemcode: '', packsize: '', batchnum: '' },
+    'QR': { itemcode: '', packsize: '', batchnum: '' },
     'Invoice': { invoiceno: '' },
-    '3A MSDS': { itemcode: '' }
+    '3A MSDS': { itemcode: '', packsize: '' }
   });
 
   const [loading, setLoading] = useState({});
   const [errors, setErrors] = useState({});
+  const [suggestions, setSuggestions] = useState({});
+  const [showSuggestions, setShowSuggestions] = useState({});
+  const [packSizes, setPackSizes] = useState({});
+  const [batchNums, setBatchNums] = useState({});
 
   const cards = [
-    { id: 1, title: '3A Label', icon: '🏷️', inputs: ['itemcode', 'batchnum'] },
-    { id: 2, title: 'Density Label', icon: '📊', inputs: ['itemcode', 'batchnum'] },
-    { id: 3, title: 'QR', icon: '🔲', inputs: ['itemcode', 'batchnum'] },
+    { id: 1, title: '3A Label', icon: '🏷️', inputs: ['itemcode', 'packsize', 'batchnum'] },
+    { id: 2, title: 'Density Label', icon: '📊', inputs: ['itemcode', 'packsize', 'batchnum'] },
+    { id: 3, title: 'QR', icon: '🔲', inputs: ['itemcode', 'packsize', 'batchnum'] },
     { id: 4, title: 'Invoice', icon: '🧾', inputs: ['invoiceno'] },
-    { id: 5, title: '3A MSDS', icon: '📄', inputs: ['itemcode'] }
+    { id: 5, title: '3A MSDS', icon: '📄', inputs: ['itemcode', 'packsize'] }
   ];
 
-  const handleInputChange = (cardTitle, inputType, value) => {
+  // 🔹 Handle typing
+  const handleInputChange = async (cardTitle, inputType, value) => {
     setInputs(prev => ({
       ...prev,
-      [cardTitle]: {
-        ...prev[cardTitle],
-        [inputType]: value
-      }
+      [cardTitle]: { ...prev[cardTitle], [inputType]: value.toUpperCase() }
     }));
 
     if (errors[cardTitle]) {
-      setErrors(prev => ({
-        ...prev,
-        [cardTitle]: null
-      }));
+      setErrors(prev => ({ ...prev, [cardTitle]: null }));
+    }
+
+    if (inputType === 'itemcode' && value.length >= 2) {
+      try {
+        const res = await fetch(`/api/density-labels/suggestions/${value.toUpperCase()}`);
+        const data = await res.json();
+        if (data.suggestions?.length > 0) {
+          setSuggestions(prev => ({ ...prev, [cardTitle]: data.suggestions }));
+          setShowSuggestions(prev => ({ ...prev, [cardTitle]: true }));
+        } else {
+          setShowSuggestions(prev => ({ ...prev, [cardTitle]: false }));
+        }
+      } catch (err) {
+        console.error('Suggestions fetch error:', err);
+      }
+    } else if (inputType === 'itemcode') {
+      setShowSuggestions(prev => ({ ...prev, [cardTitle]: false }));
     }
   };
 
+  // 🔹 Validation
   const validateInputs = (cardTitle, cardInputs) => {
     const cardData = inputs[cardTitle];
     const missingFields = cardInputs.filter(inputType => !cardData[inputType]?.trim());
-
     if (missingFields.length > 0) {
       const fieldLabels = missingFields.map(field => getInputLabel(field));
       return `Please fill in: ${fieldLabels.join(', ')}`;
@@ -52,16 +66,14 @@ const VerticalCards = () => {
     return null;
   };
 
+  // 🔹 Handle download
   const handleDownload = async (cardTitle) => {
     const card = cards.find(c => c.title === cardTitle);
     if (!card) return;
 
     const validationError = validateInputs(cardTitle, card.inputs);
     if (validationError) {
-      setErrors(prev => ({
-        ...prev,
-        [cardTitle]: validationError
-      }));
+      setErrors(prev => ({ ...prev, [cardTitle]: validationError }));
       return;
     }
 
@@ -72,199 +84,133 @@ const VerticalCards = () => {
       await downloadFile(card, inputs[cardTitle]);
     } catch (error) {
       console.error(`Download error for ${cardTitle}:`, error);
-      setErrors(prev => ({
-        ...prev,
-        [cardTitle]: error.message || 'Download failed. Please try again.'
-      }));
+      setErrors(prev => ({ ...prev, [cardTitle]: error.message || 'Download failed. Please try again.' }));
     } finally {
       setLoading(prev => ({ ...prev, [cardTitle]: false }));
     }
   };
 
-  const dataURLToBlob = (dataURL) => {
-    const arr = dataURL.split(',');
-    const mime = arr[0].match(/:(.*?);/)[1];
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new Blob([u8arr], { type: mime });
-  };
-
+  // 🔹 Router
   const downloadFile = async (card, cardInputs) => {
     switch (card.title) {
-      case '3A Label':
-        await download3ALabel(cardInputs);
-        break;
-      case 'Density Label':
-        await downloadDensityLabel(cardInputs);
-        break;
-      case 'QR':
-        await downloadQRCode(cardInputs);
-        break;
-      case 'Invoice':
-        await downloadInvoice(cardInputs);
-        break;
-      case '3A MSDS':
-        await downloadMSDS(cardInputs);
-        break;
-      default:
-        throw new Error('Unknown card type');
+      case '3A Label': return download3ALabel(cardInputs);
+      case 'Density Label': return downloadDensityLabel(cardInputs);
+      case 'QR': return downloadQRCode(cardInputs);
+      case 'Invoice': return downloadInvoice(cardInputs);
+      case '3A MSDS': return downloadMSDS(cardInputs);
+      default: throw new Error('Unknown card type');
     }
   };
 
-  const download3ALabel = async (cardInputs) => {
-    const params = new URLSearchParams();
-    if (cardInputs.batchnum) {
-      params.append('batchNum', cardInputs.batchnum);
-    }
+  const buildCodeWithPacksize = (itemcode, packsize) => {
+  if (!itemcode) return '';
+  return packsize ? `${itemcode}-${packsize}` : itemcode;
+};
 
-    const apiPath = `/api/labels/download/${encodeURIComponent(cardInputs.itemcode)}?${params.toString()}`;
-    console.log("Calling 3A Label API:", apiPath);
+ 
 
-    const response = await fetch(apiPath);
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
+  const download3ALabel = async ({ itemcode, packsize, batchnum }) => {
+  const combinedCode = buildCodeWithPacksize(itemcode, packsize);
+  const params = new URLSearchParams();
+  if (batchnum) params.append('batchNum', batchnum);
 
-    const blob = await response.blob();
-    const downloadUrl = URL.createObjectURL(blob);
+  const res = await fetch(`/api/labels/download/${encodeURIComponent(combinedCode)}?${params.toString()}`);
+  if (!res.ok) throw new Error("Failed to download 3A Label");
 
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = `3A_Label_${cardInputs.itemcode}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(downloadUrl);
-  };
+  const blob = await res.blob();
+  triggerDownload(blob, `3A_Label_${combinedCode}_${batchnum}.png`);
+};
 
-  const downloadDensityLabel = async (cardInputs) => {
-    const url = `/api/density-labels/download/${encodeURIComponent(cardInputs.itemcode)}${cardInputs.batchnum ? `?batchNum=${encodeURIComponent(cardInputs.batchnum)}` : ''}`;
+ const downloadDensityLabel = async ({ itemcode, packsize, batchnum }) => {
+  const combinedCode = buildCodeWithPacksize(itemcode, packsize);
+  const res = await fetch(`/api/density-labels/download/${encodeURIComponent(combinedCode)}${batchnum ? `?batchNum=${encodeURIComponent(batchnum)}` : ''}`);
+  if (!res.ok) throw new Error("Failed to download Density Label");
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
+  const blob = await res.blob();
+  triggerDownload(blob, `Density_Label_${combinedCode}_${batchnum}.png`);
+};
 
-    const blob = await response.blob();
-    const downloadUrl = URL.createObjectURL(blob);
+  const downloadQRCode = async ({ itemcode, packsize, batchnum }) => {
+  const combinedCode = buildCodeWithPacksize(itemcode, packsize);
+  const batch = batchnum?.trim();
+  if (!batch) throw new Error('Batch number is required for QR');
 
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = `Density_Label_${cardInputs.itemcode}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(downloadUrl);
-  };
+  const code = combinedCode.includes("-") ? combinedCode.split("-")[0] : combinedCode;
+  const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
 
-  const downloadQRCode = async (cardInputs) => {
-    const itemCode = cardInputs.itemcode.trim();
-    const batch = cardInputs.batchnum.trim();
+  const QRCode = await import('qrcode');
+  const qrDataURL = await QRCode.toDataURL(energyUrl, { width: 300, margin: 2 });
 
-    if (!batch || batch.length === 0) {
-      throw new Error('Batch number is required for QR code generation');
-    }
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const qrImage = new Image();
 
-    const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
-    const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
+  return new Promise((resolve, reject) => {
+    qrImage.onload = () => {
+      const qrSize = qrImage.width;
+      const textHeight = 80;
+      const padding = 20;
 
-    console.log("Generated Energy URL for QR:", energyUrl);
+      canvas.width = qrSize + (padding * 2);
+      canvas.height = qrSize + textHeight + (padding * 2);
 
-    const QRCode = await import('qrcode');
-    const qrDataURL = await QRCode.toDataURL(energyUrl, { width: 300, margin: 2 });
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const qrImage = new Image();
+      ctx.drawImage(qrImage, padding, padding, qrSize, qrSize);
 
-    return new Promise((resolve, reject) => {
-      qrImage.onload = () => {
-        const qrSize = qrImage.width;
-        const textHeight = 80;
-        const padding = 20;
+      ctx.fillStyle = 'black';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText(`CAT ${combinedCode}`, padding + 10, qrSize + padding + 25);
+      ctx.fillText(`LOT ${batch}`, padding + 10, qrSize + padding + 50);
 
-        canvas.width = qrSize + (padding * 2);
-        canvas.height = qrSize + textHeight + (padding * 2);
-
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.drawImage(qrImage, padding, padding, qrSize, qrSize);
-
-        ctx.fillStyle = 'black';
-        ctx.font = 'bold 16px Arial';
-        ctx.textAlign = 'left';
-
-        ctx.fillText(`CAT ${itemCode}`, padding + 10, qrSize + padding + 25);
-        ctx.fillText(`LOT ${batch}`, padding + 10, qrSize + padding + 50);
-
-        const finalDataURL = canvas.toDataURL('image/png');
-        const blob = dataURLToBlob(finalDataURL);
-        const blobUrl = URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = `QR_${itemCode}_${batch}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(blobUrl);
-
+      canvas.toBlob((blob) => {
+        triggerDownload(blob, `QR_${combinedCode}_${batch}.png`);
         resolve();
-      };
-      qrImage.onerror = reject;
-      qrImage.src = qrDataURL;
-    });
+      });
+    };
+    qrImage.onerror = reject;
+    qrImage.src = qrDataURL;
+  });
+};
+
+  const downloadInvoice = async ({ invoiceno }) => {
+    const res = await fetch(`/api/invoices/download-pdf/${encodeURIComponent(invoiceno)}`);
+    if (!res.ok) throw new Error("Failed to download Invoice");
+
+    const blob = await res.blob();
+    triggerDownload(blob, `Invoice_${invoiceno}.pdf`);
   };
 
-  const downloadInvoice = async (cardInputs) => {
-    const response = await fetch(`/api/invoices/download-pdf/${encodeURIComponent(cardInputs.invoiceno)}`);
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
 
-    const blob = await response.blob();
+const downloadMSDS = async ({ itemcode, packsize }) => {
+  const combinedCode = buildCodeWithPacksize(itemcode, packsize);
+  const msdsUrl = msdsMap[combinedCode];
+  if (!msdsUrl) throw new Error("MSDS not found");
+
+  const fileRes = await fetch(msdsUrl);
+  if (!fileRes.ok) throw new Error("MSDS not available");
+
+  const blob = await fileRes.blob();
+  triggerDownload(blob, `${combinedCode}_MSDS.pdf`);
+};
+
+  // 🔹 Helper
+  const triggerDownload = (blob, filename) => {
     const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Invoice_${cardInputs.invoiceno}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadMSDS = async (cardInputs) => {
-    const key = cardInputs.itemcode.trim();
-    const msdsUrl = msdsMap[key];
-    if (!msdsUrl) throw new Error("MSDS file not found for this ItemCode");
-
-    const fileRes = await fetch(msdsUrl);
-    if (!fileRes.ok) throw new Error(`MSDS not available (${fileRes.status})`);
-
-    const blob = await fileRes.blob();
-    const blobUrl = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = `${key}_MSDS.pdf`;
+    a.href = url;
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(blobUrl);
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const getInputLabel = (inputType) => {
     switch (inputType) {
       case 'itemcode': return 'Item Code';
+      case 'packsize': return 'Pack Size';
       case 'batchnum': return 'Batch Number';
       case 'invoiceno': return 'Invoice No';
       default: return inputType;
@@ -272,21 +218,9 @@ const VerticalCards = () => {
   };
 
   const getPlaceholder = (cardTitle, inputType) => {
-    if (cardTitle === '3A Label') {
-      if (inputType === 'itemcode') return 'Ex: A040337-100g';
-      if (inputType === 'batchnum') return 'Ex: DX6RRD6X';
-    }
-    if (cardTitle === 'Density Label') {
-      if (inputType === 'itemcode') return 'Ex: B011102-25g';
-      if (inputType === 'batchnum') return 'Ex: MSRN4RPA';
-    }
-    if (cardTitle === 'QR') {
-      if (inputType === 'itemcode') return 'Ex: A040337-100g';
-      if (inputType === 'batchnum') return 'Ex: DX6RRD6X';
-    }
-    if (cardTitle === '3A MSDS' && inputType === 'itemcode') {
-      return 'Ex: A030043-25g';
-    }
+    if (inputType === 'itemcode') return 'Type ItemCode...';
+    if (inputType === 'batchnum') return 'Enter Batch Number';
+    if (inputType === 'invoiceno') return 'Enter Invoice Number';
     return `Enter ${getInputLabel(inputType).toLowerCase()}`;
   };
 
@@ -304,9 +238,11 @@ const VerticalCards = () => {
               {cards.map((card) => {
                 const isLoading = loading[card.title];
                 const error = errors[card.title];
+                const cardSuggestions = suggestions[card.title] || [];
+                const showDropdown = showSuggestions[card.title] && cardSuggestions.length > 0;
 
                 return (
-                  <div key={card.id} style={{ backgroundColor: 'white', border: '2px solid #86efac', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', overflow: 'hidden' }}>
+                  <div key={card.id} style={{ backgroundColor: 'white', border: '2px solid #86efac', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}>
                     <div style={{ padding: '24px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -319,35 +255,158 @@ const VerticalCards = () => {
                         <button
                           onClick={() => handleDownload(card.title)}
                           disabled={isLoading}
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#15803d', color: 'white', fontWeight: '600', borderRadius: '8px', border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', transition: 'all 0.2s', opacity: isLoading ? 0.5 : 1 }}
-                          onMouseOver={(e) => !isLoading && (e.target.style.backgroundColor = '#166534')}
-                          onMouseOut={(e) => !isLoading && (e.target.style.backgroundColor = '#15803d')}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#15803d', color: 'white', fontWeight: '600', borderRadius: '8px', border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer' }}
                         >
                           {isLoading ? <Loader size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={18} />}
                           <span>{isLoading ? 'Downloading...' : 'Download'}</span>
                         </button>
                       </div>
 
+                      {/* Inputs */}
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: error ? '16px' : '0' }}>
                         {card.inputs.map((inputType) => (
-                          <div key={inputType}>
+                          <div key={inputType} style={{ position: 'relative' }}>
                             <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#15803d', marginBottom: '8px' }}>{getInputLabel(inputType)}</label>
-                            <input
-                              type="text"
-                              style={{ width: '100%', padding: '12px', border: '1px solid #86efac', borderRadius: '8px', fontSize: '14px', backgroundColor: 'white', boxSizing: 'border-box', transition: 'border-color 0.2s', outline: 'none' }}
-                              placeholder={getPlaceholder(card.title, inputType)}
-                              value={inputs[card.title][inputType] || ''}
-                              onChange={(e) => handleInputChange(card.title, inputType, e.target.value)}
-                              onFocus={(e) => e.target.style.borderColor = '#15803d'}
-                              onBlur={(e) => e.target.style.borderColor = '#86efac'}
-                            />
+
+                            {/* ItemCode with suggestions */}
+                            {inputType === 'itemcode' && (
+                              <>
+                                <input
+                                  type="text"
+                                  style={{ width: '100%', padding: '12px', border: '1px solid #86efac', borderRadius: showDropdown ? '8px 8px 0 0' : '8px', fontSize: '14px' }}
+                                  placeholder={getPlaceholder(card.title, inputType)}
+                                  value={inputs[card.title][inputType] || ''}
+                                  onChange={(e) => handleInputChange(card.title, inputType, e.target.value)}
+                                />
+                                {showDropdown && (
+                                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1px solid #86efac', maxHeight: '200px', overflowY: 'auto', zIndex: 9999 }}>
+                                    {cardSuggestions.map((s, idx) => (
+                                      <div
+                                        key={idx}
+                                        style={{ padding: '8px', cursor: 'pointer', borderBottom: '1px solid #eee' }}
+                                        onMouseDown={async () => {
+                                          setInputs(prev => ({ ...prev, [card.title]: { ...prev[card.title], itemcode: s.itemCode, packsize: '', batchnum: '' } }));
+                                          setShowSuggestions(prev => ({ ...prev, [card.title]: false }));
+                                          try {
+                                            const res = await fetch(`/api/density-labels/pack-sizes/${s.itemCode}`);
+                                            const data = await res.json();
+                                            setPackSizes(prev => ({ ...prev, [card.title]: data.packSizes || [] }));
+                                          } catch (err) {
+                                            console.error("PackSize fetch error:", err);
+                                          }
+                                        }}
+                                      >
+                                        <strong>{s.itemCode}</strong> — {s.itemName}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {/* Packsize dropdown */}
+                            {inputType === 'packsize' && packSizes[card.title]?.length > 0 && (
+                          
+                              
+                              <select
+                              value={inputs[card.title].packsize || ''}
+                              onChange={async (e) => {
+                                const selectedPackSize = e.target.value; // "1g"
+                                const selectedObj = packSizes[card.title].find(
+                                  (p) => p.displayValue === selectedPackSize
+                                );
+
+                                setInputs((prev) => ({
+                                  ...prev,
+                                  [card.title]: {
+                                    ...prev[card.title],
+                                    packsize: selectedPackSize,   // keep "1g"
+                                    catSizeMain: selectedObj?.Cat_size_main || '', // keep "A01001179-1g" internally
+                                    batchnum: '', // Reset batch number when packsize changes
+                                  },
+                                }));
+
+                                // Clear previous batch numbers first
+                                setBatchNums(prev => ({
+                                  ...prev,
+                                  [card.title]: []
+                                }));
+
+                                try {
+                                  if (selectedObj?.Cat_size_main) {
+                                    console.log('Fetching batch numbers for:', selectedObj.Cat_size_main);
+                                    
+                                    const res = await fetch(
+                                      `/api/density-labels/batchnums/${encodeURIComponent(selectedObj.Cat_size_main)}`
+                                    );
+                                    
+                                    if (!res.ok) {
+                                      throw new Error(`HTTP error! status: ${res.status}`);
+                                    }
+                                    
+                                    const data = await res.json();
+                                    console.log('Batch numbers response:', data);
+                                    
+                                    setBatchNums((prev) => ({
+                                      ...prev,
+                                      [card.title]: data.batchNums || [],
+                                    }));
+                                  }
+                                } catch (err) {
+                                  console.error('BatchNum fetch error:', err);
+                                  // Set empty array on error so user sees no options available
+                                  setBatchNums((prev) => ({
+                                    ...prev,
+                                    [card.title]: [],
+                                  }));
+                                }
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '12px',
+                                border: '1px solid #86efac',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                              }}
+                            >
+                              <option value="">Pack Size</option>
+                              {packSizes[card.title].map((p, idx) => (
+                                <option key={idx} value={p.displayValue}>{p.displayValue}</option>
+                              ))}
+                            </select>
+                            )}
+
+                            {/* Batchnum dropdown */}
+                            {inputType === 'batchnum' && batchNums[card.title]?.length > 0 && (
+                              <select
+                                value={inputs[card.title].batchnum || ''}
+                                onChange={(e) => setInputs(prev => ({ ...prev, [card.title]: { ...prev[card.title], batchnum: e.target.value } }))}
+                                style={{ width: '100%', padding: '12px', border: '1px solid #86efac', borderRadius: '8px', fontSize: '14px' }}
+                              >
+                                <option value="">Select Batch Number</option>
+                                {batchNums[card.title].map((b, idx) => (
+                                  <option key={idx} value={b.batchNum}>{b.batchNum}</option>
+                                ))}
+                              </select>
+                            )}
+
+                            {/* Fallback input */}
+                            {inputType !== 'itemcode' && inputType !== 'packsize' && inputType !== 'batchnum' && (
+                              <input
+                                type="text"
+                                style={{ width: '100%', padding: '12px', border: '1px solid #86efac', borderRadius: '8px', fontSize: '14px' }}
+                                placeholder={getPlaceholder(card.title, inputType)}
+                                value={inputs[card.title][inputType] || ''}
+                                onChange={(e) => handleInputChange(card.title, inputType, e.target.value)}
+                              />
+                            )}
                           </div>
                         ))}
                       </div>
 
                       {error && (
                         <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <AlertCircle size={16} style={{ color: '#dc2626', flexShrink: 0 }} />
+                          <AlertCircle size={16} style={{ color: '#dc2626' }} />
                           <span style={{ color: '#dc2626', fontSize: '14px' }}>{error}</span>
                         </div>
                       )}
