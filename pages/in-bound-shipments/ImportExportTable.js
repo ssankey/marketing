@@ -289,7 +289,7 @@
 
 // pages/in-bound-shipments/ImportExportTable.js
 import React, { useState, useRef } from "react";
-import { fieldLabels, fieldKeys } from '/lib/fieldConfig';
+import { fieldLabels, fieldKeys } from '@/lib/fieldConfig';
 
 import InputField from "./InputField";
 import AttachmentField from "./AttachmentField";
