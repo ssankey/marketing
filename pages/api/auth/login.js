@@ -127,6 +127,52 @@ if (email === "saurabh.b@dbllp.co.in") {
   });
 }
 
+if (email === "durga@densitypharmachem.com") {
+  if (!password) {
+    return res.status(200).json({
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "durga@densitypharmachem.com") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "durga@densitypharmachem.com",
+      role: "admin",
+      name: "Durga",
+      contactCodes: ["DURGA"],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
+  );
+
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+  console.log("[SAURABH_HARDCODED_LOGIN_SUCCESS]", {
+    email: "durga@densitypharmachem.com",
+    role: "admin",
+  });
+
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "durga@densitypharmachem.com",
+      role: "admin",
+      name: "Durga",
+      contactCodes: ["DURGA"],
+    },
+    showPassword: true,
+  });
+}
+
+
+
+
 // -------------------- Hardcoded Mahesh Sales Login --------------------
 if (email === "mahesh@testing.com") {
   if (!password) {

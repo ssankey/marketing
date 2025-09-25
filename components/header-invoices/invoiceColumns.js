@@ -7,6 +7,7 @@ import { Spinner, Badge } from "react-bootstrap";
 import msdsMap from "public/data/msds-map.json";
 import { useAuth } from 'contexts/AuthContext';
 import { Tags } from "lucide-react"; 
+import { formatTime  } from "utils/formatTime";
 
 export const tableColumns = (handlers) => [
   {
@@ -26,6 +27,12 @@ export const tableColumns = (handlers) => [
     header: "Invoice Date",
     cell: ({ getValue }) => formatDate(getValue()),
     sortable: true,
+  },
+  {
+    accessorKey: "CreateTs",
+    header: "Invoice Time",
+    cell: ({ getValue }) => formatTime(getValue()),
+    
   },
   {
     accessorKey: "ContactPerson",

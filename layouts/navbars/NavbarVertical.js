@@ -603,8 +603,8 @@ const NavbarVertical = (props) => {
             </li>
             <li className="nav-item mb-3">
               <Link
-                href="/order-lifecycle"
-                className={`nav-link d-flex align-items-center ${router === "/order-lifecycle" ? "active" : ""}`}
+                href="/in-bound-shipments"
+                className={`nav-link d-flex align-items-center ${router === "/in-bound-shipments" ? "active" : ""}`}
               >
                 <FaBox className="me-2" /> In bound Shipments
               </Link>

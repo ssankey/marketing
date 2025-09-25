@@ -28,6 +28,7 @@
     "eslint": "8.37.0",
     "eslint-config-next": "^13.2.4",
     "exceljs": "^4.4.0",
+    "formidable": "^3.5.4",
     "fs": "^0.0.1-security",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.3",

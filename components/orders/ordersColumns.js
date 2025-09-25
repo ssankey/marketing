@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
-import { formatTime  } from "../../utils/formatTime";
+import { formatTime  } from "utils/formatTime";
 import { truncateText } from "utils/truncateText";
 import { Badge } from "react-bootstrap";
 
@@ -64,6 +64,11 @@ export const tableColumns = (handlers) => [
     accessorKey: "DocDate",
     header: "Order Date",
     cell: ({ getValue }) => formatDate(getValue()),
+  },
+   {
+    accessorKey: "CreateTs",
+    header: "Order Time",
+    cell: ({ getValue }) => formatTime(getValue()),
   },
   
   {
