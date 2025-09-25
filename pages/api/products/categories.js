@@ -16,7 +16,7 @@
 //   }
 // }
 
-
+// api/products/categories.js
 import { queryDatabase } from "../../../lib/db";
 import { verify } from "jsonwebtoken";
 import sql from "mssql";

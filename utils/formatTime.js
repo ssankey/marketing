@@ -1,14 +1,11 @@
-export const formatTime = (dateString) => {
-  if (!dateString) return 'N/A';
+// utils/formatTime.js
+export function formatTime(rawTime) {
+  if (!rawTime) return "";
 
-  const date = new Date(dateString);
-  
-  // Check if the date is valid
-  if (isNaN(date.getTime())) return 'Invalid Time';
-  
-  // Extract hours and minutes
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  
-  return `${hours}:${minutes}`;
-};
+  const str = rawTime.toString().padStart(6, "0"); // ensure 6 digits
+  const hh = str.substring(0, 2);
+  const mm = str.substring(2, 4);
+  const ss = str.substring(4, 6);
+
+  return `${hh}:${mm}`; // 24-hour format
+}
