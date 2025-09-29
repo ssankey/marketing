@@ -92,47 +92,47 @@ export const tableColumns = (handlers) => [
     header: "Sales Person",
     cell: ({ getValue }) => getValue() || "N/A",
   },
-  {
-    accessorKey: "U_EmailSentDT",
-    header: "Mail Sent",
-    cell: ({ row }) => {
-      const invoice = row.original;
-      if (invoice.U_EmailSentDT) {
-        const dt = new Date(invoice.U_EmailSentDT);
-        const isMidnight =
-          dt.getUTCHours() === 0 &&
-          dt.getUTCMinutes() === 0 &&
-          dt.getUTCSeconds() === 0;
+  // {
+  //   accessorKey: "U_EmailSentDT",
+  //   header: "Mail Sent",
+  //   cell: ({ row }) => {
+  //     const invoice = row.original;
+  //     if (invoice.U_EmailSentDT) {
+  //       const dt = new Date(invoice.U_EmailSentDT);
+  //       const isMidnight =
+  //         dt.getUTCHours() === 0 &&
+  //         dt.getUTCMinutes() === 0 &&
+  //         dt.getUTCSeconds() === 0;
 
-        if (isMidnight) {
-          return (
-            <button
-              className="btn btn-sm btn-primary"
-              onClick={() => handlers.onSendMail(invoice)}
-            >
-              Send Mail
-            </button>
-          );
-        }
+  //       if (isMidnight) {
+  //         return (
+  //           <button
+  //             className="btn btn-sm btn-primary"
+  //             onClick={() => handlers.onSendMail(invoice)}
+  //           >
+  //             Send Mail
+  //           </button>
+  //         );
+  //       }
 
-        const day = String(dt.getUTCDate()).padStart(2, "0");
-        const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
-        const year = dt.getUTCFullYear();
-        const h = Math.floor((invoice.U_EmailSentTM || 0) / 60);
-        const m = (invoice.U_EmailSentTM || 0) % 60;
+  //       const day = String(dt.getUTCDate()).padStart(2, "0");
+  //       const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  //       const year = dt.getUTCFullYear();
+  //       const h = Math.floor((invoice.U_EmailSentTM || 0) / 60);
+  //       const m = (invoice.U_EmailSentTM || 0) % 60;
 
-        return `${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-      }
-      return (
-        <button
-          className="btn btn-sm btn-primary"
-          onClick={() => handlers.onSendMail(invoice)}
-        >
-          Send Mail
-        </button>
-      );
-    },
-  },
+  //       return `${day}/${month}/${year} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  //     }
+  //     return (
+  //       <button
+  //         className="btn btn-sm btn-primary"
+  //         onClick={() => handlers.onSendMail(invoice)}
+  //       >
+  //         Send Mail
+  //       </button>
+  //     );
+  //   },
+  // },
    {
     accessorKey: "DocStatusDisplay",
     header: "Status",

@@ -209,7 +209,7 @@ export default async function handler(req, res) {
       {
         code: "1028",
         name: "Chandra Prakash Rajnath Yadav",
-        dob: "17-06-2001",
+        dob: "11-10-2001",
         branch: "MUMBAI",
         email: "prakash@densitypharmachem.com",
       },
