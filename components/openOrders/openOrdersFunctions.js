@@ -1,252 +1,219 @@
 
-// components/openOrders/openOrdersFunctions.js
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { debounce } from "lodash";
-import downloadExcel from "utils/exporttoexcel";
-import { formatCurrency } from "utils/formatCurrency";
-import { formatDate } from "utils/formatDate";
+// // components/openOrders/openOrdersFunctions.js
+// import { useState, useEffect, useMemo, useCallback } from "react";
+// import { debounce } from "lodash";
+// import downloadExcel from "utils/exporttoexcel";
+// import { formatCurrency } from "utils/formatCurrency";
+// import { formatDate } from "utils/formatDate";
 
 
 
-export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) => {
-  const [allData, setAllData] = useState(orders);
-  const [currentPage, setCurrentPage] = useState(initialPage);
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState(initialStatus);
-  const [selectedMonth, setSelectedMonth] = useState(""); // Added month filter state
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [filtersChanged, setFiltersChanged] = useState(false);
+// export const useOpenOrdersData = (orders, initialStatus, initialPage, pageSize) => {
+//   const [allData, setAllData] = useState(orders);
+//   const [currentPage, setCurrentPage] = useState(initialPage);
+//   const [globalFilter, setGlobalFilter] = useState("");
+//   const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState("");
+//   const [statusFilter, setStatusFilter] = useState(initialStatus);
+//   const [selectedMonth, setSelectedMonth] = useState(""); // Added month filter state
+//   const [fromDate, setFromDate] = useState("");
+//   const [toDate, setToDate] = useState("");
+//   const [filtersChanged, setFiltersChanged] = useState(false);
 
-  const debouncedSearch = useMemo(
-    () => debounce((searchTerm) => {
-      setDebouncedGlobalFilter(searchTerm);
-    }, 300),
-    []
-  );
+//   const debouncedSearch = useMemo(
+//     () => debounce((searchTerm) => {
+//       setDebouncedGlobalFilter(searchTerm);
+//     }, 300),
+//     []
+//   );
 
-  useEffect(() => {
-    debouncedSearch(globalFilter);
-    return () => {
-      debouncedSearch.cancel();
-    };
-  }, [globalFilter, debouncedSearch]);
+//   useEffect(() => {
+//     debouncedSearch(globalFilter);
+//     return () => {
+//       debouncedSearch.cancel();
+//     };
+//   }, [globalFilter, debouncedSearch]);
 
-  useEffect(() => {
-    setAllData(orders);
-  }, [orders]);
+//   useEffect(() => {
+//     setAllData(orders);
+//   }, [orders]);
 
-  const filteredData = useMemo(() => {
-    let filtered = [...allData];
+//   const filteredData = useMemo(() => {
+//     let filtered = [...allData];
 
-    // Status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(order => 
-        statusFilter === "instock" 
-          ? order.StockStatus === "In Stock"
-          : order.StockStatus === "Out of Stock"
-      );
-    }
+//     // Status filter
+//     if (statusFilter !== "all") {
+//       filtered = filtered.filter(order => 
+//         statusFilter === "instock" 
+//           ? order.StockStatus === "In Stock"
+//           : order.StockStatus === "Out of Stock"
+//       );
+//     }
 
-    // Global search filter
-    if (debouncedGlobalFilter) {
-      const searchTerm = debouncedGlobalFilter.toLowerCase().trim();
-      filtered = filtered.filter(order => {
-        const containsSearchTerm = (value) => {
-          if (value === null || value === undefined) return false;
-          return value.toString().toLowerCase().includes(searchTerm);
-        };
+//     // Global search filter
+//     if (debouncedGlobalFilter) {
+//       const searchTerm = debouncedGlobalFilter.toLowerCase().trim();
+//       filtered = filtered.filter(order => {
+//         const containsSearchTerm = (value) => {
+//           if (value === null || value === undefined) return false;
+//           return value.toString().toLowerCase().includes(searchTerm);
+//         };
 
-        return (
-          containsSearchTerm(order.DocumentNumber) ||
-          containsSearchTerm(order.CustomerVendorName) ||
-          containsSearchTerm(order.ItemNo) ||
-          containsSearchTerm(order.ItemName) ||
-          containsSearchTerm(order.CasNo) ||
-          containsSearchTerm(order.MfrCatalogNo) ||
-          containsSearchTerm(order.UOMName) ||
-          containsSearchTerm(order.ContactPerson) ||
-          containsSearchTerm(order.Timeline) ||
-          containsSearchTerm(order.MktFeedback) ||
-          containsSearchTerm(order.SalesEmployee) ||
-          containsSearchTerm(order.CustomerPONo) ||
-          containsSearchTerm(order.LineStatus)
-        );
-      });
-    }
+//         return (
+//           containsSearchTerm(order.DocumentNumber) ||
+//           containsSearchTerm(order.CustomerVendorName) ||
+//           containsSearchTerm(order.ItemNo) ||
+//           containsSearchTerm(order.ItemName) ||
+//           containsSearchTerm(order.CasNo) ||
+//           containsSearchTerm(order.MfrCatalogNo) ||
+//           containsSearchTerm(order.UOMName) ||
+//           containsSearchTerm(order.ContactPerson) ||
+//           containsSearchTerm(order.Timeline) ||
+//           containsSearchTerm(order.MktFeedback) ||
+//           containsSearchTerm(order.SalesEmployee) ||
+//           containsSearchTerm(order.CustomerPONo) ||
+//           containsSearchTerm(order.LineStatus)
+//         );
+//       });
+//     }
 
-    // Month filter - Added month filtering logic
-    if (selectedMonth) {
-      const [year, month] = selectedMonth.split('-');
-      const filterYear = parseInt(year);
-      const filterMonth = parseInt(month);
+//     // Month filter - Added month filtering logic
+//     if (selectedMonth) {
+//       const [year, month] = selectedMonth.split('-');
+//       const filterYear = parseInt(year);
+//       const filterMonth = parseInt(month);
       
-      filtered = filtered.filter(order => {
-        if (!order.PostingDate) return false;
+//       filtered = filtered.filter(order => {
+//         if (!order.PostingDate) return false;
         
-        const orderDate = new Date(order.PostingDate);
-        const orderYear = orderDate.getFullYear();
-        const orderMonth = orderDate.getMonth() + 1;
+//         const orderDate = new Date(order.PostingDate);
+//         const orderYear = orderDate.getFullYear();
+//         const orderMonth = orderDate.getMonth() + 1;
         
-        return orderYear === filterYear && orderMonth === filterMonth;
-      });
-    }
+//         return orderYear === filterYear && orderMonth === filterMonth;
+//       });
+//     }
 
-    // Date range filter
-    if (fromDate || toDate) {
-      filtered = filtered.filter(order => {
-        if (!order.PostingDate) return false;
+//     // Date range filter
+//     if (fromDate || toDate) {
+//       filtered = filtered.filter(order => {
+//         if (!order.PostingDate) return false;
         
-        const orderDate = new Date(order.PostingDate);
-        const from = fromDate ? new Date(fromDate) : null;
-        const to = toDate ? new Date(toDate) : null;
+//         const orderDate = new Date(order.PostingDate);
+//         const from = fromDate ? new Date(fromDate) : null;
+//         const to = toDate ? new Date(toDate) : null;
         
-        if (from && to) {
-          return orderDate >= from && orderDate <= to;
-        } else if (from) {
-          return orderDate >= from;
-        } else if (to) {
-          return orderDate <= to;
-        }
-        return true;
-      });
-    }
+//         if (from && to) {
+//           return orderDate >= from && orderDate <= to;
+//         } else if (from) {
+//           return orderDate >= from;
+//         } else if (to) {
+//           return orderDate <= to;
+//         }
+//         return true;
+//       });
+//     }
 
-    return filtered;
-  }, [allData, statusFilter, debouncedGlobalFilter, selectedMonth, fromDate, toDate]);
+//     return filtered;
+//   }, [allData, statusFilter, debouncedGlobalFilter, selectedMonth, fromDate, toDate]);
 
-  const pageCount = Math.ceil(filteredData.length / pageSize);
-  const pageData = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredData.slice(start, start + pageSize);
-  }, [filteredData, currentPage, pageSize]);
+//   const pageCount = Math.ceil(filteredData.length / pageSize);
+//   const pageData = useMemo(() => {
+//     const start = (currentPage - 1) * pageSize;
+//     return filteredData.slice(start, start + pageSize);
+//   }, [filteredData, currentPage, pageSize]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate]);
+//   useEffect(() => {
+//     setCurrentPage(1);
+//   }, [debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate]);
 
-  const handleReset = () => {
-    setGlobalFilter("");
-    setDebouncedGlobalFilter("");
-    setStatusFilter("all");
-    setSelectedMonth("");
-    setFromDate("");
-    setToDate("");
-    setCurrentPage(1);
-    setFiltersChanged(false);
-  };
+//   const handleReset = () => {
+//     setGlobalFilter("");
+//     setDebouncedGlobalFilter("");
+//     setStatusFilter("all");
+//     setSelectedMonth("");
+//     setFromDate("");
+//     setToDate("");
+//     setCurrentPage(1);
+//     setFiltersChanged(false);
+//   };
 
-  const handleSearch = useCallback((searchTerm) => {
-    setGlobalFilter(searchTerm);
-    setCurrentPage(1);
-    setFiltersChanged(true);
-  }, []);
+//   const handleSearch = useCallback((searchTerm) => {
+//     setGlobalFilter(searchTerm);
+//     setCurrentPage(1);
+//     setFiltersChanged(true);
+//   }, []);
 
-  const setStatusFilterWrapper = useCallback((status) => {
-    setStatusFilter(status);
-    setFiltersChanged(true);
-  }, []);
+//   const setStatusFilterWrapper = useCallback((status) => {
+//     setStatusFilter(status);
+//     setFiltersChanged(true);
+//   }, []);
 
-  const setSelectedMonthWrapper = useCallback((month) => {
-    setSelectedMonth(month);
-    setFiltersChanged(true);
-  }, []);
+//   const setSelectedMonthWrapper = useCallback((month) => {
+//     setSelectedMonth(month);
+//     setFiltersChanged(true);
+//   }, []);
 
-  const setFromDateWrapper = useCallback((date) => {
-    setFromDate(date);
-    setFiltersChanged(true);
-  }, []);
+//   const setFromDateWrapper = useCallback((date) => {
+//     setFromDate(date);
+//     setFiltersChanged(true);
+//   }, []);
 
-  const setToDateWrapper = useCallback((date) => {
-    setToDate(date);
-    setFiltersChanged(true);
-  }, []);
+//   const setToDateWrapper = useCallback((date) => {
+//     setToDate(date);
+//     setFiltersChanged(true);
+//   }, []);
 
-  return {
-    allData,
-    filteredData,
-    pageData,
-    pageCount,
-    currentPage,
-    setCurrentPage,
-    globalFilter,
-    setGlobalFilter: handleSearch,
-    statusFilter,
-    setStatusFilter: setStatusFilterWrapper,
-    selectedMonth, // Added to return
-    setSelectedMonth: setSelectedMonthWrapper, // Added to return
-    fromDate,
-    setFromDate: setFromDateWrapper,
-    toDate,
-    setToDate: setToDateWrapper,
-    handleReset,
-    setAllData,
-    debouncedGlobalFilter,
-    filtersChanged,
-    setFiltersChanged
-  };
-};
-
-export const useExportHandler = () => {
-  const handleExportExcel = (filteredData, columns) => {
-    // Define which fields should be treated as currency/number fields
-    const numberFields = new Set(["Price", "OpenAmount"]);
-    const dateFields = new Set(["DueDate", "DocDate"]); // Add all date fields here
-
-    const exportData = filteredData.map((row) => {
-      const formattedRow = {};
-      
-      columns.forEach((column) => {
-        const value = row[column.accessorKey];
-        
-        if (numberFields.has(column.accessorKey)) {
-          // Convert to number and ensure Excel recognizes it as numeric
-          const numericValue = Number(value) || 0;
-          formattedRow[column.header] = +numericValue.toFixed(2); // The + ensures it's a number
-          
-        } else if (dateFields.has(column.accessorKey)) {
-          // Convert to Excel-friendly date format
-          if (value) {
-            const date = new Date(value);
-            // Use Excel's preferred format: MM/DD/YYYY
-            formattedRow[column.header] = date.toLocaleDateString('en-US');
-          } else {
-            formattedRow[column.header] = "";
-          }
-        } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
-          formattedRow[column.header] = value || "N/A"; // Don't truncate in Excel
-        } else {
-          formattedRow[column.header] = value || "N/A";
-        }
-      });
-      
-      return formattedRow;
-    });
-
-    // Generate filename with current date
-    const today = new Date().toISOString().split('T')[0];
-    const fileName = `OpenOrders_Report_${today}`;
-
-    // Call downloadExcel - numbers should now be properly formatted
-    downloadExcel(exportData, fileName);
-  };
-
-  return { handleExportExcel };
-};
+//   return {
+//     allData,
+//     filteredData,
+//     pageData,
+//     pageCount,
+//     currentPage,
+//     setCurrentPage,
+//     globalFilter,
+//     setGlobalFilter: handleSearch,
+//     statusFilter,
+//     setStatusFilter: setStatusFilterWrapper,
+//     selectedMonth, // Added to return
+//     setSelectedMonth: setSelectedMonthWrapper, // Added to return
+//     fromDate,
+//     setFromDate: setFromDateWrapper,
+//     toDate,
+//     setToDate: setToDateWrapper,
+//     handleReset,
+//     setAllData,
+//     debouncedGlobalFilter,
+//     filtersChanged,
+//     setFiltersChanged
+//   };
+// };
 
 // export const useExportHandler = () => {
 //   const handleExportExcel = (filteredData, columns) => {
+//     // Define which fields should be treated as currency/number fields
+//     const numberFields = new Set(["Price", "OpenAmount"]);
+//     const dateFields = new Set(["DueDate", "DocDate"]); // Add all date fields here
+
 //     const exportData = filteredData.map((row) => {
 //       const formattedRow = {};
       
 //       columns.forEach((column) => {
 //         const value = row[column.accessorKey];
         
-//         if (column.accessorKey === "Price" || column.accessorKey === "OpenAmount") {
-//           formattedRow[column.header] = formatCurrency(value, row.PriceCurrency).slice(1);
-//         } else if (column.accessorKey.includes("Date")) {
-//           formattedRow[column.header] = formatDate(value);
+//         if (numberFields.has(column.accessorKey)) {
+//           // Convert to number and ensure Excel recognizes it as numeric
+//           const numericValue = Number(value) || 0;
+//           formattedRow[column.header] = +numericValue.toFixed(2); // The + ensures it's a number
+          
+//         } else if (dateFields.has(column.accessorKey)) {
+//           // Convert to Excel-friendly date format
+//           if (value) {
+//             const date = new Date(value);
+//             // Use Excel's preferred format: MM/DD/YYYY
+//             formattedRow[column.header] = date.toLocaleDateString('en-US');
+//           } else {
+//             formattedRow[column.header] = "";
+//           }
 //         } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
 //           formattedRow[column.header] = value || "N/A"; // Don't truncate in Excel
 //         } else {
@@ -256,12 +223,380 @@ export const useExportHandler = () => {
       
 //       return formattedRow;
 //     });
-    
-//     downloadExcel(exportData, "OpenOrders_Report");
+
+//     // Generate filename with current date
+//     const today = new Date().toISOString().split('T')[0];
+//     const fileName = `OpenOrders_Report_${today}`;
+
+//     // Call downloadExcel - numbers should now be properly formatted
+//     downloadExcel(exportData, fileName);
 //   };
 
 //   return { handleExportExcel };
 // };
+
+// // export const useExportHandler = () => {
+// //   const handleExportExcel = (filteredData, columns) => {
+// //     const exportData = filteredData.map((row) => {
+// //       const formattedRow = {};
+      
+// //       columns.forEach((column) => {
+// //         const value = row[column.accessorKey];
+        
+// //         if (column.accessorKey === "Price" || column.accessorKey === "OpenAmount") {
+// //           formattedRow[column.header] = formatCurrency(value, row.PriceCurrency).slice(1);
+// //         } else if (column.accessorKey.includes("Date")) {
+// //           formattedRow[column.header] = formatDate(value);
+// //         } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
+// //           formattedRow[column.header] = value || "N/A"; // Don't truncate in Excel
+// //         } else {
+// //           formattedRow[column.header] = value || "N/A";
+// //         }
+// //       });
+      
+// //       return formattedRow;
+// //     });
+    
+// //     downloadExcel(exportData, "OpenOrders_Report");
+// //   };
+
+// //   return { handleExportExcel };
+// // };
+
+// // Debug helper function - you can use this to check your data
+// export const debugSearchData = (orders, searchTerm) => {
+//   console.log("=== Search Debug Info ===");
+//   console.log("Search term:", searchTerm);
+//   console.log("Total orders:", orders.length);
+  
+//   const sampleOrder = orders[0];
+//   if (sampleOrder) {
+//     console.log("Sample order MktFeedback:", sampleOrder.MktFeedback);
+//     console.log("MktFeedback type:", typeof sampleOrder.MktFeedback);
+//     console.log("MktFeedback null/undefined:", sampleOrder.MktFeedback === null || sampleOrder.MktFeedback === undefined);
+//   }
+  
+//   const ordersWithMktFeedback = orders.filter(order => 
+//     order.MktFeedback && order.MktFeedback.toString().toLowerCase().includes(searchTerm.toLowerCase())
+//   );
+  
+//   console.log("Orders with matching MktFeedback:", ordersWithMktFeedback.length);
+//   if (ordersWithMktFeedback.length > 0) {
+//     console.log("First matching order:", ordersWithMktFeedback[0]);
+//   }
+  
+//   return ordersWithMktFeedback;
+// };
+
+
+
+// components/openOrders/openOrdersFunctions.js
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { debounce } from "lodash";
+import downloadExcel from "utils/exporttoexcel";
+import { formatCurrency } from "utils/formatCurrency";
+import { formatDate } from "utils/formatDate";
+
+export const useOpenOrdersData = (initialStatus = "all", initialPage = 1, pageSize = 20) => {
+  const [orders, setOrders] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(initialPage);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [debouncedGlobalFilter, setDebouncedGlobalFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [sortField, setSortField] = useState("PostingDate");
+  const [sortDirection, setSortDirection] = useState("desc");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [allOrdersForFilters, setAllOrdersForFilters] = useState([]);
+  const [shouldResetPage, setShouldResetPage] = useState(false);
+
+  const debouncedSearch = useMemo(
+    () => debounce((searchTerm = "") => {
+      setDebouncedGlobalFilter(searchTerm || "");
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedSearch(globalFilter || "");
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [globalFilter, debouncedSearch]);
+
+  // Fetch orders from API
+  const fetchOrders = useCallback(async (params = {}) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const token = localStorage.getItem("token");
+      
+      const queryParams = new URLSearchParams({
+        page: params.page || currentPage,
+        pageSize: pageSize,
+        search: (params.search !== undefined ? params.search : debouncedGlobalFilter) || "",
+        status: params.status || statusFilter || "all",
+        sortField: params.sortField || sortField || "PostingDate",
+        sortDir: params.sortDir || sortDirection || "desc",
+        ...(params.month && { month: params.month }),
+        ...(params.fromDate && { fromDate: params.fromDate }),
+        ...(params.toDate && { toDate: params.toDate }),
+        ...(params.getAll && { getAll: "true" })
+      });
+
+      const response = await fetch(`/api/open-orders?${queryParams}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch open orders: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (params.getAll) {
+        return data.orders;
+      }
+      
+      setOrders(data.orders || []);
+      setTotalItems(data.totalItems || 0);
+      setTotalPages(data.totalPages || 0);
+    } catch (error) {
+      console.error("Error fetching open orders:", error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch all orders for month dropdown
+  const fetchAllOrdersForFilters = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      
+      const response = await fetch(`/api/open-orders?getAll=true&fields=PostingDate`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAllOrdersForFilters(data.orders || []);
+      }
+    } catch (error) {
+      console.error("Error fetching orders for filters:", error);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchOrders();
+    fetchAllOrdersForFilters();
+  }, []);
+
+  // Handle filter changes - reset to page 1
+  useEffect(() => {
+    if (globalFilter !== debouncedGlobalFilter) return;
+    
+    if (shouldResetPage) {
+      fetchOrders({
+        page: 1,
+        search: debouncedGlobalFilter || "",
+        status: statusFilter || "all",
+        month: selectedMonth || "",
+        fromDate: fromDate || "",
+        toDate: toDate || "",
+        sortField: sortField || "PostingDate",
+        sortDir: sortDirection || "desc"
+      });
+      
+      setCurrentPage(1);
+      setShouldResetPage(false);
+    }
+  }, [debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate, sortField, sortDirection, shouldResetPage]);
+
+  // Handle page changes only
+  useEffect(() => {
+    if (shouldResetPage || orders.length === 0) return;
+    
+    fetchOrders({ 
+      page: currentPage,
+      search: debouncedGlobalFilter || "",
+      status: statusFilter || "all",
+      month: selectedMonth || "",
+      fromDate: fromDate || "",
+      toDate: toDate || "",
+      sortField: sortField || "PostingDate",
+      sortDir: sortDirection || "desc"
+    });
+  }, [currentPage]);
+
+  const handleSearch = useCallback((searchTerm = "") => {
+    setGlobalFilter(searchTerm || "");
+    setShouldResetPage(true);
+  }, []);
+
+  const setStatusFilterWrapper = useCallback((status = "all") => {
+    setStatusFilter(status || "all");
+    setShouldResetPage(true);
+  }, []);
+
+  const setSelectedMonthWrapper = useCallback((month = "") => {
+    setSelectedMonth(month || "");
+    setShouldResetPage(true);
+  }, []);
+
+  const setFromDateWrapper = useCallback((date = "") => {
+    setFromDate(date || "");
+    setShouldResetPage(true);
+  }, []);
+
+  const setToDateWrapper = useCallback((date = "") => {
+    setToDate(date || "");
+    setShouldResetPage(true);
+  }, []);
+
+  const handleSort = useCallback((field) => {
+    const newDirection = sortField === field && sortDirection === "asc" ? "desc" : "asc";
+    setSortField(field);
+    setSortDirection(newDirection);
+    setShouldResetPage(true);
+  }, [sortField, sortDirection]);
+
+  const handlePageChange = useCallback((newPage) => {
+    if (newPage !== currentPage) {
+      setCurrentPage(newPage);
+    }
+  }, [currentPage]);
+
+  const handleReset = useCallback(() => {
+    setGlobalFilter("");
+    setDebouncedGlobalFilter("");
+    setStatusFilter("all");
+    setSelectedMonth("");
+    setFromDate("");
+    setToDate("");
+    setSortField("PostingDate");
+    setSortDirection("desc");
+    setCurrentPage(1);
+    
+    fetchOrders({
+      page: 1,
+      search: "",
+      status: "all",
+      month: "",
+      fromDate: "",
+      toDate: "",
+      sortField: "PostingDate",
+      sortDir: "desc"
+    });
+  }, [fetchOrders]);
+
+  // Export function that fetches all data
+  const handleExportExcel = useCallback(async (columns) => {
+    try {
+      setLoading(true);
+      
+      const allFilteredOrders = await fetchOrders({
+        getAll: true,
+        search: debouncedGlobalFilter || "",
+        status: statusFilter || "all",
+        month: selectedMonth || "",
+        fromDate: fromDate || "",
+        toDate: toDate || "",
+        sortField: sortField || "PostingDate",
+        sortDir: sortDirection || "desc"
+      });
+
+      if (!allFilteredOrders || allFilteredOrders.length === 0) {
+        setError("No data available for export");
+        return;
+      }
+
+      const numberFields = new Set(["Price", "OpenAmount"]);
+      const dateFields = new Set(["PostingDate", "PODate", "DeliveryDate"]);
+
+      const exportData = allFilteredOrders.map((row) => {
+        const formattedRow = {};
+        
+        columns.forEach((column) => {
+          const value = row[column.accessorKey];
+          
+          if (numberFields.has(column.accessorKey)) {
+            const numericValue = Number(value) || 0;
+            formattedRow[column.header] = +numericValue.toFixed(2);
+          } else if (dateFields.has(column.accessorKey)) {
+            if (value) {
+              const date = new Date(value);
+              formattedRow[column.header] = date.toLocaleDateString('en-US');
+            } else {
+              formattedRow[column.header] = "";
+            }
+          } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
+            formattedRow[column.header] = value || "N/A";
+          } else {
+            formattedRow[column.header] = value || "N/A";
+          }
+        });
+        
+        return formattedRow;
+      });
+
+      const today = new Date().toISOString().split('T')[0];
+      const fileName = `OpenOrders_Report_${today}`;
+
+      downloadExcel(exportData, fileName);
+    } catch (error) {
+      console.error("Export failed:", error);
+      setError("Failed to export orders: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchOrders, debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate, sortField, sortDirection]);
+
+  return {
+    orders,
+    totalItems,
+    totalPages,
+    currentPage,
+    loading,
+    error,
+    globalFilter,
+    statusFilter,
+    selectedMonth,
+    fromDate,
+    toDate,
+    sortField,
+    sortDirection,
+    allOrdersForFilters,
+    setGlobalFilter: handleSearch,
+    setStatusFilter: setStatusFilterWrapper,
+    setSelectedMonth: setSelectedMonthWrapper,
+    setFromDate: setFromDateWrapper,
+    setToDate: setToDateWrapper,
+    handleSort,
+    handleReset,
+    handlePageChange,
+    handleExportExcel,
+    setError,
+    setOrders
+  };
+};
+
+// Keep existing useExportHandler for backward compatibility
+export const useExportHandler = () => {
+  const handleExportExcel = () => {
+    console.warn("useExportHandler is deprecated. Use handleExportExcel from useOpenOrdersData instead.");
+  };
+
+  return { handleExportExcel };
+};
 
 // Debug helper function - you can use this to check your data
 export const debugSearchData = (orders, searchTerm) => {

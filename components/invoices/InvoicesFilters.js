@@ -1,3 +1,4 @@
+
 // // components/invoices/InvoicesFilters.js
 // import React from "react";
 // import { Row, Col, Button, ButtonGroup, InputGroup, Form } from "react-bootstrap";
@@ -5,10 +6,13 @@
 // const InvoicesFilters = ({
 //   globalFilter,
 //   statusFilter,
+//   selectedMonth,
 //   fromDate,
 //   toDate,
+//   invoices = [],
 //   onSearch,
 //   onStatusChange,
+//   onMonthChange,
 //   onDateChange,
 //   onReset,
 //   onExport,
@@ -22,6 +26,93 @@
 //     background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
 //     color: '#ffffff'
 //   };
+
+//   // Format month for display
+//   const formatMonthDisplay = (monthValue) => {
+//     if (!monthValue) return "";
+//     const [year, month] = monthValue.split('-');
+//     const date = new Date(year, month - 1);
+//     return date.toLocaleDateString('en-US', { 
+//       year: 'numeric', 
+//       month: 'short' 
+//     });
+//   };
+
+//   // Generate available months from invoice posting dates
+//   const getAvailableMonths = () => {
+//     if (!invoices || invoices.length === 0) return [];
+
+//     // Extract all invoice posting dates
+//     const invoiceDates = invoices
+//       .map(invoice => {
+//         const dateValue = invoice["Invoice Posting Dt."];
+//         if (!dateValue) return null;
+        
+//         let date;
+//         if (dateValue instanceof Date) {
+//           date = dateValue;
+//         } else if (typeof dateValue === 'string') {
+//           date = new Date(dateValue);
+          
+//           if (isNaN(date.getTime())) {
+//             // Try parsing different date formats if needed
+//             const dateParts = dateValue.split(/[-/]/);
+//             if (dateParts.length === 3) {
+//               const formats = [
+//                 new Date(dateParts[2], dateParts[1] - 1, dateParts[0]), // DD/MM/YYYY
+//                 new Date(dateParts[2], dateParts[0] - 1, dateParts[1]), // MM/DD/YYYY
+//                 new Date(dateParts[0], dateParts[1] - 1, dateParts[2])  // YYYY/MM/DD
+//               ];
+              
+//               for (const format of formats) {
+//                 if (!isNaN(format.getTime())) {
+//                   date = format;
+//                   break;
+//                 }
+//               }
+//             }
+//           }
+//         } else if (typeof dateValue === 'number') {
+//           date = new Date(dateValue);
+//         } else {
+//           return null;
+//         }
+        
+//         return !isNaN(date.getTime()) ? date : null;
+//       })
+//       .filter(date => date !== null)
+//       .sort((a, b) => a - b);
+
+//     if (invoiceDates.length === 0) return [];
+
+//     const minDate = invoiceDates[0];
+//     const maxDate = invoiceDates[invoiceDates.length - 1];
+    
+//     // Generate all months between min and max date
+//     const months = [];
+//     const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+//     const end = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+
+//     while (current <= end) {
+//       const year = current.getFullYear();
+//       const month = current.getMonth();
+      
+//       const monthName = current.toLocaleDateString('en-US', { month: 'short' });
+//       const displayText = `${monthName} ${year}`;
+//       const value = `${year}-${String(month + 1).padStart(2, '0')}`;
+      
+//       months.push({
+//         value: value,
+//         display: displayText
+//       });
+
+//       current.setMonth(current.getMonth() + 1);
+//     }
+
+//     return months.reverse(); // Show recent months first
+//   };
+
+//   const availableMonths = getAvailableMonths();
 
 //   return (
 //     <div className="mt-2 mb-2">
@@ -76,6 +167,23 @@
 
 //         <Col lg={4} md={5} className="d-flex align-items-center justify-content-end gap-2">
 //           <div className="d-flex align-items-center gap-1">
+//             <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>Month:</Form.Label>
+//             <Form.Select
+//               value={selectedMonth || ""}
+//               onChange={(e) => onMonthChange(e.target.value)}
+//               size="sm"
+//               style={{ width: "160px", ...commonStyle }}
+//             >
+//               <option value="">All Months</option>
+//               {availableMonths.map((month) => (
+//                 <option key={month.value} value={month.value}>
+//                   {formatMonthDisplay(month.value)}
+//                 </option>
+//               ))}
+//             </Form.Select>
+//           </div>
+
+//           {/* <div className="d-flex align-items-center gap-1">
 //             <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>From:</Form.Label>
 //             <Form.Control
 //               type="date"
@@ -95,7 +203,7 @@
 //               size="sm"
 //               style={{ width: "140px", ...commonStyle }}
 //             />
-//           </div>
+//           </div> */}
 
 //           <Button
 //             onClick={onExport}
@@ -112,6 +220,7 @@
 // };
 
 // export default InvoicesFilters;
+
 
 // components/invoices/InvoicesFilters.js
 import React from "react";
@@ -152,55 +261,104 @@ const InvoicesFilters = ({
     });
   };
 
-  // Generate available months from invoice posting dates
+  // Simplified and more robust function to generate available months
   const getAvailableMonths = () => {
-    if (!invoices || invoices.length === 0) return [];
+    console.log('Getting available months from invoices:', invoices.length);
+    
+    if (!invoices || invoices.length === 0) {
+      console.log('No invoices data available');
+      return [];
+    }
 
-    // Extract all invoice posting dates
-    const invoiceDates = invoices
-      .map(invoice => {
-        const dateValue = invoice["Invoice Posting Dt."];
-        if (!dateValue) return null;
-        
-        let date;
+    // Extract and parse all valid dates
+    const validDates = [];
+    
+    invoices.forEach((invoice, index) => {
+      const dateValue = invoice["Invoice Posting Dt."];
+      
+      if (!dateValue) return;
+      
+      let parsedDate = null;
+      
+      try {
+        // Handle different date formats
         if (dateValue instanceof Date) {
-          date = dateValue;
+          parsedDate = dateValue;
         } else if (typeof dateValue === 'string') {
-          date = new Date(dateValue);
+          // Try direct parsing first
+          parsedDate = new Date(dateValue);
           
-          if (isNaN(date.getTime())) {
-            // Try parsing different date formats if needed
-            const dateParts = dateValue.split(/[-/]/);
-            if (dateParts.length === 3) {
-              const formats = [
-                new Date(dateParts[2], dateParts[1] - 1, dateParts[0]), // DD/MM/YYYY
-                new Date(dateParts[2], dateParts[0] - 1, dateParts[1]), // MM/DD/YYYY
-                new Date(dateParts[0], dateParts[1] - 1, dateParts[2])  // YYYY/MM/DD
-              ];
-              
-              for (const format of formats) {
-                if (!isNaN(format.getTime())) {
-                  date = format;
-                  break;
+          // If that fails, try parsing ISO string
+          if (isNaN(parsedDate.getTime())) {
+            // Handle ISO string format (e.g., "2024-01-15T00:00:00.000Z")
+            if (dateValue.includes('T')) {
+              parsedDate = new Date(dateValue.split('T')[0]);
+            } else {
+              // Try parsing various date formats
+              const dateParts = dateValue.split(/[-/]/);
+              if (dateParts.length === 3) {
+                // Try YYYY-MM-DD format first
+                parsedDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
+                
+                // If that doesn't work, try DD/MM/YYYY
+                if (isNaN(parsedDate.getTime())) {
+                  parsedDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
+                }
+                
+                // If that doesn't work, try MM/DD/YYYY
+                if (isNaN(parsedDate.getTime())) {
+                  parsedDate = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]);
                 }
               }
             }
           }
         } else if (typeof dateValue === 'number') {
-          date = new Date(dateValue);
-        } else {
-          return null;
+          parsedDate = new Date(dateValue);
         }
         
-        return !isNaN(date.getTime()) ? date : null;
-      })
-      .filter(date => date !== null)
-      .sort((a, b) => a - b);
+        // Only add valid dates
+        if (parsedDate && !isNaN(parsedDate.getTime())) {
+          validDates.push(parsedDate);
+        } else {
+          console.log(`Failed to parse date at index ${index}:`, dateValue);
+        }
+      } catch (error) {
+        console.log(`Error parsing date at index ${index}:`, dateValue, error);
+      }
+    });
 
-    if (invoiceDates.length === 0) return [];
+    console.log('Valid dates found:', validDates.length);
+    
+    if (validDates.length === 0) {
+      // Fallback: generate last 12 months if no valid dates found
+      console.log('No valid dates found, generating fallback months');
+      const months = [];
+      const now = new Date();
+      
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        
+        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+        const displayText = `${monthName} ${year}`;
+        const value = `${year}-${String(month + 1).padStart(2, '0')}`;
+        
+        months.push({
+          value: value,
+          display: displayText
+        });
+      }
+      
+      return months;
+    }
 
-    const minDate = invoiceDates[0];
-    const maxDate = invoiceDates[invoiceDates.length - 1];
+    // Sort dates and get range
+    validDates.sort((a, b) => a - b);
+    const minDate = validDates[0];
+    const maxDate = validDates[validDates.length - 1];
+    
+    console.log('Date range:', minDate, 'to', maxDate);
     
     // Generate all months between min and max date
     const months = [];
@@ -223,10 +381,20 @@ const InvoicesFilters = ({
       current.setMonth(current.getMonth() + 1);
     }
 
+    console.log('Generated months:', months.length);
     return months.reverse(); // Show recent months first
   };
 
   const availableMonths = getAvailableMonths();
+  
+  // Debug logging
+  React.useEffect(() => {
+    console.log('InvoicesFilters - invoices prop:', invoices.length);
+    console.log('Available months:', availableMonths.length);
+    if (availableMonths.length > 0) {
+      console.log('First few months:', availableMonths.slice(0, 3));
+    }
+  }, [invoices, availableMonths]);
 
   return (
     <div className="mt-2 mb-2">
@@ -291,33 +459,11 @@ const InvoicesFilters = ({
               <option value="">All Months</option>
               {availableMonths.map((month) => (
                 <option key={month.value} value={month.value}>
-                  {formatMonthDisplay(month.value)}
+                  {month.display}
                 </option>
               ))}
             </Form.Select>
           </div>
-
-          {/* <div className="d-flex align-items-center gap-1">
-            <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>From:</Form.Label>
-            <Form.Control
-              type="date"
-              value={fromDate}
-              onChange={(e) => onDateChange("from", e.target.value)}
-              size="sm"
-              style={{ width: "140px", ...commonStyle }}
-            />
-          </div>
-
-          <div className="d-flex align-items-center gap-1">
-            <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>To:</Form.Label>
-            <Form.Control
-              type="date"
-              value={toDate}
-              onChange={(e) => onDateChange("to", e.target.value)}
-              size="sm"
-              style={{ width: "140px", ...commonStyle }}
-            />
-          </div> */}
 
           <Button
             onClick={onExport}
@@ -329,6 +475,13 @@ const InvoicesFilters = ({
           </Button>
         </Col>
       </Row>
+      
+      {/* Debug info - remove in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '8px' }}>
+          {/* Debug: {invoices.length} invoices, {availableMonths.length} months available */}
+        </div>
+      )}
     </div>
   );
 };
