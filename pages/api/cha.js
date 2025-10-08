@@ -1,6 +1,5 @@
-
-// api/vendors/index.js
-import { queryDatabase } from "../../../lib/db";
+// pages/api/cha.js
+import { queryDatabase } from "../../lib/db";
 import sql from "mssql";
 
 export default async function handler(req, res) {
@@ -17,7 +16,7 @@ export default async function handler(req, res) {
         CardName,
         Country
       FROM OCRD
-      WHERE CardType = 'S'
+      WHERE CardFName = 'Cha'
     `;
 
     const params = [];
@@ -29,21 +28,21 @@ export default async function handler(req, res) {
 
     query += ` ORDER BY CardName ASC`;
 
-    console.log("Executing query:", query);
+    console.log("Executing CHA query:", query);
     console.log("With parameters:", params);
 
     const results = await queryDatabase(query, params);
 
-    const vendors = results.map((row) => ({
-      cardCode: row.CardCode,
-      cardName: row.CardName,
-      country: row.Country,
+    const chaList = results.map((row) => ({
+      CardCode: row.CardCode,
+      CardName: row.CardName,
+      Country: row.Country,
       display: `${row.CardCode} - ${row.CardName}`,
     }));
 
-    res.status(200).json({ vendors });
+    res.status(200).json({ chaList });
   } catch (error) {
-    console.error("Error fetching vendors:", error);
-    res.status(500).json({ message: "Failed to fetch vendors" });
+    console.error("Error fetching CHA:", error);
+    res.status(500).json({ message: "Failed to fetch CHA list" });
   }
 }
