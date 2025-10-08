@@ -1,8 +1,25 @@
+
 // pages/in-bound-shipments/AttachmentField.js
 import React from "react";
 
 const AttachmentField = ({ fieldKey, files, onUpload, onRemove, fileInputRefs }) => {
+  // ✅ Define which fields should show attachments and their custom labels
+  const attachmentConfig = {
+    supplierInvoiceNo: "Upload Supplier Invoice",
+    supplierInvoiceNumber: "Upload Supplier Invoice",
+    mawbHawb: "Upload MAWB/HAWB",
+    attachments: "Upload Attachments",
+    boeSbNo: "Upload BOE/SB"
+  };
+
+  // ✅ Only show attachments for specific fields
+  // If fieldKey is not in the config, return null (show nothing)
+  if (!attachmentConfig[fieldKey]) {
+    return null;
+  }
+
   const currentFiles = files || [];
+  const buttonLabel = attachmentConfig[fieldKey];
 
   const handleFileUpload = (event) => {
     onUpload(fieldKey, event.target.files);
@@ -31,11 +48,12 @@ const AttachmentField = ({ fieldKey, files, onUpload, onRemove, fileInputRefs })
           backgroundColor: currentFiles.length >= 5 ? "#f3f4f6" : "#eff6ff",
           color: currentFiles.length >= 5 ? "#9ca3af" : "#2563eb",
           cursor: currentFiles.length >= 5 ? "not-allowed" : "pointer",
+          fontWeight: "500",
         }}
       >
         {currentFiles.length >= 5
           ? "Max files reached (5)"
-          : `Upload Files (${currentFiles.length}/5)`}
+          : `${buttonLabel} (${currentFiles.length}/5)`}
       </button>
 
       {currentFiles.length > 0 && (
@@ -55,7 +73,7 @@ const AttachmentField = ({ fieldKey, files, onUpload, onRemove, fileInputRefs })
                 fontSize: "12px",
               }}
             >
-              <span
+              {/* <span
                 style={{
                   flex: 1,
                   overflow: "hidden",
@@ -65,7 +83,21 @@ const AttachmentField = ({ fieldKey, files, onUpload, onRemove, fileInputRefs })
                 }}
               >
                 {file.name}
+              </span> */}
+              <span
+                title={file.name}
+                style={{
+                  display: "inline-block",
+                  maxWidth: "150px", // 🔹 fixed width
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  verticalAlign: "middle",
+                }}
+              >
+                {file.name}
               </span>
+
               <button
                 onClick={() => onRemove(fieldKey, idx)}
                 style={{

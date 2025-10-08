@@ -138,7 +138,7 @@ const RangeConfiguration = ({
 
   return (
     <div className="filter-group position-relative" ref={rangeDropdownRef}>
-      <label className="form-label text-muted small fw-medium mb-1">Day Ranges</label>
+      {/* <label className="form-label text-muted small fw-medium mb-1">Day Ranges</label> */}
       <div 
         className="form-control d-flex justify-content-between align-items-center"
         style={{ 

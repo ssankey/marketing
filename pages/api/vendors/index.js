@@ -1,3 +1,4 @@
+
 // api/vendors/index.js
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
@@ -8,20 +9,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Extract optional search term from query
     const { search } = req.query;
 
     let query = `
       SELECT TOP 20 
         CardCode, 
-        CardName 
+        CardName,
+        Country
       FROM OCRD
-      WHERE CardType = 'S' -- Only suppliers/vendors
+      WHERE CardType = 'S'
     `;
 
     const params = [];
 
-    // ✅ Add search filter if provided
     if (search && search.trim()) {
       query += ` AND (CardCode LIKE @search OR CardName LIKE @search)`;
       params.push({ name: "search", type: sql.NVarChar, value: `%${search}%` });
@@ -34,10 +34,10 @@ export default async function handler(req, res) {
 
     const results = await queryDatabase(query, params);
 
-    // ✅ Map nicely formatted results for frontend
     const vendors = results.map((row) => ({
       cardCode: row.CardCode,
       cardName: row.CardName,
+      country: row.Country,
       display: `${row.CardCode} - ${row.CardName}`,
     }));
 

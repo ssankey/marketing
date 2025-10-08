@@ -1,3 +1,5 @@
+
+
 // api/inbound/create.js
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
@@ -10,7 +12,7 @@ const writeFile = promisify(fs.writeFile);
 const access = promisify(fs.access);
 
 export const config = {
-  api: { bodyParser: { sizeLimit: "50mb" } }, // allow larger uploads
+  api: { bodyParser: { sizeLimit: "50mb" } },
 };
 
 export default async function handler(req, res) {
@@ -20,9 +22,9 @@ export default async function handler(req, res) {
 
   try {
     const {
-      formData,         // object with all fields
-      remarksData,      // object with all remarks
-      attachmentFiles,  // { fieldKey: [{ name, content(base64) }, ...] }
+      formData,
+      remarksData,
+      attachmentFiles,
     } = req.body;
 
     const boeNo = formData.boeSbNo;
@@ -30,13 +32,25 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "BOE/SB No is required" });
     }
 
-    // 🔹 1. Save attachments to network path
-    const baseDir = process.env.IMPORT_EXPORT_NETWORK_PATH; // \\172.50.10.9\SAP-Attachments\Import-Export-Documentation
+    // Check if BOE number already exists
+    const checkQuery = `SELECT COUNT(*) as count FROM ImportExportRecords WHERE BOESBNo = @BOESBNo`;
+    const checkResult = await queryDatabase(checkQuery, [
+      { name: "BOESBNo", type: sql.NVarChar(100), value: boeNo }
+    ]);
+
+    if (checkResult[0].count > 0) {
+      return res.status(409).json({ 
+        error: "Duplicate BOE/SB Number", 
+        message: `BOE/SB Number "${boeNo}" already exists in the system. Please use a different BOE/SB Number.`
+      });
+    }
+
+    // Save attachments to network path
+    const baseDir = process.env.IMPORT_EXPORT_NETWORK_PATH;
     const folderPath = path.join(baseDir, boeNo);
 
     console.log(`Attempting to create directory: ${folderPath}`);
 
-    // Check if base directory exists and create BOE folder
     try {
       await access(folderPath);
       console.log(`Directory already exists: ${folderPath}`);
@@ -62,7 +76,6 @@ export default async function handler(req, res) {
         const savePath = path.join(folderPath, safeName);
 
         try {
-          // Write file (base64 to buffer)
           const fileBuffer = Buffer.from(file.content, "base64");
           await writeFile(savePath, fileBuffer);
           console.log(`Successfully saved file: ${savePath}`);
@@ -78,7 +91,7 @@ export default async function handler(req, res) {
       }
     }
 
-    // 🔹 2. Insert into ImportExportRecords
+    // Insert into ImportExportRecords
     const insertParams = [
       { name: "BOESBNo", type: sql.NVarChar(100), value: boeNo },
 
@@ -130,11 +143,8 @@ export default async function handler(req, res) {
       { name: "SentDate", type: sql.Date, value: formData.sentDate || null },
       { name: "SentDateRemarks", type: sql.NVarChar(500), value: remarksData.sentDate || null },
 
-      { name: "MAWB", type: sql.NVarChar(100), value: formData.mawb || null },
-      { name: "MAWBRemarks", type: sql.NVarChar(500), value: remarksData.mawb || null },
-
-      { name: "HAWB", type: sql.NVarChar(100), value: formData.hawb || null },
-      { name: "HAWBRemarks", type: sql.NVarChar(500), value: remarksData.hawb || null },
+      { name: "MAWBHAWBCombined", type: sql.NVarChar(100), value: formData.mawbHawb || null },
+      { name: "MAWBHAWBCombinedRemarks", type: sql.NVarChar(500), value: remarksData.mawbHawb || null },
 
       { name: "MAWBHAWBDate", type: sql.Date, value: formData.mawbHawbDate || null },
       { name: "MAWBHAWBDateRemarks", type: sql.NVarChar(500), value: remarksData.mawbHawbDate || null },
@@ -180,8 +190,8 @@ export default async function handler(req, res) {
         SupplierInvoiceNumber, SupplierInvoiceNumberRemarks, Date, DateRemarks,
         InvoiceValue, InvoiceValueRemarks, Currency, CurrencyRemarks, PortOfLanding, PortOfLandingRemarks,
         TypeBOE, TypeBOERemarks, DocumentsSentToCHADate, DocumentsSentToCHADateRemarks,
-        CHAName, CHANameRemarks, SentDate, SentDateRemarks, MAWB, MAWBRemarks,
-        HAWB, HAWBRemarks, MAWBHAWBDate, MAWBHAWBDateRemarks, LandingDate, LandingDateRemarks,
+        CHAName, CHANameRemarks, SentDate, SentDateRemarks, [MAWB / HAWB], [MAWB / HAWB Remarks],
+        MAWBHAWBDate, MAWBHAWBDateRemarks, LandingDate, LandingDateRemarks,
         PKG, PKGRemarks, Weight, WeightRemarks, BOESBNoRemarks, BOEDT, BOEDTRemarks,
         AV, AVRemarks, Duty, DutyRemarks, DutyPaidDate, DutyPaidDateRemarks,
         Status, StatusRemarks, ClearedDate, ClearedDateRemarks, DeliveryDate, DeliveryDateRemarks,
@@ -193,8 +203,8 @@ export default async function handler(req, res) {
         @SupplierInvoiceNumber, @SupplierInvoiceNumberRemarks, @Date, @DateRemarks,
         @InvoiceValue, @InvoiceValueRemarks, @Currency, @CurrencyRemarks, @PortOfLanding, @PortOfLandingRemarks,
         @TypeBOE, @TypeBOERemarks, @DocumentsSentToCHADate, @DocumentsSentToCHADateRemarks,
-        @CHAName, @CHANameRemarks, @SentDate, @SentDateRemarks, @MAWB, @MAWBRemarks,
-        @HAWB, @HAWBRemarks, @MAWBHAWBDate, @MAWBHAWBDateRemarks, @LandingDate, @LandingDateRemarks,
+        @CHAName, @CHANameRemarks, @SentDate, @SentDateRemarks, @MAWBHAWBCombined, @MAWBHAWBCombinedRemarks,
+        @MAWBHAWBDate, @MAWBHAWBDateRemarks, @LandingDate, @LandingDateRemarks,
         @PKG, @PKGRemarks, @Weight, @WeightRemarks, @BOESBNoRemarks, @BOEDT, @BOEDTRemarks,
         @AV, @AVRemarks, @Duty, @DutyRemarks, @DutyPaidDate, @DutyPaidDateRemarks,
         @Status, @StatusRemarks, @ClearedDate, @ClearedDateRemarks, @DeliveryDate, @DeliveryDateRemarks,
@@ -204,7 +214,7 @@ export default async function handler(req, res) {
 
     await queryDatabase(insertQuery, insertParams);
 
-    // 🔹 3. Insert into ImportExportAttachments
+    // Insert into ImportExportAttachments
     for (const att of attachmentInserts) {
       await queryDatabase(
         `INSERT INTO ImportExportAttachments (BOESBNo, FieldKey, FileLink, UploadedAt)
@@ -225,6 +235,15 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error("Error saving inbound record:", err);
+    
+    // Check if it's a duplicate key error (as a fallback)
+    if (err.message && err.message.includes("duplicate key")) {
+      return res.status(409).json({ 
+        error: "Duplicate BOE/SB Number", 
+        message: `BOE/SB Number already exists in the system. Please use a different BOE/SB Number.`
+      });
+    }
+    
     res.status(500).json({ 
       error: "Internal Server Error", 
       details: err.message,
