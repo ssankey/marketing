@@ -562,6 +562,16 @@ const NavbarVertical = (props) => {
               </Link>
             </li>
 
+             {/* Outstanding Payments */}
+            <li className="nav-item mb-3">
+              <Link
+                href="/target-analytics"
+                className={`nav-link d-flex align-items-center ${router === "/target-analytics" ? "active" : ""}`}
+              >
+                <FaMoneyBillWave className="me-2" />  Target Analytics
+              </Link>
+            </li>
+
             {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link
