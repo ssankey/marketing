@@ -6,8 +6,8 @@ import FilterBadges from "./brandwise/FilterBadges";
 import QuarterlyTable from "./brandwise/QuarterlyTable";
 import LoadingState from "./brandwise/LoadingState";
 import EmptyState from "./brandwise/EmptyState";
-import { processDataForDisplay } from "./brandwise/utils/dataProcessing";
-import { exportToExcel } from "./brandwise/utils/excelExport";
+import { processDataForDisplay } from "utils/brandwise/dataProcessing";
+import { exportToExcel } from "utils/brandwise/excelExport";
 
 export default function BrandwiseAnalysis() {
   const [isMobile, setIsMobile] = useState(false);

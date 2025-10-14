@@ -1,5 +1,5 @@
 import React from "react";
-import { SALES_PERSONS } from "./utils/constants";
+import { SALES_PERSONS } from "utils/brandwise/constants";
 
 export default function FilterBadges({
   isMobile,

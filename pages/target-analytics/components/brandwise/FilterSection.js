@@ -1,5 +1,5 @@
 import React from "react";
-import { FINANCIAL_YEARS, SALES_PERSONS, REGIONS, STATES } from "./utils/constants";
+import { FINANCIAL_YEARS, SALES_PERSONS, REGIONS, STATES } from "utils/brandwise/constants";
 
 export default function FilterSection({
   isMobile,

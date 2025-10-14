@@ -1,5 +1,5 @@
 import React from "react";
-import { calculateRowTotal } from "./utils/dataProcessing";
+import { calculateRowTotal } from "utils/brandwise/dataProcessing";
 
 export default function QuarterlyTable({
   isMobile,
