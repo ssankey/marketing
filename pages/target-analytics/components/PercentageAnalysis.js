@@ -1,5 +1,4 @@
 
-
 // // pages/target-analytics/components/PercentageAnalysis.js
 // import React, { useState, useEffect, useRef } from "react";
 // import * as Chart from "chart.js";
@@ -10,11 +9,141 @@
 
 // export default function PercentageAnalysis() {
 //   const [selectedType, setSelectedType] = useState("category");
+//   const [selectedYear, setSelectedYear] = useState("FY 2025-26");
 //   const [data, setData] = useState([]);
 //   const [loading, setLoading] = useState(false);
 //   const [isMobile, setIsMobile] = useState(false);
 //   const canvasRef = useRef(null);
 //   const chartRef = useRef(null);
+
+//   // Category mapping configuration - same as BrandwiseAnalysis
+//   const categoryMapping = {
+//     "Items": "Life Science",
+//     "3A Chemicals": "3A Chemicals", 
+//     "Catalyst": "Density",
+//     "Solvent": "Density",
+//     "Polymer": "Density",
+//     "Fine Chemicals": "Density",
+//     "Reagent": "Density",
+//     "Biological Buffers": "Life Science",
+//     "Cylinders": "NULL",
+//     "Intermediates": "Density", 
+//     "API": "CATO",
+//     "Stable Isotope reagents": "Deutero",
+//     "Building Blocks": "Density",
+//     "Membranes": "NULL",
+//     "Cans": "NULL",
+//     "Laboratory Containers & Storage": "FD Cell",
+//     "Enzyme": "Life Science",
+//     "Biochemicals": "Life Science",
+//     "Reference Materials": "NULL",
+//     "Secondary Standards": "NULL", 
+//     "Instruments": "NULL",
+//     "Services": "NULL",
+//     "Analytical Standards": "NULL",
+//     "Nucleosides and Nucleotides": "NULL",
+//     "Nitrosamine": "CATO",
+//     "Pesticide Standards": "CATO",
+//     "Trading": "Trading",
+//     "Packaging Materials": "NULL",
+//     "Carbohydrates": "Life Science",
+//     "USP Standards": "NULL",
+//     "EP Standards": "NULL",
+//     "Indian pharmacopoeia": "NULL",
+//     "British Pharmacopoeia": "CATO",
+//     "Impurity": "CATO",
+//     "NMR Solvents": "Deutero",
+//     "Stable isotopes": "Deutero",
+//     "Glucuronides": "NULL",
+//     "Metabolites": "NULL",
+//     "Capricorn": "Capricorn",
+//     "Analytical Instruments": "BIKAI",
+//     "Lab Consumables": "FD Cell",
+//     "Equipment and Instruments": "NULL",
+//     "Ultrapur": "KANTO",
+//     "Assets": "NULL",
+//     "Dyes": "Density",
+//     "New Life Biologics": "Life Science", 
+//     "Food Grade": "NULL",
+//     "Lab Systems & Fixtures": "NULL",
+//     "Peptides": "Life Science",
+//     "Ultrapur-100": "KANTO",
+//     "Amino Acids": "Life Science",
+//     "Cell Culture": "NULL",
+//     "Natural Products": "Life Science",
+//     "Multiple Pharmacopoeia": "NULL",
+//     "Metal Standard Solutions": "KANTO",
+//     "High Purity Acids": "NULL",
+//     "HPLC consumables": "BIKAI",
+//     "HPLC configurations": "BIKAI",
+//     "VOLAB": "NULL",
+//     "Life science": "NULL",
+//     "Kanto": "NULL", 
+//     "Meatls&materials": "NULL",
+//     "Fixed Assets": "NULL"
+//   };
+
+//   // Convert to crores function - NO ROUNDING, keep original precision
+//   // const toCrores = (value) => {
+//   //   return value / 10000000;
+//   // };
+//   const toCrores = (value) => {
+//   return (value / 10000000).toFixed(2);
+// };
+
+//   // Function to merge categories for percentage analysis
+//   const mergePercentageCategories = (rawData) => {
+//     const mergedData = {};
+
+//     rawData.forEach(row => {
+//       const targetCategory = categoryMapping[row.Field] || "Other";
+      
+//       // Skip NULL categories
+//       if (targetCategory === "NULL") return;
+      
+//       if (!mergedData[targetCategory]) {
+//         mergedData[targetCategory] = {
+//           Field: targetCategory,
+//           IndiaSales: 0,
+//           OverseasSales: 0,
+//           TotalSales: 0,
+//           GrossProfit: 0
+//         };
+//       }
+      
+//       // Accumulate all values
+//       mergedData[targetCategory].IndiaSales += row.IndiaSales || 0;
+//       mergedData[targetCategory].OverseasSales += row.OverseasSales || 0;
+//       mergedData[targetCategory].TotalSales += row.Sales || 0;
+//       mergedData[targetCategory].GrossProfit += (row.Sales || 0) * ((row.GrossMarginPct || 0) / 100);
+//     });
+
+//     // Convert back to array and calculate percentages
+//     const finalData = Object.values(mergedData);
+//     const grandTotalSales = finalData.reduce((sum, row) => sum + row.TotalSales, 0);
+
+//     // Calculate percentages and margins - ROUND TO 2 DECIMALS
+//     const processedData = finalData.map(row => {
+//       const marginValue = row.TotalSales > 0 ? 
+//         (row.GrossProfit / row.TotalSales) * 100 : 0;
+      
+//       return {
+//         Field: row.Field,
+//         PercentageSales: grandTotalSales > 0 ? 
+//           Number(((row.TotalSales / grandTotalSales) * 100).toFixed(2)) : 0,
+//         Target: 0,
+//         Sales: row.TotalSales,
+//         GrossMarginPct: Number(marginValue.toFixed(2)),
+//         IndiaSales: row.IndiaSales,
+//         OverseasSales: row.OverseasSales
+//       };
+//     });
+
+//     // Sort by sales descending
+//     processedData.sort((a, b) => b.Sales - a.Sales);
+
+//     return processedData;
+//   };
 
 //   const typeOptions = [
 //     { value: "category", label: "Category" },
@@ -22,6 +151,8 @@
 //     { value: "region", label: "Region" },
 //     { value: "salesperson", label: "Sales Person" },
 //   ];
+
+//   const yearOptions = ["FY 2025-26", "FY 2024-25", "Complete"];
 
 //   // Check for mobile viewport
 //   useEffect(() => {
@@ -37,7 +168,7 @@
 
 //   useEffect(() => {
 //     fetchData();
-//   }, [selectedType]);
+//   }, [selectedType, selectedYear]);
 
 //   useEffect(() => {
 //     if (data.length > 0 && canvasRef.current) {
@@ -55,7 +186,7 @@
 //     try {
 //       const token = localStorage.getItem("token");
 //       const response = await fetch(
-//         `/api/target-analytics/percentage-analysis?type=${selectedType}`,
+//         `/api/target-analytics/percentage-analysis?type=${selectedType}&year=${selectedYear}`,
 //         {
 //           headers: {
 //             Authorization: `Bearer ${token}`,
@@ -63,7 +194,18 @@
 //         }
 //       );
 //       const result = await response.json();
-//       setData(result.data || []);
+      
+//       console.log("🔍 RAW PERCENTAGE DATA:", result.data);
+
+//       let processedData = result.data || [];
+      
+//       // Apply category mapping only for category type
+//       if (selectedType === "category" && result.data) {
+//         processedData = mergePercentageCategories(result.data);
+//         console.log("🔀 MERGED PERCENTAGE DATA:", processedData);
+//       }
+      
+//       setData(processedData);
 //     } catch (error) {
 //       console.error("Error fetching data:", error);
 //       setData([]);
@@ -138,13 +280,13 @@
 //         Field: row.Field,
 //         "% Sales": row.PercentageSales,
 //         Target: "-",
-//         Sales: row.Sales,
+//         "Sales (Cr)": toCrores(row.Sales),
 //         "GM %": row.GrossMarginPct,
 //       };
 
 //       if (selectedType === "category") {
-//         baseData["India Sales"] = row.IndiaSales;
-//         baseData["Overseas Sales"] = row.OverseasSales;
+//         baseData["India Sales (Cr)"] = toCrores(row.IndiaSales);
+//         baseData["Overseas Sales (Cr)"] = toCrores(row.OverseasSales);
 //       }
 
 //       return baseData;
@@ -155,19 +297,19 @@
 //       Field: "TOTAL",
 //       "% Sales": 100.0,
 //       Target: "-",
-//       Sales: data.reduce((sum, row) => sum + (row.Sales || 0), 0),
+//       "Sales (Cr)": toCrores(data.reduce((sum, row) => sum + (row.Sales || 0), 0)),
 //       "GM %": "-",
 //     };
 
 //     if (selectedType === "category") {
-//       totals["India Sales"] = data.reduce(
+//       totals["India Sales (Cr)"] = toCrores(data.reduce(
 //         (sum, row) => sum + (row.IndiaSales || 0),
 //         0
-//       );
-//       totals["Overseas Sales"] = data.reduce(
+//       ));
+//       totals["Overseas Sales (Cr)"] = toCrores(data.reduce(
 //         (sum, row) => sum + (row.OverseasSales || 0),
 //         0
-//       );
+//       ));
 //     }
 
 //     exportData.push(totals);
@@ -177,7 +319,7 @@
 //     XLSX.utils.book_append_sheet(workbook, worksheet, "Percentage Analysis");
 //     XLSX.writeFile(
 //       workbook,
-//       `Percentage_Analysis_${selectedType}_${
+//       `Percentage_Analysis_${selectedType}_${selectedYear}_${
 //         new Date().toISOString().split("T")[0]
 //       }.xlsx`
 //     );
@@ -253,6 +395,53 @@
 //             alignItems: isMobile ? "stretch" : "center",
 //           }}
 //         >
+//           {/* Financial Year Dropdown */}
+//           <div
+//             style={{
+//               display: "flex",
+//               alignItems: "center",
+//               gap: "8px",
+//               justifyContent: isMobile ? "space-between" : "flex-start",
+//             }}
+//           >
+//             <label
+//               style={{
+//                 color: "#15803d",
+//                 fontWeight: "600",
+//                 fontSize: isMobile ? "13px" : "14px",
+//                 whiteSpace: "nowrap",
+//               }}
+//             >
+//               Financial Year:
+//             </label>
+//             <select
+//               value={selectedYear}
+//               onChange={(e) => setSelectedYear(e.target.value)}
+//               style={{
+//                 padding: isMobile ? "8px 10px" : "10px 14px",
+//                 borderRadius: "6px",
+//                 border: "2px solid #a7f3d0",
+//                 backgroundColor: "white",
+//                 color: "#15803d",
+//                 cursor: "pointer",
+//                 fontSize: isMobile ? "13px" : "14px",
+//                 fontWeight: "500",
+//                 outline: "none",
+//                 transition: "all 0.2s ease",
+//                 flex: isMobile ? "1" : "auto",
+//               }}
+//               onFocus={(e) => (e.target.style.borderColor = "#15803d")}
+//               onBlur={(e) => (e.target.style.borderColor = "#a7f3d0")}
+//             >
+//               {yearOptions.map((year) => (
+//                 <option key={year} value={year}>
+//                   {year}
+//                 </option>
+//               ))}
+//             </select>
+//           </div>
+
+//           {/* Analysis By Dropdown */}
 //           <div
 //             style={{
 //               display: "flex",
@@ -298,6 +487,7 @@
 //             </select>
 //           </div>
 
+//           {/* Export Button */}
 //           <button
 //             onClick={exportToExcel}
 //             disabled={data.length === 0}
@@ -351,7 +541,7 @@
 //               margin: 0,
 //             }}
 //           >
-//             No data available for the selected analysis type.
+//             No data available for the selected filters.
 //           </p>
 //         </div>
 //       ) : (
@@ -450,7 +640,7 @@
 //                       fontSize: isMobile ? "11px" : "13px",
 //                     }}
 //                   >
-//                     Sales
+//                     Sales (Cr)
 //                   </th>
 //                   <th
 //                     style={{
@@ -477,7 +667,7 @@
 //                           whiteSpace: "nowrap",
 //                         }}
 //                       >
-//                         India Sales
+//                         India Sales (Cr)
 //                       </th>
 //                       <th
 //                         style={{
@@ -490,7 +680,7 @@
 //                           whiteSpace: "nowrap",
 //                         }}
 //                       >
-//                         Overseas Sales
+//                         Overseas Sales (Cr)
 //                       </th>
 //                     </>
 //                   )}
@@ -562,7 +752,7 @@
 //                         whiteSpace: "nowrap",
 //                       }}
 //                     >
-//                       ₹{row.Sales?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+//                       ₹{toCrores(row.Sales)} Cr
 //                     </td>
 //                     <td
 //                       style={{
@@ -591,7 +781,7 @@
 //                             whiteSpace: "nowrap",
 //                           }}
 //                         >
-//                           ₹{row.IndiaSales?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+//                           ₹{toCrores(row.IndiaSales)} Cr
 //                         </td>
 //                         <td
 //                           style={{
@@ -602,7 +792,7 @@
 //                             whiteSpace: "nowrap",
 //                           }}
 //                         >
-//                           ₹{row.OverseasSales?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+//                           ₹{toCrores(row.OverseasSales)} Cr
 //                         </td>
 //                       </>
 //                     )}
@@ -658,7 +848,7 @@
 //                         whiteSpace: "nowrap",
 //                       }}
 //                     >
-//                       ₹{data.reduce((sum, row) => sum + (row.Sales || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+//                       ₹{toCrores(data.reduce((sum, row) => sum + (row.Sales || 0), 0))} Cr
 //                     </td>
 //                     <td
 //                       style={{
@@ -681,7 +871,7 @@
 //                             whiteSpace: "nowrap",
 //                           }}
 //                         >
-//                           ₹{data.reduce((sum, row) => sum + (row.IndiaSales || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+//                           ₹{toCrores(data.reduce((sum, row) => sum + (row.IndiaSales || 0), 0))} Cr
 //                         </td>
 //                         <td
 //                           style={{
@@ -692,7 +882,7 @@
 //                             whiteSpace: "nowrap",
 //                           }}
 //                         >
-//                           ₹{data.reduce((sum, row) => sum + (row.OverseasSales || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+//                           ₹{toCrores(data.reduce((sum, row) => sum + (row.OverseasSales || 0), 0))} Cr
 //                         </td>
 //                       </>
 //                     )}
@@ -725,6 +915,131 @@ export default function PercentageAnalysis() {
   const canvasRef = useRef(null);
   const chartRef = useRef(null);
 
+  // Category mapping configuration
+  const categoryMapping = {
+    "Items": "Life Science",
+    "3A Chemicals": "3A Chemicals", 
+    "Catalyst": "Density",
+    "Solvent": "Density",
+    "Polymer": "Density",
+    "Fine Chemicals": "Density",
+    "Reagent": "Density",
+    "Biological Buffers": "Life Science",
+    "Cylinders": "NULL",
+    "Intermediates": "Density", 
+    "API": "CATO",
+    "Stable Isotope reagents": "Deutero",
+    "Building Blocks": "Density",
+    "Membranes": "NULL",
+    "Cans": "NULL",
+    "Laboratory Containers & Storage": "FD Cell",
+    "Enzyme": "Life Science",
+    "Biochemicals": "Life Science",
+    "Reference Materials": "NULL",
+    "Secondary Standards": "NULL", 
+    "Instruments": "NULL",
+    "Services": "NULL",
+    "Analytical Standards": "NULL",
+    "Nucleosides and Nucleotides": "NULL",
+    "Nitrosamine": "CATO",
+    "Pesticide Standards": "CATO",
+    "Trading": "Trading",
+    "Packaging Materials": "NULL",
+    "Carbohydrates": "Life Science",
+    "USP Standards": "NULL",
+    "EP Standards": "NULL",
+    "Indian pharmacopoeia": "NULL",
+    "British Pharmacopoeia": "CATO",
+    "Impurity": "CATO",
+    "NMR Solvents": "Deutero",
+    "Stable isotopes": "Deutero",
+    "Glucuronides": "NULL",
+    "Metabolites": "NULL",
+    "Capricorn": "Capricorn",
+    "Analytical Instruments": "BIKAI",
+    "Lab Consumables": "FD Cell",
+    "Equipment and Instruments": "NULL",
+    "Ultrapur": "KANTO",
+    "Assets": "NULL",
+    "Dyes": "Density",
+    "New Life Biologics": "Life Science", 
+    "Food Grade": "NULL",
+    "Lab Systems & Fixtures": "NULL",
+    "Peptides": "Life Science",
+    "Ultrapur-100": "KANTO",
+    "Amino Acids": "Life Science",
+    "Cell Culture": "NULL",
+    "Natural Products": "Life Science",
+    "Multiple Pharmacopoeia": "NULL",
+    "Metal Standard Solutions": "KANTO",
+    "High Purity Acids": "NULL",
+    "HPLC consumables": "BIKAI",
+    "HPLC configurations": "BIKAI",
+    "VOLAB": "NULL",
+    "Life science": "NULL",
+    "Kanto": "NULL", 
+    "Meatls&materials": "NULL",
+    "Fixed Assets": "NULL"
+  };
+
+  const toCrores = (value) => {
+    return (value / 10000000).toFixed(2);
+  };
+
+  // Function to merge categories for percentage analysis
+  const mergePercentageCategories = (rawData) => {
+    const mergedData = {};
+
+    rawData.forEach(row => {
+      const targetCategory = categoryMapping[row.Field] || "Other";
+      
+      // Skip NULL categories
+      if (targetCategory === "NULL") return;
+      
+      if (!mergedData[targetCategory]) {
+        mergedData[targetCategory] = {
+          Field: targetCategory,
+          IndiaSales: 0,
+          OverseasSales: 0,
+          TotalSales: 0,
+          GrossProfit: 0
+        };
+      }
+      
+      // Accumulate all values
+      mergedData[targetCategory].IndiaSales += row.IndiaSales || 0;
+      mergedData[targetCategory].OverseasSales += row.OverseasSales || 0;
+      mergedData[targetCategory].TotalSales += row.Sales || 0;
+      mergedData[targetCategory].GrossProfit += (row.Sales || 0) * ((row.GrossMarginPct || 0) / 100);
+    });
+
+    // Convert back to array and calculate percentages
+    const finalData = Object.values(mergedData);
+    const grandTotalSales = finalData.reduce((sum, row) => sum + row.TotalSales, 0);
+
+    // Calculate percentages and margins
+    const processedData = finalData.map(row => {
+      const marginValue = row.TotalSales > 0 ? 
+        (row.GrossProfit / row.TotalSales) * 100 : 0;
+      
+      return {
+        Field: row.Field,
+        PercentageSales: grandTotalSales > 0 ? 
+          Number(((row.TotalSales / grandTotalSales) * 100).toFixed(2)) : 0,
+        Target: 0,
+        Sales: row.TotalSales,
+        GrossMarginPct: Number(marginValue.toFixed(2)),
+        IndiaSales: row.IndiaSales,
+        OverseasSales: row.OverseasSales
+      };
+    });
+
+    // Sort by sales descending
+    processedData.sort((a, b) => b.Sales - a.Sales);
+
+    return processedData;
+  };
+
   const typeOptions = [
     { value: "category", label: "Category" },
     { value: "state", label: "State" },
@@ -746,6 +1061,7 @@ export default function PercentageAnalysis() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Auto-fetch data when filters change
   useEffect(() => {
     fetchData();
   }, [selectedType, selectedYear]);
@@ -774,7 +1090,18 @@ export default function PercentageAnalysis() {
         }
       );
       const result = await response.json();
-      setData(result.data || []);
+      
+      console.log("🔍 RAW PERCENTAGE DATA:", result.data);
+
+      let processedData = result.data || [];
+      
+      // Apply category mapping only for category type
+      if (selectedType === "category" && result.data) {
+        processedData = mergePercentageCategories(result.data);
+        console.log("🔀 MERGED PERCENTAGE DATA:", processedData);
+      }
+      
+      setData(processedData);
     } catch (error) {
       console.error("Error fetching data:", error);
       setData([]);
@@ -849,13 +1176,13 @@ export default function PercentageAnalysis() {
         Field: row.Field,
         "% Sales": row.PercentageSales,
         Target: "-",
-        Sales: row.Sales,
+        "Sales (Cr)": toCrores(row.Sales),
         "GM %": row.GrossMarginPct,
       };
 
       if (selectedType === "category") {
-        baseData["India Sales"] = row.IndiaSales;
-        baseData["Overseas Sales"] = row.OverseasSales;
+        baseData["India Sales (Cr)"] = toCrores(row.IndiaSales);
+        baseData["Overseas Sales (Cr)"] = toCrores(row.OverseasSales);
       }
 
       return baseData;
@@ -866,19 +1193,19 @@ export default function PercentageAnalysis() {
       Field: "TOTAL",
       "% Sales": 100.0,
       Target: "-",
-      Sales: data.reduce((sum, row) => sum + (row.Sales || 0), 0),
+      "Sales (Cr)": toCrores(data.reduce((sum, row) => sum + (row.Sales || 0), 0)),
       "GM %": "-",
     };
 
     if (selectedType === "category") {
-      totals["India Sales"] = data.reduce(
+      totals["India Sales (Cr)"] = toCrores(data.reduce(
         (sum, row) => sum + (row.IndiaSales || 0),
         0
-      );
-      totals["Overseas Sales"] = data.reduce(
+      ));
+      totals["Overseas Sales (Cr)"] = toCrores(data.reduce(
         (sum, row) => sum + (row.OverseasSales || 0),
         0
-      );
+      ));
     }
 
     exportData.push(totals);
@@ -1137,7 +1464,7 @@ export default function PercentageAnalysis() {
             <canvas ref={canvasRef}></canvas>
           </div>
 
-          {/* Table - keeping the same as before */}
+          {/* Table */}
           <div
             style={{
               flex: "1",
@@ -1209,7 +1536,7 @@ export default function PercentageAnalysis() {
                       fontSize: isMobile ? "11px" : "13px",
                     }}
                   >
-                    Sales
+                    Sales (Cr)
                   </th>
                   <th
                     style={{
@@ -1236,7 +1563,7 @@ export default function PercentageAnalysis() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        India Sales
+                        India Sales (Cr)
                       </th>
                       <th
                         style={{
@@ -1249,7 +1576,7 @@ export default function PercentageAnalysis() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        Overseas Sales
+                        Overseas Sales (Cr)
                       </th>
                     </>
                   )}
@@ -1321,7 +1648,7 @@ export default function PercentageAnalysis() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      ₹{row.Sales?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{toCrores(row.Sales)} Cr
                     </td>
                     <td
                       style={{
@@ -1350,7 +1677,7 @@ export default function PercentageAnalysis() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          ₹{row.IndiaSales?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{toCrores(row.IndiaSales)} Cr
                         </td>
                         <td
                           style={{
@@ -1361,7 +1688,7 @@ export default function PercentageAnalysis() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          ₹{row.OverseasSales?.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{toCrores(row.OverseasSales)} Cr
                         </td>
                       </>
                     )}
@@ -1417,7 +1744,7 @@ export default function PercentageAnalysis() {
                         whiteSpace: "nowrap",
                       }}
                     >
-                      ₹{data.reduce((sum, row) => sum + (row.Sales || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{toCrores(data.reduce((sum, row) => sum + (row.Sales || 0), 0))} Cr
                     </td>
                     <td
                       style={{
@@ -1440,7 +1767,7 @@ export default function PercentageAnalysis() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          ₹{data.reduce((sum, row) => sum + (row.IndiaSales || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{toCrores(data.reduce((sum, row) => sum + (row.IndiaSales || 0), 0))} Cr
                         </td>
                         <td
                           style={{
@@ -1451,7 +1778,7 @@ export default function PercentageAnalysis() {
                             whiteSpace: "nowrap",
                           }}
                         >
-                          ₹{data.reduce((sum, row) => sum + (row.OverseasSales || 0), 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{toCrores(data.reduce((sum, row) => sum + (row.OverseasSales || 0), 0))} Cr
                         </td>
                       </>
                     )}

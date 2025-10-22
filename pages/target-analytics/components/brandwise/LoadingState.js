@@ -1,3 +1,4 @@
+// pages/target-analytics/components/brandwise/LoadingState.js
 import React from "react";
 
 export default function LoadingState({ isMobile }) {

@@ -1,3 +1,5 @@
+
+// pages/target-analytics/components/brandwise/QuarterlyTable.js
 import React from "react";
 import { calculateRowTotal } from "utils/brandwise/dataProcessing";
 
@@ -9,6 +11,11 @@ export default function QuarterlyTable({
 }) {
   // Fixed cell width for all data cells - increased to prevent wrapping
   const CELL_WIDTH = isMobile ? "110px" : "130px";
+  
+  // Convert to crores function - ROUND TO 2 DECIMALS
+  const toCrores = (value) => {
+    return (value / 10000000).toFixed(2);
+  };
   
   const renderCategoryColumns = (row, category, isFirstCategory, categoryIndex) => {
     const sales = row[`${category}_Sales`] || 0;
@@ -59,11 +66,7 @@ export default function QuarterlyTable({
             textOverflow: "ellipsis",
           }}
         >
-          ₹
-          {sales.toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
+          ₹{toCrores(sales)} Cr
         </td>
         <td
           style={{
@@ -264,7 +267,7 @@ export default function QuarterlyTable({
                       width: CELL_WIDTH,
                     }}
                   >
-                    Sales
+                    Sales (Cr)
                   </th>
                   <th
                     style={{
@@ -382,11 +385,7 @@ export default function QuarterlyTable({
                       textOverflow: "ellipsis",
                     }}
                   >
-                    ₹
-                    {totals.totalSales.toLocaleString("en-IN", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    ₹{toCrores(totals.totalSales)} Cr
                   </td>
                   <td
                     style={{
