@@ -1,3 +1,4 @@
+// utils/brandwise/dataProcessing.js
 export const processDataForDisplay = (rawData, categoryNames) => {
   const grouped = {};
   
