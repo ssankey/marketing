@@ -17,10 +17,16 @@ export default async function handler(req, res) {
       );
     }
 
-    // Filter by sales person
-    if (slpCode) {
-      whereClauses.push(`T0.SlpCode = ${parseInt(slpCode)}`);
-    }
+    // // Filter by sales person
+    // if (slpCode) {
+    //   whereClauses.push(`T0.SlpCode = ${parseInt(slpCode)}`);
+    // }
+
+    // Filter by salesperson (line-level first, fallback to header)
+if (slpCode) {
+  whereClauses.push(`ISNULL(T1.SlpCode, T0.SlpCode) = ${parseInt(slpCode)}`);
+}
+
 
     // Build region/state filter
     let regionStateJoin = "";
