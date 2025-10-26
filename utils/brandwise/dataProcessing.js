@@ -51,6 +51,8 @@ export const processDataForDisplay = (rawData, categoryNames) => {
   return displayData;
 };
 
+
+
 export const createQuarterRow = (year, quarter, months, categoryNames) => {
   const quarterRow = {
     Year: year,
@@ -60,21 +62,21 @@ export const createQuarterRow = (year, quarter, months, categoryNames) => {
 
   categoryNames.forEach(category => {
     let totalSales = 0;
-    let totalMargins = [];
+    let totalWeightedMargin = 0;
     
     months.forEach(month => {
       if (month) {
-        totalSales += (month[`${category}_Sales`] || 0);
-        const margin = month[`${category}_Margin`];
-        if (margin !== null && margin !== undefined) {
-          totalMargins.push(margin);
-        }
+        const sales = month[`${category}_Sales`] || 0;
+        const margin = month[`${category}_Margin`] || 0;
+        
+        totalSales += sales;
+        totalWeightedMargin += sales * (margin / 100);
       }
     });
 
     quarterRow[`${category}_Sales`] = totalSales;
-    quarterRow[`${category}_Margin`] = totalMargins.length > 0 
-      ? (totalMargins.reduce((a, b) => a + b, 0) / totalMargins.length).toFixed(2)
+    quarterRow[`${category}_Margin`] = totalSales > 0 
+      ? ((totalWeightedMargin / totalSales) * 100).toFixed(2)
       : 0;
   });
 
@@ -83,18 +85,18 @@ export const createQuarterRow = (year, quarter, months, categoryNames) => {
 
 export const calculateRowTotal = (row, categories) => {
   let totalSales = 0;
-  let totalMargins = [];
+  let totalWeightedMargin = 0;
 
   categories.forEach(cat => {
-    totalSales += (row[`${cat}_Sales`] || 0);
-    const margin = row[`${cat}_Margin`];
-    if (margin !== null && margin !== undefined) {
-      totalMargins.push(parseFloat(margin));
-    }
+    const sales = row[`${cat}_Sales`] || 0;
+    const margin = row[`${cat}_Margin`] || 0;
+    
+    totalSales += sales;
+    totalWeightedMargin += sales * (margin / 100);
   });
 
-  const avgMargin = totalMargins.length > 0
-    ? (totalMargins.reduce((a, b) => a + b, 0) / totalMargins.length).toFixed(2)
+  const avgMargin = totalSales > 0
+    ? ((totalWeightedMargin / totalSales) * 100).toFixed(2)
     : 0;
 
   return { totalSales, avgMargin };

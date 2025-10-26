@@ -1,4 +1,5 @@
 
+
 // // pages/target-analytics/components/BrandwiseAnalysis.js
 // import React, { useState, useEffect } from "react";
 // import FilterSection from "./brandwise/FilterSection";
@@ -19,71 +20,82 @@
 //   const [categories, setCategories] = useState([]);
 //   const [loading, setLoading] = useState(false);
 
-//   // Category mapping configuration - left side from backend, right side for frontend
+//   // Hardcoded target margin values for categories (%)
+//   const targetMarginValues = {
+//     "3A Chemicals": 25,
+//     "BIKAI": 20,
+//     "CATO": 30,
+//     "FD Cell": 25,
+//     "KANTO": 25,
+//     "Capricorn": 20,
+//     "VOLAB": 20,
+//     "Density": 20,
+//     "Deutero": 25,
+//     "Trading": 15,
+//     "Life Science": 25,
+//     "Other": 20
+//   };
+
+//   // Updated category mapping configuration
 //   const categoryMapping = {
-//     "Items": "Life Science",
-//     "3A Chemicals": "3A Chemicals", 
+//     "Items": "Trading",
+//     "3A Chemicals": "3A Chemicals",
 //     "Catalyst": "Density",
 //     "Solvent": "Density",
 //     "Polymer": "Density",
 //     "Fine Chemicals": "Density",
 //     "Reagent": "Density",
 //     "Biological Buffers": "Life Science",
-//     "Cylinders": "NULL",
-//     "Intermediates": "Density", 
+//     "Intermediates": "Density",
 //     "API": "CATO",
 //     "Stable Isotope reagents": "Deutero",
 //     "Building Blocks": "Density",
-//     "Membranes": "NULL",
-//     "Cans": "NULL",
+//     "Membranes": "Life Science",
 //     "Laboratory Containers & Storage": "FD Cell",
 //     "Enzyme": "Life Science",
 //     "Biochemicals": "Life Science",
-//     "Reference Materials": "NULL",
-//     "Secondary Standards": "NULL", 
-//     "Instruments": "NULL",
+//     "Reference Materials": "KANTO",
+//     "Secondary Standards": "KANTO",
+//     "Instruments": "BIKAI",
 //     "Services": "NULL",
-//     "Analytical Standards": "NULL",
-//     "Nucleosides and Nucleotides": "NULL",
+//     "Analytical Standards": "KANTO",
+//     "Nucleosides and Nucleotides": "Life Science",
 //     "Nitrosamine": "CATO",
 //     "Pesticide Standards": "CATO",
 //     "Trading": "Trading",
-//     "Packaging Materials": "NULL",
 //     "Carbohydrates": "Life Science",
-//     "USP Standards": "NULL",
-//     "EP Standards": "NULL",
-//     "Indian pharmacopoeia": "NULL",
+//     "USP Standards": "CATO",
+//     "EP Standards": "CATO",
+//     "Indian pharmacopoeia": "CATO",
 //     "British Pharmacopoeia": "CATO",
 //     "Impurity": "CATO",
 //     "NMR Solvents": "Deutero",
 //     "Stable isotopes": "Deutero",
-//     "Glucuronides": "NULL",
-//     "Metabolites": "NULL",
+//     "Glucuronides": "CATO",
+//     "Metabolites": "CATO",
 //     "Capricorn": "Capricorn",
 //     "Analytical Instruments": "BIKAI",
 //     "Lab Consumables": "FD Cell",
-//     "Equipment and Instruments": "NULL",
+//     "Equipment and Instruments": "BIKAI",
 //     "Ultrapur": "KANTO",
-//     "Assets": "NULL",
 //     "Dyes": "Density",
-//     "New Life Biologics": "Life Science", 
-//     "Food Grade": "NULL",
-//     "Lab Systems & Fixtures": "NULL",
+//     "New Life Biologics": "Life Science",
+//     "Food Grade": "Life Science",
+//     "Lab Systems & Fixtures": "BIKAI",
 //     "Peptides": "Life Science",
 //     "Ultrapur-100": "KANTO",
 //     "Amino Acids": "Life Science",
-//     "Cell Culture": "NULL",
+//     "Cell Culture": "Life Science",
 //     "Natural Products": "Life Science",
-//     "Multiple Pharmacopoeia": "NULL",
+//     "Multiple Pharmacopoeia": "CATO",
 //     "Metal Standard Solutions": "KANTO",
-//     "High Purity Acids": "NULL",
+//     "High Purity Acids": "KANTO",
 //     "HPLC consumables": "BIKAI",
 //     "HPLC configurations": "BIKAI",
-//     "VOLAB": "NULL",
-//     "Life science": "NULL",
-//     "Kanto": "NULL", 
-//     "Meatls&materials": "NULL",
-//     "Fixed Assets": "NULL"
+//     "VOLAB": "VOLAB",
+//     "Life science": "Life Science",
+//     "Kanto": "KANTO",
+//     "Meatls&materials": "Density"
 //   };
 
 //   // Function to merge categories in frontend
@@ -143,7 +155,7 @@
 //       });
 //     });
     
-//     // Calculate final weighted margins - ROUND TO 2 DECIMALS
+//     // Calculate final weighted margins
 //     Object.keys(mergedData).forEach(key => {
 //       const row = mergedData[key];
 //       if (row._tempMargins) {
@@ -152,7 +164,6 @@
 //           const marginKey = `${category}_Margin`;
 //           const marginValue = totalSales > 0 ? 
 //             (totalWeightedMargin / totalSales) * 100 : 0;
-//           // Round to 2 decimals
 //           row[marginKey] = Number(marginValue.toFixed(2));
 //         });
 //         // Remove temporary data
@@ -175,10 +186,10 @@
 //     return () => window.removeEventListener("resize", checkMobile);
 //   }, []);
 
-//   // Fetch data automatically on component mount
+//   // Auto-fetch data when filters change
 //   useEffect(() => {
 //     fetchData();
-//   }, []);
+//   }, [selectedYear, selectedSalesPerson, selectedRegion, selectedState]);
 
 //   const fetchData = async () => {
 //     setLoading(true);
@@ -213,7 +224,7 @@
 //           const finalCategories = Object.keys(mergedData[0])
 //             .filter(key => key.endsWith('_Sales'))
 //             .map(key => key.replace('_Sales', ''))
-//             .filter(cat => cat !== '_tempMargins' && categoryMapping[cat] !== "NULL"); // Exclude temp data and NULL categories
+//             .filter(cat => cat !== '_tempMargins' && categoryMapping[cat] !== "NULL");
           
 //           console.log("🎯 FINAL CATEGORIES:", finalCategories);
           
@@ -236,22 +247,15 @@
 //     }
 //   };
 
-//   const handleApplyFilters = () => {
-//     fetchData();
-//   };
-
 //   const handleResetFilters = () => {
 //     setSelectedYear("FY 2025-26");
 //     setSelectedSalesPerson("");
 //     setSelectedRegion("");
 //     setSelectedState("");
-//     setTimeout(() => {
-//       fetchData();
-//     }, 100);
 //   };
 
 //   const handleDownloadExcel = () => {
-//     exportToExcel(data, categories, selectedYear);
+//     exportToExcel(data, categories, selectedYear, targetMarginValues);
 //   };
 
 //   return (
@@ -266,7 +270,6 @@
 //         setSelectedRegion={setSelectedRegion}
 //         selectedState={selectedState}
 //         setSelectedState={setSelectedState}
-//         onApply={handleApplyFilters}
 //         onReset={handleResetFilters}
 //       />
 
@@ -288,6 +291,7 @@
 //           data={data}
 //           categories={categories}
 //           onDownloadExcel={handleDownloadExcel}
+//           targetMargins={targetMarginValues}
 //         />
 //       )}
 //     </div>
@@ -315,146 +319,157 @@ export default function BrandwiseAnalysis() {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Category mapping configuration
+  // Hardcoded target margin values for categories (%)
+  const targetMarginValues = {
+    "3A Chemicals": 25,
+    "BIKAI": 20,
+    "CATO": 30,
+    "FD Cell": 25,
+    "KANTO": 25,
+    "Capricorn": 20,
+    "VOLAB": 20,
+    "Density": 20,
+    "Deutero": 25,
+    "Trading": 15,
+    "Life Science": 25,
+    "Other": 20,
+  };
+
+  // Updated category mapping configuration
   const categoryMapping = {
-    "Items": "Life Science",
-    "3A Chemicals": "3A Chemicals", 
-    "Catalyst": "Density",
-    "Solvent": "Density",
-    "Polymer": "Density",
+    Items: "Trading",
+    "3A Chemicals": "3A Chemicals",
+    Catalyst: "Density",
+    Solvent: "Density",
+    Polymer: "Density",
     "Fine Chemicals": "Density",
-    "Reagent": "Density",
+    Reagent: "Density",
     "Biological Buffers": "Life Science",
-    "Cylinders": "NULL",
-    "Intermediates": "Density", 
-    "API": "CATO",
+    Intermediates: "Density",
+    API: "CATO",
     "Stable Isotope reagents": "Deutero",
     "Building Blocks": "Density",
-    "Membranes": "NULL",
-    "Cans": "NULL",
+    Membranes: "Life Science",
     "Laboratory Containers & Storage": "FD Cell",
-    "Enzyme": "Life Science",
-    "Biochemicals": "Life Science",
-    "Reference Materials": "NULL",
-    "Secondary Standards": "NULL", 
-    "Instruments": "NULL",
-    "Services": "NULL",
-    "Analytical Standards": "NULL",
-    "Nucleosides and Nucleotides": "NULL",
-    "Nitrosamine": "CATO",
+    Enzyme: "Life Science",
+    Biochemicals: "Life Science",
+    "Reference Materials": "KANTO",
+    "Secondary Standards": "KANTO",
+    Instruments: "BIKAI",
+    Services: "NULL",
+    "Analytical Standards": "KANTO",
+    "Nucleosides and Nucleotides": "Life Science",
+    Nitrosamine: "CATO",
     "Pesticide Standards": "CATO",
-    "Trading": "Trading",
-    "Packaging Materials": "NULL",
-    "Carbohydrates": "Life Science",
-    "USP Standards": "NULL",
-    "EP Standards": "NULL",
-    "Indian pharmacopoeia": "NULL",
+    Trading: "Trading",
+    Carbohydrates: "Life Science",
+    "USP Standards": "CATO",
+    "EP Standards": "CATO",
+    "Indian pharmacopoeia": "CATO",
     "British Pharmacopoeia": "CATO",
-    "Impurity": "CATO",
+    Impurity: "CATO",
     "NMR Solvents": "Deutero",
     "Stable isotopes": "Deutero",
-    "Glucuronides": "NULL",
-    "Metabolites": "NULL",
-    "Capricorn": "Capricorn",
+    Glucuronides: "CATO",
+    Metabolites: "CATO",
+    Capricorn: "Capricorn",
     "Analytical Instruments": "BIKAI",
     "Lab Consumables": "FD Cell",
-    "Equipment and Instruments": "NULL",
-    "Ultrapur": "KANTO",
-    "Assets": "NULL",
-    "Dyes": "Density",
-    "New Life Biologics": "Life Science", 
-    "Food Grade": "NULL",
-    "Lab Systems & Fixtures": "NULL",
-    "Peptides": "Life Science",
+    "Equipment and Instruments": "BIKAI",
+    Ultrapur: "KANTO",
+    Dyes: "Density",
+    "New Life Biologics": "Life Science",
+    "Food Grade": "Life Science",
+    "Lab Systems & Fixtures": "BIKAI",
+    Peptides: "Life Science",
     "Ultrapur-100": "KANTO",
     "Amino Acids": "Life Science",
-    "Cell Culture": "NULL",
+    "Cell Culture": "Life Science",
     "Natural Products": "Life Science",
-    "Multiple Pharmacopoeia": "NULL",
+    "Multiple Pharmacopoeia": "CATO",
     "Metal Standard Solutions": "KANTO",
-    "High Purity Acids": "NULL",
+    "High Purity Acids": "KANTO",
     "HPLC consumables": "BIKAI",
     "HPLC configurations": "BIKAI",
-    "VOLAB": "NULL",
-    "Life science": "NULL",
-    "Kanto": "NULL", 
-    "Meatls&materials": "NULL",
-    "Fixed Assets": "NULL"
+    VOLAB: "VOLAB",
+    "Life science": "Life Science",
+    Kanto: "KANTO",
+    "Meatls&materials": "Density",
   };
 
   // Function to merge categories in frontend
   const mergeCategories = (rawData) => {
     const mergedData = {};
-    
-    rawData.forEach(row => {
+
+    rawData.forEach((row) => {
       const key = `${row.Year}-${row.Month}`;
-      
+
       if (!mergedData[key]) {
         mergedData[key] = {
           Year: row.Year,
           Month: row.Month,
-          MonthNumber: row.MonthNumber
+          MonthNumber: row.MonthNumber,
         };
       }
-      
+
       // Process each category column in the row
-      Object.keys(row).forEach(column => {
-        if (column.endsWith('_Sales') || column.endsWith('_Margin')) {
-          const originalCategory = column.replace(/_Sales|_Margin/, '');
+      Object.keys(row).forEach((column) => {
+        if (column.endsWith("_Sales") || column.endsWith("_Margin")) {
+          const originalCategory = column.replace(/_Sales|_Margin/, "");
           const targetCategory = categoryMapping[originalCategory] || "Other";
-          
+
           // Skip NULL categories
           if (targetCategory === "NULL") return;
-          
+
           const salesKey = `${targetCategory}_Sales`;
           const marginKey = `${targetCategory}_Margin`;
-          
+
           // Initialize if not exists
           if (!mergedData[key][salesKey]) {
             mergedData[key][salesKey] = 0;
             mergedData[key][marginKey] = 0;
           }
-          
-          if (column.endsWith('_Sales')) {
+
+          if (column.endsWith("_Sales")) {
             // Add sales directly
             mergedData[key][salesKey] += row[column] || 0;
-          } else if (column.endsWith('_Margin')) {
-            // For margin, we need to calculate weighted average later
-            // Store temporary data for weighted calculation
+          } else if (column.endsWith("_Margin")) {
+            // For margin, store temporary data for weighted calculation
             if (!mergedData[key]._tempMargins) {
               mergedData[key]._tempMargins = {};
             }
             if (!mergedData[key]._tempMargins[targetCategory]) {
               mergedData[key]._tempMargins[targetCategory] = {
                 totalWeightedMargin: 0,
-                totalSales: 0
+                totalSales: 0,
               };
             }
             const sales = row[`${originalCategory}_Sales`] || 0;
             const margin = row[column] || 0;
-            mergedData[key]._tempMargins[targetCategory].totalWeightedMargin += sales * (margin / 100);
+            mergedData[key]._tempMargins[targetCategory].totalWeightedMargin +=
+              sales * (margin / 100);
             mergedData[key]._tempMargins[targetCategory].totalSales += sales;
           }
         }
       });
     });
-    
+
     // Calculate final weighted margins
-    Object.keys(mergedData).forEach(key => {
+    Object.keys(mergedData).forEach((key) => {
       const row = mergedData[key];
       if (row._tempMargins) {
-        Object.keys(row._tempMargins).forEach(category => {
+        Object.keys(row._tempMargins).forEach((category) => {
           const { totalWeightedMargin, totalSales } = row._tempMargins[category];
           const marginKey = `${category}_Margin`;
-          const marginValue = totalSales > 0 ? 
-            (totalWeightedMargin / totalSales) * 100 : 0;
+          const marginValue =
+            totalSales > 0 ? (totalWeightedMargin / totalSales) * 100 : 0;
           row[marginKey] = Number(marginValue.toFixed(2));
         });
         // Remove temporary data
         delete row._tempMargins;
       }
     });
-    
+
     return Object.values(mergedData);
   };
 
@@ -502,16 +517,43 @@ export default function BrandwiseAnalysis() {
         // Merge categories in frontend
         const mergedData = mergeCategories(result.data);
         console.log("🔀 MERGED DATA:", mergedData);
-        
-        // Extract final categories from merged data (excluding NULL categories)
+
         if (mergedData.length > 0) {
-          const finalCategories = Object.keys(mergedData[0])
-            .filter(key => key.endsWith('_Sales'))
-            .map(key => key.replace('_Sales', ''))
-            .filter(cat => cat !== '_tempMargins' && categoryMapping[cat] !== "NULL");
-          
-          console.log("🎯 FINAL CATEGORIES:", finalCategories);
-          
+          // 🔧 NEW: Build category list as a UNION across ALL rows
+          const categorySet = new Set();
+          mergedData.forEach((r) => {
+            Object.keys(r).forEach((k) => {
+              if (k.endsWith("_Sales")) {
+                const cat = k.replace("_Sales", "");
+                if (cat !== "_tempMargins" && categoryMapping[cat] !== "NULL") {
+                  categorySet.add(cat);
+                }
+              }
+            });
+          });
+
+          // Optional: stable ordering for nicer presentation
+          const preferredOrder = [
+            "3A Chemicals",
+            "BIKAI",
+            "CATO",
+            "FD Cell",
+            "KANTO",
+            "Capricorn",
+            "VOLAB",
+            "Density",
+            "Deutero",
+            "Trading",
+            "Life Science",
+            "Other",
+          ];
+          const finalCategories = [
+            ...preferredOrder.filter((c) => categorySet.has(c)),
+            ...[...categorySet].filter((c) => !preferredOrder.includes(c)),
+          ];
+
+          console.log("🎯 FINAL CATEGORIES (UNION):", finalCategories);
+
           setCategories(finalCategories);
           setData(processDataForDisplay(mergedData, finalCategories));
         } else {
@@ -536,11 +578,10 @@ export default function BrandwiseAnalysis() {
     setSelectedSalesPerson("");
     setSelectedRegion("");
     setSelectedState("");
-    // No need to call fetchData here as useEffect will trigger automatically
   };
 
   const handleDownloadExcel = () => {
-    exportToExcel(data, categories, selectedYear);
+    exportToExcel(data, categories, selectedYear, targetMarginValues);
   };
 
   return (
@@ -556,7 +597,6 @@ export default function BrandwiseAnalysis() {
         selectedState={selectedState}
         setSelectedState={setSelectedState}
         onReset={handleResetFilters}
-        // Removed onApply prop since we auto-fetch now
       />
 
       <FilterBadges
@@ -577,6 +617,7 @@ export default function BrandwiseAnalysis() {
           data={data}
           categories={categories}
           onDownloadExcel={handleDownloadExcel}
+          targetMargins={targetMarginValues}
         />
       )}
     </div>
