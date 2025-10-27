@@ -1,6 +1,5 @@
 
 
-
 // // pages/target-analytics/components/brandwise/QuarterlyTable.js
 // import React from "react";
 // import { calculateRowTotal } from "utils/brandwise/dataProcessing";
@@ -27,9 +26,6 @@
 
 //   // ---------- Visible months (only what's shown on the frontend) ----------
 //   const monthlyRows = data.filter((r) => !r.isQuarter && r.MonthNumber);
-//   const visibleMonthKeys = new Set(
-//     monthlyRows.map((r) => toMonthKey(r))
-//   );
 
 //   // ---------- Quarter helpers ----------
 //   const QUARTER_MAP = {
@@ -41,27 +37,26 @@
 
 //   const getQuarterMonthNumbers = (qLabel) => QUARTER_MAP[qLabel] || [];
 
-//   // Return only the month-keys that are BOTH (a) in that quarter, (b) currently visible
-//   const getQuarterVisibleMonthKeys = (qLabel) => {
+//   // ⬇️ REVISED: constrain to months of the SAME YEAR as the quarter row
+//   const getQuarterVisibleMonthKeys = (qLabel, rowYear) => {
 //     const monthNums = new Set(getQuarterMonthNumbers(qLabel));
 //     return monthlyRows
-//       .filter((r) => monthNums.has(Number(r.MonthNumber)))
-//       .map((r) => toMonthKey(r))
-//       .filter((k) => visibleMonthKeys.has(k));
+//       .filter((r) => r.Year === rowYear && monthNums.has(Number(r.MonthNumber)))
+//       .map((r) => toMonthKey(r));
 //   };
 
-//   // Sum quarter target (Cr) for one category across visible months
-//   const calcQuarterCategoryTarget = (qLabel, category) => {
-//     const keys = getQuarterVisibleMonthKeys(qLabel);
+//   // Sum quarter target (Cr) for one category across visible months in SAME YEAR
+//   const calcQuarterCategoryTarget = (qLabel, category, rowYear) => {
+//     const keys = getQuarterVisibleMonthKeys(qLabel, rowYear);
 //     return keys.reduce(
 //       (sum, k) => sum + (TARGET_SALES_CR_FY_2025_26?.[k]?.[category] ?? 0),
 //       0
 //     );
 //   };
 
-//   // Sum quarter target (Cr) for ALL categories across visible months
-//   const calcQuarterRowTarget = (qLabel) => {
-//     const keys = getQuarterVisibleMonthKeys(qLabel);
+//   // Sum quarter target (Cr) for ALL categories across visible months in SAME YEAR
+//   const calcQuarterRowTarget = (qLabel, rowYear) => {
+//     const keys = getQuarterVisibleMonthKeys(qLabel, rowYear);
 //     return keys.reduce((acc, k) => {
 //       const rowTargets = categories.reduce(
 //         (s, c) => s + (TARGET_SALES_CR_FY_2025_26?.[k]?.[c] ?? 0),
@@ -79,7 +74,7 @@
 //       totalWeightedMargin: 0, // for weighted margin calculation
 //       categorySales: {},     // actuals by category (₹, not Cr)
 //       categoryTarget: {},    // targets by category (Cr)
-//       categoryMargins: {},   // ADDED: weighted margins by category
+//       categoryMargins: {},   // weighted margins by category
 //     };
 
 //     // init per-category buckets
@@ -154,11 +149,11 @@
 //       ? "#f0fdf4"
 //       : "transparent";
 
-//     // Target cell value (Cr). For quarter rows, sum visible months in that quarter.
+//     // Target cell value (Cr). For quarter rows, sum only months in same year.
 //     let targetDisplay = "-";
 //     if (row.isQuarter) {
 //       const qLabel = String(row.Month || "").toUpperCase(); // "Q1","Q2","Q3","Q4"
-//       const qCatTargetCr = calcQuarterCategoryTarget(qLabel, category);
+//       const qCatTargetCr = calcQuarterCategoryTarget(qLabel, category, row.Year); // ⬅️ pass row.Year
 //       targetDisplay = `₹${Number(qCatTargetCr).toFixed(2)} Cr`;
 //     } else if (row.MonthNumber) {
 //       const mKey = toMonthKey(row);
@@ -290,7 +285,7 @@
 //           ₹{toCrores(categorySales)} Cr
 //         </td>
 
-//         {/* Margin total - NOW CALCULATED */}
+//         {/* Margin total */}
 //         <td
 //           style={{
 //             padding: isMobile ? "8px 6px" : "12px 8px",
@@ -562,7 +557,7 @@
 //               let rowTargetCr = "-";
 //               if (row.isQuarter) {
 //                 const qLabel = String(row.Month || "").toUpperCase();
-//                 rowTargetCr = Number(calcQuarterRowTarget(qLabel)).toFixed(2);
+//                 rowTargetCr = Number(calcQuarterRowTarget(qLabel, row.Year)).toFixed(2); // ⬅️ pass row.Year
 //               } else if (row.MonthNumber) {
 //                 const mKey = toMonthKey(row);
 //                 const sum = categories.reduce(
@@ -802,6 +797,7 @@
 //   );
 // }
 
+
 // pages/target-analytics/components/brandwise/QuarterlyTable.js
 import React from "react";
 import { calculateRowTotal } from "utils/brandwise/dataProcessing";
@@ -839,26 +835,47 @@ export default function QuarterlyTable({
 
   const getQuarterMonthNumbers = (qLabel) => QUARTER_MAP[qLabel] || [];
 
-  // ⬇️ REVISED: constrain to months of the SAME YEAR as the quarter row
-  const getQuarterVisibleMonthKeys = (qLabel, rowYear) => {
+  // Helper to extract fiscal year from row
+  const getFiscalYearFromRow = (row) => {
+    const yearMatch = row.Year?.toString().match(/(\d{4})/);
+    return yearMatch ? parseInt(yearMatch[1]) : null;
+  };
+
+  // ⬇️ FIXED: Get quarter month keys accounting for fiscal year spanning
+  const getQuarterVisibleMonthKeys = (qLabel, row) => {
     const monthNums = new Set(getQuarterMonthNumbers(qLabel));
+    const fiscalYear = getFiscalYearFromRow(row);
+    
+    if (!fiscalYear) return [];
+    
     return monthlyRows
-      .filter((r) => r.Year === rowYear && monthNums.has(Number(r.MonthNumber)))
+      .filter((r) => {
+        const monthNum = Number(r.MonthNumber);
+        if (!monthNums.has(monthNum)) return false;
+        
+        // For Q4 (Jan-Mar), year should be fiscalYear + 1
+        // For Q1-Q3 (Apr-Dec), year should be fiscalYear
+        if (qLabel === 'Q4' && [1, 2, 3].includes(monthNum)) {
+          return r.Year === fiscalYear + 1;
+        } else {
+          return r.Year === fiscalYear;
+        }
+      })
       .map((r) => toMonthKey(r));
   };
 
-  // Sum quarter target (Cr) for one category across visible months in SAME YEAR
-  const calcQuarterCategoryTarget = (qLabel, category, rowYear) => {
-    const keys = getQuarterVisibleMonthKeys(qLabel, rowYear);
+  // Sum quarter target (Cr) for one category
+  const calcQuarterCategoryTarget = (qLabel, category, row) => {
+    const keys = getQuarterVisibleMonthKeys(qLabel, row);
     return keys.reduce(
       (sum, k) => sum + (TARGET_SALES_CR_FY_2025_26?.[k]?.[category] ?? 0),
       0
     );
   };
 
-  // Sum quarter target (Cr) for ALL categories across visible months in SAME YEAR
-  const calcQuarterRowTarget = (qLabel, rowYear) => {
-    const keys = getQuarterVisibleMonthKeys(qLabel, rowYear);
+  // Sum quarter target (Cr) for ALL categories
+  const calcQuarterRowTarget = (qLabel, row) => {
+    const keys = getQuarterVisibleMonthKeys(qLabel, row);
     return keys.reduce((acc, k) => {
       const rowTargets = categories.reduce(
         (s, c) => s + (TARGET_SALES_CR_FY_2025_26?.[k]?.[c] ?? 0),
@@ -951,11 +968,11 @@ export default function QuarterlyTable({
       ? "#f0fdf4"
       : "transparent";
 
-    // Target cell value (Cr). For quarter rows, sum only months in same year.
+    // Target cell value (Cr). For quarter rows, sum months in fiscal year span.
     let targetDisplay = "-";
     if (row.isQuarter) {
       const qLabel = String(row.Month || "").toUpperCase(); // "Q1","Q2","Q3","Q4"
-      const qCatTargetCr = calcQuarterCategoryTarget(qLabel, category, row.Year); // ⬅️ pass row.Year
+      const qCatTargetCr = calcQuarterCategoryTarget(qLabel, category, row);
       targetDisplay = `₹${Number(qCatTargetCr).toFixed(2)} Cr`;
     } else if (row.MonthNumber) {
       const mKey = toMonthKey(row);
@@ -1359,7 +1376,7 @@ export default function QuarterlyTable({
               let rowTargetCr = "-";
               if (row.isQuarter) {
                 const qLabel = String(row.Month || "").toUpperCase();
-                rowTargetCr = Number(calcQuarterRowTarget(qLabel, row.Year)).toFixed(2); // ⬅️ pass row.Year
+                rowTargetCr = Number(calcQuarterRowTarget(qLabel, row)).toFixed(2);
               } else if (row.MonthNumber) {
                 const mKey = toMonthKey(row);
                 const sum = categories.reduce(

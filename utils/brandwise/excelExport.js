@@ -110,15 +110,11 @@
 //   return totals;
 // };
 
-// // Get visible months from data
-// const getVisibleMonthKeys = (data) => {
-//   const monthlyRows = data.filter((r) => !r.isQuarter && r.MonthNumber);
-//   return new Set(monthlyRows.map((r) => toMonthKey(r)));
-// };
-
-// // Calculate quarter category target
-// const calcQuarterCategoryTarget = (qLabel, category, data) => {
-//   const monthlyRows = data.filter((r) => !r.isQuarter && r.MonthNumber);
+// // ⬇️ REVISED: Quarter target helpers constrained to the row's YEAR
+// const calcQuarterCategoryTarget = (qLabel, category, data, rowYear) => {
+//   const monthlyRows = data.filter(
+//     (r) => !r.isQuarter && r.MonthNumber && r.Year === rowYear
+//   );
 //   const monthNums = new Set(getQuarterMonthNumbers(qLabel));
 //   const quarterRows = monthlyRows.filter((r) => monthNums.has(Number(r.MonthNumber)));
   
@@ -128,9 +124,10 @@
 //   }, 0);
 // };
 
-// // Calculate quarter row target
-// const calcQuarterRowTarget = (qLabel, categories, data) => {
-//   const monthlyRows = data.filter((r) => !r.isQuarter && r.MonthNumber);
+// const calcQuarterRowTarget = (qLabel, categories, data, rowYear) => {
+//   const monthlyRows = data.filter(
+//     (r) => !r.isQuarter && r.MonthNumber && r.Year === rowYear
+//   );
 //   const monthNums = new Set(getQuarterMonthNumbers(qLabel));
 //   const quarterRows = monthlyRows.filter((r) => monthNums.has(Number(r.MonthNumber)));
   
@@ -186,31 +183,31 @@
 //       totalSales += sales;
 //       totalWeightedMargin += sales * (margin / 100);
       
-//       // Calculate target value (same logic as QuarterlyTable)
+//       // Calculate target value (scoped to row's year for quarters)
 //       let targetValue = 0;
 //       if (row.isQuarter) {
 //         const qLabel = String(row.Month || "").toUpperCase();
-//         targetValue = calcQuarterCategoryTarget(qLabel, cat, data);
+//         targetValue = calcQuarterCategoryTarget(qLabel, cat, data, row.Year); // ⬅️ pass row.Year
 //       } else if (row.MonthNumber) {
 //         const mKey = toMonthKey(row);
 //         targetValue = TARGET_SALES_CR_FY_2025_26?.[mKey]?.[cat] ?? 0;
 //       }
       
 //       // Push data for this category (3 columns)
-//       rowData.push(Number(targetValue)); // Target in Crores
-//       rowData.push(Number(toCrores(sales))); // Sales in Crores
-//       rowData.push(Number(margin)); // Margin %
+//       rowData.push(Number(targetValue));         // Target in Crores
+//       rowData.push(Number(toCrores(sales)));     // Sales in Crores
+//       rowData.push(Number(margin));              // Margin %
 //     });
     
 //     // Calculate weighted average margin
 //     const avgMargin = totalSales > 0 ? 
 //       (totalWeightedMargin / totalSales) * 100 : 0;
     
-//     // Calculate row target total (same logic as QuarterlyTable)
+//     // Calculate row target total (scoped to row's year for quarters)
 //     let rowTargetCr = 0;
 //     if (row.isQuarter) {
 //       const qLabel = String(row.Month || "").toUpperCase();
-//       rowTargetCr = calcQuarterRowTarget(qLabel, categories, data);
+//       rowTargetCr = calcQuarterRowTarget(qLabel, categories, data, row.Year); // ⬅️ pass row.Year
 //     } else if (row.MonthNumber) {
 //       const mKey = toMonthKey(row);
 //       rowTargetCr = categories.reduce(
@@ -220,9 +217,9 @@
 //     }
     
 //     // Push total data (3 columns)
-//     rowData.push(Number(rowTargetCr)); // Target in Crores
-//     rowData.push(Number(toCrores(totalSales))); // Total Sales in Crores
-//     rowData.push(Number(avgMargin.toFixed(2))); // Weighted Average Margin
+//     rowData.push(Number(rowTargetCr));                 // Target in Crores
+//     rowData.push(Number(toCrores(totalSales)));        // Total Sales in Crores
+//     rowData.push(Number(avgMargin.toFixed(2)));        // Weighted Average Margin
     
 //     excelData.push(rowData);
 //   });
@@ -236,15 +233,15 @@
 //     const categorySales = grandTotals.categorySales[cat] || 0;
 //     const categoryMargin = grandTotals.categoryMargins[cat]?.finalMargin || 0;
     
-//     totalRow.push(Number(categoryTarget)); // Target
+//     totalRow.push(Number(categoryTarget));          // Target
 //     totalRow.push(Number(toCrores(categorySales))); // Sales
-//     totalRow.push(Number(categoryMargin)); // Margin
+//     totalRow.push(Number(categoryMargin));          // Margin
 //   });
   
 //   // Overall totals (only visible months)
-//   totalRow.push(Number(grandTotals.totalTarget)); // Total Target
-//   totalRow.push(Number(toCrores(grandTotals.totalSales))); // Total Sales
-//   totalRow.push(Number(grandTotals.grandTotalMargin)); // Total Margin
+//   totalRow.push(Number(grandTotals.totalTarget));             // Total Target
+//   totalRow.push(Number(toCrores(grandTotals.totalSales)));    // Total Sales
+//   totalRow.push(Number(grandTotals.grandTotalMargin));        // Total Margin
   
 //   excelData.push(totalRow);
   
@@ -302,19 +299,19 @@
 //       const salesCol = colOffset + 1;
 //       const marginCol = colOffset + 2;
       
-//       // Format Target column (currency)
+//       // Format Target column (numeric with 2 decimals)
 //       const targetCell = XLSX.utils.encode_cell({ r: R, c: targetCol });
 //       if (ws[targetCell]) {
 //         if (!ws[targetCell].z) ws[targetCell].z = '#,##0.00';
 //       }
       
-//       // Format Sales column (currency)
+//       // Format Sales column (numeric with 2 decimals)
 //       const salesCell = XLSX.utils.encode_cell({ r: R, c: salesCol });
 //       if (ws[salesCell]) {
 //         if (!ws[salesCell].z) ws[salesCell].z = '#,##0.00';
 //       }
       
-//       // Format Margin column (percentage)
+//       // Format Margin column (percentage-looking text)
 //       const marginCell = XLSX.utils.encode_cell({ r: R, c: marginCol });
 //       if (ws[marginCell]) {
 //         if (!ws[marginCell].z) ws[marginCell].z = '0.00"%";-0.00"%";0.00"%";';
@@ -375,6 +372,12 @@ const QUARTER_MAP = {
 };
 
 const getQuarterMonthNumbers = (qLabel) => QUARTER_MAP[qLabel] || [];
+
+// Helper to extract fiscal year from row
+const getFiscalYearFromRow = (row) => {
+  const yearMatch = row.Year?.toString().match(/(\d{4})/);
+  return yearMatch ? parseInt(yearMatch[1]) : null;
+};
 
 // Calculate grand totals (same logic as your component)
 const calculateGrandTotals = (data, categories) => {
@@ -443,13 +446,26 @@ const calculateGrandTotals = (data, categories) => {
   return totals;
 };
 
-// ⬇️ REVISED: Quarter target helpers constrained to the row's YEAR
-const calcQuarterCategoryTarget = (qLabel, category, data, rowYear) => {
-  const monthlyRows = data.filter(
-    (r) => !r.isQuarter && r.MonthNumber && r.Year === rowYear
-  );
+// ⬇️ FIXED: Quarter target helpers accounting for fiscal year spanning
+const calcQuarterCategoryTarget = (qLabel, category, data, row) => {
+  const fiscalYear = getFiscalYearFromRow(row);
+  if (!fiscalYear) return 0;
+  
+  const monthlyRows = data.filter((r) => !r.isQuarter && r.MonthNumber);
   const monthNums = new Set(getQuarterMonthNumbers(qLabel));
-  const quarterRows = monthlyRows.filter((r) => monthNums.has(Number(r.MonthNumber)));
+  
+  const quarterRows = monthlyRows.filter((r) => {
+    const monthNum = Number(r.MonthNumber);
+    if (!monthNums.has(monthNum)) return false;
+    
+    // For Q4 (Jan-Mar), year should be fiscalYear + 1
+    // For Q1-Q3 (Apr-Dec), year should be fiscalYear
+    if (qLabel === 'Q4' && [1, 2, 3].includes(monthNum)) {
+      return r.Year === fiscalYear + 1;
+    } else {
+      return r.Year === fiscalYear;
+    }
+  });
   
   return quarterRows.reduce((sum, row) => {
     const mKey = toMonthKey(row);
@@ -457,12 +473,25 @@ const calcQuarterCategoryTarget = (qLabel, category, data, rowYear) => {
   }, 0);
 };
 
-const calcQuarterRowTarget = (qLabel, categories, data, rowYear) => {
-  const monthlyRows = data.filter(
-    (r) => !r.isQuarter && r.MonthNumber && r.Year === rowYear
-  );
+const calcQuarterRowTarget = (qLabel, categories, data, row) => {
+  const fiscalYear = getFiscalYearFromRow(row);
+  if (!fiscalYear) return 0;
+  
+  const monthlyRows = data.filter((r) => !r.isQuarter && r.MonthNumber);
   const monthNums = new Set(getQuarterMonthNumbers(qLabel));
-  const quarterRows = monthlyRows.filter((r) => monthNums.has(Number(r.MonthNumber)));
+  
+  const quarterRows = monthlyRows.filter((r) => {
+    const monthNum = Number(r.MonthNumber);
+    if (!monthNums.has(monthNum)) return false;
+    
+    // For Q4 (Jan-Mar), year should be fiscalYear + 1
+    // For Q1-Q3 (Apr-Dec), year should be fiscalYear
+    if (qLabel === 'Q4' && [1, 2, 3].includes(monthNum)) {
+      return r.Year === fiscalYear + 1;
+    } else {
+      return r.Year === fiscalYear;
+    }
+  });
   
   return quarterRows.reduce((acc, row) => {
     const mKey = toMonthKey(row);
@@ -516,11 +545,11 @@ export const exportToExcel = (data, categories, selectedYear, targetMargins) => 
       totalSales += sales;
       totalWeightedMargin += sales * (margin / 100);
       
-      // Calculate target value (scoped to row's year for quarters)
+      // Calculate target value (accounting for fiscal year spanning)
       let targetValue = 0;
       if (row.isQuarter) {
         const qLabel = String(row.Month || "").toUpperCase();
-        targetValue = calcQuarterCategoryTarget(qLabel, cat, data, row.Year); // ⬅️ pass row.Year
+        targetValue = calcQuarterCategoryTarget(qLabel, cat, data, row);
       } else if (row.MonthNumber) {
         const mKey = toMonthKey(row);
         targetValue = TARGET_SALES_CR_FY_2025_26?.[mKey]?.[cat] ?? 0;
@@ -536,11 +565,11 @@ export const exportToExcel = (data, categories, selectedYear, targetMargins) => 
     const avgMargin = totalSales > 0 ? 
       (totalWeightedMargin / totalSales) * 100 : 0;
     
-    // Calculate row target total (scoped to row's year for quarters)
+    // Calculate row target total (accounting for fiscal year spanning)
     let rowTargetCr = 0;
     if (row.isQuarter) {
       const qLabel = String(row.Month || "").toUpperCase();
-      rowTargetCr = calcQuarterRowTarget(qLabel, categories, data, row.Year); // ⬅️ pass row.Year
+      rowTargetCr = calcQuarterRowTarget(qLabel, categories, data, row);
     } else if (row.MonthNumber) {
       const mKey = toMonthKey(row);
       rowTargetCr = categories.reduce(
