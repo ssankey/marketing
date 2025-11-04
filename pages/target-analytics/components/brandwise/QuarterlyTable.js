@@ -37,26 +37,47 @@
 
 //   const getQuarterMonthNumbers = (qLabel) => QUARTER_MAP[qLabel] || [];
 
-//   // ⬇️ REVISED: constrain to months of the SAME YEAR as the quarter row
-//   const getQuarterVisibleMonthKeys = (qLabel, rowYear) => {
+//   // Helper to extract fiscal year from row
+//   const getFiscalYearFromRow = (row) => {
+//     const yearMatch = row.Year?.toString().match(/(\d{4})/);
+//     return yearMatch ? parseInt(yearMatch[1]) : null;
+//   };
+
+//   // ⬇️ FIXED: Get quarter month keys accounting for fiscal year spanning
+//   const getQuarterVisibleMonthKeys = (qLabel, row) => {
 //     const monthNums = new Set(getQuarterMonthNumbers(qLabel));
+//     const fiscalYear = getFiscalYearFromRow(row);
+    
+//     if (!fiscalYear) return [];
+    
 //     return monthlyRows
-//       .filter((r) => r.Year === rowYear && monthNums.has(Number(r.MonthNumber)))
+//       .filter((r) => {
+//         const monthNum = Number(r.MonthNumber);
+//         if (!monthNums.has(monthNum)) return false;
+        
+//         // For Q4 (Jan-Mar), year should be fiscalYear + 1
+//         // For Q1-Q3 (Apr-Dec), year should be fiscalYear
+//         if (qLabel === 'Q4' && [1, 2, 3].includes(monthNum)) {
+//           return r.Year === fiscalYear + 1;
+//         } else {
+//           return r.Year === fiscalYear;
+//         }
+//       })
 //       .map((r) => toMonthKey(r));
 //   };
 
-//   // Sum quarter target (Cr) for one category across visible months in SAME YEAR
-//   const calcQuarterCategoryTarget = (qLabel, category, rowYear) => {
-//     const keys = getQuarterVisibleMonthKeys(qLabel, rowYear);
+//   // Sum quarter target (Cr) for one category
+//   const calcQuarterCategoryTarget = (qLabel, category, row) => {
+//     const keys = getQuarterVisibleMonthKeys(qLabel, row);
 //     return keys.reduce(
 //       (sum, k) => sum + (TARGET_SALES_CR_FY_2025_26?.[k]?.[category] ?? 0),
 //       0
 //     );
 //   };
 
-//   // Sum quarter target (Cr) for ALL categories across visible months in SAME YEAR
-//   const calcQuarterRowTarget = (qLabel, rowYear) => {
-//     const keys = getQuarterVisibleMonthKeys(qLabel, rowYear);
+//   // Sum quarter target (Cr) for ALL categories
+//   const calcQuarterRowTarget = (qLabel, row) => {
+//     const keys = getQuarterVisibleMonthKeys(qLabel, row);
 //     return keys.reduce((acc, k) => {
 //       const rowTargets = categories.reduce(
 //         (s, c) => s + (TARGET_SALES_CR_FY_2025_26?.[k]?.[c] ?? 0),
@@ -149,11 +170,11 @@
 //       ? "#f0fdf4"
 //       : "transparent";
 
-//     // Target cell value (Cr). For quarter rows, sum only months in same year.
+//     // Target cell value (Cr). For quarter rows, sum months in fiscal year span.
 //     let targetDisplay = "-";
 //     if (row.isQuarter) {
 //       const qLabel = String(row.Month || "").toUpperCase(); // "Q1","Q2","Q3","Q4"
-//       const qCatTargetCr = calcQuarterCategoryTarget(qLabel, category, row.Year); // ⬅️ pass row.Year
+//       const qCatTargetCr = calcQuarterCategoryTarget(qLabel, category, row);
 //       targetDisplay = `₹${Number(qCatTargetCr).toFixed(2)} Cr`;
 //     } else if (row.MonthNumber) {
 //       const mKey = toMonthKey(row);
@@ -557,7 +578,7 @@
 //               let rowTargetCr = "-";
 //               if (row.isQuarter) {
 //                 const qLabel = String(row.Month || "").toUpperCase();
-//                 rowTargetCr = Number(calcQuarterRowTarget(qLabel, row.Year)).toFixed(2); // ⬅️ pass row.Year
+//                 rowTargetCr = Number(calcQuarterRowTarget(qLabel, row)).toFixed(2);
 //               } else if (row.MonthNumber) {
 //                 const mKey = toMonthKey(row);
 //                 const sum = categories.reduce(
@@ -810,38 +831,31 @@ export default function QuarterlyTable({
   onDownloadExcel,
   targetMargins,
 }) {
-  // Fixed cell width for all data cells - increased to prevent wrapping
   const CELL_WIDTH = isMobile ? "110px" : "130px";
 
-  // Convert to crores function - ROUND TO 2 DECIMALS (for ACTUAL SALES ONLY)
   const toCrores = (value) => {
     return (value / 10000000).toFixed(2);
   };
 
-  // Month key helper (e.g., "2025-04")
   const toMonthKey = (row) =>
     `${row.Year}-${String(row.MonthNumber).padStart(2, "0")}`;
 
-  // ---------- Visible months (only what's shown on the frontend) ----------
   const monthlyRows = data.filter((r) => !r.isQuarter && r.MonthNumber);
 
-  // ---------- Quarter helpers ----------
   const QUARTER_MAP = {
-    Q1: [4, 5, 6],    // Apr-Jun
-    Q2: [7, 8, 9],    // Jul-Sep
-    Q3: [10, 11, 12], // Oct-Dec
-    Q4: [1, 2, 3],    // Jan-Mar
+    Q1: [4, 5, 6],
+    Q2: [7, 8, 9],
+    Q3: [10, 11, 12],
+    Q4: [1, 2, 3],
   };
 
   const getQuarterMonthNumbers = (qLabel) => QUARTER_MAP[qLabel] || [];
 
-  // Helper to extract fiscal year from row
   const getFiscalYearFromRow = (row) => {
     const yearMatch = row.Year?.toString().match(/(\d{4})/);
     return yearMatch ? parseInt(yearMatch[1]) : null;
   };
 
-  // ⬇️ FIXED: Get quarter month keys accounting for fiscal year spanning
   const getQuarterVisibleMonthKeys = (qLabel, row) => {
     const monthNums = new Set(getQuarterMonthNumbers(qLabel));
     const fiscalYear = getFiscalYearFromRow(row);
@@ -853,8 +867,6 @@ export default function QuarterlyTable({
         const monthNum = Number(r.MonthNumber);
         if (!monthNums.has(monthNum)) return false;
         
-        // For Q4 (Jan-Mar), year should be fiscalYear + 1
-        // For Q1-Q3 (Apr-Dec), year should be fiscalYear
         if (qLabel === 'Q4' && [1, 2, 3].includes(monthNum)) {
           return r.Year === fiscalYear + 1;
         } else {
@@ -864,7 +876,6 @@ export default function QuarterlyTable({
       .map((r) => toMonthKey(r));
   };
 
-  // Sum quarter target (Cr) for one category
   const calcQuarterCategoryTarget = (qLabel, category, row) => {
     const keys = getQuarterVisibleMonthKeys(qLabel, row);
     return keys.reduce(
@@ -873,7 +884,6 @@ export default function QuarterlyTable({
     );
   };
 
-  // Sum quarter target (Cr) for ALL categories
   const calcQuarterRowTarget = (qLabel, row) => {
     const keys = getQuarterVisibleMonthKeys(qLabel, row);
     return keys.reduce((acc, k) => {
@@ -885,18 +895,16 @@ export default function QuarterlyTable({
     }, 0);
   };
 
-  // ----- GRAND TOTALS (Actuals + Targets, only visible months) -----
   const calculateGrandTotals = () => {
     const totals = {
-      totalSales: 0,         // sum of all actual sales (₹, not Cr)
-      totalTarget: 0,        // sum of all targets (Cr)
-      totalWeightedMargin: 0, // for weighted margin calculation
-      categorySales: {},     // actuals by category (₹, not Cr)
-      categoryTarget: {},    // targets by category (Cr)
-      categoryMargins: {},   // weighted margins by category
+      totalSales: 0,
+      totalTarget: 0,
+      totalWeightedMargin: 0,
+      categorySales: {},
+      categoryTarget: {},
+      categoryMargins: {},
     };
 
-    // init per-category buckets
     categories.forEach((c) => {
       totals.categorySales[c] = 0;
       totals.categoryTarget[c] = 0;
@@ -906,9 +914,7 @@ export default function QuarterlyTable({
       };
     });
 
-    // loop through only visible monthly rows
     monthlyRows.forEach((row) => {
-      // actuals
       const rowTotals = calculateRowTotal(row, categories);
       totals.totalSales += rowTotals.totalSales;
       totals.totalWeightedMargin += rowTotals.totalSales * (rowTotals.avgMargin / 100);
@@ -922,7 +928,6 @@ export default function QuarterlyTable({
         totals.categoryMargins[cat].totalSales += sales;
       });
 
-      // targets (Cr)
       const mKey = toMonthKey(row);
       let rowTarget = 0;
       categories.forEach((cat) => {
@@ -933,12 +938,10 @@ export default function QuarterlyTable({
       totals.totalTarget += rowTarget;
     });
 
-    // Calculate grand total margin (weighted average)
     totals.grandTotalMargin = totals.totalSales > 0 
       ? Number(((totals.totalWeightedMargin / totals.totalSales) * 100).toFixed(2))
       : 0;
 
-    // Calculate individual category margins
     categories.forEach(cat => {
       const marginData = totals.categoryMargins[cat];
       totals.categoryMargins[cat].finalMargin = marginData.totalSales > 0 ?
@@ -950,13 +953,9 @@ export default function QuarterlyTable({
 
   const grandTotals = calculateGrandTotals();
 
-  // ----- RENDER HELPERS -----
-
-  // header helper
   const getTargetMargin = (category) =>
     targetMargins[category] || targetMargins["Other"] || 20;
 
-  // individual category cell block for a row
   const renderCategoryColumns = (row, category, isFirstCategory, categoryIndex) => {
     const sales = row[`${category}_Sales`] || 0;
     const margin = row[`${category}_Margin`] || 0;
@@ -968,10 +967,9 @@ export default function QuarterlyTable({
       ? "#f0fdf4"
       : "transparent";
 
-    // Target cell value (Cr). For quarter rows, sum months in fiscal year span.
     let targetDisplay = "-";
     if (row.isQuarter) {
-      const qLabel = String(row.Month || "").toUpperCase(); // "Q1","Q2","Q3","Q4"
+      const qLabel = String(row.Month || "").toUpperCase();
       const qCatTargetCr = calcQuarterCategoryTarget(qLabel, category, row);
       targetDisplay = `₹${Number(qCatTargetCr).toFixed(2)} Cr`;
     } else if (row.MonthNumber) {
@@ -982,7 +980,6 @@ export default function QuarterlyTable({
 
     return (
       <React.Fragment key={category}>
-        {/* Target (Cr) */}
         <td
           style={{
             padding: isMobile ? "8px 6px" : "12px 8px",
@@ -1004,7 +1001,6 @@ export default function QuarterlyTable({
           {targetDisplay}
         </td>
 
-        {/* Sales (Cr) */}
         <td
           style={{
             padding: isMobile ? "8px 6px" : "12px 8px",
@@ -1024,7 +1020,6 @@ export default function QuarterlyTable({
           ₹{toCrores(sales)} Cr
         </td>
 
-        {/* Margin % */}
         <td
           style={{
             padding: isMobile ? "8px 6px" : "12px 8px",
@@ -1053,7 +1048,6 @@ export default function QuarterlyTable({
     );
   };
 
-  // bottom-grand-total: per-category cells
   const renderTotalRowCategoryColumns = (category, isFirstCategory) => {
     const categorySales = grandTotals.categorySales[category] || 0;
     const categoryTargetCr = grandTotals.categoryTarget[category] || 0;
@@ -1061,7 +1055,6 @@ export default function QuarterlyTable({
 
     return (
       <React.Fragment key={category}>
-        {/* Target total (Cr) */}
         <td
           style={{
             padding: isMobile ? "8px 6px" : "12px 8px",
@@ -1083,7 +1076,6 @@ export default function QuarterlyTable({
           ₹{Number(categoryTargetCr).toFixed(2)} Cr
         </td>
 
-        {/* Sales total (Cr) */}
         <td
           style={{
             padding: isMobile ? "8px 6px" : "12px 8px",
@@ -1104,7 +1096,6 @@ export default function QuarterlyTable({
           ₹{toCrores(categorySales)} Cr
         </td>
 
-        {/* Margin total */}
         <td
           style={{
             padding: isMobile ? "8px 6px" : "12px 8px",
@@ -1135,7 +1126,6 @@ export default function QuarterlyTable({
 
   return (
     <div>
-      {/* Header with Download Button */}
       <div
         style={{
           display: "flex",
@@ -1180,7 +1170,6 @@ export default function QuarterlyTable({
         </button>
       </div>
 
-      {/* Scrollable Table Container */}
       <div
         style={{
           overflowX: "auto",
@@ -1200,7 +1189,12 @@ export default function QuarterlyTable({
           <colgroup>
             <col style={{ width: isMobile ? "60px" : "70px" }} />
             <col style={{ width: isMobile ? "70px" : "80px" }} />
-            {[...categories, "Total"].map((cat, idx) => (
+            {/* Total column group */}
+            <col style={{ width: CELL_WIDTH }} />
+            <col style={{ width: CELL_WIDTH }} />
+            <col style={{ width: CELL_WIDTH }} />
+            {/* Category column groups */}
+            {categories.map((cat, idx) => (
               <React.Fragment key={`colgroup-${cat}-${idx}`}>
                 <col style={{ width: CELL_WIDTH }} />
                 <col style={{ width: CELL_WIDTH }} />
@@ -1244,6 +1238,22 @@ export default function QuarterlyTable({
               >
                 Month
               </th>
+              {/* Total header - MOVED HERE */}
+              <th
+                colSpan="3"
+                style={{
+                  padding: isMobile ? "10px 6px" : "14px 8px",
+                  border: "2px solid #ffffff",
+                  color: "#fef3c7",
+                  textAlign: "center",
+                  fontSize: isMobile ? "11px" : "13px",
+                  fontWeight: "700",
+                  backgroundColor: "#166534",
+                }}
+              >
+                Total
+              </th>
+              {/* Category headers */}
               {categories.map((category) => (
                 <th
                   key={category}
@@ -1260,22 +1270,52 @@ export default function QuarterlyTable({
                   {category}
                 </th>
               ))}
-              <th
-                colSpan="3"
-                style={{
-                  padding: isMobile ? "10px 6px" : "14px 8px",
-                  border: "2px solid #ffffff",
-                  color: "#fef3c7",
-                  textAlign: "center",
-                  fontSize: isMobile ? "11px" : "13px",
-                  fontWeight: "700",
-                  backgroundColor: "#166534",
-                }}
-              >
-                Total
-              </th>
             </tr>
             <tr style={{ backgroundColor: "#86efac" }}>
+              {/* Total column sub-headers - MOVED HERE */}
+              <th
+                style={{
+                  padding: isMobile ? "8px 4px" : "10px 6px",
+                  border: "1px solid #ffffff",
+                  color: "#15803d",
+                  textAlign: "center",
+                  fontSize: isMobile ? "10px" : "11px",
+                  fontWeight: "600",
+                  backgroundColor: "#dcfce7",
+                  width: CELL_WIDTH,
+                }}
+              >
+                Target (Cr)
+              </th>
+              <th
+                style={{
+                  padding: isMobile ? "8px 4px" : "10px 6px",
+                  border: "1px solid #ffffff",
+                  color: "#15803d",
+                  textAlign: "center",
+                  fontSize: isMobile ? "10px" : "11px",
+                  fontWeight: "600",
+                  backgroundColor: "#dcfce7",
+                  width: CELL_WIDTH,
+                }}
+              >
+                Sales (Cr)
+              </th>
+              <th
+                style={{
+                  padding: isMobile ? "8px 4px" : "10px 6px",
+                  border: "1px solid #ffffff",
+                  color: "#15803d",
+                  textAlign: "center",
+                  fontSize: isMobile ? "10px" : "11px",
+                  fontWeight: "600",
+                  backgroundColor: "#dcfce7",
+                  width: CELL_WIDTH,
+                }}
+              >
+                Margin %
+              </th>
+              {/* Category sub-headers */}
               {categories.map((category) => (
                 <React.Fragment key={`${category}-headers`}>
                   <th
@@ -1322,49 +1362,6 @@ export default function QuarterlyTable({
                   </th>
                 </React.Fragment>
               ))}
-              {/* Total column headers */}
-              <th
-                style={{
-                  padding: isMobile ? "8px 4px" : "10px 6px",
-                  border: "1px solid #ffffff",
-                  color: "#15803d",
-                  textAlign: "center",
-                  fontSize: isMobile ? "10px" : "11px",
-                  fontWeight: "600",
-                  backgroundColor: "#dcfce7",
-                  width: CELL_WIDTH,
-                }}
-              >
-                Target (Cr)
-              </th>
-              <th
-                style={{
-                  padding: isMobile ? "8px 4px" : "10px 6px",
-                  border: "1px solid #ffffff",
-                  color: "#15803d",
-                  textAlign: "center",
-                  fontSize: isMobile ? "10px" : "11px",
-                  fontWeight: "600",
-                  backgroundColor: "#dcfce7",
-                  width: CELL_WIDTH,
-                }}
-              >
-                Sales (Cr)
-              </th>
-              <th
-                style={{
-                  padding: isMobile ? "8px 4px" : "10px 6px",
-                  border: "1px solid #ffffff",
-                  color: "#15803d",
-                  textAlign: "center",
-                  fontSize: isMobile ? "10px" : "11px",
-                  fontWeight: "600",
-                  backgroundColor: "#dcfce7",
-                  width: CELL_WIDTH,
-                }}
-              >
-                Margin %
-              </th>
             </tr>
           </thead>
 
@@ -1372,7 +1369,6 @@ export default function QuarterlyTable({
             {data.map((row, index) => {
               const totals = calculateRowTotal(row, categories);
 
-              // right-side Target (Cr) per row:
               let rowTargetCr = "-";
               if (row.isQuarter) {
                 const qLabel = String(row.Month || "").toUpperCase();
@@ -1401,7 +1397,6 @@ export default function QuarterlyTable({
                       : "1px solid #e5e7eb",
                   }}
                 >
-                  {/* Year */}
                   <td
                     style={{
                       padding: isMobile ? "8px 6px" : "12px 10px",
@@ -1422,7 +1417,6 @@ export default function QuarterlyTable({
                     {row.Year}
                   </td>
 
-                  {/* Month (or Quarter label) */}
                   <td
                     style={{
                       padding: isMobile ? "8px 6px" : "12px 10px",
@@ -1445,12 +1439,7 @@ export default function QuarterlyTable({
                     {row.Month}
                   </td>
 
-                  {/* Category blocks: Target (Cr) | Sales (Cr) | Margin % */}
-                  {categories.map((cat, idx) =>
-                    renderCategoryColumns(row, cat, idx === 0, idx)
-                  )}
-
-                  {/* Row total: Target (Cr) | Sales (Cr) | Avg Margin % */}
+                  {/* Row total MOVED FIRST - after Month column */}
                   <td
                     style={{
                       padding: isMobile ? "8px 6px" : "12px 8px",
@@ -1509,10 +1498,16 @@ export default function QuarterlyTable({
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
+                      borderRight: "2px solid #d1d5db",
                     }}
                   >
                     {totals.avgMargin}%
                   </td>
+
+                  {/* Category columns */}
+                  {categories.map((cat, idx) =>
+                    renderCategoryColumns(row, cat, idx === 0, idx)
+                  )}
                 </tr>
               );
             })}
@@ -1557,12 +1552,7 @@ export default function QuarterlyTable({
                 -
               </td>
 
-              {/* Category totals across all visible months */}
-              {categories.map((category, idx) =>
-                renderTotalRowCategoryColumns(category, idx === 0)
-              )}
-
-              {/* Overall totals (only visible months) */}
+              {/* Overall totals MOVED FIRST */}
               <td
                 style={{
                   padding: isMobile ? "10px 6px" : "14px 8px",
@@ -1604,10 +1594,16 @@ export default function QuarterlyTable({
                       ? "#fef3c7"
                       : "#fca5a5",
                   backgroundColor: "#15803d",
+                  borderRight: "2px solid #ffffff",
                 }}
               >
                 {grandTotals.grandTotalMargin}%
               </td>
+
+              {/* Category totals */}
+              {categories.map((category, idx) =>
+                renderTotalRowCategoryColumns(category, idx === 0)
+              )}
             </tr>
           </tbody>
         </table>
