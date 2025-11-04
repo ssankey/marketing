@@ -4,8 +4,8 @@ import BrandwiseAnalysis from "./components/BrandwiseAnalysis";
 import PercentageAnalysis from "./components/PercentageAnalysis";
 
 export default function TARGET_ANALYTICS() {
-  const [selected, setSelected] = useState("Brandwise Target Analysis");
-  const buttons = ["Brandwise Target Analysis", "Percentage Analysis"];
+  const [selected, setSelected] = useState("Percentage Analysis");
+  const buttons = [ "Percentage Analysis","Brandwise Target Analysis"];
 
   const renderContent = () => {
     switch (selected) {
