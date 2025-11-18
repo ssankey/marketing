@@ -191,88 +191,171 @@ export default function BrandwiseAnalysis() {
     fetchData();
   }, [selectedYear, selectedSalesPerson, selectedRegion, selectedState]);
 
+  // const fetchData = async () => {
+  //   setLoading(true);
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     const params = new URLSearchParams({
+  //       year: selectedYear,
+  //       ...(selectedSalesPerson && { slpCode: selectedSalesPerson }),
+  //       ...(selectedRegion && { region: selectedRegion }),
+  //       ...(selectedState && { state: selectedState }),
+  //     });
+
+  //     const response = await fetch(
+  //       `/api/target-analytics/quarterly-analysis?${params}`,
+  //       {
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //         },
+  //       }
+  //     );
+  //     const result = await response.json();
+
+  //     console.log("🔍 RAW API DATA:", result.data);
+
+  //     if (result.data && result.data.length > 0) {
+  //       // Merge categories in frontend
+  //       const mergedData = mergeCategories(result.data);
+  //       console.log("🔀 MERGED DATA:", mergedData);
+
+  //       if (mergedData.length > 0) {
+  //         // 🔧 NEW: Build category list as a UNION across ALL rows
+  //         const categorySet = new Set();
+  //         mergedData.forEach((r) => {
+  //           Object.keys(r).forEach((k) => {
+  //             if (k.endsWith("_Sales")) {
+  //               const cat = k.replace("_Sales", "");
+  //               if (cat !== "_tempMargins" && categoryMapping[cat] !== "NULL") {
+  //                 categorySet.add(cat);
+  //               }
+  //             }
+  //           });
+  //         });
+
+  //         // Optional: stable ordering for nicer presentation
+  //         const preferredOrder = [
+  //           "3A Chemicals",
+  //           "BIKAI",
+  //           "CATO",
+  //           "FD Cell",
+  //           "KANTO",
+  //           "Capricorn",
+  //           "VOLAB",
+  //           "Density",
+  //           "Deutero",
+  //           "Trading",
+  //           "Life Science",
+  //           "Other",
+  //         ];
+  //         const finalCategories = [
+  //           ...preferredOrder.filter((c) => categorySet.has(c)),
+  //           ...[...categorySet].filter((c) => !preferredOrder.includes(c)),
+  //         ];
+
+  //         console.log("🎯 FINAL CATEGORIES (UNION):", finalCategories);
+
+  //         setCategories(finalCategories);
+  //         setData(processDataForDisplay(mergedData, finalCategories));
+  //       } else {
+  //         setCategories([]);
+  //         setData([]);
+  //       }
+  //     } else {
+  //       setCategories([]);
+  //       setData([]);
+  //     }
+  //   } catch (error) {
+  //     console.error("Error fetching data:", error);
+  //     setCategories([]);
+  //     setData([]);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
   const fetchData = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const params = new URLSearchParams({
-        year: selectedYear,
-        ...(selectedSalesPerson && { slpCode: selectedSalesPerson }),
-        ...(selectedRegion && { region: selectedRegion }),
-        ...(selectedState && { state: selectedState }),
+  setLoading(true);
+  try {
+    const token = localStorage.getItem("token");
+    const params = new URLSearchParams({
+      year: selectedYear,
+      ...(selectedSalesPerson && { slpCode: selectedSalesPerson }),
+      ...(selectedRegion && { region: selectedRegion }),
+      ...(selectedState && { state: selectedState }),
+    });
+
+    const response = await fetch(
+      `/api/target-analytics/quarterly-analysis?${params}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    const result = await response.json();
+
+    console.log("🔍 RAW API DATA:", result.data);
+
+    if (result.data) {
+      // Merge categories in frontend
+      const mergedData = mergeCategories(result.data);
+      console.log("🔀 MERGED DATA:", mergedData);
+
+      // Build category list as a UNION across ALL rows
+      const categorySet = new Set();
+      
+      // IMPORTANT: Also check the categoryMapping to ensure all possible categories are included
+      Object.values(categoryMapping).forEach(cat => {
+        if (cat !== "NULL") {
+          categorySet.add(cat);
+        }
+      });
+      
+      // Also add categories from actual data
+      mergedData.forEach((r) => {
+        Object.keys(r).forEach((k) => {
+          if (k.endsWith("_Sales")) {
+            const cat = k.replace("_Sales", "");
+            if (cat !== "_tempMargins" && categoryMapping[cat] !== "NULL") {
+              categorySet.add(cat);
+            }
+          }
+        });
       });
 
-      const response = await fetch(
-        `/api/target-analytics/quarterly-analysis?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const result = await response.json();
+      // Preferred ordering
+      const preferredOrder = [
+        "3A Chemicals", "BIKAI", "CATO", "FD Cell", "KANTO",
+        "Capricorn", "VOLAB", "Density", "Deutero", "Trading",
+        "Life Science", "Other",
+      ];
+      
+      const finalCategories = [
+        ...preferredOrder.filter((c) => categorySet.has(c)),
+        ...[...categorySet].filter((c) => !preferredOrder.includes(c)),
+      ];
 
-      console.log("🔍 RAW API DATA:", result.data);
+      console.log("🎯 FINAL CATEGORIES (UNION):", finalCategories);
 
-      if (result.data && result.data.length > 0) {
-        // Merge categories in frontend
-        const mergedData = mergeCategories(result.data);
-        console.log("🔀 MERGED DATA:", mergedData);
-
-        if (mergedData.length > 0) {
-          // 🔧 NEW: Build category list as a UNION across ALL rows
-          const categorySet = new Set();
-          mergedData.forEach((r) => {
-            Object.keys(r).forEach((k) => {
-              if (k.endsWith("_Sales")) {
-                const cat = k.replace("_Sales", "");
-                if (cat !== "_tempMargins" && categoryMapping[cat] !== "NULL") {
-                  categorySet.add(cat);
-                }
-              }
-            });
-          });
-
-          // Optional: stable ordering for nicer presentation
-          const preferredOrder = [
-            "3A Chemicals",
-            "BIKAI",
-            "CATO",
-            "FD Cell",
-            "KANTO",
-            "Capricorn",
-            "VOLAB",
-            "Density",
-            "Deutero",
-            "Trading",
-            "Life Science",
-            "Other",
-          ];
-          const finalCategories = [
-            ...preferredOrder.filter((c) => categorySet.has(c)),
-            ...[...categorySet].filter((c) => !preferredOrder.includes(c)),
-          ];
-
-          console.log("🎯 FINAL CATEGORIES (UNION):", finalCategories);
-
-          setCategories(finalCategories);
-          setData(processDataForDisplay(mergedData, finalCategories));
-        } else {
-          setCategories([]);
-          setData([]);
-        }
-      } else {
-        setCategories([]);
-        setData([]);
-      }
-    } catch (error) {
-      console.error("Error fetching data:", error);
+      setCategories(finalCategories);
+      
+      // Process data - this will now fill in missing months
+      setData(processDataForDisplay(mergedData, finalCategories));
+    } else {
       setCategories([]);
       setData([]);
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    setCategories([]);
+    setData([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const handleResetFilters = () => {
     setSelectedYear("FY 2025-26");
