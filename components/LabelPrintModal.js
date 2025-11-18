@@ -1,12 +1,14 @@
+
 // components/LabelPrintModal.js
 import React, { useState, useEffect } from 'react';
-import { Modal, Spinner, Table, Badge } from 'react-bootstrap';
-import { Package, X } from 'lucide-react';
+import { Modal, Spinner, Table, Badge, Button } from 'react-bootstrap';
+import { Package, X, Download } from 'lucide-react';
 
 const LabelPrintModal = ({ show, onHide, docEntry, docNum }) => {
   const [loading, setLoading] = useState(false);
   const [labelData, setLabelData] = useState([]);
   const [error, setError] = useState(null);
+  const [downloadingLabels, setDownloadingLabels] = useState({});
 
   useEffect(() => {
     if (show && docEntry && docNum) {
@@ -44,14 +46,133 @@ const LabelPrintModal = ({ show, onHide, docEntry, docNum }) => {
   const handleClose = () => {
     setLabelData([]);
     setError(null);
+    setDownloadingLabels({});
     onHide();
+  };
+
+  const buildCodeWithPacksize = (itemCode, packSize) => {
+    if (!itemCode) return '';
+    
+    // Check if itemCode already ends with the packSize pattern
+    // Example: "DP09176-1kg" already has the pack size
+    const itemCodeLower = itemCode.toLowerCase();
+    const packSizeLower = packSize?.toLowerCase() || '';
+    
+    // If itemCode already ends with "-{packSize}", don't append again
+    if (packSizeLower && packSizeLower !== 'n/a' && itemCodeLower.endsWith(`-${packSizeLower}`)) {
+      return itemCode;
+    }
+    
+    // If packSize exists and is not 'N/A' and not already in itemCode, combine them
+    if (packSize && packSize !== 'N/A') {
+      return `${itemCode}-${packSize}`;
+    }
+    
+    return itemCode;
+  };
+
+  const handleLabelDownload = async (item, index) => {
+    setDownloadingLabels(prev => ({ ...prev, [index]: true }));
+    
+    try {
+      const itemCode = item.itemCode?.toString()?.trim();
+      const packSize = item.packSize?.toString()?.trim();
+      const batchNum = item.batchNum?.toString()?.trim() || '';
+      const category = item.category?.toString()?.trim() || '';
+      
+      if (!itemCode) {
+        alert('Item code is missing');
+        return;
+      }
+
+      // Build the combined code with pack size (avoiding duplication)
+      const combinedCode = buildCodeWithPacksize(itemCode, packSize);
+      
+      console.log('Download params:', {
+        itemCode,
+        packSize,
+        combinedCode,
+        batchNum,
+        category,
+        'Already has packsize': itemCode.toLowerCase().endsWith(`-${packSize?.toLowerCase() || ''}`)
+      });
+
+      // Check if category contains "3A Chemical" (case insensitive)
+      const is3AChemical = category.toLowerCase().includes('3a chemical');
+      
+      // Build URL with parameters
+      const params = new URLSearchParams({
+        docEntry: docEntry.toString(),
+        docNum: docNum.toString()
+      });
+      
+      if (batchNum && batchNum !== 'N/A') {
+        params.append('batchNum', batchNum);
+      }
+      
+      // Choose API endpoint based on category
+      let apiPath;
+      if (is3AChemical) {
+        // Use 3A Label API
+        apiPath = `/api/labels/download/${encodeURIComponent(combinedCode)}?${params.toString()}`;
+        console.log("Downloading 3A Label from:", apiPath);
+      } else {
+        // Use Density Label API
+        apiPath = `/api/density-labels/download/${encodeURIComponent(combinedCode)}${batchNum && batchNum !== 'N/A' ? `?batchNum=${encodeURIComponent(batchNum)}` : ''}`;
+        console.log("Downloading Density Label from:", apiPath);
+      }
+
+      const response = await fetch(apiPath, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to download label: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      const labelType = is3AChemical ? '3A_Label' : 'Density_Label';
+      a.download = `${labelType}_${combinedCode}${batchNum ? `_${batchNum}` : ''}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+
+      console.log(`Successfully downloaded ${labelType} for: ${combinedCode}`);
+    } catch (err) {
+      console.error(`Failed to download label:`, err);
+      alert(`Failed to download label: ${err.message}`);
+    } finally {
+      setDownloadingLabels(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
+  const getLabelButtonText = (category) => {
+    if (category?.toLowerCase().includes('3a chemical')) {
+      return 'Download 3A Label';
+    }
+    return 'Download Density Label';
+  };
+
+  const getLabelButtonVariant = (category) => {
+    if (category?.toLowerCase().includes('3a chemical')) {
+      return 'warning';
+    }
+    return 'info';
   };
 
   return (
     <Modal 
       show={show} 
       onHide={handleClose} 
-      size="lg"
+      size="xl"
       centered
     >
       <Modal.Header className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0">
@@ -110,10 +231,11 @@ const LabelPrintModal = ({ show, onHide, docEntry, docNum }) => {
                 <thead className="bg-light">
                   <tr>
                     <th style={{ width: '5%' }}>#</th>
-                    <th style={{ width: '20%' }}>Cat No</th>
-                    <th style={{ width: '15%' }}>Pack Size</th>
-                    <th style={{ width: '25%' }}>Batch Number</th>
-                    <th style={{ width: '35%' }}>Category</th>
+                    <th style={{ width: '15%' }}>Cat No</th>
+                    <th style={{ width: '12%' }}>Pack Size</th>
+                    <th style={{ width: '18%' }}>Batch Number</th>
+                    <th style={{ width: '25%' }}>Category</th>
+                    <th style={{ width: '25%' }} className="text-center">Label</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -136,42 +258,34 @@ const LabelPrintModal = ({ show, onHide, docEntry, docNum }) => {
                         </code>
                       </td>
                       <td className="text-muted">
-                        {item.category}
+                        <small>{item.category}</small>
+                      </td>
+                      <td className="text-center">
+                        <Button
+                          size="sm"
+                          variant={getLabelButtonVariant(item.category)}
+                          onClick={() => handleLabelDownload(item, index)}
+                          disabled={downloadingLabels[index]}
+                          className="d-flex align-items-center gap-2 mx-auto"
+                        >
+                          {downloadingLabels[index] ? (
+                            <>
+                              <Spinner animation="border" size="sm" />
+                              <span>Downloading...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Download size={14} />
+                              <span>{getLabelButtonText(item.category)}</span>
+                            </>
+                          )}
+                        </Button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </Table>
             </div>
-
-            {/* Label Preview Cards - Alternative View */}
-            {/* <div className="mt-4">
-              <h6 className="text-muted mb-3">Label Preview</h6>
-              <div className="row g-3">
-                {labelData.map((item, index) => (
-                  <div key={index} className="col-md-6">
-                    <div className="card shadow-sm border-0">
-                      <div className="card-body p-3">
-                        <div className="d-flex justify-content-between align-items-start mb-2">
-                          <h6 className="mb-0 text-primary">
-                            CAT: {item.catNo}
-                          </h6>
-                          <Badge bg="info">{item.packSize}</Badge>
-                        </div>
-                        <div className="mt-2">
-                          <small className="text-muted d-block">
-                            <strong>LOT:</strong> {item.batchNum}
-                          </small>
-                          <small className="text-muted d-block">
-                            <strong>Category:</strong> {item.category}
-                          </small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div> */}
           </div>
         )}
       </Modal.Body>
@@ -182,14 +296,6 @@ const LabelPrintModal = ({ show, onHide, docEntry, docNum }) => {
           onClick={handleClose}
         >
           Close
-        </button>
-        {/* Placeholder for future download functionality */}
-        <button 
-          className="btn btn-primary"
-          disabled={loading || labelData.length === 0}
-        >
-          <Package size={16} className="me-2" />
-          Download Labels (Coming Soon)
         </button>
       </Modal.Footer>
     </Modal>

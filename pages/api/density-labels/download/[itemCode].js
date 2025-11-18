@@ -1,4 +1,5 @@
 
+
 // pages/api/density-labels/download/[itemCode].js
 import { queryDatabase } from "../../../../lib/db";
 import sql from "mssql";
@@ -199,7 +200,7 @@ async function generateDensityLabelImage(productData, vendorBatchNum = "") {
 
   // Reset alignment
   ctx.textAlign = "left";
-  yPos = margin + 90;
+  yPos = margin + 90 + 24; // Added extra 24px space after eMail line
 
   // Product name
   ctx.font = getFontString(26, "bold");
@@ -214,23 +215,29 @@ async function generateDensityLabelImage(productData, vendorBatchNum = "") {
     yPos += 36;
   }
 
-  // Item Code + LOT (inline)
+  // Item Code + Pack size (inline)
   ctx.font = getFontString(24, "bold");
   const itemCodeText = safeText(productData.Cat_No || productData.Cat_size_main || "");
-  const lotText = `LOT: ${vendorBatchNum}`;
-  ctx.fillText(`${itemCodeText}    ${lotText}`, margin, yPos);
-  yPos += 34;
-
-  // Pack size + CAS (inline)
   const quantity = productData.U_Quantity && productData.U_UOM 
     ? `${productData.U_Quantity}${productData.U_UOM}` 
     : "100g";
+  ctx.fillText(`${itemCodeText}    ${quantity}`, margin, yPos);
+  yPos += 34;
+
+  // LOT (starting at margin)
+  const lotText = `LOT: ${vendorBatchNum}`;
+  ctx.fillText(lotText, margin, yPos);
+  yPos += 34;
+
+  // CAS (starting at same margin position as LOT - vertically aligned)
   const casText = productData.Cas ? `CAS No: ${safeText(productData.Cas)}` : "";
-  ctx.fillText(`${quantity}    ${casText}`, margin, yPos);
+  if (casText) {
+    ctx.fillText(casText, margin, yPos);
+  }
   yPos += 40;
 
-  // Bottom notes - bold, black
-  yPos = height - 38;
+  // Bottom notes - bold, black (moved up a little)
+  yPos = height - 45;
   ctx.fillStyle = "#000";
   ctx.font = getFontString(20, "bold");
   ctx.textAlign = "left";

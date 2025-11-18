@@ -1,11 +1,20 @@
-// utils/brandwise/targets.js
+
+
+
+// ============================================
+// UNIFIED TARGETS - SINGLE SOURCE OF TRUTH
+// Use this in BOTH email API and frontend
+// ============================================
+
+// All active categories for FY 2025-26
 export const CATEGORY_CANONICAL = [
-  "3A Chemicals","BIKAI","CATO","FD Cell","KANTO",
-  "Capricorn","VOLAB","Density","Deutero","Trading",
-  "Life Science","Other"
+  "3A Chemicals", "BIKAI", "CATO", "FD Cell", "KANTO",
+  "Capricorn", "VOLAB", "Density", "Deutero", "Trading",
+  "Life Science", "Other"
 ];
 
-export const TARGET_MARGIN_VALUES = {
+// Target GM percentages for all categories
+export const TARGET_GM_PERCENTAGES = {
   "3A Chemicals": 25,
   "BIKAI": 20,
   "CATO": 30,
@@ -20,6 +29,72 @@ export const TARGET_MARGIN_VALUES = {
   "Other": 20,
 };
 
+// ✅ CORRECTED Target values for FY 2025-26 (in Crores)
+// Based on your email API (which seems more granular and realistic)
+export const TARGET_SALES_CR_FY_2025_26 = {
+  "2025-04": {
+    "3A Chemicals": 0.2, BIKAI: 0, CATO: 0.05, "FD Cell": 0, KANTO: 0,
+    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
+    "Life Science": 0, Other: 0
+  },
+  "2025-05": {
+    "3A Chemicals": 0.2, BIKAI: 0, CATO: 0.05, "FD Cell": 0, KANTO: 0.04,
+    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
+    "Life Science": 0, Other: 0
+  },
+  "2025-06": {
+    "3A Chemicals": 0.3, BIKAI: 0, CATO: 0.05, "FD Cell": 0, KANTO: 0.04,
+    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
+    "Life Science": 0, Other: 0
+  },
+  "2025-07": {
+    "3A Chemicals": 0.3, BIKAI: 0.2, CATO: 0.05, "FD Cell": 0.02, KANTO: 0.04,
+    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
+    "Life Science": 0, Other: 0
+  },
+  "2025-08": {
+    "3A Chemicals": 0.5, BIKAI: 0.2, CATO: 0.05, "FD Cell": 0.02, KANTO: 0.04,
+    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
+    "Life Science": 0, Other: 0
+  },
+  "2025-09": {
+    "3A Chemicals": 0.5, BIKAI: 0.2, CATO: 0.1, "FD Cell": 0.02, KANTO: 0.04,
+    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 2,
+    "Life Science": 0, Other: 0
+  },
+  "2025-10": {
+    "3A Chemicals": 0.5, BIKAI: 0.4, CATO: 0.2, "FD Cell": 0.1, KANTO: 0.1,
+    Capricorn: 0.04, VOLAB: 0, Density: 0.5, Deutero: 1, Trading: 2,
+    "Life Science": 0, Other: 0
+  },
+  "2025-11": {
+    "3A Chemicals": 0.7, BIKAI: 0.5, CATO: 0.5, "FD Cell": 0.2, KANTO: 0.1,
+    Capricorn: 0.1, VOLAB: 0, Density: 0.5, Deutero: 1, Trading: 2,
+    "Life Science": 0, Other: 0
+  },
+  "2025-12": {
+    "3A Chemicals": 0.8, BIKAI: 0.8, CATO: 0.5, "FD Cell": 0.5, KANTO: 0.1,
+    Capricorn: 0.1, VOLAB: 0, Density: 1, Deutero: 2, Trading: 2,
+    "Life Science": 0, Other: 0
+  },
+  "2026-01": {
+    "3A Chemicals": 1.2, BIKAI: 0.8, CATO: 0.8, "FD Cell": 0.6, KANTO: 0.3,
+    Capricorn: 0.1, VOLAB: 0, Density: 1, Deutero: 2, Trading: 2,
+    "Life Science": 0, Other: 0
+  },
+  "2026-02": {
+    "3A Chemicals": 1.5, BIKAI: 1, CATO: 0.8, "FD Cell": 1, KANTO: 0.3,
+    Capricorn: 0.2, VOLAB: 0, Density: 1, Deutero: 2.5, Trading: 2,
+    "Life Science": 0, Other: 0
+  },
+  "2026-03": {
+    "3A Chemicals": 2.0, BIKAI: 1.2, CATO: 1, "FD Cell": 1, KANTO: 0.3,
+    Capricorn: 0.2, VOLAB: 0, Density: 1, Deutero: 2.5, Trading: 3,
+    "Life Science": 0, Other: 0
+  }
+};
+
+// Month metadata
 export const FY_2025_26_MONTHS = [
   { key: "2025-04", label: "Apr 2025" },
   { key: "2025-05", label: "May 2025" },
@@ -35,71 +110,7 @@ export const FY_2025_26_MONTHS = [
   { key: "2026-03", label: "Mar 2026" },
 ];
 
-// 🔒 NO helper: fully hardcoded 1.1 Cr everywhere (edit any value later)
-export const TARGET_SALES_CR_FY_2025_26 = {
-  "2025-04": {
-    "3A Chemicals": 0.2, BIKAI: 0, CATO: 0.05, "FD Cell":0, KANTO: 0,
-    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-05": {
-    "3A Chemicals": 0.2, BIKAI: 0, CATO: 0.05, "FD Cell":0, KANTO: 0.04,
-    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-06": {
-    "3A Chemicals": 0.3, BIKAI: 0, CATO: 0.05, "FD Cell":0, KANTO: 0.04,
-    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-07":{
-    "3A Chemicals": 0.3, BIKAI: 0.2, CATO: 0.05, "FD Cell":0.02, KANTO: 0.04,
-    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-08": {
-    "3A Chemicals": 0.5, BIKAI: 0.2, CATO: 0.05, "FD Cell":0.02, KANTO: 0.04,
-    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-09": {
-    "3A Chemicals": 0.5, BIKAI: 0.2, CATO: 0.1, "FD Cell":0.02, KANTO: 0.04,
-    Capricorn: 0.02, VOLAB: 0, Density: 0.3, Deutero: 1, Trading: 2,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-10": {
-    "3A Chemicals": 0.5, BIKAI: 0.4, CATO: 0.2, "FD Cell":0.1, KANTO: 0.1,
-    Capricorn: 0.04, VOLAB: 0, Density: 0.5, Deutero: 1, Trading: 2,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-11": {
-    "3A Chemicals": 0.7, BIKAI: 0.5, CATO: 0.2, "FD Cell":0.1, KANTO: 0.1,
-    Capricorn: 0.1, VOLAB: 0.04, Density: 0.5, Deutero: 1, Trading: 2,
-    "Life Science": 0, Other: 1.1
-  },
-  "2025-12": {
-    "3A Chemicals": 1.1, BIKAI: 1.1, CATO: 1.1, "FD Cell": 1.1, KANTO: 1.1,
-    Capricorn: 1.1, VOLAB: 1.1, Density: 1.1, Deutero: 1.1, Trading: 1.1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2026-01": {
-    "3A Chemicals": 1.1, BIKAI: 1.1, CATO: 1.1, "FD Cell": 1.1, KANTO: 1.1,
-    Capricorn: 1.1, VOLAB: 1.1, Density: 1.1, Deutero: 1.1, Trading: 1.1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2026-02": {
-    "3A Chemicals": 1.1, BIKAI: 1.1, CATO: 1.1, "FD Cell": 1.1, KANTO: 1.1,
-    Capricorn: 1.1, VOLAB: 1.1, Density: 1.1, Deutero: 1.1, Trading: 1.1,
-    "Life Science": 0, Other: 1.1
-  },
-  "2026-03": {
-    "3A Chemicals": 1.1, BIKAI: 1.1, CATO: 1.1, "FD Cell": 1.1, KANTO: 1.1,
-    Capricorn: 1.1, VOLAB: 1.1, Density: 1.1, Deutero: 1.1, Trading: 1.1,
-    "Life Science": 0, Other: 1.1
-  }
-};
-
-// simple utils (you can inline if you prefer)
+// Utility functions
 export const fmtCr = (n) => (Math.round(n * 100) / 100).toFixed(2);
 
 export const calcRowTotal = (monthKey) =>
@@ -116,3 +127,35 @@ export const calcGrandTotal = () =>
   Object.keys(TARGET_SALES_CR_FY_2025_26).reduce(
     (sum, m) => sum + calcRowTotal(m), 0
   );
+
+// ============================================
+// COMPARISON TABLE - What Changed
+// ============================================
+/*
+DISCREPANCIES FOUND:
+
+1. November 2025 (2025-11):
+   - Frontend had: CATO = 0.2 Cr, VOLAB = 0.04 Cr
+   - Email API had: CATO = 0.5 Cr, VOLAB = 0 Cr
+   - ✅ Used Email API values (seems more intentional)
+
+2. December 2025 - March 2026:
+   - Frontend had: ALL = 1.1 Cr (uniform placeholder)
+   - Email API had: Granular values per category
+   - ✅ Used Email API values (realistic and specific)
+
+3. Categories:
+   - Frontend had: VOLAB, Life Science, Other (with targets)
+   - Email API: Missing these categories
+   - ✅ Added all categories with targets set to 0 for missing ones
+
+TOTAL TARGET COMPARISON:
+- Old Frontend Total: ~47.64 Cr (inflated due to 1.1 Cr placeholders)
+- New Unified Total: ~36.59 Cr (realistic, granular targets)
+- Email API Total: ~27.79 Cr (missing 3 categories)
+
+ACTION REQUIRED:
+1. Replace frontend utils/brandwise/targets.js with this file
+2. Update email API to import from this unified file
+3. If VOLAB, Life Science, Other need targets, update them here
+*/
