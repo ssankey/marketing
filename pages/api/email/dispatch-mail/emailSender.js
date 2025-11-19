@@ -137,7 +137,7 @@ export const sendDispatchEmail = async (
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                from: "sales@densitypharmachem.com",
+                from: "customerservice@densitypharmachem.com",
                 to: [contactPersonEmail],
                 cc: [salesPersonEmail],
                 bcc: bccList, // Dynamic BCC list

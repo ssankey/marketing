@@ -134,11 +134,11 @@ export default async function handler(req, res) {
             <p><strong>Billing Address:</strong> ${details.BillToAddress || "N/A"}</p>
             <p><strong>Payment Terms:</strong> ${details.PaymentTerms || "N/A"}</p>
 
-            <p>Should you have any inquiries or require further assistance, please do not hesitate to contact our customer service team at sales@densitypharmachem.com<br/><br>
+            <p>Should you have any inquiries or require further assistance, please do not hesitate to contact our customer service team at customerservice@densitypharmachem.com<br/><br>
             Thank you for your patronage. We greatly appreciate your business and look forward to serving you again.</p><br/>
 
             <p><strong>Yours Sincerely,<br/></strong></p>
-            <p>${details.SalesEmployee}</p>
+            <p>Customer Service Team</p>
 
             <strong>Website: www.densitypharmachem.com</strong><br/><br/>
             DENSITY PHARMACHEM PRIVATE LIMITED<br/><br/>
