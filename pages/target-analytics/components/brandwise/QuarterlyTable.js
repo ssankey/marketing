@@ -1,6 +1,4 @@
-
-
-// pages/target-analytics/components/brandwise/QuarterlyTable.js
+// components/brandwise/QuarterlyTable.js
 import React from "react";
 import { calculateRowTotal } from "utils/brandwise/dataProcessing";
 import { TARGET_SALES_CR_FY_2025_26 } from "utils/brandwise/targets";
@@ -13,6 +11,9 @@ export default function QuarterlyTable({
   targetMargins,
 }) {
   const CELL_WIDTH = isMobile ? "110px" : "130px";
+
+  // ⭐ FIX: Always show latest at bottom by reversing the data
+  const displayData = data;
 
   const toCrores = (value) => {
     return (value / 10000000).toFixed(2);
@@ -608,7 +609,7 @@ export default function QuarterlyTable({
                       width: CELL_WIDTH,
                     }}
                   >
-                    Target ({getTargetMargin(category)}%)
+                    Target (Cr)
                   </th>
                   <th
                     style={{
@@ -636,7 +637,7 @@ export default function QuarterlyTable({
                       width: CELL_WIDTH,
                     }}
                   >
-                    GM %
+                    GM ({getTargetMargin(category)}%)
                   </th>
                 </React.Fragment>
               ))}
@@ -644,7 +645,7 @@ export default function QuarterlyTable({
           </thead>
 
           <tbody>
-            {data.map((row, index) => {
+            {displayData.map((row, index) => {
               const totals = calculateRowTotal(row, categories);
 
               let rowTargetCr = null;

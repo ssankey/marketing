@@ -213,7 +213,7 @@ WHERE
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: "sales@densitypharmachem.com",
+              from: "customerservice@densitypharmachem.com",
               to: [ContactPersonEmail],
               cc: [SalesPersonEmail],
               bcc: ["chandraprakashyadav1110@gmail.com"],
