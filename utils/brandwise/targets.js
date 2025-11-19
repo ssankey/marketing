@@ -1,11 +1,4 @@
 
-
-
-// ============================================
-// UNIFIED TARGETS - SINGLE SOURCE OF TRUTH
-// Use this in BOTH email API and frontend
-// ============================================
-
 // All active categories for FY 2025-26
 export const CATEGORY_CANONICAL = [
   "3A Chemicals", "BIKAI", "CATO", "FD Cell", "KANTO",
@@ -127,35 +120,3 @@ export const calcGrandTotal = () =>
   Object.keys(TARGET_SALES_CR_FY_2025_26).reduce(
     (sum, m) => sum + calcRowTotal(m), 0
   );
-
-// ============================================
-// COMPARISON TABLE - What Changed
-// ============================================
-/*
-DISCREPANCIES FOUND:
-
-1. November 2025 (2025-11):
-   - Frontend had: CATO = 0.2 Cr, VOLAB = 0.04 Cr
-   - Email API had: CATO = 0.5 Cr, VOLAB = 0 Cr
-   - ✅ Used Email API values (seems more intentional)
-
-2. December 2025 - March 2026:
-   - Frontend had: ALL = 1.1 Cr (uniform placeholder)
-   - Email API had: Granular values per category
-   - ✅ Used Email API values (realistic and specific)
-
-3. Categories:
-   - Frontend had: VOLAB, Life Science, Other (with targets)
-   - Email API: Missing these categories
-   - ✅ Added all categories with targets set to 0 for missing ones
-
-TOTAL TARGET COMPARISON:
-- Old Frontend Total: ~47.64 Cr (inflated due to 1.1 Cr placeholders)
-- New Unified Total: ~36.59 Cr (realistic, granular targets)
-- Email API Total: ~27.79 Cr (missing 3 categories)
-
-ACTION REQUIRED:
-1. Replace frontend utils/brandwise/targets.js with this file
-2. Update email API to import from this unified file
-3. If VOLAB, Life Science, Other need targets, update them here
-*/
