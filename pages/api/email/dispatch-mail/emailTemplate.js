@@ -181,9 +181,10 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
         </table>
         ${showMoreLink}
         <p>
-          If you have any questions or need assistance, please don't hesitate to reach out to us at sales@densitypharmachem.com.
+          If you have any questions or need assistance, please don't hesitate to reach out to us at customerservice@densitypharmachem.com.
         </p>
         <p>Thank you for your purchase and support!</p>
+        <p>Customer Service Team</p>
         <strong>Website: www.densitypharmachem.com</strong><br/><br/>
         DENSITY PHARMACHEM PRIVATE LIMITED<br/>
         Sy No 615/A & 624/2/1, Pudur Village<br/>
