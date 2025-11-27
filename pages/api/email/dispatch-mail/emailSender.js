@@ -1,60 +1,4 @@
-
-// // // pages/api/email/dispatch-mail/emailSender.js
-
-// // // Function to send dispatch email
-// // export const sendDispatchEmail = async (emailContent, contactPersonEmail, salesPersonEmail, baseUrl) => {
-// //     const { subject, html } = emailContent;
-
-// //     // Console log the email IDs for checking
-// //     console.log('Contact Person Email in senddispatch:', contactPersonEmail);
-// //     console.log('Sales Person Email in senddispatch:', salesPersonEmail);
-    
-// //     const sendRes = await fetch(
-// //         `${baseUrl}/api/email/base_mail`,
-// //         {
-// //             method: "POST",
-// //             headers: { "Content-Type": "application/json" },
-// //             body: JSON.stringify({
-// //             from: "sales@densitypharmachem.com",
-// //             to: [contactPersonEmail],
-// //             cc: [salesPersonEmail],
-// //             bcc: ["chandraprakashyadav1110@gmail.com"],
-// //             subject: subject,
-// //             body: html,
-// //             }),
-// //         }
-// //     );
-// //     // const sendRes = await fetch(
-// //     //     `${baseUrl}/api/email/base_mail`,
-// //     //     {
-// //     //         method: "POST",
-// //     //         headers: { "Content-Type": "application/json" },
-// //     //         body: JSON.stringify({
-// //     //         from: "prakash@densitypharmachem.com",
-// //     //         to: ["chandraprakashyadav1110@gmail.com"],
-                
-           
-// //     //         subject: subject,
-// //     //         body: html,
-// //     //         }),
-// //     //     }
-// //     // );
-
-// //     // Handle email send failure
-// //     if (!sendRes.ok) {
-// //         const errText = await sendRes.text();
-// //         throw new Error(`base_mail failed: ${errText}`);
-// //     }
-
-// //     return true;
-// // };
-
-
-
-// // ===================================================
 // // pages/api/email/dispatch-mail/emailSender.js
-// // ===================================================
-
 // // Function to send dispatch email with conditional BCC
 // export const sendDispatchEmail = async (
 //     emailContent, 
@@ -86,7 +30,7 @@
 //             method: "POST",
 //             headers: { "Content-Type": "application/json" },
 //             body: JSON.stringify({
-//                 from: "sales@densitypharmachem.com",
+//                 from: "customerservice@densitypharmachem.com",
 //                 to: [contactPersonEmail],
 //                 cc: [salesPersonEmail],
 //                 bcc: bccList, // Dynamic BCC list
@@ -105,8 +49,8 @@
 //     return true;
 // };
 
-
-// Function to send dispatch email with conditional BCC
+// pages/api/email/dispatch-mail/emailSender.js
+// Function to send dispatch email with conditional BCC and CC
 export const sendDispatchEmail = async (
     emailContent, 
     contactPersonEmail, 
@@ -131,6 +75,15 @@ export const sendDispatchEmail = async (
         console.log(`📌 Added Prashant to BCC for CardCode: ${cardCode}`);
     }
     
+    // Build CC list - start with sales person email
+    const ccList = [salesPersonEmail];
+    
+    // Add Mankind Pharma emails if CardCode is C000224
+    if (cardCode === 'C000224') {
+        ccList.push("Invoices@mankindpharma.com", "aman.bhatt@mankindpharma.com");
+        console.log(`📌 Added Mankind Pharma emails to CC for CardCode: ${cardCode}`);
+    }
+    
     const sendRes = await fetch(
         `${baseUrl}/api/email/base_mail`,
         {
@@ -139,7 +92,7 @@ export const sendDispatchEmail = async (
             body: JSON.stringify({
                 from: "customerservice@densitypharmachem.com",
                 to: [contactPersonEmail],
-                cc: [salesPersonEmail],
+                cc: ccList, // Dynamic CC list
                 bcc: bccList, // Dynamic BCC list
                 subject: subject,
                 body: html,
