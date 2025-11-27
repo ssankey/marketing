@@ -18,7 +18,9 @@ const SPECIAL_CARDCODES = [
   'C000028', // Siddhi Specialities Chennai
   'C000319', // Compiere Pharma LLP
   'C000221', // National Brain Research Center
-  'C000345'  // PHYTO LIFE SCIENCES PRIVATE LIMITED
+  'C000345', // PHYTO LIFE SCIENCES PRIVATE LIMITED
+  'C000363'
+
 ];
 
 export default async function handler(req, res) {

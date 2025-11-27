@@ -1,5 +1,7 @@
 
 // curl -X POST "http://localhost:3000/api/email/sendTargetEmails"
+// curl -X POST "https://marketing.densitypharmachem.com/api/email/sendTargetEmails"
+
 // pages/api/email/sendTargetEmails.js
 
 import { queryDatabase } from "../../../lib/db";

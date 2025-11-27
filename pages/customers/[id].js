@@ -367,13 +367,13 @@ export default function CustomerDetails({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // from: "shafique@densitypharmachem.com",
+          from: "shafique@densitypharmachem.com",
 
-          // to: [email], // customer gets it
-          // cc: [salesPersonEmail], // sales-person on CC
+          to: [email], // customer gets it
+          cc: [salesPersonEmail], // sales-person on CC
 
-           from: "prakash@densitypharmachem.com",
-           to:"chandraprakashyadav1110@gmail.com",
+          //  from: "prakash@densitypharmachem.com",
+          //  to:"chandraprakashyadav1110@gmail.com",
              
 
           subject:
