@@ -233,6 +233,7 @@ const EnhancedSalesCOGSChart = () => {
     salesBarColor: "#124f94",
     cogsBarColor: "#3bac4e",
     gmLineColor: "#3bac4e",
+    orderValueColor: "#F39C12",
   };
 
   // Sales dataset
@@ -242,6 +243,17 @@ const EnhancedSalesCOGSChart = () => {
     backgroundColor: colorPalette.salesBarColor,
     borderWidth: 1
   };
+
+
+// Add the Order Value dataset
+const orderValueDataset = {
+  label: 'Order Value',
+  data: filteredSalesData.map((d) => d.orderValue || 0),
+  backgroundColor: colorPalette.orderValueColor,
+  borderWidth: 1
+};
+
+
 
   // COGS dataset (only if admin)
   const cogsDataset = {
@@ -274,13 +286,15 @@ const EnhancedSalesCOGSChart = () => {
     pointHoverRadius: 6,
   };
 
-  let finalDatasets = [salesDataset, invoiceCountDataset];
+  let finalDatasets = [salesDataset, orderValueDataset,invoiceCountDataset];
   if (user?.role === 'admin' || user?.role === 'sales_person') {
     finalDatasets = [
       invoiceCountDataset,
       salesDataset,
+      orderValueDataset,
       cogsDataset,
       gmPercentDataset,
+
     ];
   }
 
@@ -558,6 +572,19 @@ const EnhancedSalesCOGSChart = () => {
                         {filteredSalesData.reduce(
                           (sum, d) => sum + (d.invoiceCount || 0),
                           0
+                        )}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Order Value</td>
+                      {filteredSalesData.map((data, index) => (
+                        <td key={index}>
+                          {formatCurrency(data.orderValue || 0)}
+                        </td>
+                      ))}
+                      <td>
+                        {formatCurrency(
+                          filteredSalesData.reduce((sum, d) => sum + (d.orderValue || 0), 0)
                         )}
                       </td>
                     </tr>

@@ -36,21 +36,7 @@ export async function getSalesDataForModal(params) {
       toDate = today.toISOString().split("T")[0];
       break;
     }
-  //   case "thisMonth": {
-  //     // This month: from 1st to today (not last day of month)
-  //     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-  //     fromDate = firstDay.toISOString().split("T")[0];
-  //     toDate = today.toISOString().split("T")[0]; // Use today, not last day of month
-
-  //     // Add debug logs
-  // console.log('This month calculation:');
-  // console.log('Today:', today);
-  // console.log('First day of month:', firstDay);
-  // console.log('From date:', fromDate);
-  // console.log('To date:', toDate);
-
-  //     break;
-  //   }
+ 
   case "thisMonth": {
   // Get today's date string and replace day with '01'
   const todayStr = today.toISOString().split("T")[0]; // YYYY-MM-DD
