@@ -219,6 +219,13 @@ export const tableColumns = [
     cell: ({ getValue }) => getValue() || "N/A",
   },
   {
+    accessorKey: "Sales Employee",
+    header: "Sales Employee",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
+  
+  
+  {
     id: "Item No.",
     header: "Item No.",
     accessorFn: row => row["Item No."],

@@ -78,11 +78,18 @@ export const tableColumns = (handlers) => [
     header: "Cas No",
     cell: ({ getValue }) => getValue() || "N/A",
   },
+  
+  {
+    accessorKey: "ItemGroup",
+    header: "Category",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
   {
     accessorKey: "Quantity",
     header: "Quantity Order",
     cell: ({ getValue }) => getValue() || "0",
   },
+  
   {
     accessorKey: "OpenQty",
     header: "Open Qty",
@@ -106,6 +113,7 @@ export const tableColumns = (handlers) => [
     header: "Delivery Date",
     cell: ({ getValue }) => formatDate(getValue()),
   },
+  
   {
     accessorKey: "Timeline",
     header: "Timeline",
