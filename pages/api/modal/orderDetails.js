@@ -25,6 +25,7 @@ export default async function handler(req, res) {
         T12.ItemCode AS "Item No.",
         T12.Dscription AS "Item/Service Description",
         T12.U_CasNo AS "Cas No",
+        T17.ItmsGrpNam AS "CategoryName",
         T12.VendorNum AS "Vendor Catalog No.",
         T12.U_Packsize AS "PKZ",
         T12.Quantity AS "Qty",
@@ -45,6 +46,10 @@ export default async function handler(req, res) {
       FROM ORDR T13
       INNER JOIN OCPR TA ON T13.CntctCode = TA.CntctCode
       INNER JOIN RDR1 T12 ON T13.DocEntry = T12.DocEntry
+
+      LEFT JOIN OITM T16 ON T12.ItemCode = T16.ItemCode
+      LEFT JOIN OITB T17 ON T16.ItmsGrpCod = T17.ItmsGrpCod
+      
       LEFT JOIN DLN1 T2 ON T2.BaseEntry = T12.DocEntry 
                         AND T2.BaseType = 17 
                         AND T2.BaseLine = T12.LineNum

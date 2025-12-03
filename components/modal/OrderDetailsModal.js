@@ -60,6 +60,11 @@ const OrderDetailsModal = ({ orderData, onClose, title = "Order Details" }) => {
         cell: ({ getValue }) => getValue() || "-",
       },
       {
+        accessorFn: row => row["CategoryName"],
+        header: "CategoryName",
+        cell: ({ getValue }) => getValue() || "-",
+      },
+      {
         accessorFn: row => row["Vendor Catalog No."],
         header: "Vendor Cat. No.",
         cell: ({ getValue }) => getValue() || "-",
