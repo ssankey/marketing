@@ -126,7 +126,8 @@ export default function CustomerBalTable({
         header: "Dispatch Date",
         cell: ({ getValue }) => formatDate(getValue()),
       },
-      { accessorKey: "SlpName", header: "Sales Person" },
+      { accessorKey: "SlpName", header: "Sales Person - Invoice" },
+      { accessorKey: "MasterSalesPerson", header: "Sales Person - customer master" },
     ],
     []
   );
