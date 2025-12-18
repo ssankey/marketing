@@ -250,52 +250,118 @@
         const pageSize = 20;
         const offset = (page - 1) * pageSize;
 
-        const paginatedQuery = `
-          SELECT
-            T13.[DocNum] AS 'Invoice No.',
-            T13.[DocDate] AS 'AR Invoice Date',
-            T0.[DocNum] AS 'SO#',
-            T0.[DocDate] AS 'SO Date',
-            T13.[NumAtCard] AS 'BP Reference No.',
-            T14.[CardName] AS 'Customer Name',
-            T16.[Name] AS 'Contact Person',
-            T14.[Country] AS 'Country',
-            T17.[State] AS 'State',
-            T13.[DocTotal] AS 'Invoice Total',
-            (T13.[DocTotal] - T13.[PaidToDate]) AS 'Balance Due',
-            T13.[U_Airlinename] AS 'AirlineName',
-            T13.[trackNo] AS 'TrackingNo',
-            T3.[DocDate] AS 'Delivery Date',
-            DATEDIFF(DAY, T0.[DocDate], T3.[DocDate]) AS 'SOToDeliveryDays',
-            DATEDIFF(DAY, T13.[DocDueDate], GETDATE()) AS 'Overdue Days',
-            T15.[PymntGroup] AS 'Payment Terms',
-            T50.[SlpName] AS 'Sales Person',
-            T13.[TaxDate] AS 'Dispatch Date'
-          FROM ORDR T0
-          INNER JOIN RDR1 T1 ON T0.[DocEntry] = T1.[DocEntry]
-          INNER JOIN DLN1 T2 ON T1.[DocEntry] = T2.[BaseEntry] AND T1.[ItemCode] = T2.[ItemCode] AND T2.[BaseLine] = T1.[LineNum]
-          INNER JOIN ODLN T3 ON T3.[DocEntry] = T2.[DocEntry]
-          INNER JOIN INV1 T12 ON T2.[DocEntry] = T12.[BaseEntry] AND T2.[ItemCode] = T12.[ItemCode] AND T12.[BaseLine] = T2.[LineNum]
-          INNER JOIN OINV T13 ON T13.[DocEntry] = T12.[DocEntry]
-          INNER JOIN OITM T10 ON T10.[ItemCode] = T1.[ItemCode]
-          INNER JOIN OITB T11 ON T11.[ItmsGrpCod] = T10.[ItmsGrpCod]
-          INNER JOIN OCRD T14 ON T13.[CardCode] = T14.[CardCode]
-          INNER JOIN CRD1 T17 ON T14.[CardCode] = T17.[CardCode]
-          INNER JOIN OCPR T16 ON T14.[CardCode] = T16.[CardCode]
-          INNER JOIN OCTG T15 ON T14.[GroupNum] = T15.[GroupNum]
-          LEFT JOIN OSLP T50 ON T50.[SlpCode] = T13.[SlpCode]
-          WHERE (T13.[DocTotal] - T13.[PaidToDate]) > 0
-          ${searchFilter}
-          ${dateFilter}
-          ${overdueFilter}
-          ${salesPersonFilter}
-          ${categoryFilter}
-          ${productFilter}
-          ${customerFilter}
-          ${orderBy}
+        // const paginatedQuery = `
+        //   SELECT
+        //     T13.[DocNum] AS 'Invoice No.',
+        //     T13.[DocDate] AS 'AR Invoice Date',
+        //     T0.[DocNum] AS 'SO#',
+        //     T0.[DocDate] AS 'SO Date',
+        //     T13.[NumAtCard] AS 'BP Reference No.',
+        //     T14.[CardName] AS 'Customer Name',
+        //     T16.[Name] AS 'Contact Person',
+        //     T14.[Country] AS 'Country',
+        //     T17.[State] AS 'State',
+        //     T13.[DocTotal] AS 'Invoice Total',
+        //     (T13.[DocTotal] - T13.[PaidToDate]) AS 'Balance Due',
+        //     T13.[U_Airlinename] AS 'AirlineName',
+        //     T13.[trackNo] AS 'TrackingNo',
+        //     T3.[DocDate] AS 'Delivery Date',
+        //     DATEDIFF(DAY, T0.[DocDate], T3.[DocDate]) AS 'SOToDeliveryDays',
+        //     DATEDIFF(DAY, T13.[DocDueDate], GETDATE()) AS 'Overdue Days',
+        //     T15.[PymntGroup] AS 'Payment Terms',
+        //     T50.[SlpName] AS 'Sales Person',
+        //     T13.[TaxDate] AS 'Dispatch Date'
+        //   FROM ORDR T0
+        //   INNER JOIN RDR1 T1 ON T0.[DocEntry] = T1.[DocEntry]
+        //   INNER JOIN DLN1 T2 ON T1.[DocEntry] = T2.[BaseEntry] AND T1.[ItemCode] = T2.[ItemCode] AND T2.[BaseLine] = T1.[LineNum]
+        //   INNER JOIN ODLN T3 ON T3.[DocEntry] = T2.[DocEntry]
+        //   INNER JOIN INV1 T12 ON T2.[DocEntry] = T12.[BaseEntry] AND T2.[ItemCode] = T12.[ItemCode] AND T12.[BaseLine] = T2.[LineNum]
+        //   INNER JOIN OINV T13 ON T13.[DocEntry] = T12.[DocEntry]
+        //   INNER JOIN OITM T10 ON T10.[ItemCode] = T1.[ItemCode]
+        //   INNER JOIN OITB T11 ON T11.[ItmsGrpCod] = T10.[ItmsGrpCod]
+        //   INNER JOIN OCRD T14 ON T13.[CardCode] = T14.[CardCode]
+        //   INNER JOIN CRD1 T17 ON T14.[CardCode] = T17.[CardCode]
+        //   INNER JOIN OCPR T16 ON T14.[CardCode] = T16.[CardCode]
+        //   INNER JOIN OCTG T15 ON T14.[GroupNum] = T15.[GroupNum]
+        //   LEFT JOIN OSLP T50 ON T50.[SlpCode] = T13.[SlpCode]
+        //   WHERE (T13.[DocTotal] - T13.[PaidToDate]) > 0
+        //   ${searchFilter}
+        //   ${dateFilter}
+        //   ${overdueFilter}
+        //   ${salesPersonFilter}
+        //   ${categoryFilter}
+        //   ${productFilter}
+        //   ${customerFilter}
+        //   ${orderBy}
           
-          ${isGetAll ? "" : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
-        `;
+        //   ${isGetAll ? "" : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
+        // `;
+
+        const paginatedQuery = `
+  SELECT
+    T13.[DocNum] AS 'Invoice No.',
+    T13.[DocDate] AS 'AR Invoice Date',
+    T0.[DocNum] AS 'SO#',
+    T0.[DocDate] AS 'SO Date',
+    T13.[NumAtCard] AS 'BP Reference No.',
+    T14.[CardName] AS 'Customer Name',
+    T16.[Name] AS 'Contact Person',
+    T14.[Country] AS 'Country',
+    T17.[State] AS 'State',
+    T13.[DocTotal] AS 'Invoice Total',
+    (T13.[DocTotal] - T13.[PaidToDate]) AS 'Balance Due',
+    T13.[U_Airlinename] AS 'AirlineName',
+    T13.[trackNo] AS 'TrackingNo',
+    T3.[DocDate] AS 'Delivery Date',
+    DATEDIFF(DAY, T0.[DocDate], T3.[DocDate]) AS 'SOToDeliveryDays',
+    DATEDIFF(DAY, T13.[DocDueDate], GETDATE()) AS 'Overdue Days',
+    T15.[PymntGroup] AS 'Payment Terms',
+    T50.[SlpName] AS 'Sales Person - Invoice',
+    T51.[SlpName] AS 'MasterSalesPerson',
+    T13.[TaxDate] AS 'Dispatch Date'
+  FROM ORDR T0
+  INNER JOIN RDR1 T1
+    ON T0.[DocEntry] = T1.[DocEntry]
+  INNER JOIN DLN1 T2
+    ON T1.[DocEntry] = T2.[BaseEntry]
+   AND T1.[ItemCode] = T2.[ItemCode]
+   AND T2.[BaseLine] = T1.[LineNum]
+  INNER JOIN ODLN T3
+    ON T3.[DocEntry] = T2.[DocEntry]
+  INNER JOIN INV1 T12
+    ON T2.[DocEntry] = T12.[BaseEntry]
+   AND T2.[ItemCode] = T12.[ItemCode]
+   AND T12.[BaseLine] = T2.[LineNum]
+  INNER JOIN OINV T13
+    ON T13.[DocEntry] = T12.[DocEntry]
+  INNER JOIN OITM T10
+    ON T10.[ItemCode] = T1.[ItemCode]
+  INNER JOIN OITB T11
+    ON T11.[ItmsGrpCod] = T10.[ItmsGrpCod]
+  INNER JOIN OCRD T14
+    ON T13.[CardCode] = T14.[CardCode]
+  INNER JOIN CRD1 T17
+    ON T14.[CardCode] = T17.[CardCode]
+  INNER JOIN OCPR T16
+    ON T14.[CardCode] = T16.[CardCode]
+  INNER JOIN OCTG T15
+    ON T14.[GroupNum] = T15.[GroupNum]
+  LEFT JOIN OSLP T50
+    ON T50.[SlpCode] = T13.[SlpCode]
+  LEFT JOIN OSLP T51
+    ON T51.[SlpCode] = T14.[SlpCode]
+  WHERE (T13.[DocTotal] - T13.[PaidToDate]) > 0
+  ${searchFilter}
+  ${dateFilter}
+  ${overdueFilter}
+  ${salesPersonFilter}
+  ${categoryFilter}
+  ${productFilter}
+  ${customerFilter}
+  ${orderBy}
+  ${isGetAll ? "" : `OFFSET ${offset} ROWS FETCH NEXT ${pageSize} ROWS ONLY`}
+`;
+
 
         const countQuery = `
           SELECT COUNT(*) AS total

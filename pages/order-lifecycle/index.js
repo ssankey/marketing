@@ -1,7 +1,13 @@
 
-
 // pages/order-lifecycle/index.js
 import React, { useState, useEffect, useRef } from "react";
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import RangeConfiguration from '../../components/order-lifecycle/RangeConfiguration';
+import SummaryTable from '../../components/order-lifecycle/SummaryTable';
+import DetailModal from '../../components/order-lifecycle/DetailModal';
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const DEFAULT_RANGES = [
   { id: 1, min: 0, max: 3, label: "0-3 days", color: "#10b981" },
@@ -13,6 +19,7 @@ const DEFAULT_RANGES = [
 
 const OrderLifeCycle = () => {
   const [activeTab, setActiveTab] = useState("po-to-grn");
+  const [customRanges, setCustomRanges] = useState([...DEFAULT_RANGES]);
   const [filters, setFilters] = useState({
     salesPerson: "",
     customer: "",
@@ -37,6 +44,10 @@ const OrderLifeCycle = () => {
     category: false,
   });
 
+  // Modal states
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedCell, setSelectedCell] = useState(null);
+
   const dropdownRefs = {
     salesPerson: useRef(null),
     customer: useRef(null),
@@ -44,18 +55,14 @@ const OrderLifeCycle = () => {
     category: useRef(null),
   };
 
-  // Fetch unique values when tab changes
   useEffect(() => {
     fetchUniqueValues();
   }, [activeTab]);
 
-  // Fetch chart data when filters or tab changes
   useEffect(() => {
     fetchChartData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, filters]);
+  }, [activeTab, filters, customRanges]);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       Object.keys(dropdownRefs).forEach((key) => {
@@ -107,16 +114,14 @@ const OrderLifeCycle = () => {
       const endpoint = apiEndpoints[activeTab];
       const params = new URLSearchParams();
 
-      // Use names directly (no codes)
       if (filters.salesPerson) params.append("salesPerson", filters.salesPerson);
       if (filters.customer) params.append("customer", filters.customer);
       if (filters.contactPerson) params.append("contactPerson", filters.contactPerson);
       if (filters.category) params.append("category", filters.category);
+      params.append("ranges", JSON.stringify(customRanges));
 
       const res = await fetch(`${endpoint}?${params.toString()}`);
       const data = await res.json();
-
-      console.log("API Response:", data);
 
       const aggregated = aggregateByMonth(data.data || []);
       setChartData(aggregated);
@@ -128,29 +133,55 @@ const OrderLifeCycle = () => {
     }
   };
 
-  const aggregateByMonth = (rows) => {
-    const monthMap = {};
-    rows.forEach((r) => {
-      const key = r.Month;
-      if (!monthMap[key]) {
-        monthMap[key] = { 
-          month: key, 
-          year: r.Year, 
-          monthNumber: r.MonthNumber, 
-          buckets: {} 
-        };
-      }
-      monthMap[key].buckets[r.Bucket] = {
-        count: Number(r.TotalCount) || 0,
-        percentage: Number(r.Percentage) || 0,
-      };
-    });
+  // const aggregateByMonth = (rows) => {
+  //   const monthMap = {};
+  //   rows.forEach((r) => {
+  //     const key = r.Month;
+  //     if (!monthMap[key]) {
+  //       monthMap[key] = { 
+  //         month: key, 
+  //         year: r.Year, 
+  //         monthNumber: r.MonthNumber, 
+  //         buckets: {} 
+  //       };
+  //     }
+  //     monthMap[key].buckets[r.Bucket] = {
+  //       count: Number(r.TotalCount) || 0,
+  //       percentage: Number(r.Percentage) || 0,
+  //     };
+  //   });
     
-    return Object.values(monthMap).sort((a, b) => {
-      if (a.year !== b.year) return b.year - a.year;
-      return b.monthNumber - a.monthNumber;
-    });
-  };
+  //   return Object.values(monthMap).sort((a, b) => {
+  //     if (a.year !== b.year) return a.year - b.year;
+  //     return a.monthNumber - b.monthNumber;
+  //   });
+  // };
+  const aggregateByMonth = (rows) => {
+  const monthMap = {};
+  rows.forEach((r) => {
+    const key = r.Month;
+    if (!monthMap[key]) {
+      monthMap[key] = { 
+        month: key, 
+        year: r.Year, 
+        monthNumber: r.MonthNumber, 
+        buckets: {},
+        total: 0  // ✅ Initialize total
+      };
+    }
+    monthMap[key].buckets[r.Bucket] = {
+      count: Number(r.TotalCount) || 0,
+      percentage: Number(r.Percentage) || 0,
+    };
+    // ✅ Add to total
+    monthMap[key].total += Number(r.TotalCount) || 0;
+  });
+  
+  return Object.values(monthMap).sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.monthNumber - b.monthNumber;
+  });
+};
 
   const handleInputChange = (field, value) => {
     setFilters((prev) => ({ ...prev, [field]: value }));
@@ -164,7 +195,7 @@ const OrderLifeCycle = () => {
         value = item.SlpName;
         break;
       case "customer":
-        value = item.CardName; // Only name, no code
+        value = item.CardName;
         break;
       case "contactPerson":
         value = item.ContactPerson;
@@ -192,7 +223,6 @@ const OrderLifeCycle = () => {
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
-    // Reset filters when tab changes
     setFilters({
       salesPerson: "",
       customer: "",
@@ -200,6 +230,19 @@ const OrderLifeCycle = () => {
       category: "",
     });
   };
+
+  // const handleCellClick = (month, bucket) => {
+  //   setSelectedCell({ month, bucket, tab: activeTab, filters });
+  //   setShowDetailModal(true);
+  // };
+
+  const handleCellClick = (month, bucket) => {
+  setSelectedCell({ 
+    month, bucket, tab: activeTab, filters,
+    ranges: customRanges  // Add this!
+  });
+  setShowDetailModal(true);
+};
 
   const tabs = [
     { id: "po-to-grn", label: "PO to GRN" },
@@ -213,143 +256,205 @@ const OrderLifeCycle = () => {
     return `${monthNames[parseInt(month) - 1]} ${year}`;
   };
 
-  const renderStackedBar = (monthData) => {
-    const total = Object.values(monthData.buckets).reduce((sum, b) => sum + (b.count || 0), 0);
+  // Filter suggestions based on input
+  const getFilteredSuggestions = (field) => {
+    const searchValue = filters[field].toLowerCase().trim();
+    if (!searchValue) return suggestions[field];
+
+    return suggestions[field].filter((item) => {
+      let itemValue = "";
+      switch (field) {
+        case "salesPerson":
+          itemValue = item.SlpName?.toLowerCase() || "";
+          break;
+        case "customer":
+          itemValue = item.CardName?.toLowerCase() || "";
+          break;
+        case "contactPerson":
+          itemValue = item.ContactPerson?.toLowerCase() || "";
+          break;
+        case "category":
+          itemValue = item.ItmsGrpNam?.toLowerCase() || "";
+          break;
+      }
+      return itemValue.includes(searchValue);
+    });
+  };
+
+  // Prepare Chart.js data
+  const prepareChartData = () => {
+    const labels = chartData.map(m => formatMonthYear(m.month));
+    
+    const datasets = customRanges.map(range => {
+      return {
+        label: range.label,
+        data: chartData.map(m => m.buckets[range.label]?.count || 0),
+        backgroundColor: range.color,
+        borderColor: range.color,
+        borderWidth: 1,
+      };
+    });
+
+    return { labels, datasets };
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        stacked: true,
+        grid: { display: false },
+        ticks: { font: { size: 11, weight: 600 }, color: '#374151' }
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: { font: { size: 11 }, color: '#6b7280' },
+        grid: { color: '#f3f4f6' }
+      },
+    },
+    plugins: {
+            datalabels: {
+              display: false,
+            },
+      legend: {
+        position: 'bottom',
+        labels: {
+          boxWidth: 12,
+          font: { size: 11, weight: 600 },
+          padding: 12,
+        },
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        callbacks: {
+          label: (context) => {
+            const label = context.dataset.label || '';
+            const value = context.parsed.y || 0;
+            return `${label}: ${value}`;
+          },
+        },
+      },
+    },
+  };
+
+  const renderDropdown = (field, placeholder) => {
+    const filteredSuggestions = getFilteredSuggestions(field);
     
     return (
-      <div key={monthData.month} style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#1f2937" }}>
-            {formatMonthYear(monthData.month)}
-          </span>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#6b7280" }}>
-            Total: {total}
-          </span>
-        </div>
+      <div
+        style={{ position: "relative", flex: 1, minWidth: 180 }}
+        ref={dropdownRefs[field]}
+      >
+        <input
+          type="text"
+          value={filters[field]}
+          onChange={(e) => handleInputChange(field, e.target.value)}
+          onFocus={() => setShowSuggestions((p) => ({ ...p, [field]: true }))}
+          placeholder={placeholder}
+          style={{
+            width: "100%",
+            padding: "10px 32px 10px 12px",
+            border: "1px solid #d1d5db",
+            borderRadius: 8,
+            fontSize: 14,
+            outline: "none",
+          }}
+        />
 
-        <div style={{ 
-          height: 36, 
-          borderRadius: 6, 
-          display: "flex", 
-          overflow: "hidden", 
-          border: "1px solid #e5e7eb" 
-        }}>
-          {DEFAULT_RANGES.map((range, idx) => {
-            const bucket = monthData.buckets[range.label];
-            const percentage = bucket ? bucket.percentage : 0;
-            if (!percentage) return null;
+        {filters[field] && (
+          <button
+            onClick={() => handleClearFilter(field)}
+            aria-label="Clear"
+            style={{
+              position: "absolute",
+              right: 8,
+              top: "50%",
+              transform: "translateY(-50%)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: 18,
+              color: "#9ca3af",
+              padding: 4,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        )}
 
-            return (
+        {showSuggestions[field] && filteredSuggestions.length > 0 && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              marginTop: 4,
+              backgroundColor: "#fff",
+              border: "1px solid #d1d5db",
+              borderRadius: 8,
+              boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+              maxHeight: 220,
+              overflowY: "auto",
+              zIndex: 1000,
+            }}
+          >
+            {filteredSuggestions.map((item, idx) => (
               <div
                 key={idx}
-                style={{
-                  width: `${percentage}%`,
-                  backgroundColor: range.color,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#fff",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  opacity: 0.85,
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleSelectSuggestion(field, item);
                 }}
-                title={`${range.label}: ${bucket.count} orders (${percentage.toFixed(1)}%)`}
+                style={{
+                  padding: "10px 12px",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  backgroundColor: "#fff",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
               >
-                {percentage > 10 && `${percentage.toFixed(1)}%`}
+                {field === "customer" && (
+                  <div style={{ fontWeight: 600, color: "#111827" }}>{item.CardName}</div>
+                )}
+                {field === "salesPerson" && item.SlpName}
+                {field === "contactPerson" && item.ContactPerson}
+                {field === "category" && item.ItmsGrpNam}
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
+
+        {showSuggestions[field] && filteredSuggestions.length === 0 && filters[field] && (
+          <div
+            style={{
+              position: "absolute",
+              top: "100%",
+              left: 0,
+              right: 0,
+              marginTop: 4,
+              backgroundColor: "#fff",
+              border: "1px solid #d1d5db",
+              borderRadius: 8,
+              boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+              padding: "10px 12px",
+              zIndex: 1000,
+              color: "#9ca3af",
+              fontSize: 14,
+              textAlign: "center",
+            }}
+          >
+            No results found
+          </div>
+        )}
       </div>
     );
   };
-
-  const renderDropdown = (field, placeholder) => (
-    <div
-      style={{ position: "relative", flex: 1, minWidth: 180 }}
-      ref={dropdownRefs[field]}
-    >
-      <input
-        type="text"
-        value={filters[field]}
-        onChange={(e) => handleInputChange(field, e.target.value)}
-        onFocus={() => setShowSuggestions((p) => ({ ...p, [field]: true }))}
-        placeholder={placeholder}
-        style={{
-          width: "100%",
-          padding: "10px 32px 10px 12px",
-          border: "1px solid #d1d5db",
-          borderRadius: 8,
-          fontSize: 14,
-          outline: "none",
-        }}
-      />
-
-      {filters[field] && (
-        <button
-          onClick={() => handleClearFilter(field)}
-          aria-label="Clear"
-          style={{
-            position: "absolute",
-            right: 8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontSize: 18,
-            color: "#9ca3af",
-            padding: 4,
-            lineHeight: 1,
-          }}
-        >
-          ×
-        </button>
-      )}
-
-      {showSuggestions[field] && suggestions[field]?.length > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
-            marginTop: 4,
-            backgroundColor: "#fff",
-            border: "1px solid #d1d5db",
-            borderRadius: 8,
-            boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-            maxHeight: 220,
-            overflowY: "auto",
-            zIndex: 1000,
-          }}
-        >
-          {suggestions[field].map((item, idx) => (
-            <div
-              key={idx}
-              onMouseDown={() => handleSelectSuggestion(field, item)}
-              style={{
-                padding: "10px 12px",
-                cursor: "pointer",
-                fontSize: 14,
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
-            >
-              {field === "customer" && (
-                <div style={{ fontWeight: 600, color: "#111827" }}>{item.CardName}</div>
-              )}
-              {field === "salesPerson" && item.SlpName}
-              {field === "contactPerson" && item.ContactPerson}
-              {field === "category" && item.ItmsGrpNam}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const sortedLegend = [...DEFAULT_RANGES].sort((a, b) => a.min - b.min);
 
   return (
     <div style={{ padding: 24, minHeight: "100vh", backgroundColor: "#f9fafb" }}>
@@ -387,6 +492,12 @@ const OrderLifeCycle = () => {
           {renderDropdown("customer", "Customer")}
           {renderDropdown("contactPerson", "Contact Person")}
           {renderDropdown("category", "Category")}
+
+          <RangeConfiguration
+            customRanges={customRanges}
+            onRangesChange={setCustomRanges}
+            onApplyRanges={setCustomRanges}
+          />
 
           <button
             onClick={handleResetAll}
@@ -444,35 +555,21 @@ const OrderLifeCycle = () => {
         {/* Chart */}
         <div style={{ padding: 24 }}>
           {loading ? (
-            <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>⏳ Loading data...</div>
+            <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>
+              ⏳ Loading data...
+            </div>
           ) : chartData.length ? (
             <>
-              <div style={{ maxHeight: 520, overflowY: "auto", paddingRight: 8, marginBottom: 20 }}>
-                {chartData.map((m) => renderStackedBar(m))}
+              <div style={{ height: 400, marginBottom: 32 }}>
+                <Bar data={prepareChartData()} options={chartOptions} />
               </div>
 
-              {/* Legend */}
-              <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 10 }}>
-                  Day Range Legend
-                </div>
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-                  {sortedLegend.map((r) => (
-                    <div key={r.label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span
-                        style={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: 4,
-                          backgroundColor: r.color,
-                          border: "1px solid rgba(0,0,0,0.1)",
-                        }}
-                      />
-                      <span style={{ fontSize: 13, color: "#374151", fontWeight: 500 }}>{r.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Summary Table */}
+              <SummaryTable
+                chartData={chartData}
+                customRanges={customRanges}
+                onCellClick={handleCellClick}
+              />
             </>
           ) : (
             <div style={{ textAlign: "center", padding: 40, color: "#6b7280" }}>
@@ -483,6 +580,15 @@ const OrderLifeCycle = () => {
           )}
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && (
+        <DetailModal
+          show={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          selectedCell={selectedCell}
+        />
+      )}
     </div>
   );
 };
