@@ -1,268 +1,3 @@
-
-// // components/order-lifecycle/SummaryTable.js
-// import React, { useEffect, useRef } from "react";
-
-// const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
-//   const scrollContainerRef = useRef(null);
-
-//   const formatMonthYear = (monthStr) => {
-//     const [year, month] = monthStr.split("-");
-//     const monthNames = [
-//       "Jan",
-//       "Feb",
-//       "Mar",
-//       "Apr",
-//       "May",
-//       "Jun",
-//       "Jul",
-//       "Aug",
-//       "Sep",
-//       "Oct",
-//       "Nov",
-//       "Dec",
-//     ];
-//     return `${monthNames[parseInt(month, 10) - 1]}-${year}`;
-//   };
-
-//   // Scroll to the RIGHT side whenever chartData changes
-//   useEffect(() => {
-//     if (scrollContainerRef.current) {
-//       const el = scrollContainerRef.current;
-//       // Use setTimeout to ensure DOM is fully rendered
-//       setTimeout(() => {
-//         el.scrollLeft = el.scrollWidth - el.clientWidth;
-//       }, 0);
-//     }
-//   }, [chartData]);
-
-//   return (
-//     <div style={{ marginTop: 40 }}>
-//       <h2
-//         style={{
-//           fontSize: 20,
-//           fontWeight: 600,
-//           color: "#1f2937",
-//           marginBottom: 20,
-//         }}
-//       >
-//         Summary Table
-//       </h2>
-
-//       {/* Scroll container */}
-//       <div
-//         ref={scrollContainerRef}
-//         style={{
-//           overflowX: "auto",
-//           overflowY: "hidden",
-//           maxWidth: "100%",
-//           position: "relative",
-//           // Optional: style the scrollbar
-//           scrollbarWidth: "thin", // For Firefox
-//           scrollbarColor: "#cbd5e1 #f1f5f9", // For Firefox
-//         }}
-//       >
-//         <table
-//           style={{
-//             width: "auto", // Changed from 100% to auto
-//             minWidth: "100%", // Ensures table is at least full width
-//             borderCollapse: "collapse",
-//             background: "#fff",
-//             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-//             borderRadius: 8,
-//             overflow: "hidden",
-//           }}
-//         >
-//           <thead>
-//             <tr style={{ background: "#f9fafb" }}>
-//               {/* Sticky first column header */}
-//               <th
-//                 style={{
-//                   padding: "12px 16px",
-//                   textAlign: "left",
-//                   fontSize: 13,
-//                   fontWeight: 600,
-//                   color: "#374151",
-//                   borderBottom: "2px solid #e5e7eb",
-//                   position: "sticky",
-//                   left: 0,
-//                   minWidth: 180,
-//                   background: "#f9fafb",
-//                   zIndex: 20,
-//                   boxShadow: "2px 0 4px rgba(0,0,0,0.05)", // Shadow for depth
-//                 }}
-//               >
-//                 Range / Month
-//               </th>
-//               {chartData.map((monthData, idx) => (
-//                 <th
-//                   key={idx}
-//                   style={{
-//                     padding: "12px 16px",
-//                     textAlign: "center",
-//                     fontSize: 13,
-//                     fontWeight: 600,
-//                     color: "#374151",
-//                     borderBottom: "2px solid #e5e7eb",
-//                     minWidth: 120,
-//                     whiteSpace: "nowrap",
-//                   }}
-//                 >
-//                   {formatMonthYear(monthData.month)}
-//                 </th>
-//               ))}
-//             </tr>
-//           </thead>
-
-//           <tbody>
-//             {customRanges.map((range, rangeIdx) => {
-//               const rowBg = rangeIdx % 2 === 0 ? "#fff" : "#f9fafb";
-
-//               return (
-//                 <tr key={range.id} style={{ background: rowBg }}>
-//                   {/* Sticky first column cells */}
-//                   <td
-//                     style={{
-//                       padding: 0,
-//                       borderBottom: "1px solid #e5e7eb",
-//                       position: "sticky",
-//                       left: 0,
-//                       minWidth: 180,
-//                       background: rowBg,
-//                       zIndex: 10,
-//                       boxShadow: "2px 0 4px rgba(0,0,0,0.05)", // Shadow for depth
-//                     }}
-//                   >
-//                     <div
-//                       style={{
-//                         display: "flex",
-//                         alignItems: "center",
-//                         gap: 10,
-//                         padding: "12px 16px",
-//                       }}
-//                     >
-//                       <div
-//                         style={{
-//                           width: 16,
-//                           height: 16,
-//                           borderRadius: 4,
-//                           background: range.color,
-//                           flexShrink: 0,
-//                         }}
-//                       />
-//                       <span
-//                         style={{
-//                           fontSize: 14,
-//                           fontWeight: 500,
-//                           color: "#1f2937",
-//                         }}
-//                       >
-//                         {range.label}
-//                       </span>
-//                     </div>
-//                   </td>
-
-//                   {chartData.map((monthData, monthIdx) => {
-//                     const count = monthData.buckets[range.label]?.count || 0;
-
-//                     return (
-//                       <td
-//                         key={monthIdx}
-//                         onClick={() =>
-//                           count > 0 && onCellClick(monthData.month, range.label)
-//                         }
-//                         style={{
-//                           padding: "12px 16px",
-//                           textAlign: "center",
-//                           fontSize: 14,
-//                           color: "#374151",
-//                           borderBottom: "1px solid #e5e7eb",
-//                           cursor: count > 0 ? "pointer" : "default",
-//                           transition: "background 0.2s",
-//                           whiteSpace: "nowrap",
-//                         }}
-//                         onMouseEnter={(e) => {
-//                           if (count > 0) {
-//                             e.currentTarget.style.background = "#e0f2fe";
-//                           }
-//                         }}
-//                         onMouseLeave={(e) => {
-//                           e.currentTarget.style.background = rowBg;
-//                         }}
-//                       >
-//                         {count || "-"}
-//                       </td>
-//                     );
-//                   })}
-//                 </tr>
-//               );
-//             })}
-
-//             {/* Total Row */}
-//             <tr style={{ background: "#f3f4f6", fontWeight: 600 }}>
-//               <td
-//                 style={{
-//                   padding: 0,
-//                   position: "sticky",
-//                   left: 0,
-//                   minWidth: 180,
-//                   background: "#f3f4f6",
-//                   zIndex: 15,
-//                   boxShadow: "2px 0 4px rgba(0,0,0,0.05)", // Shadow for depth
-//                 }}
-//               >
-//                 <div
-//                   style={{
-//                     padding: "12px 16px",
-//                     fontSize: 14,
-//                     color: "#1f2937",
-//                   }}
-//                 >
-//                   Total
-//                 </div>
-//               </td>
-//               {chartData.map((monthData, idx) => (
-//                 <td
-//                   key={idx}
-//                   style={{
-//                     padding: "12px 16px",
-//                     textAlign: "center",
-//                     fontSize: 14,
-//                     color: "#1f2937",
-//                     whiteSpace: "nowrap",
-//                   }}
-//                 >
-//                   {monthData.total}
-//                 </td>
-//               ))}
-//             </tr>
-//           </tbody>
-//         </table>
-//       </div>
-
-//       {/* Optional: Custom scrollbar styles for webkit browsers */}
-//       <style jsx>{`
-//         div::-webkit-scrollbar {
-//           height: 8px;
-//         }
-//         div::-webkit-scrollbar-track {
-//           background: #f1f5f9;
-//           border-radius: 4px;
-//         }
-//         div::-webkit-scrollbar-thumb {
-//           background: #cbd5e1;
-//           border-radius: 4px;
-//         }
-//         div::-webkit-scrollbar-thumb:hover {
-//           background: #94a3b8;
-//         }
-//       `}</style>
-//     </div>
-//   );
-// };
-
-// export default SummaryTable;
-
-
 // components/order-lifecycle/SummaryTable.js (WITH PERCENTAGES)
 import React, { useEffect, useRef } from "react";
 
@@ -292,9 +27,9 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
   useEffect(() => {
     if (scrollContainerRef.current) {
       const el = scrollContainerRef.current;
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         el.scrollLeft = el.scrollWidth - el.clientWidth;
-      }, 0);
+      });
     }
   }, [chartData]);
 
@@ -315,7 +50,7 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
         ref={scrollContainerRef}
         style={{
           overflowX: "auto",
-          overflowY: "hidden",
+          overflowY: "visible",
           maxWidth: "100%",
           position: "relative",
           scrollbarWidth: "thin",
@@ -326,7 +61,8 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
           style={{
             width: "auto",
             minWidth: "100%",
-            borderCollapse: "collapse",
+            borderCollapse: "separate",
+            borderSpacing: 0,
             background: "#fff",
             boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
             borderRadius: 8,
@@ -345,10 +81,12 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
                   borderBottom: "2px solid #e5e7eb",
                   position: "sticky",
                   left: 0,
+                  width: 180,
                   minWidth: 180,
-                  background: "#f9fafb",
-                  zIndex: 20,
-                  boxShadow: "2px 0 4px rgba(0,0,0,0.05)",
+                  maxWidth: 180,
+                  backgroundColor: "#f9fafb",
+                  zIndex: 30,
+                  boxShadow: "2px 0 4px rgba(0,0,0,0.1)",
                 }}
               >
                 Range / Month
@@ -365,6 +103,7 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
                     borderBottom: "2px solid #e5e7eb",
                     minWidth: 120,
                     whiteSpace: "nowrap",
+                    backgroundColor: "#f9fafb",
                   }}
                 >
                   {formatMonthYear(monthData.month)}
@@ -378,17 +117,19 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
               const rowBg = rangeIdx % 2 === 0 ? "#fff" : "#f9fafb";
 
               return (
-                <tr key={range.id} style={{ background: rowBg }}>
+                <tr key={range.id}>
                   <td
                     style={{
-                      padding: 0,
+                      padding: "12px 16px",
                       borderBottom: "1px solid #e5e7eb",
                       position: "sticky",
                       left: 0,
+                      width: 180,
                       minWidth: 180,
-                      background: rowBg,
-                      zIndex: 10,
-                      boxShadow: "2px 0 4px rgba(0,0,0,0.05)",
+                      maxWidth: 180,
+                      backgroundColor: rowBg,
+                      zIndex: 20,
+                      boxShadow: "2px 0 4px rgba(0,0,0,0.1)",
                     }}
                   >
                     <div
@@ -396,7 +137,6 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
                         display: "flex",
                         alignItems: "center",
                         gap: 10,
-                        padding: "12px 16px",
                       }}
                     >
                       <div
@@ -440,14 +180,15 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
                           cursor: count > 0 ? "pointer" : "default",
                           transition: "background 0.2s",
                           whiteSpace: "nowrap",
+                          backgroundColor: rowBg,
                         }}
                         onMouseEnter={(e) => {
                           if (count > 0) {
-                            e.currentTarget.style.background = "#e0f2fe";
+                            e.currentTarget.style.backgroundColor = "#e0f2fe";
                           }
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = rowBg;
+                          e.currentTarget.style.backgroundColor = rowBg;
                         }}
                       >
                         {count > 0 ? (
@@ -466,27 +207,24 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
             })}
 
             {/* Total Row */}
-            <tr style={{ background: "#f3f4f6", fontWeight: 600 }}>
+            <tr>
               <td
                 style={{
-                  padding: 0,
+                  padding: "12px 16px",
                   position: "sticky",
                   left: 0,
+                  width: 180,
                   minWidth: 180,
-                  background: "#f3f4f6",
-                  zIndex: 15,
-                  boxShadow: "2px 0 4px rgba(0,0,0,0.05)",
+                  maxWidth: 180,
+                  backgroundColor: "#f3f4f6",
+                  zIndex: 20,
+                  boxShadow: "2px 0 4px rgba(0,0,0,0.1)",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "#1f2937",
                 }}
               >
-                <div
-                  style={{
-                    padding: "12px 16px",
-                    fontSize: 14,
-                    color: "#1f2937",
-                  }}
-                >
-                  Total
-                </div>
+                Total
               </td>
               {chartData.map((monthData, idx) => (
                 <td
@@ -497,6 +235,8 @@ const SummaryTable = ({ chartData, customRanges, onCellClick }) => {
                     fontSize: 14,
                     color: "#1f2937",
                     whiteSpace: "nowrap",
+                    backgroundColor: "#f3f4f6",
+                    fontWeight: 600,
                   }}
                 >
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
