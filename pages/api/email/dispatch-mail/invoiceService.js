@@ -11,6 +11,7 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
       SELECT TOP 6
             T0.DocNum                AS InvoiceNo,
             T0.DocDate               AS InvoiceDate,
+            T0.DocCur                AS Currency,
             T4.DocNum                AS OrderNo,
             T4.DocDate               AS OrderDate,
             T0.TrackNo               AS TrackingNumber,
@@ -118,6 +119,7 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
         SalesPersonEmail,
         ContactPersonEmail,
         PaymentTerms,
+        Currency,
     } = rows[0];
 
     // Log email addresses for debugging
@@ -139,6 +141,7 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
         SalesPersonEmail,
         ContactPersonEmail,
         PaymentTerms,
+        Currency,
     };
 };
 

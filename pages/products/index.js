@@ -35,37 +35,6 @@ export default function ProductsPage({
     };
   }, [router]);
 
-  // Fetch products whenever status changes
-  // useEffect(() => {
-  //   const fetchProducts = async () => {
-  //     setIsLoading(true);
-  //     try {
-  //       const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc" } = router.query;
-  //       // Determine protocol: this example assumes HTTPS
-  //       const host = window.location.host;
-  //       const apiUrl = `https://${host}/api/products`;
-
-  //       const res = await fetch(
-  //         `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
-  //       );
-
-  //       if (!res.ok) throw new Error("Failed to fetch products");
-
-  //       const data = await res.json();
-
-  //       setProducts(data.products);
-  //       setTotalItems(data.totalItems);
-  //     } catch (error) {
-  //       console.error("Error fetching products:", error);
-  //       setProducts([]);
-  //       setTotalItems(0);
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
-
-  //   fetchProducts();
-  // }, [status, router.query]);
 
   // Fetch products whenever status changes
 useEffect(() => {
@@ -146,50 +115,7 @@ ProductsPage.seo = {
   keywords: "products, density",
 };
 
-// export async function getServerSideProps(context) {
-//   const {
-//     page = 1,
-//     search = "",
-//     sortField = "ItemCode",
-//     sortDir = "asc",
-//     status = "all",
-//   } = context.query;
 
-//   const protocol = context.req.headers["x-forwarded-proto"] || "http";
-//   const host = context.req.headers.host || "localhost:3000";
-//   const apiUrl = `${protocol}://${host}/api/products`;
-
-//   try {
-//     const res = await fetch(
-//       `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
-//     );
-
-//     if (!res.ok) throw new Error("Failed to fetch products");
-
-//     const data = await res.json();
-
-//     const products = Array.isArray(data.products) ? data.products : [];
-//     const totalItems = data.totalItems || 0;
-
-//     return {
-//       props: {
-//         products, // will be renamed to initialProducts in the component
-//         totalItems, // will be renamed to initialTotalItems
-//         currentPage: parseInt(page, 10),
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error in getServerSideProps:", error);
-//     return {
-//       props: {
-//         products: [],
-//         totalItems: 0,
-//         currentPage: 1,
-//         error: "Failed to fetch products",
-//       },
-//     };
-//   }
-// }
 
 export async function getServerSideProps(context) {
   const {
