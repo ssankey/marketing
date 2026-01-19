@@ -151,7 +151,7 @@ export default async function handler(req, res) {
         `;
 
         // ✉️ Step 5: Build BCC list based on CardCode
-        const bccList = ["chandraprakashyadav1110@gmail.com"];
+        const bccList = [];
         
         // Add prashant@densitypharmachem.com if CardCode matches
         if (SPECIAL_CARDCODES.includes(order.CardCode)) {

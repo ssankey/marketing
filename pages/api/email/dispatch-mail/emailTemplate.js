@@ -16,7 +16,7 @@ const generateTrackingLinkHtml = (trackingLink) => {
 };
 
 // Updated table row generation with COA availability checking
-const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl) => {
+const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl, currency) => {
   const htmlRows = [];
   let hasCOA = false;
 
@@ -79,7 +79,7 @@ const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl) => {
 };
 
 export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl) => {
-    const { rows, InvoiceDate, TransportName, CustomerPONo } = invoiceDetails;
+    const { rows, InvoiceDate, TransportName, CustomerPONo,Currency  } = invoiceDetails;
     const { TrackingNumber, TrackingUpdatedDate, DeliveryDate, DocEntry, InvoiceNo } = trackingData;
 
     console.log(`\n=== Starting email generation for Invoice ${InvoiceNo} ===`);
@@ -101,7 +101,7 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
     const { pdfLinkHtml, isPdfAvailable } = await checkPdfAvailability(InvoiceNo, baseUrl);
     
     // Generate table rows and check for COA availability (NOW WITH ACTUAL AVAILABILITY CHECKING)
-    const { htmlRows, hasCOA } = await generateTableRows(rows, DocEntry, InvoiceNo, baseUrl);
+    const { htmlRows, hasCOA } = await generateTableRows(rows, DocEntry, InvoiceNo, baseUrl,Currency);
 
     // Generate tracking link
     const trackingLink = generateTrackingLink(TransportName, TrackingNumber);

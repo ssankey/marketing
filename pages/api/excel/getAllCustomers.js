@@ -1,4 +1,4 @@
-// pages/api/getAllQuotations.js
+
 import { getAllCustomers } from "lib/models/excel-function";
 
 export default async function handler(req, res) {
