@@ -94,6 +94,14 @@ const NavbarVertical = (props) => {
             <ul className="navbar-nav flex-column">
               {/* Only show Products page for 3ASenrise users */}
               <li className="nav-item mb-3">
+              <Link
+                href="/"
+                className={`nav-link d-flex align-items-center ${router === "/" ? "active" : ""}`}
+              >
+                <House className="me-2" /> Dashboard
+              </Link>
+            </li>
+              <li className="nav-item mb-3">
                 <Link
                   href="/products"
                   className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
