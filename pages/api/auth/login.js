@@ -219,6 +219,49 @@ if (email === "mahesh@testing.com") {
 }
 
 // -------------------- Hardcoded 3ASenrise Login --------------------
+// if (email === "3ASenrise@densitydashboard.com") {
+//   if (!password) {
+//     return res.status(200).json({
+//       message: "SHOW_PASSWORD_FIELD",
+//       showPassword: true,
+//     });
+//   }
+
+//   if (password !== "3ASenrise") {
+//     return res.status(401).json({ message: "Incorrect Password" });
+//   }
+
+//   const token = jwt.sign(
+//     {
+//       email: "3ASenrise@densitydashboard.com",
+//       role: "3ASenrise",
+//       name: "3ASenrise",
+//       contactCodes: [""], // You can adjust this code as needed
+//     },
+//     process.env.JWT_SECRET,
+//     { expiresIn: "6h" }
+//   );
+
+//   res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+//   console.log("[3ASENRISE_HARDCODED_LOGIN_SUCCESS]", {
+//     email: "3ASenrise",
+//     role: "3ASenrise",
+//   });
+
+//   return res.status(200).json({
+//     message: "Login_successful",
+//     token,
+//     user: {
+//       email: "3ASenrise@densitydashboard.com",
+//       role: "3ASenrise",
+//       name: "3ASenrise",
+//       contactCodes: ["3ASENRISE"],
+//     },
+//     showPassword: true,
+//   });
+// }
+// -------------------- Hardcoded 3ASenrise Login --------------------
 if (email === "3ASenrise@densitydashboard.com") {
   if (!password) {
     return res.status(200).json({
@@ -236,7 +279,12 @@ if (email === "3ASenrise@densitydashboard.com") {
       email: "3ASenrise@densitydashboard.com",
       role: "3ASenrise",
       name: "3ASenrise",
-      contactCodes: ["3ASENRISE"], // You can adjust this code as needed
+      // ✅ Important: Use empty arrays, not arrays with empty strings
+      contactCodes: [], // Empty array - no contact code filtering
+      cardCodes: [], // Empty array - no customer code filtering
+      // ✅ Add category filtering information
+      filterByCategory: true,
+      category: "3A Chemicals",
     },
     process.env.JWT_SECRET,
     { expiresIn: "6h" }
@@ -244,10 +292,11 @@ if (email === "3ASenrise@densitydashboard.com") {
 
   res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
 
-  console.log("[3ASENRISE_HARDCODED_LOGIN_SUCCESS]", {
-    email: "3ASenrise",
-    role: "3ASenrise",
-  });
+  // console.log("[3ASENRISE_HARDCODED_LOGIN_SUCCESS]", {
+  //   email: "3ASenrise",
+  //   role: "3ASenrise",
+  //   categoryFilter: "3A Chemicals",
+  // });
 
   return res.status(200).json({
     message: "Login_successful",
@@ -256,12 +305,15 @@ if (email === "3ASenrise@densitydashboard.com") {
       email: "3ASenrise@densitydashboard.com",
       role: "3ASenrise",
       name: "3ASenrise",
-      contactCodes: ["3ASENRISE"],
+      // ✅ Match the JWT: empty arrays and category info
+      contactCodes: [],
+      cardCodes: [],
+      filterByCategory: true,
+      category: "3A Chemicals",
     },
     showPassword: true,
   });
 }
-
   // -------------------- Salesperson and Admin Login --------------------
   try {
     const salesResults = await queryDatabase(
