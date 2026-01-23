@@ -1,232 +1,4 @@
 
-// //pages/api/auth/logn.js
-// import bcrypt from "bcrypt";
-// import jwt from "jsonwebtoken";
-// import { queryDatabase } from "lib/db";
-// import sql from "mssql";
-// import { serialize } from "cookie";
-
-// const COOKIE_OPTIONS = {
-//   httpOnly: true,
-//   secure: process.env.NODE_ENV === "production",
-//   sameSite: "strict",
-//   path: "/",
-//   maxAge: 3600,
-// };
-
-// const ADMIN_CREDENTIALS = {
-//   email: "satish@densitypharmachem.com",
-//   password: "Satish@123",
-// };
-
-// const salesPersons = [
-//   ["Sr.", "Contact Code", "Display name", "Email ID"],
-//   [1, 1, "Bhavani", "bhavani@densitypharmachem.com"],
-//   [2, 6, "Christy", "christy@densitypharmachem.com"],
-//   [3, 3, "Dinesh", "dinesh@densitypharmachem.com"],
-//   [4, 13, "Jagadish", "jagadish@densitypharmachem.com"],
-//   [5, 16, "Kalyan", "kalyan@densitypharmachem.com"],
-//   [6, 14, "Kamal", "kamal@densitypharmachem.com"],
-//   [7, 8, "Mahesh", "mahesh@densitypharmachem.com"],
-//   [8, 11, "Maneesh", "maneesh@densitypharmachem.com"],
-//   [9, 12, "Prashant", "prashant@densitypharmachem.com"],
-//   [10, 7, "Pratik", "pratik@densitypharmachem.com"],
-//   [11, 10, "Raghu", "raghu@densitypharmachem.com"],
-//   [12, 2, "Rama", "rama@densitypharmachem.com"],
-//   [13, 15, "Ravindra", "ravindra@densitypharmachem.com"],
-//   [14, 5, "Saroj", "saroj@densitypharmachem.com"],
-//   [15, 9, "Shafique", "shafique@densitypharmachem.com"],
-// ];
-
-// export default async function handler(req, res) {
-//   if (req.method !== "POST") {
-//     return res.status(405).json({ message: "Method Not Allowed" });
-//   }
-
-//   const { email, password } = req.body;
-
-//   // Admin login
-//   if (email.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase()) {
-//     if (!password)
-//       return res.status(200).json({ message: "SHOW_PASSWORD_FIELD" });
-//     if (password !== ADMIN_CREDENTIALS.password)
-//       return res.status(401).json({ message: "Invalid credentials" });
-
-//     const token = jwt.sign({ email, role: "admin" }, process.env.JWT_SECRET, {
-//       expiresIn: "1h",
-//     });
-//     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-//     return res.status(200).json({
-//       message: "Login_successful",
-//       token,
-//       user: { email, role: "admin", name: "Admin" },
-//     });
-//   }
-
-//   // Salesperson login
-
-//   const matchedSales = salesPersons.find(
-//     (row, i) => i !== 0 && row[3].toLowerCase() === email.toLowerCase()
-//   );
-
-//   if (matchedSales) {
-//     const contactCode = matchedSales[1]?.toString();
-//     const name = matchedSales[2];
-
-//     if (!password)
-//       return res.status(200).json({ message: "SHOW_PASSWORD_FIELD" });
-
-//     // PASSWORD_NOT_SET logic
-//     if (password !== email) {
-//       const token = jwt.sign(
-//         { email, role: "sales_person", name, contactCodes: [contactCode] 
-
-//         },
-//         process.env.JWT_SECRET,
-//         { expiresIn: "1h" }
-//       );
-//       res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-//       console.log("[SALES_LOGIN][PASSWORD_NOT_SET]", {
-//         email,
-//         contactCodes: [contactCode],
-//       });
-
-//       return res.status(200).json({
-//         message: "PASSWORD_NOT_SET",
-//         token,
-//         user: {
-//           email,
-//           role: "sales_person",
-//           name,
-//           contactCodes: [contactCode],
-//         },
-//       });
-//     }
-
-   
-//     const token = jwt.sign(
-//       {
-//         email,
-//         role: "contact_person",
-//         contactCodes,
-//         cardCodes: [userWithPassword.CardCode.trim()],
-//       },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1h" }
-//     );
-
-//     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-//     console.log("[SALES_LOGIN][SUCCESS]", {
-//       email,
-//       contactCodes: [contactCode],
-//     });
-
-//     return res.status(200).json({
-//       message: "Login_successful",
-//       token,
-//       user: {
-//         email,
-//         role: "sales_person",
-//         name,
-//         contactCodes: [contactCode],
-//       },
-//     });
-//   }
-
-//   // Customer login
-//   try {
-//     const results = await queryDatabase(
-//       `SELECT CntctCode, Name, E_MailL, CardCode, Password FROM ocpr WHERE E_MailL = @email`,
-//       [{ name: "email", type: sql.VarChar, value: email }]
-//     );
-
-//     if (!results || results.length === 0)
-//       return res.status(401).json({ message: "User Not Found" });
-//     if (!password)
-//       return res.status(200).json({ message: "SHOW_PASSWORD_FIELD" });
-
-//     const contactCodes = results.map((user) =>
-//       user.CntctCode.toString().trim()
-//     );
-//     const userWithPassword = results.find((user) => user.Password?.trim());
-
-//     if (!userWithPassword) {
-  
-//     const token = jwt.sign(
-//       {
-//         email,
-//         role: "contact_person",
-//         contactCodes,
-//         cardCodes: [userWithPassword.CardCode.trim()],
-//       },
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1h" }
-//     );
-
-
-//       res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-//       return res.status(200).json({
-//         message: "PASSWORD_NOT_SET",
-//         token,
-//         user: {
-//           email,
-//           role: "contact_person",
-//           contactCodes,
-//         },
-//       });
-//     }
-
-//     const isMatch = await bcrypt.compare(password, userWithPassword.Password);
-//     if (!isMatch)
-//       return res.status(401).json({ message: "Incorrect Password" });
-
-
-//     const token = jwt.sign(
-//       {
-//         email,
-//         role: "contact_person",
-//         contactCodes,
-//         cardCodes: [userWithPassword.CardCode.trim()],
-//       },
-
-//       process.env.JWT_SECRET,
-//       { expiresIn: "1h" }
-//     );
-//     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-//     return res.status(200).json({
-//       message: "Login_successful",
-//       token,
-//       //   user: {
-//       //     email,
-//       //     role: "contact_person",
-//       //     name: userWithPassword.Name,
-//       //     cardCode: userWithPassword.CardCode,
-//       //     contactCodes,
-//       //   },
-//       user: {
-//         email,
-//         role: "contact_person",
-//         name: userWithPassword.Name,
-//         cardCode: userWithPassword.CardCode,
-//         cardCodes: [userWithPassword.CardCode.trim()],
-//         contactCodes,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Login error:", error);
-//     return res
-//       .status(500)
-//       .json({ message: "Internal server error", error: error.message });
-//   }
-// }
-
-
-// pages/api/auth/logn.js
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { queryDatabase } from "lib/db";
@@ -238,32 +10,20 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === "production",
   sameSite: "strict",
   path: "/",
-  maxAge: 3600,
+  // maxAge: 3600,
+  maxAge: 6 * 60 * 60, // 6 hours
+  // maxAge: 300,
+
 };
 
-const ADMIN_CREDENTIALS = {
-  email: "satish@densitypharmachem.com",
-  password: "Satish@123",
+// Hardcoded test admin credentials
+const TEST_ADMIN = {
+  email: "testing@gmail.com",
+  password: "12Qwerty",
+  name: "Test Admin",
+  role: "admin",
+  contactCodes: ["ADMIN001"],
 };
-
-const salesPersons = [
-  ["Sr.", "Contact Code", "Display name", "Email ID"],
-  [1, 1, "Bhavani", "bhavani@densitypharmachem.com"],
-  [2, 6, "Christy", "christy@densitypharmachem.com"],
-  [3, 3, "Dinesh", "dinesh@densitypharmachem.com"],
-  [4, 13, "Jagadish", "jagadish@densitypharmachem.com"],
-  [5, 16, "Kalyan", "kalyan@densitypharmachem.com"],
-  [6, 14, "Kamal", "kamal@densitypharmachem.com"],
-  [7, 8, "Mahesh", "mahesh@densitypharmachem.com"],
-  [8, 11, "Maneesh", "maneesh@densitypharmachem.com"],
-  [9, 12, "Prashant", "prashant@densitypharmachem.com"],
-  [10, 7, "Pratik", "pratik@densitypharmachem.com"],
-  [11, 10, "Raghu", "raghu@densitypharmachem.com"],
-  [12, 2, "Rama", "rama@densitypharmachem.com"],
-  [13, 15, "Ravindra", "ravindra@densitypharmachem.com"],
-  [14, 5, "Saroj", "saroj@densitypharmachem.com"],
-  [15, 9, "Shafique", "shafique@densitypharmachem.com"],
-];
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -272,75 +32,570 @@ export default async function handler(req, res) {
 
   const { email, password } = req.body;
 
-  // -------------------- Admin Login --------------------
-  if (email.toLowerCase() === ADMIN_CREDENTIALS.email.toLowerCase()) {
-    if (!password) return res.status(200).json({ message: "SHOW_PASSWORD_FIELD" });
-    if (password !== ADMIN_CREDENTIALS.password)
-      return res.status(401).json({ message: "Invalid credentials" });
+  // Validate email presence
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
 
-    const token = jwt.sign({ email, role: "admin" }, process.env.JWT_SECRET, { expiresIn: "1h" });
+  // -------------------- Test Admin Login --------------------
+  if (email === TEST_ADMIN.email) {
+    if (!password) {
+      return res.status(200).json({
+        message: "SHOW_PASSWORD_FIELD",
+        showPassword: true,
+      });
+    }
+
+    if (password !== TEST_ADMIN.password) {
+      return res.status(401).json({ message: "Incorrect Password" });
+    }
+
+    // Create token for test admin
+    const token = jwt.sign(
+      {
+        email: TEST_ADMIN.email,
+        role: TEST_ADMIN.role,
+        name: TEST_ADMIN.name,
+        contactCodes: TEST_ADMIN.contactCodes,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "6h" }
+      //  { expiresIn: "5m" }
+    );
+
     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+    console.log("[TEST_ADMIN_LOGIN]", {
+      email: TEST_ADMIN.email,
+      role: TEST_ADMIN.role,
+    });
 
     return res.status(200).json({
       message: "Login_successful",
       token,
-      user: { email, role: "admin", name: "Admin" },
+      user: {
+        email: TEST_ADMIN.email,
+        role: TEST_ADMIN.role,
+        name: TEST_ADMIN.name,
+        contactCodes: TEST_ADMIN.contactCodes,
+      },
+      showPassword: true,
     });
   }
 
-  // -------------------- Salesperson Login --------------------
-  const matchedSales = salesPersons.find(
-    (row, i) => i !== 0 && row[3].toLowerCase() === email.toLowerCase()
+  // -------------------- Hardcoded Saurabh Admin Login --------------------
+if (email === "saurabh.b@dbllp.co.in") {
+  if (!password) {
+    return res.status(200).json({
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "saurabh.b@dbllp.co.in") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "saurabh.b@dbllp.co.in",
+      role: "admin",
+      name: "Saurabh Admin",
+      contactCodes: ["SAURABH_ADMIN"],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
   );
 
-  if (matchedSales) {
-    const contactCode = matchedSales[1]?.toString();
-    const name = matchedSales[2];
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
 
-    if (!password) return res.status(200).json({ message: "SHOW_PASSWORD_FIELD" });
+  console.log("[SAURABH_HARDCODED_LOGIN_SUCCESS]", {
+    email: "saurabh.b@dbllp.co.in",
+    role: "admin",
+  });
 
-    const token = jwt.sign(
-      { email, role: "sales_person", name, contactCodes: [contactCode] },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
-    res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "saurabh.b@dbllp.co.in",
+      role: "admin",
+      name: "Saurabh",
+      contactCodes: ["SAURABH_ADMIN"],
+    },
+    showPassword: true,
+  });
+}
 
-    console.log("[SALES_LOGIN]", { email, contactCodes: [contactCode] });
-
+if (email === "durga@densitypharmachem.com") {
+  if (!password) {
     return res.status(200).json({
-      message: password !== email ? "PASSWORD_NOT_SET" : "Login_successful",
-      token,
-      user: {
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "durga@densitypharmachem.com") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "durga@densitypharmachem.com",
+      role: "admin",
+      name: "Durga",
+      contactCodes: ["DURGA"],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
+  );
+
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+  console.log("[SAURABH_HARDCODED_LOGIN_SUCCESS]", {
+    email: "durga@densitypharmachem.com",
+    role: "admin",
+  });
+
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "durga@densitypharmachem.com",
+      role: "admin",
+      name: "Durga",
+      contactCodes: ["DURGA"],
+    },
+    showPassword: true,
+  });
+}
+
+
+
+
+// -------------------- Hardcoded Mahesh Sales Login --------------------
+if (email === "mahesh@testing.com") {
+  if (!password) {
+    return res.status(200).json({
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "Mahesh@123") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "mahesh@example.com",
+      role: "sales_person",
+      name: "Mahesh",
+      contactCodes: ["8"], // Using SlpCode 8
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
+  );
+
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+  console.log("[MAHESH_HARDCODED_LOGIN_SUCCESS]", {
+    email: "mahesh@example.com",
+    role: "sales_person",
+    slpCode: "8",
+  });
+
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "mahesh@example.com",
+      role: "sales_person",
+      name: "Mahesh",
+      contactCodes: ["8"],
+    },
+    showPassword: true,
+  });
+}
+
+// -------------------- Hardcoded 3ASenrise Login --------------------
+// if (email === "3ASenrise@densitydashboard.com") {
+//   if (!password) {
+//     return res.status(200).json({
+//       message: "SHOW_PASSWORD_FIELD",
+//       showPassword: true,
+//     });
+//   }
+
+//   if (password !== "3ASenrise") {
+//     return res.status(401).json({ message: "Incorrect Password" });
+//   }
+
+//   const token = jwt.sign(
+//     {
+//       email: "3ASenrise@densitydashboard.com",
+//       role: "3ASenrise",
+//       name: "3ASenrise",
+//       contactCodes: [""], // You can adjust this code as needed
+//     },
+//     process.env.JWT_SECRET,
+//     { expiresIn: "6h" }
+//   );
+
+//   res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+//   console.log("[3ASENRISE_HARDCODED_LOGIN_SUCCESS]", {
+//     email: "3ASenrise",
+//     role: "3ASenrise",
+//   });
+
+//   return res.status(200).json({
+//     message: "Login_successful",
+//     token,
+//     user: {
+//       email: "3ASenrise@densitydashboard.com",
+//       role: "3ASenrise",
+//       name: "3ASenrise",
+//       contactCodes: ["3ASENRISE"],
+//     },
+//     showPassword: true,
+//   });
+// }
+// -------------------- Hardcoded 3ASenrise Login --------------------
+if (email === "3ASenrise@densitydashboard.com") {
+  if (!password) {
+    return res.status(200).json({
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "3ASenrise") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "3ASenrise@densitydashboard.com",
+      role: "3ASenrise",
+      name: "3ASenrise",
+      // ✅ Important: Use empty arrays, not arrays with empty strings
+      contactCodes: [], // Empty array - no contact code filtering
+      cardCodes: [], // Empty array - no customer code filtering
+      // ✅ Add category filtering information
+      filterByCategory: true,
+      category: "3A Chemicals",
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
+  );
+
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+  // console.log("[3ASENRISE_HARDCODED_LOGIN_SUCCESS]", {
+  //   email: "3ASenrise",
+  //   role: "3ASenrise",
+  //   categoryFilter: "3A Chemicals",
+  // });
+
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "3ASenrise@densitydashboard.com",
+      role: "3ASenrise",
+      name: "3ASenrise",
+      // ✅ Match the JWT: empty arrays and category info
+      contactCodes: [],
+      cardCodes: [],
+      filterByCategory: true,
+      category: "3A Chemicals",
+    },
+    showPassword: true,
+  });
+}
+  // -------------------- Salesperson and Admin Login --------------------
+  try {
+    const salesResults = await queryDatabase(
+      `SELECT SlpCode, SlpName, email, U_Password, isAdmin FROM OSLP WHERE email = @email`,
+      [{ name: "email", type: sql.VarChar, value: email }]
+    );
+
+    if (salesResults && salesResults.length > 0) {
+      const user = salesResults[0];
+      const contactCode = user.SlpCode?.toString();
+      const name = user.SlpName;
+      const isAdmin = user.isAdmin?.trim() === "Yes";
+
+      // Check if password is set (not null, not equal to email, not empty)
+      const passwordIsSet =
+        user.U_Password &&
+        user.U_Password !== email &&
+        user.U_Password.trim() !== "";
+
+      if (!passwordIsSet) {
+        // Password not set, generate token and redirect to set password
+        const token = jwt.sign(
+          {
+            email,
+            role: isAdmin ? "admin" : "sales_person",
+            name,
+            contactCodes: [contactCode],
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "6h" }
+          //  { expiresIn: "5m" }
+        );
+
+        res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+        console.log("[SALES_LOGIN_PASSWORD_NOT_SET]", {
+          email,
+          contactCodes: [contactCode],
+          role: isAdmin ? "admin" : "sales_person",
+        });
+
+        return res.status(200).json({
+          message: "PASSWORD_NOT_SET",
+          token,
+          user: {
+            email,
+            role: isAdmin ? "admin" : "sales_person",
+            name,
+            contactCodes: [contactCode],
+          },
+          showPassword: false,
+        });
+      }
+
+      // Password is set, require password input
+      if (!password) {
+        return res.status(200).json({
+          message: "SHOW_PASSWORD_FIELD",
+          showPassword: true,
+        });
+      }
+
+      // Verify password
+      let isMatch = false;
+      try {
+        if (!user.U_Password || typeof user.U_Password !== "string") {
+          console.error(
+            "[LOGIN] Invalid password hash format for user:",
+            email
+          );
+          return res
+            .status(500)
+            .json({ message: "Authentication system error" });
+        } else {
+          console.log("[LOGIN] Verifying password for:", email);
+          isMatch = await bcrypt.compare(password, user.U_Password);
+          console.log("[LOGIN] Password verification result:", isMatch);
+        }
+      } catch (err) {
+        console.error("[LOGIN] Password comparison error:", err);
+        return res.status(500).json({ message: "Authentication error" });
+      }
+
+      if (!isMatch) {
+        return res.status(401).json({ message: "Incorrect Password" });
+      }
+
+      const token = jwt.sign(
+        {
+          email,
+          role: isAdmin ? "admin" : "sales_person",
+          name,
+          contactCodes: [contactCode],
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "6h" }
+        //  { expiresIn: "5m" }
+      );
+
+      res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+      console.log("[SALES_LOGIN_SUCCESS]", {
         email,
-        role: "sales_person",
-        name,
         contactCodes: [contactCode],
-      },
+        role: isAdmin ? "admin" : "sales_person",
+      });
+
+      return res.status(200).json({
+        message: "Login_successful",
+        token,
+        user: {
+          email,
+          role: isAdmin ? "admin" : "sales_person",
+          name,
+          contactCodes: [contactCode],
+        },
+        showPassword: true,
+      });
+    }
+  } catch (error) {
+    console.error("[LOGIN] Salesperson login error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+
+  // -------------------- Employee (OHEM) Login --------------------
+  try {
+    const employeeResults = await queryDatabase(
+      `SELECT firstName, lastName, email, U_Password FROM OHEM WHERE email = @email`,
+      [{ name: "email", type: sql.VarChar, value: email }]
+    );
+
+    if (employeeResults && employeeResults.length > 0) {
+      const user = employeeResults[0];
+      const name = `${user.firstName} ${user.lastName}`;
+      const slpCode = "19"; // Default SLP code for employees
+
+      // Check if password is set
+      const passwordIsSet =
+        user.U_Password &&
+        user.U_Password !== email &&
+        user.U_Password.trim() !== "";
+
+      if (!passwordIsSet) {
+        // Password not set, generate token and redirect to set password
+        const token = jwt.sign(
+          {
+            email,
+            role: "sales_person",
+            name,
+            contactCodes: [slpCode],
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "6h" }
+          //  { expiresIn: "5m" }
+        );
+
+        res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+        console.log("[EMPLOYEE_LOGIN_PASSWORD_NOT_SET]", {
+          email,
+          contactCodes: [slpCode],
+          role: "sales_person",
+        });
+
+        return res.status(200).json({
+          message: "PASSWORD_NOT_SET",
+          token,
+          user: {
+            email,
+            role: "sales_person",
+            name,
+            contactCodes: [slpCode],
+          },
+          showPassword: false,
+        });
+      }
+
+      // Password is set, require password input
+      if (!password) {
+        return res.status(200).json({
+          message: "SHOW_PASSWORD_FIELD",
+          showPassword: true,
+        });
+      }
+
+      // Verify password
+      let isMatch = false;
+      try {
+        if (!user.U_Password || typeof user.U_Password !== "string") {
+          console.error("[LOGIN] Invalid password hash format for employee:", email);
+          return res.status(500).json({ message: "Authentication system error" });
+        } else {
+          console.log("[LOGIN] Verifying password for employee:", email);
+          isMatch = await bcrypt.compare(password, user.U_Password);
+          console.log("[LOGIN] Employee password verification result:", isMatch);
+        }
+      } catch (err) {
+        console.error("[LOGIN] Employee password comparison error:", err);
+        return res.status(500).json({ message: "Authentication error" });
+      }
+
+      if (!isMatch) {
+        return res.status(401).json({ message: "Incorrect Password" });
+      }
+
+      const token = jwt.sign(
+        {
+          email,
+          role: "sales_person",
+          name,
+          contactCodes: [slpCode],
+        },
+        process.env.JWT_SECRET,
+        { expiresIn: "6h" }
+        //  { expiresIn: "5m" }
+      );
+
+      res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+      console.log("[EMPLOYEE_LOGIN_SUCCESS]", {
+        email,
+        contactCodes: [slpCode],
+        role: "sales_person",
+      });
+
+      return res.status(200).json({
+        message: "Login_successful",
+        token,
+        user: {
+          email,
+          role: "sales_person",
+          name,
+          contactCodes: [slpCode],
+        },
+        showPassword: true,
+      });
+    }
+  } catch (error) {
+    console.error("[LOGIN] Employee login error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
     });
   }
 
   // -------------------- Customer Login --------------------
   try {
     const results = await queryDatabase(
-      `SELECT CntctCode, Name, E_MailL, CardCode, Password FROM ocpr WHERE E_MailL = @email`,
+      `SELECT CntctCode, Name, E_MailL, CardCode, Password FROM OCPR WHERE E_MailL = @email`,
       [{ name: "email", type: sql.VarChar, value: email }]
     );
 
-    if (!results || results.length === 0)
+    if (!results || results.length === 0) {
       return res.status(401).json({ message: "User Not Found" });
-    if (!password) return res.status(200).json({ message: "SHOW_PASSWORD_FIELD" });
+    }
 
     const userWithPassword = results.find((user) => user.Password?.trim());
-    const cardCode = userWithPassword?.CardCode?.trim();
+    const cardCode =
+      userWithPassword?.CardCode?.trim() || results[0].CardCode?.trim();
 
     if (!userWithPassword) {
+      // Generate token for password setup
       const token = jwt.sign(
-        { email, role: "contact_person", cardCodes: [cardCode] },
+        {
+          email,
+          role: "contact_person",
+          cardCodes: [cardCode],
+        },
         process.env.JWT_SECRET,
-        { expiresIn: "1h" }
+        { expiresIn: "6h" }
+        //  { expiresIn: "5m" }
       );
+
       res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+      console.log("[CUSTOMER_LOGIN_PASSWORD_NOT_SET]", {
+        email,
+        cardCodes: [cardCode],
+      });
 
       return res.status(200).json({
         message: "PASSWORD_NOT_SET",
@@ -350,11 +605,28 @@ export default async function handler(req, res) {
           role: "contact_person",
           cardCodes: [cardCode],
         },
+        showPassword: false,
       });
     }
 
-    const isMatch = await bcrypt.compare(password, userWithPassword.Password);
-    if (!isMatch) return res.status(401).json({ message: "Incorrect Password" });
+    if (!password) {
+      return res.status(200).json({
+        message: "SHOW_PASSWORD_FIELD",
+        showPassword: true,
+      });
+    }
+
+    let isMatch = false;
+    try {
+      isMatch = await bcrypt.compare(password, userWithPassword.Password);
+    } catch (error) {
+      console.error("[LOGIN] Customer password comparison error:", error);
+      return res.status(500).json({ message: "Authentication error" });
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Incorrect Password" });
+    }
 
     const token = jwt.sign(
       {
@@ -364,10 +636,16 @@ export default async function handler(req, res) {
         cardCodes: [cardCode],
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "6h" }
+      //  { expiresIn: "5m" }
     );
 
     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+    console.log("[CUSTOMER_LOGIN_SUCCESS]", {
+      email,
+      cardCodes: [cardCode],
+    });
 
     return res.status(200).json({
       message: "Login_successful",
@@ -378,9 +656,13 @@ export default async function handler(req, res) {
         name: userWithPassword.Name,
         cardCodes: [cardCode],
       },
+      showPassword: true,
     });
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    console.error("[LOGIN] Customer login error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 }
