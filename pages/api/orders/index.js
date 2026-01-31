@@ -1,6 +1,6 @@
 
 
-
+// pages/api/orders.js
 import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
 import { getOrdersFromDatabase } from "../../../lib/models/orders";
@@ -45,18 +45,32 @@ export default async function handler(req, res) {
       page = 1,
       search = "",
       status = "all",
-      sortField = "DocNum",
-      sortDir = "asc",
+      sortField = "DocDate",
+      sortDir = "desc",
       fromDate,
       toDate,
-      getAll = "false"  // New flag for getting all records
+      month = "", // For month filtering
+      getAll = "false",  // Flag for getting all records (for export)
+      pageSize = 20 // Allow configurable page size
     } = req.query;
 
-    const ITEMS_PER_PAGE = 20;
+    const ITEMS_PER_PAGE = parseInt(pageSize, 10);
 
     // Validate date filters
     const validFromDate = isValidDate(fromDate) ? fromDate : undefined;
     const validToDate = isValidDate(toDate) ? toDate : undefined;
+
+    // Handle month filtering
+    let monthFromDate, monthToDate;
+    if (month && month !== "") {
+      const [year, monthNum] = month.split('-');
+      if (year && monthNum) {
+        monthFromDate = `${year}-${monthNum.padStart(2, '0')}-01`;
+        // Last day of the month
+        const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
+        monthToDate = `${year}-${monthNum.padStart(2, '0')}-${lastDay}`;
+      }
+    }
 
     // 5) Fetch from database with role/contact filtering
     const { totalItems, orders } = await getOrdersFromDatabase({
@@ -65,8 +79,8 @@ export default async function handler(req, res) {
       status,
       sortField,
       sortDir,
-      fromDate: validFromDate,
-      toDate: validToDate,
+      fromDate: validFromDate || monthFromDate,
+      toDate: validToDate || monthToDate,
       itemsPerPage: ITEMS_PER_PAGE,
       isAdmin,
       cardCodes,
@@ -77,8 +91,12 @@ export default async function handler(req, res) {
     // 6) Respond
     return res.status(200).json({
       orders,
-      totalItems: getAll === "true" ? orders.length : totalItems,
+      totalItems,
       currentPage: parseInt(page, 10),
+      totalPages: Math.ceil(totalItems / ITEMS_PER_PAGE),
+      pageSize: ITEMS_PER_PAGE,
+      hasNextPage: parseInt(page, 10) * ITEMS_PER_PAGE < totalItems,
+      hasPrevPage: parseInt(page, 10) > 1,
     });
   } catch (error) {
     console.error("Error fetching orders:", error);
