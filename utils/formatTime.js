@@ -2,10 +2,18 @@
 export function formatTime(rawTime) {
   if (!rawTime) return "";
 
-  const str = rawTime.toString().padStart(6, "0"); // ensure 6 digits
+  // If it's an ISO string, extract the time
+  if (typeof rawTime === 'string' && rawTime.includes('T')) {
+    const date = new Date(rawTime);
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }
+
+  // If it's a number (HHMMSS format)
+  const str = rawTime.toString().padStart(6, "0");
   const hh = str.substring(0, 2);
   const mm = str.substring(2, 4);
-  const ss = str.substring(4, 6);
-
-  return `${hh}:${mm}`; // 24-hour format
+  
+  return `${hh}:${mm}`;
 }
