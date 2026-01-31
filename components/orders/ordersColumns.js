@@ -76,14 +76,21 @@
       header: "Delivery Date",
       cell: ({ getValue }) => formatDate(getValue()),
     },
+    // {
+    //   accessorKey: "DocTotal",
+    //   header: "Total Amount",
+    //   cell: ({ getValue, row }) => {
+    //     const amt = row.original.DocCur === "INR" ? getValue() : getValue() * (row.original.ExchangeRate || 1);
+    //     return formatCurrency(amt || 0);
+    //   },
+    // },
     {
-      accessorKey: "DocTotal",
-      header: "Total Amount",
-      cell: ({ getValue, row }) => {
-        const amt = row.original.DocCur === "INR" ? getValue() : getValue() * (row.original.ExchangeRate || 1);
-        return formatCurrency(amt || 0);
-      },
-    },
+  accessorKey: "DocTotal",
+  header: "Total Amount",
+  cell: ({ getValue, row }) => {
+    return formatCurrency(getValue() || 0);
+  },
+},
     {
       accessorKey: "SalesEmployee",
       header: "Sales Employee",
