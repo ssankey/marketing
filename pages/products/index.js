@@ -35,37 +35,47 @@ export default function ProductsPage({
     };
   }, [router]);
 
+
   // Fetch products whenever status changes
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      try {
-        const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc" } = router.query;
-        // Determine protocol: this example assumes HTTPS
-        const host = window.location.host;
-        const apiUrl = `https://${host}/api/products`;
+useEffect(() => {
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc" } = router.query;
+      // Determine protocol: this example assumes HTTPS
+      const host = window.location.host;
+      const apiUrl = `https://${host}/api/products`;
 
-        const res = await fetch(
-          `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
-        );
-
-        if (!res.ok) throw new Error("Failed to fetch products");
-
-        const data = await res.json();
-
-        setProducts(data.products);
-        setTotalItems(data.totalItems);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setProducts([]);
-        setTotalItems(0);
-      } finally {
-        setIsLoading(false);
+      // Get token from localStorage or cookies
+      const token = localStorage.getItem('token') || document.cookie.match(/token=([^;]+)/)?.[1];
+      
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
       }
-    };
 
-    fetchProducts();
-  }, [status, router.query]);
+      const res = await fetch(
+        `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`,
+        { headers }
+      );
+
+      if (!res.ok) throw new Error("Failed to fetch products");
+
+      const data = await res.json();
+
+      setProducts(data.products);
+      setTotalItems(data.totalItems);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+      setTotalItems(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchProducts();
+}, [status, router.query]);
 
   // Update local state when props change
   useEffect(() => {
@@ -105,6 +115,8 @@ ProductsPage.seo = {
   keywords: "products, density",
 };
 
+
+
 export async function getServerSideProps(context) {
   const {
     page = 1,
@@ -119,8 +131,17 @@ export async function getServerSideProps(context) {
   const apiUrl = `${protocol}://${host}/api/products`;
 
   try {
+    // Get the token from cookies
+    const token = context.req.cookies.token || context.req.headers.cookie?.match(/token=([^;]+)/)?.[1];
+    
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const res = await fetch(
-      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
+      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`,
+      { headers }
     );
 
     if (!res.ok) throw new Error("Failed to fetch products");

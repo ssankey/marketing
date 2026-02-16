@@ -1,0 +1,48 @@
+// pages/api/order-lifecycle.js
+import { verify } from "jsonwebtoken";
+import { getSalesOrdersFromDatabase } from "models/order-lifecycle/order-lifecycle";
+
+export default async function handler(req, res) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ message: "Method Not Allowed" });
+  }
+
+  try {
+    // 1) Verify the Bearer token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        error: "Missing or malformed Authorization header",
+        received: authHeader,
+      });
+    }
+
+    const token = authHeader.split(" ")[1];
+    let decodedToken;
+    try {
+      decodedToken = verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      console.error("Token verification failed:", err);
+      return res.status(401).json({ error: "Token verification failed" });
+    }
+
+    // 2) Extract role and access codes from token
+    const isAdmin = decodedToken.role === "admin";
+    const contactCodes = decodedToken.contactCodes || [];
+    const cardCodes = decodedToken.cardCodes || [];
+
+    // 3) Call the modal function with only the required parameters
+    const results = await getSalesOrdersFromDatabase({
+      isAdmin,
+      contactCodes,
+      cardCodes
+    });
+
+    // 4) Return the data
+    return res.status(200).json(results);
+
+  } catch (error) {
+    console.error("Error fetching order lifecycle data:", error);
+    return res.status(500).json({ error: "Failed to fetch order lifecycle data" });
+  }
+}
