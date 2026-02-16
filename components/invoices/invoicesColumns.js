@@ -283,6 +283,11 @@ export const tableColumns = [
     cell: ({ getValue }) => getValue() || "N/A",
   },
   {
+    accessorKey: "Courier Service",  // ✅ ADD THIS COLUMN
+    header: "Courier Service",
+    cell: ({ getValue }) => getValue() || "N/A",
+  },
+  {
     accessorKey: "Dispatch Date",
     header: "Dispatch Date",
     cell: ({ getValue }) => formatDate(getValue()),
