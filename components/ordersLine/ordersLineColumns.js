@@ -1,20 +1,19 @@
-
-
-// components/openOrders/openOrdersColumns.js
+// components/ordersLine/ordersLineColumns.js
 import Link from "next/link";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 import { truncateText } from "utils/truncateText";
 import { Badge } from "react-bootstrap";
 
-export const tableColumns = (handlers) => [
+export const tableColumns = () => [
   {
     accessorKey: "LineStatus",
-    header: "Document Status",
+    header: "Line Status",
     cell: ({ getValue }) => {
       const value = getValue();
       let cls = "bg-danger";
-      if (value === "Closed") cls = "bg-secondary";
+      if (value === "Open") cls = "bg-danger";
+      if (value === "Closed") cls = "bg-success";
       return <Badge className={cls}>{value || 'N/A'}</Badge>;
     },
   },
@@ -80,7 +79,6 @@ export const tableColumns = (handlers) => [
     header: "Cas No",
     cell: ({ getValue }) => getValue() || "N/A",
   },
-  
   {
     accessorKey: "ItemGroup",
     header: "Category",
@@ -91,7 +89,6 @@ export const tableColumns = (handlers) => [
     header: "Quantity Order",
     cell: ({ getValue }) => getValue() || "0",
   },
-  
   {
     accessorKey: "OpenQty",
     header: "Open Qty",
@@ -115,7 +112,6 @@ export const tableColumns = (handlers) => [
     header: "Delivery Date",
     cell: ({ getValue }) => formatDate(getValue()),
   },
-  
   {
     accessorKey: "Timeline",
     header: "Timeline",
@@ -129,18 +125,12 @@ export const tableColumns = (handlers) => [
   {
     accessorKey: "Price",
     header: "Price",
-    cell: ({ getValue }) => {
-      // Remove PriceCurrency parameter - DocTotal is already in INR
-      return formatCurrency(getValue() || 0);
-    },
+    cell: ({ getValue }) => formatCurrency(getValue() || 0),
   },
   {
     accessorKey: "OpenAmount",
     header: "OPEN AMOUNT",
-    cell: ({ getValue }) => {
-      // Remove PriceCurrency parameter - DocTotal is already in INR
-      return formatCurrency(getValue() || 0);
-    },
+    cell: ({ getValue }) => formatCurrency(getValue() || 0),
   },
   {
     accessorKey: "SalesEmployee",

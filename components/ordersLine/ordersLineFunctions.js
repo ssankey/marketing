@@ -1,13 +1,12 @@
-
-// components/invoices/invoicesFunctions.js
+// components/ordersLine/ordersLineFunctions.js
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { debounce } from "lodash";
 import downloadExcel from "utils/exporttoexcel";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 
-export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize = 20) => {
-  const [invoices, setInvoices] = useState([]);
+export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSize = 20) => {
+  const [ordersLine, setOrdersLine] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(initialPage);
@@ -17,11 +16,11 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
   const [selectedMonth, setSelectedMonth] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [sortField, setSortField] = useState("DocDate");
+  const [sortField, setSortField] = useState("PostingDate");
   const [sortDirection, setSortDirection] = useState("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [allInvoicesForFilters, setAllInvoicesForFilters] = useState([]);
+  const [allOrdersLineForFilters, setAllOrdersLineForFilters] = useState([]);
   const [shouldResetPage, setShouldResetPage] = useState(false);
 
   const debouncedSearch = useMemo(
@@ -38,8 +37,7 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
     };
   }, [globalFilter, debouncedSearch]);
 
-  // Fetch invoices from API
-  const fetchInvoices = useCallback(async (params = {}) => {
+  const fetchOrdersLine = useCallback(async (params = {}) => {
     setLoading(true);
     setError(null);
     
@@ -51,7 +49,7 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
         pageSize: pageSize,
         search: (params.search !== undefined ? params.search : debouncedGlobalFilter) || "",
         status: params.status || statusFilter || "all",
-        sortField: params.sortField || sortField || "DocDate",
+        sortField: params.sortField || sortField || "PostingDate",
         sortDir: params.sortDir || sortDirection || "desc",
         ...(params.month && { month: params.month }),
         ...(params.fromDate && { fromDate: params.fromDate }),
@@ -59,69 +57,66 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
         ...(params.getAll && { getAll: "true" })
       });
 
-      const response = await fetch(`/api/invoices?${queryParams}`, {
+      const response = await fetch(`/api/orders-line?${queryParams}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch invoices: ${response.status}`);
+        throw new Error(`Failed to fetch order lines: ${response.status}`);
       }
 
       const data = await response.json();
       
       if (params.getAll) {
-        return data.invoices;
+        return data.ordersLine;
       }
       
-      setInvoices(data.invoices || []);
+      setOrdersLine(data.ordersLine || []);
       setTotalItems(data.totalItems || 0);
       setTotalPages(data.totalPages || 0);
     } catch (error) {
-      console.error("Error fetching invoices:", error);
+      console.error("Error fetching order lines:", error);
       setError(error.message);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Fetch all invoices for month dropdown
-  const fetchAllInvoicesForFilters = useCallback(async () => {
+  const fetchAllOrdersLineForFilters = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
       
-      const response = await fetch(`/api/invoices?getAll=true&fields=Invoice Posting Dt.`, {
+      const response = await fetch(`/api/orders-line?getAll=true&fields=PostingDate`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAllInvoicesForFilters(data.invoices || []);
+        setAllOrdersLineForFilters(data.ordersLine || []);
       }
     } catch (error) {
-      console.error("Error fetching invoices for filters:", error);
+      console.error("Error fetching order lines for filters:", error);
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
-    fetchInvoices();
-    fetchAllInvoicesForFilters();
+    fetchOrdersLine();
+    fetchAllOrdersLineForFilters();
   }, []);
 
-  // Handle filter changes - reset to page 1
   useEffect(() => {
     if (globalFilter !== debouncedGlobalFilter) return;
     
     if (shouldResetPage) {
-      fetchInvoices({
+      fetchOrdersLine({
         page: 1,
         search: debouncedGlobalFilter || "",
         status: statusFilter || "all",
         month: selectedMonth || "",
         fromDate: fromDate || "",
         toDate: toDate || "",
-        sortField: sortField || "DocDate",
+        sortField: sortField || "PostingDate",
         sortDir: sortDirection || "desc"
       });
       
@@ -130,18 +125,17 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
     }
   }, [debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate, sortField, sortDirection, shouldResetPage]);
 
-  // Handle page changes only
   useEffect(() => {
-    if (shouldResetPage || invoices.length === 0) return;
+    if (shouldResetPage || ordersLine.length === 0) return;
     
-    fetchInvoices({ 
+    fetchOrdersLine({ 
       page: currentPage,
       search: debouncedGlobalFilter || "",
       status: statusFilter || "all",
       month: selectedMonth || "",
       fromDate: fromDate || "",
       toDate: toDate || "",
-      sortField: sortField || "DocDate",
+      sortField: sortField || "PostingDate",
       sortDir: sortDirection || "desc"
     });
   }, [currentPage]);
@@ -191,57 +185,56 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
     setSelectedMonth("");
     setFromDate("");
     setToDate("");
-    setSortField("DocDate");
+    setSortField("PostingDate");
     setSortDirection("desc");
     setCurrentPage(1);
     
-    fetchInvoices({
+    fetchOrdersLine({
       page: 1,
       search: "",
       status: "all",
       month: "",
       fromDate: "",
       toDate: "",
-      sortField: "DocDate",
+      sortField: "PostingDate",
       sortDir: "desc"
     });
-  }, [fetchInvoices]);
+  }, [fetchOrdersLine]);
 
-  // Export function that fetches all data
   const handleExportExcel = useCallback(async (columns) => {
     try {
       setLoading(true);
       
-      const allFilteredInvoices = await fetchInvoices({
+      const allFilteredOrdersLine = await fetchOrdersLine({
         getAll: true,
         search: debouncedGlobalFilter || "",
         status: statusFilter || "all",
         month: selectedMonth || "",
         fromDate: fromDate || "",
         toDate: toDate || "",
-        sortField: sortField || "DocDate",
+        sortField: sortField || "PostingDate",
         sortDir: sortDirection || "desc"
       });
 
-      if (!allFilteredInvoices || allFilteredInvoices.length === 0) {
+      if (!allFilteredOrdersLine || allFilteredOrdersLine.length === 0) {
         setError("No data available for export");
         return;
       }
 
-      const currencyFields = new Set(["Unit Sales Price", "Total Sales Price"]);
-      const dateFields = new Set(["Invoice Posting Dt.", "SO Date", "Dispatch Date"]);
+      const currencyFields = new Set(["Price", "OpenAmount"]);
+      const dateFields = new Set(["PostingDate", "PODate", "DeliveryDate"]);
 
-      const exportData = allFilteredInvoices.map((row) => {
+      const exportData = allFilteredOrdersLine.map((row) => {
         const formattedRow = {};
         
         columns.forEach((column) => {
-          const key = column.accessorKey || column.id;
-          const value = column.accessorFn ? column.accessorFn(row) : row[key];
+          const key = column.accessorKey;
+          const value = row[key];
           
           if (currencyFields.has(key)) {
             const cleanNumber = Math.round((Number(value) || 0) * 100) / 100;
             formattedRow[column.header] = +cleanNumber;
-          } else if (key && (key.includes("Date") || key.includes("Dt."))) {
+          } else if (dateFields.has(key)) {
             if (value) {
               const date = new Date(value);
               formattedRow[column.header] = date.toLocaleDateString('en-US');
@@ -257,19 +250,19 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
       });
 
       const today = new Date().toISOString().split('T')[0];
-      const fileName = `Invoices_${today}`;
+      const fileName = `Orders_Line_${today}`;
 
       downloadExcel(exportData, fileName);
     } catch (error) {
       console.error("Export failed:", error);
-      setError("Failed to export invoices: " + error.message);
+      setError("Failed to export order lines: " + error.message);
     } finally {
       setLoading(false);
     }
-  }, [fetchInvoices, debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate, sortField, sortDirection]);
+  }, [fetchOrdersLine, debouncedGlobalFilter, statusFilter, selectedMonth, fromDate, toDate, sortField, sortDirection]);
 
   return {
-    invoices,
+    ordersLine,
     totalItems,
     totalPages,
     currentPage,
@@ -282,7 +275,7 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
     toDate,
     sortField,
     sortDirection,
-    allInvoicesForFilters,
+    allOrdersLineForFilters,
     setGlobalFilter: handleSearch,
     setStatusFilter: setStatusFilterWrapper,
     setSelectedMonth: setSelectedMonthWrapper,
@@ -292,16 +285,6 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
     handleReset,
     handlePageChange,
     handleExportExcel,
-    setError,
-    setInvoices
+    setError
   };
-};
-
-// Backward compatibility
-export const useExportHandler = () => {
-  const handleExportExcel = () => {
-    console.warn("useExportHandler is deprecated. Use handleExportExcel from useInvoicesData instead.");
-  };
-
-  return { handleExportExcel };
 };

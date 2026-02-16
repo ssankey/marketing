@@ -1,5 +1,4 @@
-
-// components/invoices/InvoicesTable.js
+// components/ordersLine/OrdersLineTable.js
 import React, { useMemo, useEffect } from "react";
 import { useRouter } from "next/router";
 import { 
@@ -9,14 +8,12 @@ import {
   Card
 } from "react-bootstrap";
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table";
-import InvoicesFilters from "./InvoicesFilters";
-import InvoicesPagination from "./InvoicesPagination";
-import { tableColumns } from "./invoicesColumns";
-import { 
-  useInvoicesData
-} from "./invoicesFunctions";
+import OrdersLineFilters from "./OrdersLineFilters";
+import OrdersLinePagination from "./OrdersLinePagination";
+import { tableColumns } from "./ordersLineColumns";
+import { useOrdersLineData } from "./ordersLineFunctions";
 
-const InvoicesTable = ({
+const OrdersLineTable = ({
   initialStatus = "all",
   initialPage = 1,
   pageSize = 20,
@@ -25,7 +22,7 @@ const InvoicesTable = ({
   const { status, month: urlMonth } = router.query;
 
   const {
-    invoices,
+    ordersLine,
     totalItems,
     totalPages,
     currentPage,
@@ -36,7 +33,7 @@ const InvoicesTable = ({
     selectedMonth,
     sortField,
     sortDirection,
-    allInvoicesForFilters,
+    allOrdersLineForFilters,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
@@ -45,7 +42,7 @@ const InvoicesTable = ({
     handlePageChange,
     handleExportExcel,
     setError
-  } = useInvoicesData(initialStatus, initialPage, pageSize);
+  } = useOrdersLineData(initialStatus, initialPage, pageSize);
 
   // Apply URL parameters only on initial load
   useEffect(() => {
@@ -57,10 +54,10 @@ const InvoicesTable = ({
     }
   }, [status, urlMonth]);
 
-  const columns = React.useMemo(() => tableColumns, []);
+  const columns = useMemo(() => tableColumns(), []);
 
   const table = useReactTable({
-    data: invoices,
+    data: ordersLine,
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
@@ -79,7 +76,6 @@ const InvoicesTable = ({
 
   const handleResetWithURL = () => {
     handleReset();
-    // Remove URL parameters
     router.replace({
       pathname: router.pathname,
       query: {}
@@ -89,7 +85,6 @@ const InvoicesTable = ({
   const handleMonthChange = (monthValue) => {
     setSelectedMonth(monthValue);
     
-    // Update URL parameter
     if (monthValue) {
       router.replace({
         pathname: router.pathname,
@@ -107,7 +102,6 @@ const InvoicesTable = ({
   const handleStatusChange = (statusValue) => {
     setStatusFilter(statusValue);
     
-    // Update URL parameter
     if (statusValue !== "all") {
       router.replace({
         pathname: router.pathname,
@@ -122,7 +116,6 @@ const InvoicesTable = ({
     }
   };
 
-  // Format month for display in alerts
   const formatMonthDisplay = (monthValue) => {
     if (!monthValue) return "";
     const [year, month] = monthValue.split('-');
@@ -165,14 +158,13 @@ const InvoicesTable = ({
           </Alert>
         )}
 
-        {/* Filters Card */}
         <Card className="shadow-sm border-0 mb-4" style={{background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)'}}>
           <Card.Body className="px-3 py-1">
-            <InvoicesFilters
+            <OrdersLineFilters
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
-              invoices={allInvoicesForFilters}
+              ordersLine={allOrdersLineForFilters}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}
@@ -183,7 +175,6 @@ const InvoicesTable = ({
           </Card.Body>
         </Card>
 
-        {/* Main Table Card */}
         <Card className="shadow-lg border-0 overflow-hidden">
           <Card.Body className="p-0">
             <div 
@@ -229,7 +220,7 @@ const InvoicesTable = ({
                   ))}
                 </thead>
                 <tbody>
-                  {invoices.length > 0 ? (
+                  {ordersLine.length > 0 ? (
                     table.getRowModel().rows.map((row, rowIndex) => (
                       <tr 
                         key={row.id} 
@@ -277,7 +268,7 @@ const InvoicesTable = ({
                           {loading ? (
                             <>
                               <Spinner animation="border" variant="primary" className="mb-3" />
-                              <h5 className="text-muted mb-2">Loading invoices...</h5>
+                              <h5 className="text-muted mb-2">Loading order lines...</h5>
                               <p className="text-muted small mb-0">Please wait while we fetch your data</p>
                             </>
                           ) : (
@@ -290,9 +281,9 @@ const InvoicesTable = ({
                                   background: 'linear-gradient(135deg, #e0f2fe 0%, #b3e5fc 100%)'
                                 }}
                               >
-                                <i className="bi bi-file-text text-info" style={{fontSize: '2rem'}}></i>
+                                <i className="bi bi-list-ul text-info" style={{fontSize: '2rem'}}></i>
                               </div>
-                              <h5 className="text-muted mb-2">No invoices found</h5>
+                              <h5 className="text-muted mb-2">No order lines found</h5>
                               <p className="text-muted small mb-0">Try adjusting your search criteria or filters</p>
                             </>
                           )}
@@ -314,7 +305,7 @@ const InvoicesTable = ({
                 >
                   <div className="text-center">
                     <Spinner animation="border" variant="primary" style={{width: '3rem', height: '3rem'}} />
-                    <p className="mt-3 mb-0 fw-medium text-primary">Loading invoices...</p>
+                    <p className="mt-3 mb-0 fw-medium text-primary">Loading order lines...</p>
                   </div>
                 </div>
               )}
@@ -328,7 +319,7 @@ const InvoicesTable = ({
               borderTop: '1px solid #e2e8f0'
             }}
           >
-            <InvoicesPagination
+            <OrdersLinePagination
               currentPage={currentPage}
               pageCount={totalPages}
               filteredCount={totalItems}
@@ -341,4 +332,4 @@ const InvoicesTable = ({
   );
 };
 
-export default InvoicesTable;
+export default OrdersLineTable;

@@ -1,11 +1,9 @@
-
-
-// pages/invoices.js
+// pages/orders-line/index.js
 import { useRouter } from "next/router";
 import { useAuth } from "hooks/useAuth";
-import InvoicesTable from "components/invoices/InvoicesTable";
+import OrdersLineTable from "components/ordersLine/OrdersLineTable";
 
-export default function InvoicesPage() {
+export default function OrdersLinePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
 
@@ -27,7 +25,7 @@ export default function InvoicesPage() {
   }
 
   return (
-    <InvoicesTable
+    <OrdersLineTable
       initialStatus="all"
       initialPage={1}
       pageSize={20}
@@ -35,8 +33,8 @@ export default function InvoicesPage() {
   );
 }
 
-InvoicesPage.seo = {
-  title: "Invoices | Density",
-  description: "View and manage all your invoices.",
-  keywords: "invoices, billing, management, density",
+OrdersLinePage.seo = {
+  title: "Orders Line | Density",
+  description: "View and manage all your order lines.",
+  keywords: "orders, line items, density",
 };

@@ -177,6 +177,14 @@ const NavbarVertical = (props) => {
                 </li>
                 <li className="nav-item mb-3">
                   <Link
+                    href="/orders-line"
+                    className={`nav-link d-flex align-items-center ${router === "/orders-line" ? "active" : ""}`}
+                  >
+                    <Clipboard className="me-2" /> All Line Orders
+                  </Link>
+                </li>
+                <li className="nav-item mb-3">
+                  <Link
                     href="/open-orders"
                     className={`nav-link d-flex align-items-center ${router === "/open-orders" ? "active" : ""}`}
                   >

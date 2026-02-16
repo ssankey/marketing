@@ -1,3 +1,4 @@
+
 // // pages/api/search.js
 // import { queryDatabase } from '../../lib/db';
 // import sql from 'mssql';
@@ -39,19 +40,7 @@
 //   const contactCodes = decoded.contactCodes || [];
 //   const cardCodes = decoded.cardCodes || [];
 
-//   // Create cache key
-//   const userIdentifier = isAdmin 
-//     ? "admin" 
-//     : contactCodes.length 
-//       ? `sales_${contactCodes.join("-")}` 
-//       : `customer_${cardCodes.join("-")}`;
-//   const cacheKey = `search-results:${userIdentifier}:${searchTerm}`;
-
-//   // Check cache first
-//   const cachedResult = await getCache(cacheKey);
-//   if (cachedResult) {
-//     return res.status(200).json(cachedResult);
-//   }
+  
 
 //   // Build role-based filtering
 //   const baseWhereClause = "T0.CANCELED = 'N'";
@@ -227,8 +216,11 @@
 //       });
 //     }
 
+//     // CACHING LOGIC CONTINUED (commented out)
+//     /*
 //     // Cache the results for 5 minutes
 //     await setCache(cacheKey, groupedResults, 300);
+//     */
 
 //     return res.status(200).json(groupedResults);
 //   } catch (error) {
@@ -236,7 +228,6 @@
 //     return res.status(500).json({ error: 'Internal Server Error' });
 //   }
 // }
-
 
 // pages/api/search.js
 import { queryDatabase } from '../../lib/db';
@@ -251,7 +242,6 @@ export default async function handler(req, res) {
 
   const { query: searchTerm } = req.query;
 
-  // Handle empty query parameter
   if (!searchTerm || searchTerm.trim() === '') {
     return res.status(400).json({ error: 'Query parameter is required' });
   }
@@ -279,23 +269,6 @@ export default async function handler(req, res) {
   const contactCodes = decoded.contactCodes || [];
   const cardCodes = decoded.cardCodes || [];
 
-  // CACHING LOGIC START (commented out)
-  /*
-  // Create cache key
-  const userIdentifier = isAdmin 
-    ? "admin" 
-    : contactCodes.length 
-      ? `sales_${contactCodes.join("-")}` 
-      : `customer_${cardCodes.join("-")}`;
-  const cacheKey = `search-results:${userIdentifier}:${searchTerm}`;
-
-  // Check cache first
-  const cachedResult = await getCache(cacheKey);
-  if (cachedResult) {
-    return res.status(200).json(cachedResult);
-  }
-  */
-
   // Build role-based filtering
   const baseWhereClause = "T0.CANCELED = 'N'";
   let roleWhereClause = "";
@@ -313,20 +286,50 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Prepare the search term with wildcards
     const searchPattern = `%${searchTerm}%`;
     const params = [{ name: 'search', type: sql.VarChar, value: searchPattern }];
 
-    // Invoice search query with role filtering - ALWAYS include Sales Employee column
+    // Invoice search query with DISPATCH-BASED STATUS
     const invoiceQuery = `
       SELECT TOP 10
           T0.DocNum AS 'Invoice No',
           CASE 
-              WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'N' THEN 'Closed'
-              WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'Y' THEN 'Canceled'
-              WHEN T0.DocStatus = 'O' AND T0.PaidToDate > 0 AND T0.DocTotal > T0.PaidToDate THEN 'Partially Open'
-              WHEN T0.DocStatus = 'O' THEN 'Open'
-              ELSE 'NA'
+              -- All line items dispatched
+              WHEN NOT EXISTS (
+                  SELECT 1 
+                  FROM INV1 
+                  WHERE INV1.DocEntry = T0.DocEntry 
+                  AND (T0.U_DispatchDate IS NULL OR T0.U_DispatchDate = '')
+              ) THEN 'Closed'
+              
+              -- No line items dispatched
+              WHEN NOT EXISTS (
+                  SELECT 1 
+                  FROM INV1 
+                  WHERE INV1.DocEntry = T0.DocEntry 
+                  AND T0.U_DispatchDate IS NOT NULL 
+                  AND T0.U_DispatchDate <> ''
+              ) THEN 'Open'
+              
+              -- Some line items dispatched, some not
+              WHEN EXISTS (
+                  SELECT 1 
+                  FROM INV1 
+                  WHERE INV1.DocEntry = T0.DocEntry 
+                  AND T0.U_DispatchDate IS NOT NULL 
+                  AND T0.U_DispatchDate <> ''
+              ) 
+              AND EXISTS (
+                  SELECT 1 
+                  FROM INV1 
+                  WHERE INV1.DocEntry = T0.DocEntry 
+                  AND (T0.U_DispatchDate IS NULL OR T0.U_DispatchDate = '')
+              ) THEN 'Partial'
+              
+              -- Document is canceled
+              WHEN T0.CANCELED = 'Y' THEN 'Canceled'
+              
+              ELSE 'Open'
           END AS 'Status',
           T0.NumAtCard AS 'Ref No',
           T0.CardName AS 'Customer Name',
@@ -346,7 +349,7 @@ export default async function handler(req, res) {
       ORDER BY T0.DocNum DESC
     `;
 
-    // Order search query with role filtering - ALWAYS include Sales Employee column
+    // Order search query with role filtering - Keep existing logic
     const orderQuery = `
       SELECT TOP 10
           T0.DocNum AS 'SO No',
@@ -414,19 +417,17 @@ export default async function handler(req, res) {
       queryDatabase(orderQuery, params)
     ]);
 
-    // Format the grouped results - EXACT SAME STRUCTURE AS UNCOMMENTED CODE
+    // Format the grouped results
     const groupedResults = [];
 
     // Add Invoice header and results if any invoices found
     if (invoiceResults && invoiceResults.length > 0) {
-      // Add header row - EXACT SAME STRUCTURE
       groupedResults.push({
         type: 'header',
         category: 'Invoice',
         data: ['Invoice No', 'Status', 'Ref No', 'Customer Name', 'Total Amount', 'Dispatch Date', 'Sales Employee']
       });
 
-      // Add invoice data rows - EXACT SAME STRUCTURE
       invoiceResults.forEach(invoice => {
         groupedResults.push({
           type: 'data',
@@ -446,14 +447,12 @@ export default async function handler(req, res) {
 
     // Add Order header and results if any orders found
     if (orderResults && orderResults.length > 0) {
-      // Add header row - EXACT SAME STRUCTURE
       groupedResults.push({
         type: 'header',
         category: 'Order',
         data: ['SO No', 'Status', 'PO No', 'Customer Name', 'Total Amount', 'Sales Employee']
       });
 
-      // Add order data rows - EXACT SAME STRUCTURE
       orderResults.forEach(order => {
         groupedResults.push({
           type: 'data',
@@ -469,12 +468,6 @@ export default async function handler(req, res) {
         });
       });
     }
-
-    // CACHING LOGIC CONTINUED (commented out)
-    /*
-    // Cache the results for 5 minutes
-    await setCache(cacheKey, groupedResults, 300);
-    */
 
     return res.status(200).json(groupedResults);
   } catch (error) {

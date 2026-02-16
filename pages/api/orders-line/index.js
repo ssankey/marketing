@@ -1,9 +1,7 @@
-
-
-// pages/api/invoices.js
+// pages/api/orders-line.js
 import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
-import { getInvoicesList } from "../../../lib/models/invoices";
+import { getOrdersLineFromDatabase } from "../../../lib/models/orders";
 
 function isValidDate(date) {
   return date && isValid(parseISO(date));
@@ -15,7 +13,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1) Check for Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
@@ -24,7 +21,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2) Verify token
     const token = authHeader.split(" ")[1];
     let decodedToken;
     try {
@@ -34,45 +30,39 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "Token verification failed" });
     }
 
-    // 3) Extract role-based or contactCodes-based logic
     const isAdmin = decodedToken.role === "admin";
     const contactCodes = decodedToken.contactCodes || [];
     const cardCodes = decodedToken.cardCodes || [];
 
-    // 4) Parse query params
     const {
       page = 1,
       search = "",
       status = "all",
-      sortField = "DocDate",
+      sortField = "PostingDate",
       sortDir = "desc",
       fromDate,
       toDate,
-      month = "", // For month filtering
-      getAll = "false",  // Flag for getting all records (for export)
-      pageSize = 20 // Allow configurable page size
+      month = "",
+      getAll = "false",
+      pageSize = 20
     } = req.query;
 
     const itemsPerPage = parseInt(pageSize, 10);
 
-    // Validate date filters
     const validFromDate = isValidDate(fromDate) ? fromDate : undefined;
     const validToDate = isValidDate(toDate) ? toDate : undefined;
 
-    // Handle month filtering
     let monthFromDate, monthToDate;
     if (month && month !== "") {
       const [year, monthNum] = month.split('-');
       if (year && monthNum) {
         monthFromDate = `${year}-${monthNum.padStart(2, '0')}-01`;
-        // Last day of the month
         const lastDay = new Date(parseInt(year), parseInt(monthNum), 0).getDate();
         monthToDate = `${year}-${monthNum.padStart(2, '0')}-${lastDay}`;
       }
     }
 
-    // 5) Fetch from database with role/contact filtering
-    const { totalItems, invoices } = await getInvoicesList({
+    const { totalItems, ordersLine } = await getOrdersLineFromDatabase({
       page: parseInt(page, 10),
       search,
       status,
@@ -84,12 +74,11 @@ export default async function handler(req, res) {
       isAdmin,
       cardCodes,
       contactCodes,
-      getAll: getAll === "true", // Convert string to boolean
+      getAll: getAll === "true",
     });
 
-    // 6) Respond
     return res.status(200).json({
-      invoices,
+      ordersLine,
       totalItems,
       currentPage: parseInt(page, 10),
       totalPages: Math.ceil(totalItems / itemsPerPage),
@@ -98,7 +87,7 @@ export default async function handler(req, res) {
       hasPrevPage: parseInt(page, 10) > 1,
     });
   } catch (error) {
-    console.error("Error fetching invoices:", error);
-    return res.status(500).json({ error: "Failed to fetch invoices" });
+    console.error("Error fetching order lines:", error);
+    return res.status(500).json({ error: "Failed to fetch order lines" });
   }
 }
