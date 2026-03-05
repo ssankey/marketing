@@ -218,6 +218,51 @@ if (email === "mahesh@testing.com") {
   });
 }
 
+// -------------------- Hardcoded Maneesh Sales Login --------------------
+if (email === "maneesh@testing.com") {
+  if (!password) {
+    return res.status(200).json({
+      message: "SHOW_PASSWORD_FIELD",
+      showPassword: true,
+    });
+  }
+
+  if (password !== "maneesh@123") {
+    return res.status(401).json({ message: "Incorrect Password" });
+  }
+
+  const token = jwt.sign(
+    {
+      email: "maneesh@testing.com",
+      role: "sales_person",
+      name: "Maneesh",
+      contactCodes: ["11"],
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "6h" }
+  );
+
+  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
+
+  console.log("[MANEESH_HARDCODED_LOGIN_SUCCESS]", {
+    email: "maneesh@testing.com",
+    role: "sales_person",
+    slpCode: "11",
+  });
+
+  return res.status(200).json({
+    message: "Login_successful",
+    token,
+    user: {
+      email: "maneesh@testing.com",
+      role: "sales_person",
+      name: "Maneesh",
+      contactCodes: ["11"],
+    },
+    showPassword: true,
+  });
+}
+
 // -------------------- Hardcoded 3ASenrise Login --------------------
 // if (email === "3ASenrise@densitydashboard.com") {
 //   if (!password) {

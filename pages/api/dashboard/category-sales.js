@@ -103,11 +103,19 @@ export default async function handler(req, res) {
     const params = [];
 
     // Role-based filtering
+    // Role-based filtering
     if (!isAdmin) {
-      if (contactCodes.length > 0) {
-        whereConditions.push(`OINV.CntctCode IN (${contactCodes.map(c => `'${c}'`).join(',')})`);
+      const isSalesPerson = decoded.role === 'sales_person';
+
+      if (isSalesPerson && contactCodes.length > 0) {
+        // sales_person: contactCodes are SlpCodes, filter by salesperson
+        whereConditions.push(`OINV.SlpCode IN (${contactCodes.map(c => parseInt(c, 10)).join(',')})`);
       } else if (cardCodes.length > 0) {
+        // contact_person: filter by customer CardCode
         whereConditions.push(`OINV.CardCode IN (${cardCodes.map(c => `'${c}'`).join(',')})`);
+      } else if (contactCodes.length > 0) {
+        // fallback for other roles with contactCodes
+        whereConditions.push(`OINV.CntctCode IN (${contactCodes.map(c => `'${c}'`).join(',')})`);
       } else {
         return res.status(403).json({ 
           error: 'No access: cardCodes or contactCodes not provided' 
