@@ -218,7 +218,8 @@ export const generateCoaUrl = (row, baseUrl) => {
                     filename = pathParts[pathParts.length - 1];
                 }
                 
-                const encodedFilename = encodeURIComponent(filename);
+                // const encodedFilename = encodeURIComponent(filename);
+                const encodedFilename = encodeURIComponent(filename).replace(/%23/g, '%2523');
                 // Use hardcoded base URL instead of dynamic baseUrl
                 const localUrl = `${hardcodedBaseUrl}/api/coa/download/${encodedFilename}`;
                 console.log(`  Extracted filename: "${filename}"`);
