@@ -72,7 +72,67 @@ const NavbarVertical = (props) => {
   }
 
   const isAdmin = user.role === 'admin';
+  const isSalesPerson = user.role === "sales_person";
+  const is3ASenrise = user.role === "3ASenrise"; // Check for 3ASenrise role
 
+  // If user has 3ASenrise role, show only the Products page
+  if (is3ASenrise) {
+    return (
+      <Fragment>
+        <div className="position-relative" style={{ height: "100vh" }}>
+          <SimpleBar style={{ maxHeight: "100vh", paddingBottom: "100px" }}>
+            <div className="nav-scroller">
+              <Link href="/" className="navbar-brand">
+                <img
+                  src="/assets/density_logo_new_trans.png"
+                  alt="Logo"
+                  className="img-fluid"
+                  style={{ height: "80px", width: "auto" }}
+                />
+              </Link>
+            </div>
+            <ul className="navbar-nav flex-column">
+              {/* Only show Products page for 3ASenrise users */}
+              <li className="nav-item mb-3">
+              <Link
+                href="/"
+                className={`nav-link d-flex align-items-center ${router === "/" ? "active" : ""}`}
+              >
+                <House className="me-2" /> Dashboard
+              </Link>
+            </li>
+              <li className="nav-item mb-3">
+                <Link
+                  href="/products"
+                  className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Products
+                </Link>
+              </li>
+                <li className="nav-item mb-3">
+              <Link
+                href="/quick-quote"
+                className={`nav-link d-flex align-items-center ${router === "/quick-quote" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> Quick Quote
+              </Link>
+            </li>
+            <li className="nav-item mb-3">
+                <Link
+                  href="/category"
+                  className={`nav-link d-flex align-items-center ${router === "/category" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Category Analytics
+                </Link>
+              </li>
+            </ul>
+          </SimpleBar>
+        </div>
+      </Fragment>
+    );
+  }
+
+  // For all other roles, show the regular navigation
   return (
     <Fragment>
       <div className="position-relative" style={{ height: "100vh" }}>
@@ -88,60 +148,46 @@ const NavbarVertical = (props) => {
             </Link>
           </div>
           <Accordion as="ul" className="navbar-nav flex-column">
-            {/* Dashboard Link (Direct for Admin, Accordion for Others) */}
-            {!isAdmin ? (
-              <li className="nav-item mb-3">
-                <Link href="/" className={`nav-link d-flex align-items-center ${router === "/" ? "active" : ""}`}>
-                  <House className="me-2" /> Dashboard
-                </Link>
-              </li>
-            ) : (
-              <>
-                <CustomToggle eventKey="dashboard" icon={<House className="me-2" />} href="/">
-                  Dashboard
-                </CustomToggle>
-                <Accordion.Collapse eventKey="dashboard">
-                  <ul className="nav flex-column ms-3">
-                    <li className="nav-item mb-3">
-                      <Link href="/" className={`nav-link d-flex align-items-center ${router === "/" ? "active" : ""}`}>
-                        <House className="me-2" /> All
-                      </Link>
-                    </li>
-                    <li className="nav-item mb-3">
-                      <Link href="/dashboard/customer" className={`nav-link d-flex align-items-center ${router === "/dashboard/customer" ? "active" : ""}`}>
-                        <People className="me-2" /> Customer
-                      </Link>
-                    </li>
-                    <li className="nav-item mb-3">
-                      <Link href="/dashboard/sales-person" className={`nav-link d-flex align-items-center ${router === "/dashboard/sales-person" ? "active" : ""}`}>
-                        <FaUser className="me-2" /> Sales Person
-                      </Link>
-                    </li>
-                  </ul>
-                </Accordion.Collapse>
-              </>
-            )}
-
-            {/* Quotations */}
-            {/* <li className="nav-item mb-3">
-              <Link href="/quotations" className={`nav-link d-flex align-items-center ${router === "/quotations" ? "active" : ""}`}>
-                <CurrencyDollar className="me-2" /> Quotation
+            <li className="nav-item mb-3">
+              <Link
+                href="/"
+                className={`nav-link d-flex align-items-center ${router === "/" ? "active" : ""}`}
+              >
+                <House className="me-2" /> Dashboard
               </Link>
-            </li> */}
+            </li>
 
             {/* Orders Accordion */}
-            <CustomToggle eventKey="orders" icon={<Clipboard className="me-2" />} href="/orders">
+            <CustomToggle
+              eventKey="orders"
+              icon={<Clipboard className="me-2" />}
+              href="/orders"
+            >
               Orders
             </CustomToggle>
             <Accordion.Collapse eventKey="orders">
               <ul className="nav flex-column ms-3">
                 <li className="nav-item mb-3">
-                  <Link href="/orders" className={`nav-link d-flex align-items-center ${router === "/orders" ? "active" : ""}`}>
+                  <Link
+                    href="/orders"
+                    className={`nav-link d-flex align-items-center ${router === "/orders" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> All Orders
                   </Link>
                 </li>
                 <li className="nav-item mb-3">
-                  <Link href="/open-orders" className={`nav-link d-flex align-items-center ${router === "/open-orders" ? "active" : ""}`}>
+                  <Link
+                    href="/orders-line"
+                    className={`nav-link d-flex align-items-center ${router === "/orders-line" ? "active" : ""}`}
+                  >
+                    <Clipboard className="me-2" /> All Line Orders
+                  </Link>
+                </li>
+                <li className="nav-item mb-3">
+                  <Link
+                    href="/open-orders"
+                    className={`nav-link d-flex align-items-center ${router === "/open-orders" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> Open Orders
                   </Link>
                 </li>
@@ -149,91 +195,155 @@ const NavbarVertical = (props) => {
             </Accordion.Collapse>
 
             {/* Invoices */}
-            {/* <li className="nav-item mb-3">
-              <Link href="/invoices" className={`nav-link d-flex align-items-center ${router === "/invoices" ? "active" : ""}`}>
-                <FileText className="me-2" /> Invoice
-              </Link>
-            </li> */}
-              <CustomToggle eventKey="invoices" icon={<Clipboard className="me-2" />} href="/invoices">
+            <CustomToggle
+              eventKey="invoices"
+              icon={<Clipboard className="me-2" />}
+              href="/invoices"
+            >
               Invoice
             </CustomToggle>
             <Accordion.Collapse eventKey="invoices">
               <ul className="nav flex-column ms-3">
-                
                 <li className="nav-item mb-3">
-                  <Link href="/header-invoices" className={`nav-link d-flex align-items-center ${router === "/header-invoices" ? "active" : ""}`}>
+                  <Link
+                    href="/header-invoices"
+                    className={`nav-link d-flex align-items-center ${router === "/header-invoices" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> Invoices (Header)
                   </Link>
                 </li>
                 <li className="nav-item mb-3">
-                  <Link href="/invoices" className={`nav-link d-flex align-items-center ${router === "/invoices" ? "active" : ""}`}>
+                  <Link
+                    href="/invoices"
+                    className={`nav-link d-flex align-items-center ${router === "/invoices" ? "active" : ""}`}
+                  >
                     <Clipboard className="me-2" /> Invoices(Line)
                   </Link>
                 </li>
                 <li className="nav-item mb-3">
-                  <Link href="/dispatch-pending" className={`nav-link d-flex align-items-center ${router === "/dispatch-pending" ? "active" : ""}`}>
-                    <Clipboard className="me-2" />Pending for dispatch
+                  <Link
+                    href="/dispatch-pending"
+                    className={`nav-link d-flex align-items-center ${router === "/dispatch-pending" ? "active" : ""}`}
+                  >
+                    <Clipboard className="me-2" />
+                    Pending for dispatch
                   </Link>
                 </li>
               </ul>
             </Accordion.Collapse>
 
             {/* Customers (Admin Only) */}
-            {isAdmin && (
+            {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
-                <Link href="/customers" className={`nav-link d-flex align-items-center ${router === "/customers" ? "active" : ""}`}>
+                <Link
+                  href="/customers"
+                  className={`nav-link d-flex align-items-center ${router === "/customers" ? "active" : ""}`}
+                >
                   <People className="me-2" /> Customers
                 </Link>
               </li>
             )}
 
             {/* Products (Hidden for Admin) */}
-            {isAdmin && (
+            {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
-                <Link href="/products" className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}>
+                <Link
+                  href="/products"
+                  className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
+                >
                   <FaBox className="me-2" /> Products
                 </Link>
               </li>
             )}
 
-            {/* Outstanding Payments (Hidden for Admin) */}
-            {isAdmin && (
-              <>
-                <li className="nav-item mb-3">
-                  <Link href="/customer-balance" className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}>
-                    <FaMoneyBillWave className="me-2" /> Customer Balance
-                  </Link>
-                </li>
+            {/* Outstanding Payments */}
+            <li className="nav-item mb-3">
+              <Link
+                href="/customer-balance"
+                className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}
+              >
+                <FaMoneyBillWave className="me-2" />  Balance
+              </Link>
+            </li>
 
-                {/* <li className="nav-item mb-3">
-                  <Link href="/vendor-payment" className={`nav-link d-flex align-items-center ${router === "/vendor-payment" ? "active" : ""}`}>
-                    <FaMoneyBillWave className="me-2" /> Vendor Payments
-                  </Link>
-                </li> */}
-              </>
+             {/* Outstanding Payments */}
+            <li className="nav-item mb-3">
+              <Link
+                href="/target-analytics"
+                className={`nav-link d-flex align-items-center ${router === "/target-analytics" ? "active" : ""}`}
+              >
+                <FaMoneyBillWave className="me-2" />  Target Analytics
+              </Link>
+            </li>
+
+            {(isAdmin || isSalesPerson) && (
+              <li className="nav-item mb-3">
+                <Link
+                  href="/category"
+                  className={`nav-link d-flex align-items-center ${router === "/category" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Category Analytics
+                </Link>
+              </li>
+            )}
+            
+            {/* {(isAdmin || isSalesPerson) && (
+              <li className="nav-item mb-3">
+                <Link
+                  href="/dispatch"
+                  className={`nav-link d-flex align-items-center ${router === "/dispatch" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Dispatch Details
+                </Link>
+              </li>
+            )} */}
+            
+            <li className="nav-item mb-3">
+              <Link
+                href="/quick-quote"
+                className={`nav-link d-flex align-items-center ${router === "/quick-quote" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> Quick Quote
+              </Link>
+            </li>
+            
+            <li className="nav-item mb-3">
+              <Link
+                href="/order-lifecycle"
+                className={`nav-link d-flex align-items-center ${router === "/order-lifecycle" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> Order lifecycle
+              </Link>
+            </li>
+            <li className="nav-item mb-3">
+              <Link
+                href="/in-bound-shipments"
+                className={`nav-link d-flex align-items-center ${router === "/in-bound-shipments" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> In bound Shipments
+              </Link>
+            </li>
+            <li className="nav-item mb-3">
+              <Link
+                href="/Document-downloading"
+                className={`nav-link d-flex align-items-center ${router === "/Document-downloading" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> Document Downloading
+              </Link>
+            </li>
+
+            {(isAdmin || isSalesPerson) && (
+              <li className="nav-item mb-3">
+                <Link
+                  href="/dispatch"
+                  className={`nav-link d-flex align-items-center ${router === "/dispatch" ? "active" : ""}`}
+                >
+                  <FaBox className="me-2" /> Dispatch Details
+                </Link>
+              </li>
             )}
           </Accordion>
         </SimpleBar>
-
-        {/* Fixed Logout Section */}
-        {/* <div className="position-absolute bottom-0 start-0 end-0 p-3" style={{ backgroundColor: "transparent" }}>
-          <div className="text-muted mb-2 text-center">
-            Logged in as: <strong>{user.name}</strong>
-          </div>
-          <Button
-            variant="primary"
-            onClick={handleLogout}
-            className="w-100"
-            style={{
-              backgroundColor: "#003366",
-              borderColor: "#003366",
-              padding: "10px",
-              borderRadius: "5px",
-            }}
-          >
-            <FaSignOutAlt className="me-2" /> Logout
-          </Button>
-        </div> */}
       </div>
     </Fragment>
   );
