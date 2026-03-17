@@ -732,26 +732,90 @@ export default async function handler(req, res) {
     ]);
 
     // ------------------ MERGE RESULTS ------------------
-    const invoiceMap = {};
-    invoiceResults.forEach((row) => {
-      invoiceMap[row["Month-Year"]] = parseInt(row.InvoiceCount) || 0;
-    });
+    // const invoiceMap = {};
+    // invoiceResults.forEach((row) => {
+    //   invoiceMap[row["Month-Year"]] = parseInt(row.InvoiceCount) || 0;
+    // });
 
-    const orderValueMap = {};
-    orderValueResults.forEach((row) => {
-      orderValueMap[row["Month-Year"]] = parseFloat(row.TotalOrderValue) || 0;
-    });
+    // const orderValueMap = {};
+    // orderValueResults.forEach((row) => {
+    //   orderValueMap[row["Month-Year"]] = parseFloat(row.TotalOrderValue) || 0;
+    // });
 
-    const data = salesResults.map((row) => ({
-      monthYear: row["Month-Year"],
-      year: row.year,
-      monthNumber: row.monthNumber,
-      totalSales: parseFloat(row.TotalSales) || 0,
-      totalCogs: parseFloat(row.TotalCOGS) || 0,
-      grossMarginPct: parseFloat(row.GrossMarginPct) || 0,
-      invoiceCount: invoiceMap[row["Month-Year"]] || 0,
-      orderValue: orderValueMap[row["Month-Year"]] || 0,
-    }));
+    // const data = salesResults.map((row) => ({
+    //   monthYear: row["Month-Year"],
+    //   year: row.year,
+    //   monthNumber: row.monthNumber,
+    //   totalSales: parseFloat(row.TotalSales) || 0,
+    //   totalCogs: parseFloat(row.TotalCOGS) || 0,
+    //   grossMarginPct: parseFloat(row.GrossMarginPct) || 0,
+    //   invoiceCount: invoiceMap[row["Month-Year"]] || 0,
+    //   orderValue: orderValueMap[row["Month-Year"]] || 0,
+    // }));
+
+    // ------------------ MERGE RESULTS ------------------
+const salesMap = {};
+salesResults.forEach((row) => {
+  salesMap[row["Month-Year"]] = {
+    monthYear: row["Month-Year"],
+    year: row.year,
+    monthNumber: row.monthNumber,
+    totalSales: parseFloat(row.TotalSales) || 0,
+    totalCogs: parseFloat(row.TotalCOGS) || 0,
+    grossMarginPct: parseFloat(row.GrossMarginPct) || 0,
+  };
+});
+
+const invoiceMap = {};
+invoiceResults.forEach((row) => {
+  invoiceMap[row["Month-Year"]] = {
+    monthYear: row["Month-Year"],
+    year: row.year,
+    monthNumber: row.monthNumber,
+    invoiceCount: parseInt(row.InvoiceCount) || 0,
+  };
+});
+
+const orderValueMap = {};
+orderValueResults.forEach((row) => {
+  orderValueMap[row["Month-Year"]] = {
+    monthYear: row["Month-Year"],
+    year: row.year,
+    monthNumber: row.monthNumber,
+    orderValue: parseFloat(row.TotalOrderValue) || 0,
+  };
+});
+
+// Collect ALL unique month keys across all three sources
+const allMonthKeys = new Set([
+  ...Object.keys(salesMap),
+  ...Object.keys(invoiceMap),
+  ...Object.keys(orderValueMap),
+]);
+
+const data = Array.from(allMonthKeys).map((key) => {
+  const s = salesMap[key] || {};
+  const i = invoiceMap[key] || {};
+  const o = orderValueMap[key] || {};
+
+  // Get year/monthNumber from whichever source has it
+  const year = s.year ?? i.year ?? o.year;
+  const monthNumber = s.monthNumber ?? i.monthNumber ?? o.monthNumber;
+
+  return {
+    monthYear: key,
+    year,
+    monthNumber,
+    totalSales: s.totalSales || 0,
+    totalCogs: s.totalCogs || 0,
+    grossMarginPct: s.grossMarginPct || 0,
+    invoiceCount: i.invoiceCount || 0,
+    orderValue: o.orderValue || 0,
+  };
+}).sort((a, b) => {
+  if (a.year !== b.year) return a.year - b.year;
+  return a.monthNumber - b.monthNumber;
+});
 
     // ------------------ AVAILABLE YEARS CACHE ------------------
     const yearsCacheKey = "sales-data:available-years";
