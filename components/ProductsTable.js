@@ -462,6 +462,12 @@ export default function ProductsTable({
 
     },
     {
+    label: "CAS No.",
+    field: "U_CasNo",
+    sortable: true,
+    render: (value) => value || "N/A",
+  },
+    {
       label: "Stock Status",
       field: "stockStatus",
       render: (value) => (
@@ -522,7 +528,7 @@ export default function ProductsTable({
       <TableFilters
         searchConfig={{
           enabled: true,
-          placeholder: "Search products...",
+          placeholder: "Search by CAT No., Item Name, CAS No....",
           fields: ["ItemCode", "ItemName", "ItemType", "U_CasNo"],
         }}
         statusFilter={{
