@@ -118,7 +118,7 @@ export default async function handler(req, res) {
         YEAR(T0.DocDate) AS Year,
         MONTH(T0.DocDate) AS MonthNumber,
         DATENAME(MONTH, T0.DocDate) AS Month,
-        T6.ItmsGrpNam AS Category,
+        ISNULL(T6.ItmsGrpNam, 'Uncategorized') AS Category,
         SUM(T1.LineTotal) AS Sales,
         CASE 
           WHEN SUM(T1.LineTotal) = 0 THEN 0
@@ -129,11 +129,11 @@ export default async function handler(req, res) {
         END AS Margin
       FROM OINV T0
       JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-      JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-      JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+      LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+      LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
       ${regionStateJoin}
       WHERE ${whereSQL}
-      GROUP BY YEAR(T0.DocDate), MONTH(T0.DocDate), DATENAME(MONTH, T0.DocDate), T6.ItmsGrpNam
+      GROUP BY YEAR(T0.DocDate), MONTH(T0.DocDate), DATENAME(MONTH, T0.DocDate), ISNULL(T6.ItmsGrpNam, 'Uncategorized')
       ORDER BY Year ASC, MonthNumber ASC
     `;
 
