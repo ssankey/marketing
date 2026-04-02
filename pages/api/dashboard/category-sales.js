@@ -354,6 +354,7 @@ const categoryColorMap = {
   "Ultrapur": "#FB8072",
   "Ultrapur-100": "#80B1D3",
   "USP Standards": "#FDB462",
+  "Uncategorized": "#CCCCCC",
 };
 
 export default async function handler(req, res) {
@@ -484,8 +485,8 @@ export default async function handler(req, res) {
         YEAR(OINV.DocDate) * 100 + MONTH(OINV.DocDate) AS SortOrder
       FROM OINV
       INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-      INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-      INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+      LEFT JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+      LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
       ${customer || contactPerson ? "LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode" : ""}
       WHERE ${whereClause}
       ORDER BY SortOrder
@@ -501,17 +502,17 @@ export default async function handler(req, res) {
     // Get the category sales data
     const salesQuery = `
       SELECT 
-        T4.ItmsGrpNam AS Category,
+        ISNULL(T4.ItmsGrpNam, 'Uncategorized') AS Category,
         FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
         SUM(INV1.LineTotal) AS Amount
       FROM OINV
       JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-      JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-      JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+      LEFT JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+      LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
       ${customer || contactPerson ? "LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode" : ""}
       WHERE ${whereClause}
-      GROUP BY T4.ItmsGrpNam, FORMAT(OINV.DocDate, 'MMM yyyy')
-      ORDER BY T4.ItmsGrpNam
+      GROUP BY ISNULL(T4.ItmsGrpNam, 'Uncategorized'), FORMAT(OINV.DocDate, 'MMM yyyy')
+      ORDER BY ISNULL(T4.ItmsGrpNam, 'Uncategorized')
     `;
 
     const salesResult = await queryDatabase(salesQuery, params);

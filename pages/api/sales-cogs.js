@@ -454,8 +454,8 @@ export default async function handler(req, res) {
         END AS GrossMarginPct
       FROM OINV T0
       JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-      JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-      JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+      LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+      LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
       ${whereSQL}
       GROUP BY
         DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2),
