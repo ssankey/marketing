@@ -27,6 +27,7 @@ import CategorySalesChart from "./CustomerCharts/CategorySalesChart";
 import OrdersChartArray from "./OpenClosedOrdersChartArray";
 import OrdersChartArrayMerged from "./open-partial-chart/OpenClosedOrdersChartArray";
 import DailyReportChart from './daily-report/DailyReportChart';
+import DailyInvoiceChart from './daily-report/DailyInvoiceChart';
 import OrderToInvoiceChart from 'components/main-page/order-to-invoice/OrderToInvoiceChart';
 import OrderToInvoiceChartBucket from 'components/main-page/order-to-invoice-buckets/order-to-invoice-charts';
 
@@ -129,6 +130,7 @@ function DashboardCharts({ userRole }) {
     <div className="g-4">
       <EnhancedSalesCOGSChart />
       <DailyReportChart />
+      <DailyInvoiceChart />
       <OrderToInvoiceChart />
       
       {/* Conditionally render CategorySalesChart for admin/sales */}
