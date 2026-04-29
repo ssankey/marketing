@@ -232,8 +232,8 @@ const NavbarVertical = (props) => {
               </ul>
             </Accordion.Collapse>
 
-            {/* Customers (Admin Only) */}
-            {(isAdmin || isSalesPerson) && (
+           
+            {/* {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link
                   href="/customers"
@@ -242,6 +242,38 @@ const NavbarVertical = (props) => {
                   <People className="me-2" /> Customers
                 </Link>
               </li>
+            )} */}
+            {/* Customers Accordion (Admin & SalesPerson only) */}
+            {(isAdmin || isSalesPerson) && (
+              <>
+                <CustomToggle
+                  eventKey="customers"
+                  icon={<People className="me-2" />}
+                  href="/customers"
+                >
+                  Customers
+                </CustomToggle>
+                <Accordion.Collapse eventKey="customers">
+                  <ul className="nav flex-column ms-3">
+                    <li className="nav-item mb-3">
+                      <Link
+                        href="/customers"
+                        className={`nav-link d-flex align-items-center ${router === "/customers" ? "active" : ""}`}
+                      >
+                        <People className="me-2" /> All Customers
+                      </Link>
+                    </li>
+                    <li className="nav-item mb-3">
+                      <Link
+                        href="/customers/new-vs-old-trend"
+                        className={`nav-link d-flex align-items-center ${router === "/customers/new-vs-old-trend" ? "active" : ""}`}
+                      >
+                        <People className="me-2" /> New vs Old Trend
+                      </Link>
+                    </li>
+                  </ul>
+                </Accordion.Collapse>
+              </>
             )}
 
             {/* Products (Hidden for Admin) */}
