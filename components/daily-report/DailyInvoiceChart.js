@@ -4,7 +4,7 @@ import { Bar } from "react-chartjs-2";
 import Select from 'react-select';
 import AsyncSelect from 'react-select/async';
 import { formatCurrency } from "utils/formatCurrency";
-import DailyInvoiceDetailsModal from "../modal/DailyInvoiceDetailsModal";
+import DailyInvoiceDetailsModalSlim from "../modal/DailyInvoiceDetailsModalSlim";
 import { customSelectStyles } from "./ChartConfig";
 
 import {
@@ -163,7 +163,7 @@ const DailyInvoiceChart = () => {
       if (filters.product)       params.append('itemCode',   filters.product);
       if (filters.customer)      params.append('cardCode',   filters.customer);
 
-      const response = await fetch(`/api/daily-invoice/modal-data?${params}`, {
+      const response = await fetch(`/api/daily-invoice/modal-data-slim?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error("Failed to fetch modal data");
@@ -426,7 +426,7 @@ const DailyInvoiceChart = () => {
       </div>
 
                 {modalData && (
-            <DailyInvoiceDetailsModal
+            <DailyInvoiceDetailsModalSlim
                 invoiceData={modalData}
                 onClose={() => setModalData(null)}
                 title={modalTitle}
