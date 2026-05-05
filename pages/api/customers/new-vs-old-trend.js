@@ -266,9 +266,22 @@ export default async function handler(req, res) {
       GROUP BY C.CustomerType;
     `;
 
-    const [trendRows, kpiRows] = await Promise.all([
-      queryDatabase(trendQuery, params),
-      queryDatabase(kpiQuery,   params),
+    // const [trendRows, kpiRows] = await Promise.all([
+    //   queryDatabase(trendQuery, params),
+    //   queryDatabase(kpiQuery,   params),
+    // ]);
+
+    const totalCustomersQuery = `
+      SELECT COUNT(*) AS TotalCustomers
+      FROM OCRD
+      WHERE CardType = 'C'
+        AND CONVERT(DATE, CreateDate, 23) <= CONVERT(DATE, '${endDate}', 23)
+    `;
+
+    const [trendRows, kpiRows, totalRows] = await Promise.all([
+      queryDatabase(trendQuery,         params),
+      queryDatabase(kpiQuery,           params),
+      queryDatabase(totalCustomersQuery, []),
     ]);
 
     // ── Build period labels ───────────────────────────────────────────────────
@@ -334,13 +347,14 @@ export default async function handler(req, res) {
       sales:         newKpi.sales         + oldKpi.sales,
     };
 
-    const retentionRate = allKpi.customerCount > 0
-      ? ((oldKpi.customerCount / allKpi.customerCount) * 100).toFixed(1)
+    const totalSAPCustomers = parseInt(totalRows[0]?.TotalCustomers) || 0;
+    const retentionRate = totalSAPCustomers > 0
+      ? (((newKpi.customerCount + oldKpi.customerCount) / totalSAPCustomers) * 100).toFixed(1)
       : "0.0";
 
     return res.status(200).json({
       chartData,
-      kpi: { new: newKpi, old: oldKpi, all: allKpi, retentionRate },
+      kpi: { new: newKpi, old: oldKpi, all: allKpi, retentionRate ,totalSAPCustomers},
       startDate,
       endDate,
     });
