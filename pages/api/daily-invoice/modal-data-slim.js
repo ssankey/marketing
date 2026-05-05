@@ -2,7 +2,6 @@
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
 import { queryDatabase } from '../../../lib/db';
-import { getCache, setCache } from "../../../lib/redis";
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -25,13 +24,6 @@ export default async function handler(req, res) {
     const contactCodes = decoded.contactCodes || [];
     const cardCodes    = decoded.cardCodes    || [];
 
-    // Cache key
-    const userIdentifier = isAdmin ? "admin" : contactCodes.length ? contactCodes.join("-") : cardCodes.join("-");
-    const cacheKey = `daily-invoice-modal-slim:${userIdentifier}:${year}:${month}:${day}:${slpCode||"all"}:${cardCode||"all"}:${cntctCode||"all"}:${itmsGrpCod||"all"}:${itemCode||"all"}`;
-
-    const cached = await getCache(cacheKey);
-    if (cached) return res.status(200).json(cached);
-
     // WHERE clauses
     const whereClauses = ["H.CANCELED = 'N'", "H.[IssReason] <> '4'"];
     const params = [];
@@ -45,7 +37,7 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: "No access" });
     }
 
-    // Date filters (all three required for modal)
+    // Date filters
     whereClauses.push(`YEAR(H.DocDate)  = @year`);
     whereClauses.push(`MONTH(H.DocDate) = @month`);
     whereClauses.push(`DAY(H.DocDate)   = @day`);
@@ -62,7 +54,6 @@ export default async function handler(req, res) {
     if (itemCode)  { whereClauses.push(`L.ItemCode  = @itemCode`);  params.push({ name: "itemCode",  type: sql.VarChar, value: itemCode             }); }
 
     if (itmsGrpCod) {
-      // Subquery avoids adding OITM/OITB to the main join — keeps it lean
       whereClauses.push(`EXISTS (
         SELECT 1 FROM OITM I2
         INNER JOIN OITB B2 ON I2.ItmsGrpCod = B2.ItmsGrpCod
@@ -74,14 +65,9 @@ export default async function handler(req, res) {
 
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
 
-    // Lean query — 9 fields only.
-    // Dropped vs full modal: DLN1/ODLN (delivery), RDR1/ORDR (SO), OCPR (contact via SO),
-    //                        IBT1/OIBT (batch tracking), COA path logic.
-    // Kept: OSLP (sales person), OITM+OITB (item + category), OCPR via invoice header (contact).
-    // Contact person is read directly from the invoice header (H.CntctCode → OCPR)
-    // which is simpler and faster than chasing it through the SO chain.
     const query = `
       SELECT
+          L.ItemCode                AS [ItemCode],
           H.DocNum                  AS [Inv#],
           H.CardName                AS [Customer],
           T5.SlpName                AS [Sales_Person],
@@ -102,7 +88,6 @@ export default async function handler(req, res) {
     `;
 
     const results = await queryDatabase(query, params);
-    await setCache(cacheKey, results || [], 1800);
     res.status(200).json(results || []);
 
   } catch (error) {
