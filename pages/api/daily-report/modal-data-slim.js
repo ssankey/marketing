@@ -2,7 +2,6 @@
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
 import { queryDatabase } from '../../../lib/db';
-import { getCache, setCache } from "../../../lib/redis";
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -40,15 +39,6 @@ export default async function handler(req, res) {
     const contactCodes = decoded.contactCodes || [];
     const cardCodes = decoded.cardCodes || [];
 
-    // Cache key
-    const userIdentifier = isAdmin ? "admin" : contactCodes.length ? contactCodes.join("-") : cardCodes.join("-");
-    const cacheKey = `daily-modal-slim:${userIdentifier}:${year}:${month}:${day}:${slpCode || "all"}:${cardCode || "all"}:${cntctCode || "all"}:${itmsGrpCod || "all"}:${itemCode || "all"}`;
-
-    const cachedResult = await getCache(cacheKey);
-    if (cachedResult) {
-      return res.status(200).json(cachedResult);
-    }
-
     // WHERE clauses
     const whereClauses = ["T0.CANCELED = 'N'"];
     const params = [];
@@ -84,7 +74,6 @@ export default async function handler(req, res) {
       params.push({ name: "cntctCode", type: sql.Int, value: parseInt(cntctCode) });
     }
     if (itmsGrpCod) {
-      // Still need the OITB join, kept below
       whereClauses.push(`T4.ItmsGrpCod = @itmsGrpCod`);
       params.push({ name: "itmsGrpCod", type: sql.Int, value: parseInt(itmsGrpCod) });
     }
@@ -99,22 +88,21 @@ export default async function handler(req, res) {
 
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
 
-    // Lean query — only the 8 fields the modal displays.
-    // Dropped joins: OLCT, DLN1, INV1, OINV, IBT1, OIBT (invoice + batch chain)
-    // Kept joins: OSLP (sales person), OCPR (contact person), OITM (item), OITB (category)
     const query = `
       SELECT
+          T0.DocNum           AS [SO_No],
           T5.SlpName          AS [Sales_Person],
           T0.CardName         AS [Customer],
           T6.Name             AS [Contact_Person],
           T1.Dscription       AS [Item_Service_Description],
+          T1.ItemCode         AS [ItemCode],
           T4.ItmsGrpNam       AS [Category],
           T1.Quantity         AS [Quantity],
           T1.Price            AS [Unit_Price],
           T1.LineTotal        AS [Total_Price]
       FROM ORDR T0
-      INNER JOIN RDR1 T1  ON T0.DocEntry = T1.DocEntry
-      INNER JOIN OSLP T5  ON T0.SlpCode  = T5.SlpCode
+      INNER JOIN RDR1 T1  ON T0.DocEntry  = T1.DocEntry
+      INNER JOIN OSLP T5  ON T0.SlpCode   = T5.SlpCode
       INNER JOIN OCPR T6  ON T0.CntctCode = T6.CntctCode
       LEFT  JOIN OITM T3  ON T1.ItemCode  = T3.ItemCode
       LEFT  JOIN OITB T4  ON T3.ItmsGrpCod = T4.ItmsGrpCod
@@ -123,8 +111,6 @@ export default async function handler(req, res) {
     `;
 
     const results = await queryDatabase(query, params);
-
-    await setCache(cacheKey, results || [], 1800);
 
     res.status(200).json(results || []);
 

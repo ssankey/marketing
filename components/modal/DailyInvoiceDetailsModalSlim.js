@@ -1,4 +1,3 @@
-
 // components/modal/DailyInvoiceDetailsModalSlim.js
 import React, { useState, useMemo } from "react";
 import {
@@ -27,14 +26,13 @@ const useIsMobile = () => {
   return isMobile;
 };
 
-// Sort chips for mobile
 const SORT_OPTIONS = [
-  { label: "Unit Price ↑",  field: "Unit Sales Price",              desc: false },
-  { label: "Unit Price ↓",  field: "Unit Sales Price",              desc: true  },
-  { label: "Total Price ↑", field: "Total Sales Price/Open Value",  desc: false },
-  { label: "Total Price ↓", field: "Total Sales Price/Open Value",  desc: true  },
-  { label: "Customer A–Z",  field: "Customer",                      desc: false },
-  { label: "Customer Z–A",  field: "Customer",                      desc: true  },
+  { label: "Unit Price ↑",  field: "Unit Sales Price",             desc: false },
+  { label: "Unit Price ↓",  field: "Unit Sales Price",             desc: true  },
+  { label: "Total Price ↑", field: "Total Sales Price/Open Value", desc: false },
+  { label: "Total Price ↓", field: "Total Sales Price/Open Value", desc: true  },
+  { label: "Customer A–Z",  field: "Customer",                     desc: false },
+  { label: "Customer Z–A",  field: "Customer",                     desc: true  },
 ];
 
 const STYLES = `
@@ -52,27 +50,20 @@ const STYLES = `
   }
   .slim-inv-title {
     font-family: Georgia, serif; color: #5ba4f5;
-    font-size: 1.05rem; font-weight: 700; margin: 0 0 10px 0;
+    font-size: 1.05rem; font-weight: 700; margin: 0 0 4px 0;
     letter-spacing: 0.02em;
   }
-    .slim-inv-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
-}
-.slim-inv-summary-chip {
-  background: rgba(91,164,245,0.15);
-  border: 1px solid rgba(91,164,245,0.35);
-  color: #a8d0ff;
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 20px;
-  white-space: nowrap;
-  letter-spacing: 0.02em;
-}
-  .slim-inv-header-row { display: flex; gap: 8px; align-items: center; }
+  .slim-inv-summary {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;
+  }
+  .slim-inv-summary-chip {
+    background: rgba(91,164,245,0.15);
+    border: 1px solid rgba(91,164,245,0.35);
+    color: #a8d0ff; font-size: 0.75rem; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+    white-space: nowrap; letter-spacing: 0.02em;
+  }
+  .slim-inv-header-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
   .slim-inv-search {
     flex: 1; min-width: 0;
     background: rgba(255,255,255,0.09) !important;
@@ -100,14 +91,12 @@ const STYLES = `
   }
   .slim-inv-close-btn:hover { background: rgba(255,255,255,0.22); }
 
-  /* Mobile sort bar */
   .slim-inv-sort-bar {
     display: flex; align-items: center;
     padding: 8px 12px 6px; background: #f0f3f8;
     border-bottom: 1px solid #dce2ed;
     overflow-x: auto; flex-shrink: 0;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   .slim-inv-sort-bar::-webkit-scrollbar { display: none; }
   .slim-inv-sort-bar-label {
@@ -119,15 +108,13 @@ const STYLES = `
     flex-shrink: 0; padding: 5px 11px; border-radius: 20px;
     font-size: 0.74rem; font-weight: 600; cursor: pointer;
     border: 1.5px solid #dde0e8; background: #fff; color: #555;
-    margin-right: 6px; white-space: nowrap;
-    transition: all 0.15s ease;
+    margin-right: 6px; white-space: nowrap; transition: all 0.15s ease;
   }
   .slim-inv-sort-chip.active {
     background: #124f94; color: #fff; border-color: #124f94;
     box-shadow: 0 2px 6px rgba(18,79,148,0.35);
   }
 
-  /* Table */
   .slim-inv-body { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
   .slim-inv-table-wrap { flex: 1; overflow: auto; }
   .slim-inv-tbl { width: 100%; border-collapse: collapse; }
@@ -150,11 +137,11 @@ const STYLES = `
     color: #2d2d2d; white-space: nowrap; border: none; vertical-align: middle;
   }
   .slim-inv-tbl td.c-inv   { font-weight: 700; color: #124f94; }
+  .slim-inv-tbl td.c-cat   {  font-weight: 700; color: #01060b;  }
   .slim-inv-tbl td.c-price { font-family: 'Courier New', monospace; font-weight: 600; color: #1a7a4a; }
   .slim-inv-tbl td.c-total { font-family: 'Courier New', monospace; font-weight: 700; color: #0f3460; }
   .slim-inv-empty { text-align: center; padding: 48px 20px; color: #bbb; font-size: 0.88rem; }
 
-  /* Pagination */
   .slim-inv-pager {
     flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
     padding: 9px 16px; background: #f8f9fa; border-top: 1px solid #e9ecef;
@@ -170,7 +157,6 @@ const STYLES = `
   .slim-inv-pbtn:disabled { opacity: 0.38; cursor: not-allowed; }
   .slim-inv-pbtn:not(:disabled):hover { background: #124f94; color: #fff; border-color: #124f94; }
 
-  /* Mobile cards */
   .slim-inv-cards { flex: 1; overflow-y: auto; padding: 12px; background: #f0f3f8; }
   .slim-inv-card {
     background: #fff; border-radius: 12px; padding: 14px 16px;
@@ -189,6 +175,7 @@ const STYLES = `
   .slim-inv-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 14px; }
   .slim-inv-card-f label { font-size: 0.63rem; text-transform: uppercase; letter-spacing: 0.07em; color: #bbb; display: block; margin-bottom: 1px; font-weight: 700; }
   .slim-inv-card-f span { font-size: 0.81rem; color: #333; font-weight: 500; word-break: break-word; }
+  .slim-inv-card-f span.cat { font-size: 0.75rem; color: #666; font-family: 'Courier New', monospace; font-weight: 600; }
   .slim-inv-card-f span.p { color: #1a7a4a; font-family: 'Courier New', monospace; font-weight: 700; }
   .slim-inv-card-f span.t { color: #0f3460; font-family: 'Courier New', monospace; font-weight: 700; font-size: 0.88rem; }
   .slim-inv-card-total-row { display: flex; justify-content: space-between; align-items: center; }
@@ -198,7 +185,7 @@ const STYLES = `
     .slim-inv-modal .modal-dialog { margin: 0 !important; max-width: 100vw !important; }
     .slim-inv-modal .modal-content { border-radius: 0; min-height: 100dvh; }
     .slim-inv-header { padding: 12px 14px; }
-    .slim-inv-title { font-size: 0.9rem; margin-bottom: 8px; }
+    .slim-inv-title { font-size: 0.9rem; margin-bottom: 4px; }
   }
 `;
 
@@ -224,7 +211,6 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
     }
   };
 
-  // Column order: Invoice No, Customer, Unit Price, Quantity, Total Price, Category, Item Name, Sales Person, Contact Person
   const columns = useMemo(() => [
     {
       accessorFn: row => row["Inv#"],
@@ -262,6 +248,12 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
       accessorFn: row => row["Category"],
       id: "Category",
       header: "Category",
+      cell: ({ getValue }) => getValue() || "—",
+    },
+    {
+      accessorFn: row => row["ItemCode"],
+      id: "ItemCode",
+      header: "CAT #",
       cell: ({ getValue }) => getValue() || "—",
     },
     {
@@ -314,6 +306,7 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
       "Quantity":       r["Qty"] ?? "—",
       "Total Price":    r["Total Sales Price/Open Value"] != null ? parseFloat(r["Total Sales Price/Open Value"]) : "",
       "Category":       r["Category"] || "—",
+      "CAT #":          r["ItemCode"] || "—",
       "Item Name":      r["Item/Service Description"] || "—",
       "Sales Person":   r["Sales_Person"] || "—",
       "Contact Person": r["Contact Person"] || "—",
@@ -334,22 +327,20 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
       >
         {/* Header */}
         <div className="slim-inv-header">
-          <div className="d-flex align-items-center gap-1 mb-1">
-
-            {/* <h5 className="slim-inv-title flex-grow-1">{title}</h5> */}
+          <div className="d-flex align-items-center gap-1">
             <div className="flex-grow-1">
-  <h5 className="slim-inv-title">{title}</h5>
-  <div className="slim-inv-summary">
-    <span className="slim-inv-summary-chip">
-      🧾 {invoiceData?.length ?? 0} Invoice{invoiceData?.length !== 1 ? "s" : ""}
-    </span>
-    <span className="slim-inv-summary-chip">
-      💰 {formatCurrency(
-        (invoiceData || []).reduce((sum, r) => sum + (parseFloat(r["Total Sales Price/Open Value"]) || 0), 0)
-      )}
-    </span>
-  </div>
-</div>
+              <h5 className="slim-inv-title">{title}</h5>
+              <div className="slim-inv-summary">
+                <span className="slim-inv-summary-chip">
+                  🧾 {invoiceData?.length ?? 0} Invoice{invoiceData?.length !== 1 ? "s" : ""}
+                </span>
+                <span className="slim-inv-summary-chip">
+                  💰 {formatCurrency(
+                    (invoiceData || []).reduce((sum, r) => sum + (parseFloat(r["Total Sales Price/Open Value"]) || 0), 0)
+                  )}
+                </span>
+              </div>
+            </div>
             <button className="slim-inv-close-btn" onClick={onClose}>✕</button>
           </div>
           <div className="slim-inv-header-row">
@@ -370,7 +361,6 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
 
             {isMobile ? (
               <>
-                {/* ── Mobile sort chips ── */}
                 <div className="slim-inv-sort-bar">
                   <span className="slim-inv-sort-bar-label">Sort:</span>
                   {SORT_OPTIONS.map((opt, idx) => (
@@ -384,7 +374,6 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
                   ))}
                 </div>
 
-                {/* ── Mobile card list ── */}
                 <div className="slim-inv-cards">
                   {rows.length > 0 ? rows.map((row, i) => {
                     const d = row.original;
@@ -398,13 +387,17 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
                           ))}
                         </div>
                         <div className="slim-inv-card-grid">
-                          <div className="slim-inv-card-f" style={{ gridColumn: "1 / -1" }}>
-                            <label>Item Name</label>
-                            <span>{d["Item/Service Description"] || "—"}</span>
+                          <div className="slim-inv-card-f">
+                            <label>CAT #</label>
+                            <span className="cat">{d["ItemCode"] || "—"}</span>
                           </div>
                           <div className="slim-inv-card-f">
                             <label>Category</label>
                             <span>{d["Category"] || "—"}</span>
+                          </div>
+                          <div className="slim-inv-card-f" style={{ gridColumn: "1 / -1" }}>
+                            <label>Item Name</label>
+                            <span>{d["Item/Service Description"] || "—"}</span>
                           </div>
                           <div className="slim-inv-card-f">
                             <label>Quantity</label>
@@ -430,7 +423,6 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
                 </div>
               </>
             ) : (
-              /* ── Desktop table ── */
               <div className="slim-inv-table-wrap">
                 <table className="slim-inv-tbl">
                   <thead>
@@ -451,9 +443,10 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
                         {row.getVisibleCells().map(cell => {
                           const id = cell.column.id;
                           const cls =
-                            id === "Inv#" ? "c-inv" :
-                            id === "Unit Sales Price" ? "c-price" :
-                            id === "Total Sales Price/Open Value" ? "c-total" : "";
+                            id === "Inv#"                            ? "c-inv"   :
+                            id === "ItemCode"                        ? "c-cat"   :
+                            id === "Unit Sales Price"                ? "c-price" :
+                            id === "Total Sales Price/Open Value"    ? "c-total" : "";
                           return (
                             <td key={cell.id} className={cls}>
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
