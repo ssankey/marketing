@@ -924,15 +924,27 @@ const NewVsOldTrend = () => {
         <div className="row g-3 mb-3">
           <div className="col-6 col-md-3">
             <div className="novo-kpi-card h-100 novo-retention">
-              <div className="novo-kpi-inner">
-                <div className="d-flex justify-content-between align-items-start">
-                  <span className="novo-kpi-label">Retention Rate</span>
-                  <span style={{fontSize:"1.4rem"}}>🔄</span>
+                <div className="novo-kpi-inner">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <span className="novo-kpi-label">Retention Rate</span>
+                    <span style={{fontSize:"1.4rem"}}>🔄</span>
+                  </div>
+                  <div className="novo-kpi-value">{kpi ? `${kpi.retentionRate}%` : "—"}</div>
+                  <div className="novo-kpi-sub">Active Customers / Total SAP Customers</div>
+                  {kpi && (
+                    <div className="novo-kpi-metrics">
+                      <div className="novo-kpi-metric">
+                        <label style={{color:"rgba(255,255,255,0.7)"}}>Active Customers</label>
+                        <span style={{color:"#fff"}}>{kpi.all?.customerCount?.toLocaleString()}</span>
+                      </div>
+                      <div className="novo-kpi-metric">
+                        <label style={{color:"rgba(255,255,255,0.7)"}}>Total in SAP within Selected Period</label>
+                        <span style={{color:"#fff"}}>{kpi.totalSAPCustomers?.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="novo-kpi-value">{kpi?`${kpi.retentionRate}%`:"—"}</div>
-                <div className="novo-kpi-sub">Old / Total customers</div>
               </div>
-            </div>
           </div>
           <div className="col-6 col-md-3">
             <KpiCard title="New Customers" data={kpi?.new} color="#198754" icon="🆕" onSeeCustomers={()=>openKpiModal("New")}/>
