@@ -42,6 +42,7 @@ const DailyInvoiceChart = () => {
   const [metric, setMetric] = useState("invoiceCount"); // "invoiceCount" | "invoiceValue"
   const [modalData, setModalData] = useState(null);
   const [modalTitle, setModalTitle] = useState("");
+  const [barSummary, setBarSummary] = useState(null);
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -149,6 +150,11 @@ const DailyInvoiceChart = () => {
 
   const handleBarClick = async (day) => {
     if (!filters.selectedMonth) return;
+
+    const dayData = chartData.find(item => item.day === day);
+  setBarSummary({ invoiceCount: dayData?.invoiceCount ?? 0, totalValue: dayData?.totalValue ?? 0 });
+
+
     try {
       setLoadingModal(true);
       const token = localStorage.getItem("token");
@@ -428,8 +434,9 @@ const DailyInvoiceChart = () => {
                 {modalData && (
             <DailyInvoiceDetailsModalSlim
                 invoiceData={modalData}
-                onClose={() => setModalData(null)}
+                onClose={() => { setModalData(null); setBarSummary(null); }}
                 title={modalTitle}
+                barSummary={barSummary}  
             />
             )}
       {loadingModal && (

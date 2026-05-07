@@ -193,7 +193,7 @@ const SortIcon = ({ s }) => (
   <span className={`slim-sort${s ? " on" : ""}`}>{!s ? "⇅" : s === "asc" ? "↑" : "↓"}</span>
 );
 
-const OrderDetailsModalSlim = ({ orderData, onClose, title = "Order Details" }) => {
+const OrderDetailsModalSlim = ({ orderData, onClose, title = "Order Details" , barSummary }) => {
   const isMobile = useIsMobile();
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 12 });
@@ -322,11 +322,13 @@ const OrderDetailsModalSlim = ({ orderData, onClose, title = "Order Details" }) 
               <h5 className="slim-title">{title}</h5>
               <div className="slim-summary">
                 <span className="slim-summary-chip">
-                  📋 {orderData?.length ?? 0} Order{orderData?.length !== 1 ? "s" : ""}
+                  📋 {barSummary != null ? barSummary.orderCount : (orderData?.length ?? 0)} Order{(barSummary?.orderCount ?? orderData?.length) !== 1 ? "s" : ""}
                 </span>
                 <span className="slim-summary-chip">
                   💰 {formatCurrency(
-                    (orderData || []).reduce((sum, r) => sum + (parseFloat(r["Total_Price"]) || 0), 0)
+                    barSummary != null
+                      ? barSummary.totalValue
+                      : (orderData || []).reduce((sum, r) => sum + (parseFloat(r["Total_Price"]) || 0), 0)
                   )}
                 </span>
               </div>
