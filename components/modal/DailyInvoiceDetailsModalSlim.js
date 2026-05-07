@@ -193,7 +193,7 @@ const SortIcon = ({ s }) => (
   <span className={`slim-inv-sort${s ? " on" : ""}`}>{!s ? "⇅" : s === "asc" ? "↑" : "↓"}</span>
 );
 
-const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice Details" }) => {
+const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice Details", barSummary }) => {
   const isMobile = useIsMobile();
   const [globalFilter, setGlobalFilter] = useState("");
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 12 });
@@ -332,11 +332,13 @@ const DailyInvoiceDetailsModalSlim = ({ invoiceData, onClose, title = "Invoice D
               <h5 className="slim-inv-title">{title}</h5>
               <div className="slim-inv-summary">
                 <span className="slim-inv-summary-chip">
-                  🧾 {invoiceData?.length ?? 0} Invoice{invoiceData?.length !== 1 ? "s" : ""}
+                  🧾 {barSummary != null ? barSummary.invoiceCount : (invoiceData?.length ?? 0)} Invoice{(barSummary?.invoiceCount ?? invoiceData?.length) !== 1 ? "s" : ""}
                 </span>
                 <span className="slim-inv-summary-chip">
                   💰 {formatCurrency(
-                    (invoiceData || []).reduce((sum, r) => sum + (parseFloat(r["Total Sales Price/Open Value"]) || 0), 0)
+                    barSummary != null
+                      ? barSummary.totalValue
+                      : (invoiceData || []).reduce((sum, r) => sum + (parseFloat(r["Total Sales Price/Open Value"]) || 0), 0)
                   )}
                 </span>
               </div>

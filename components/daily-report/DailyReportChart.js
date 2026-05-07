@@ -50,10 +50,13 @@ const DailyReportChart = () => {
 
   const [modalData, setModalData] = useState(null);
   const [modalTitle, setModalTitle] = useState("");
+  const [barSummary, setBarSummary] = useState(null); 
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [loadingModal, setLoadingModal] = useState(false);
+
+ 
 
   const chartRef = useRef(null);
 
@@ -176,6 +179,10 @@ const DailyReportChart = () => {
 
   const handleBarClick = async (day) => {
     if (!filters.selectedMonth) return;
+
+    const dayData = chartData.find(item => item.day === day);
+  setBarSummary({ orderCount: dayData?.orderCount ?? 0, totalValue: dayData?.totalValue ?? 0 });
+
 
     try {
       setLoadingModal(true);
@@ -578,8 +585,9 @@ const DailyReportChart = () => {
       {modalData && (
         <OrderDetailsModalSlim
           orderData={modalData}
-          onClose={() => setModalData(null)}
+          onClose={() => { setModalData(null); setBarSummary(null); }}
           title={modalTitle}
+          barSummary={barSummary} 
         />
       )}
 
