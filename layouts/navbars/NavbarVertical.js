@@ -11,7 +11,7 @@ import { useAccordionButton } from "react-bootstrap/AccordionButton";
 import SimpleBar from "simplebar-react";
 import "simplebar/dist/simplebar.min.css";
 import { People, House, Clipboard, FileText, CurrencyDollar } from "react-bootstrap-icons";
-import { FaMoneyBillWave, FaSignOutAlt, FaUser, FaBox } from "react-icons/fa";
+import { FaMoneyBillWave, FaSignOutAlt, FaUser, FaBox , FaFileAlt} from "react-icons/fa";
 import { Button } from "react-bootstrap";
 import { useAuth } from "contexts/AuthContext";
 
@@ -288,6 +288,17 @@ const NavbarVertical = (props) => {
               </li>
             )}
 
+            {(isAdmin || isSalesPerson) && (
+              <li className="nav-item mb-3">
+                <Link
+                  href="/generate-waybill"
+                  className={`nav-link d-flex align-items-center ${router === "/generate-waybill" ? "active" : ""}`}
+                >
+                  <FaFileAlt className="me-2" /> Generate Waybill
+                </Link>
+              </li>
+            )}
+
             {/* Outstanding Payments */}
             <li className="nav-item mb-3">
               <Link
@@ -318,6 +329,8 @@ const NavbarVertical = (props) => {
                 </Link>
               </li>
             )}
+
+            
             
             {/* {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
