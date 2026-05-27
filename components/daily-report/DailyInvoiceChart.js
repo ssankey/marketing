@@ -57,37 +57,42 @@ const DailyInvoiceChart = () => {
   }, [filters]);
 
   const fetchFilterOptions = async () => {
-    try {
-      const token = localStorage.getItem("token");
+  try {
+    const token = localStorage.getItem("token");
 
-      const [salesPersons, contactPersons, categories, customers, availableMonths] = await Promise.all([
-        fetch("/api/unique/salespersons",      { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        fetch("/api/unique/contact-persons",   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        fetch("/api/unique/categories",        { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        fetch("/api/unique/customers",         { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-        fetch("/api/daily-invoice/available-months", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
-      ]);
+    const [salesPersons, contactPersons, categories, customers, availableMonths] = await Promise.all([
+      fetch("/api/unique/salespersons",      { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch("/api/unique/contact-persons",   { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch("/api/unique/categories",        { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch("/api/unique/customers",         { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+      fetch("/api/daily-invoice/available-months", { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json()),
+    ]);
 
-      setFilterOptions({
-        salesPersons:  salesPersons.data?.map(sp   => ({ value: sp.SlpCode,      label: sp.SlpName       })) || [],
-        contactPersons: contactPersons.data?.map(cp => ({ value: cp.CntctCode,   label: cp.ContactPerson })) || [],
-        categories:    categories.data?.map(cat    => ({ value: cat.ItmsGrpCod,  label: cat.ItmsGrpNam   })) || [],
-        customers:     customers.data?.map(cust    => ({ value: cust.CardCode,   label: cust.CardName    })) || [],
-        availableMonths: availableMonths || []
-      });
+    // 👇 FIX: Properly handle the response
+    const availableMonthsArray = Array.isArray(availableMonths) 
+      ? availableMonths 
+      : availableMonths?.data || [];
 
-      const now = new Date();
-      const currentMonthOption = availableMonths.find(
-        m => m.year === now.getFullYear() && m.monthNumber === now.getMonth() + 1
-      );
-      setFilters(prev => ({
-        ...prev,
-        selectedMonth: currentMonthOption || (availableMonths.length > 0 ? availableMonths[0] : null)
-      }));
-    } catch (err) {
-      console.error("Error fetching filter options:", err);
-    }
-  };
+    setFilterOptions({
+      salesPersons:  salesPersons.data?.map(sp   => ({ value: sp.SlpCode,      label: sp.SlpName       })) || [],
+      contactPersons: contactPersons.data?.map(cp => ({ value: cp.CntctCode,   label: cp.ContactPerson })) || [],
+      categories:    categories.data?.map(cat    => ({ value: cat.ItmsGrpCod,  label: cat.ItmsGrpNam   })) || [],
+      customers:     customers.data?.map(cust    => ({ value: cust.CardCode,   label: cust.CardName    })) || [],
+      availableMonths: availableMonthsArray  // 👈 USE THIS
+    });
+
+    const now = new Date();
+    const currentMonthOption = availableMonthsArray.find(
+      m => m.year === now.getFullYear() && m.monthNumber === now.getMonth() + 1
+    );
+    setFilters(prev => ({
+      ...prev,
+      selectedMonth: currentMonthOption || (availableMonthsArray.length > 0 ? availableMonthsArray[0] : null)
+    }));
+  } catch (err) {
+    console.error("Error fetching filter options:", err);
+  }
+};
 
   const loadProductOptions = async (inputValue) => {
     try {
@@ -340,7 +345,7 @@ const DailyInvoiceChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Month</label>
                 <Select
-                  options={filterOptions.availableMonths.map(m => ({ value: m, label: `${m.monthName} ${m.year}` }))}
+                  options={filterOptions.availableMonths?.map(m => ({ value: m, label: `${m.monthName} ${m.year}` })) || []}
                   value={filters.selectedMonth ? { value: filters.selectedMonth, label: `${filters.selectedMonth.monthName} ${filters.selectedMonth.year}` } : null}
                   onChange={handleMonthChange}
                   placeholder="Select Month"

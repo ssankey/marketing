@@ -87,7 +87,7 @@ const DailyReportChart = () => {
         contactPersons: contactPersons.data?.map(cp => ({ value: cp.CntctCode, label: cp.ContactPerson })) || [],
         categories: categories.data?.map(cat => ({ value: cat.ItmsGrpCod, label: cat.ItmsGrpNam })) || [],
         customers: customers.data?.map(cust => ({ value: cust.CardCode, label: cust.CardName })) || [],
-        availableMonths: availableMonths || []
+        availableMonths: Array.isArray(availableMonths) ? availableMonths : []
       });
 
       const now = new Date();
@@ -464,20 +464,20 @@ const DailyReportChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Month</label>
                 <Select
-                  options={filterOptions.availableMonths.map(m => ({
-                    value: m,
-                    label: `${m.monthName} ${m.year}`
-                  }))}
-                  value={filters.selectedMonth ? {
-                    value: filters.selectedMonth,
-                    label: `${filters.selectedMonth.monthName} ${filters.selectedMonth.year}`
-                  } : null}
-                  onChange={handleMonthChange}
-                  placeholder="Select Month"
-                  isClearable={false}
-                  isSearchable={false}
-                  styles={customSelectStyles}
-                />
+                options={filterOptions.availableMonths?.map(m => ({
+                  value: m,
+                  label: `${m.monthName} ${m.year}`
+                })) || []}
+                value={filters.selectedMonth ? {
+                  value: filters.selectedMonth,
+                  label: `${filters.selectedMonth.monthName} ${filters.selectedMonth.year}`
+                } : null}
+                onChange={handleMonthChange}
+                placeholder="Select Month"
+                isClearable={false}
+                isSearchable={false}
+                styles={customSelectStyles}
+              />
               </div>
             </div>
 
