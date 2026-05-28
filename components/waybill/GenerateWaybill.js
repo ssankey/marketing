@@ -173,8 +173,8 @@ export default function GenerateWaybill() {
     FavouringName: "", PayableAt: "", ForwardAWBNo: "",
     ForwardLogisticCompName: "", InsurancePaidBy: "", IsChequeDD: "",
     noOfDCGiven: "0", TotalCashPaytoCustomer: "0", DeferredDeliveryDays: "0",
-    RegisterPickup: false, PDFOutputNotRequired: true,
-    //  RegisterPickup: false, PDFOutputNotRequired: false,
+    RegisterPickup: true, PDFOutputNotRequired: true,
+    //  RegisterPickup: false, PDFOutputNotRequired: true,
     IsDedicatedDeliveryNetwork: false, IsReversePickup: false,
     IsForcePickup: false, IsPartialPickup: false, ProductFeature: "",
   });
