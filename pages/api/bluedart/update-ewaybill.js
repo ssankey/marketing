@@ -66,6 +66,19 @@ export default async function handler(req, res) {
     );
 
     const bdData = await bdRes.json();
+
+    // Log for debugging
+    console.log("Update ewaybill response:", JSON.stringify(bdData, null, 2));
+
+    // Handle error-response format
+    if (bdData?.["error-response"]) {
+      const errResult = bdData["error-response"][0];
+      return res.status(400).json({
+        error:  errResult?.Status?.[0]?.StatusInformation || "Update e-waybill failed",
+        status: errResult?.Status,
+      });
+    }
+
     const result = bdData?.UpdateEwayBillResult;
 
     if (!result) {
