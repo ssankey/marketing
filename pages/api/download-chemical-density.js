@@ -69,7 +69,7 @@ var PAGE_HTML =
   ".btn .icon { font-size: 18px; }" +
   ".info-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-top: 24px; font-size: 12px; color: #15803d; }" +
   ".meta { margin-top: 24px; font-size: 12px; color: #bbb; }" +
-  "</style>"
+  "</style>" +
   "</head>" +
   "<body>" +
   "<div class='card'>" +
@@ -79,7 +79,6 @@ var PAGE_HTML =
   "<a class='btn' href='/api/download-chemical-density?download=true'>" +
   "<span class='icon'>⬇️</span> Download Chemical_Density" +
   "</a>" +
-  "<div class='info-box'>✅ Now includes HSN codes from OCHP reference table</div>" +
   "<div class='meta'>Source: TEST_DENSITY database</div>" +
   "</div>" +
   "</body>" +
