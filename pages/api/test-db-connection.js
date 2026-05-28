@@ -289,7 +289,7 @@ const MISMATCH_QUERY =
   "      valid_price.U_PriceUSD IS NULL OR cd.price_usd IS NULL OR valid_price.U_PriceUSD != cd.price_usd " +
   "    ) " +
   "  ) " +
-  "  OR cd.hsn != ch.ChapterID";
+  "  OR ISNULL(cd.hsn, '') != ISNULL(ch.ChapterID, '')";
 
 function buildUpdateQuery(inClause) {
   return (
