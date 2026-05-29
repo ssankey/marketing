@@ -44,6 +44,8 @@ const SHIPPER_DEFAULTS_PRODUCTION = {
 
 // ✅ SWITCH HERE — change "sandbox" to "production" when going live
 const ACTIVE_ENV = "production";
+// const ACTIVE_ENV = "sandbox";
+
 const SHIPPER_DEFAULTS = ACTIVE_ENV === "production"
   ? SHIPPER_DEFAULTS_PRODUCTION
   : SHIPPER_DEFAULTS_SANDBOX;
@@ -173,8 +175,8 @@ export default function GenerateWaybill() {
     FavouringName: "", PayableAt: "", ForwardAWBNo: "",
     ForwardLogisticCompName: "", InsurancePaidBy: "", IsChequeDD: "",
     noOfDCGiven: "0", TotalCashPaytoCustomer: "0", DeferredDeliveryDays: "0",
-    RegisterPickup: true, PDFOutputNotRequired: true,
-    //  RegisterPickup: false, PDFOutputNotRequired: true,
+    RegisterPickup: true, PDFOutputNotRequired: false, 
+    // RegisterPickup: false, PDFOutputNotRequired: false, 
     IsDedicatedDeliveryNetwork: false, IsReversePickup: false,
     IsForcePickup: false, IsPartialPickup: false, ProductFeature: "",
   });
@@ -690,7 +692,7 @@ export default function GenerateWaybill() {
           {result && (
             <div className={s.alertSuccess}>
               <i className="ti ti-circle-check" aria-hidden="true" style={{fontSize:18,flexShrink:0}} />
-              <div>
+              <div style={{flex:1}}>
                 <p className={s.alertTitle}>Waybill Generated Successfully!</p>
                 <p className={s.alertBody}>
                   AWB No: <strong className={s.awbHighlight}>{result.AWBNo}</strong>
@@ -698,6 +700,25 @@ export default function GenerateWaybill() {
                   &nbsp;·&nbsp;{result.StatusInformation}
                   {sapUpdated && <>&nbsp;·&nbsp;✅ SAP invoice TrackNo updated.</>}
                 </p>
+                {result.AWBPrintContent && (
+                  <button
+                    type="button"
+                    className={s.pdfBtn}
+                    onClick={() => {
+                        // AWBPrintContent is a byte array — convert to PDF blob
+                        const bytes = new Uint8Array(result.AWBPrintContent);
+                        const blob  = new Blob([bytes], { type: "application/pdf" });
+                        const url   = URL.createObjectURL(blob);
+                        const link  = document.createElement("a");
+                        link.href     = url;
+                        link.download = `BlueDart_AWB_${result.AWBNo}.pdf`;
+                        link.click();
+                        URL.revokeObjectURL(url);
+                      }}
+                  >
+                    <i className="ti ti-file-download" aria-hidden="true" /> Download Waybill PDF
+                  </button>
+                )}
               </div>
             </div>
           )}
