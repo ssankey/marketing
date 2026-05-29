@@ -370,3 +370,4 @@ select.input { height: 32px; }
   cursor: pointer; transition: all 0.12s;
 }
 .pdfBtn:hover { background: #047857; transform: translateY(-1px); }
+

@@ -359,3 +359,77 @@ select.input { height: 32px; }
   background: #fff5f5 !important;
   box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.12) !important;
 }
+
+/* ── Mode Toggle ── */
+.modeToggle {
+  display: flex; gap: 0;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  overflow: hidden; margin-bottom: 0.85rem;
+  width: fit-content;
+}
+
+.modeBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 0.5rem 1.1rem;
+  background: white; border: none;
+  font-size: 0.82rem; font-weight: 600;
+  color: #64748b; cursor: pointer;
+  transition: all 0.12s;
+}
+.modeBtn:first-child { border-right: 1px solid #e2e8f0; }
+.modeBtn:hover { background: #f8fafc; color: #0f172a; }
+.modeBtnActive { background: #2563eb !important; color: white !important; }
+
+/* ── Multi Invoice Box ── */
+.multiInvoiceBox {
+  border: 1px solid #e2e8f0; border-radius: 9px;
+  padding: 0.85rem; background: #fafafa; margin-bottom: 0.75rem;
+}
+
+.multiNote {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: #2563eb;
+  background: #eff6ff; border: 1px solid #bfdbfe;
+  border-radius: 7px; padding: 0.5rem 0.75rem; margin-bottom: 0.85rem;
+}
+
+.multiInputList { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem; }
+
+.multiInputRow { display: flex; align-items: center; gap: 0.6rem; }
+
+.multiInputLabel {
+  font-size: 0.75rem; font-weight: 600; color: #64748b;
+  width: 65px; flex-shrink: 0;
+}
+
+.removeInvoiceBtn {
+  width: 28px; height: 28px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: white; border: 1px solid #fca5a5;
+  border-radius: 6px; color: #dc2626;
+  cursor: pointer; font-size: 13px; transition: all 0.12s;
+}
+.removeInvoiceBtn:hover { background: #fef2f2; }
+
+.multiActions { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+
+.addInvoiceBtn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 0.45rem 0.9rem;
+  background: white; border: 1.5px dashed #cbd5e1;
+  border-radius: 7px; font-size: 0.78rem; font-weight: 600;
+  color: #64748b; cursor: pointer; transition: all 0.12s;
+}
+.addInvoiceBtn:hover { border-color: #3b82f6; color: #2563eb; background: #eff6ff; }
+
+.multiBadge {
+  display: inline-flex; align-items: center;
+  font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
+  background: #dbeafe; color: #1d4ed8; border-radius: 20px;
+}
+
+.invTag {
+  display: inline-flex; font-size: 0.68rem; font-weight: 600;
+  padding: 1px 6px; background: #f1f5f9; color: #475569;
+  border-radius: 4px; white-space: nowrap;
+}
