@@ -22,8 +22,8 @@ const SHIPPER_DEFAULTS_PRODUCTION = {
   Sender: "Manikanth", VendorCode: "070814", IsToPayCustomer: false,
 };
 // ✅ SWITCH HERE
-// const ACTIVE_ENV      = "sandbox";
-const ACTIVE_ENV      = "production";
+const ACTIVE_ENV      = "sandbox";
+// const ACTIVE_ENV      = "production";
 const SHIPPER_DEFAULTS = ACTIVE_ENV === "production" ? SHIPPER_DEFAULTS_PRODUCTION : SHIPPER_DEFAULTS_SANDBOX;
 
 const RETURN_DEFAULTS = {
@@ -123,7 +123,8 @@ export default function GenerateWaybill() {
     Officecutofftime: "", FavouringName: "", PayableAt: "", ForwardAWBNo: "",
     ForwardLogisticCompName: "", InsurancePaidBy: "", IsChequeDD: "",
     noOfDCGiven: "0", TotalCashPaytoCustomer: "0", DeferredDeliveryDays: "0",
-    RegisterPickup: true, PDFOutputNotRequired: false, IsDedicatedDeliveryNetwork: false,
+    RegisterPickup: true,
+     PDFOutputNotRequired: false, IsDedicatedDeliveryNetwork: false,
     IsReversePickup: false, IsForcePickup: false, IsPartialPickup: false, ProductFeature: "",
   });
   const [dimensions, setDimensions] = useState([{ Length: "", Breadth: "", Height: "", Count: "1" }]);
