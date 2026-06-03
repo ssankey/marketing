@@ -1,4 +1,3 @@
-
 // components/daily-report/DailyReportChart.js
 import React, { useState, useEffect, useRef } from "react";
 import { Bar } from "react-chartjs-2";
