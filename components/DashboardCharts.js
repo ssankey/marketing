@@ -130,7 +130,7 @@ function DashboardCharts({ userRole }) {
       <DailyReportChart />
       <DailyInvoiceChart />
       <OrderToInvoiceChart />
-      
+      <OrdersChartArrayMerged />
       {/* Conditionally render CategorySalesChart for admin/sales */}
       {isAdminOrSales && <CategorySalesChart />}
     </div>
