@@ -16,14 +16,48 @@ const COOKIE_OPTIONS = {
 
 };
 
-// Hardcoded test admin credentials
-const TEST_ADMIN = {
-  email: "testing@gmail.com",
-  password: "12Qwerty",
-  name: "Test Admin",
-  role: "admin",
-  contactCodes: ["ADMIN001"],
-};
+const decodeHash = (b64) => (b64 ? Buffer.from(b64, "base64").toString("utf8") : undefined);
+
+const getHardcodedUsers = () => [
+  {
+    email: "testing@gmail.com",
+    passwordHash: decodeHash(process.env.HC_TEST_ADMIN_HASH_B64),
+    name: "Test Admin",
+    role: "admin",
+    contactCodes: ["ADMIN001"],
+  },
+  {
+    email: "saurabh.b@dbllp.co.in",
+    passwordHash: decodeHash(process.env.HC_SAURABH_HASH_B64),
+    name: "Saurabh",
+    role: "admin",
+    contactCodes: [],
+  },
+  {
+    email: "mahesh@testing.com",
+    passwordHash: decodeHash(process.env.HC_MAHESH_HASH_B64),
+    name: "Mahesh",
+    role: "sales_person",
+    contactCodes: ["8"],
+  },
+  {
+    email: "maneesh@testing.com",
+    passwordHash: decodeHash(process.env.HC_MANEESH_HASH_B64),
+    name: "Maneesh",
+    role: "sales_person",
+    contactCodes: ["11"],
+  },
+  {
+    email: "3ASenrise@densitydashboard.com",
+    passwordHash: decodeHash(process.env.HC_SENRISE_HASH_B64),
+    name: "3ASenrise",
+    role: "3ASenrise",
+    contactCodes: [],
+    cardCodes: [],
+    filterByCategory: true,
+    category: "3A Chemicals",
+  },
+];
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -32,333 +66,50 @@ export default async function handler(req, res) {
 
   const { email, password } = req.body;
 
-  // Validate email presence
   if (!email) {
     return res.status(400).json({ message: "Email is required" });
   }
 
-  // -------------------- Test Admin Login --------------------
-  if (email === TEST_ADMIN.email) {
+  // -------------------- Hardcoded Users --------------------
+  const hardcodedUser = getHardcodedUsers().find(
+    (u) => u.email.toLowerCase() === email.toLowerCase()
+  );
+
+  if (hardcodedUser) {
     if (!password) {
-      return res.status(200).json({
-        message: "SHOW_PASSWORD_FIELD",
-        showPassword: true,
-      });
+      return res.status(200).json({ message: "SHOW_PASSWORD_FIELD", showPassword: true });
     }
 
-    if (password !== TEST_ADMIN.password) {
+    if (!hardcodedUser.passwordHash) {
+      console.error("[HARDCODED_LOGIN] Password hash missing from env for:", hardcodedUser.email);
+      return res.status(500).json({ message: "Authentication configuration error" });
+    }
+
+    const isMatch = await bcrypt.compare(password, hardcodedUser.passwordHash);
+    if (!isMatch) {
       return res.status(401).json({ message: "Incorrect Password" });
     }
 
-    // Create token for test admin
-    const token = jwt.sign(
-      {
-        email: TEST_ADMIN.email,
-        role: TEST_ADMIN.role,
-        name: TEST_ADMIN.name,
-        contactCodes: TEST_ADMIN.contactCodes,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "6h" }
-      //  { expiresIn: "5m" }
-    );
+    const tokenPayload = {
+      email: hardcodedUser.email,
+      role: hardcodedUser.role,
+      name: hardcodedUser.name,
+      contactCodes: hardcodedUser.contactCodes,
+    };
+    if (hardcodedUser.cardCodes !== undefined) tokenPayload.cardCodes = hardcodedUser.cardCodes;
+    if (hardcodedUser.filterByCategory) {
+      tokenPayload.filterByCategory = true;
+      tokenPayload.category = hardcodedUser.category;
+    }
 
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "6h" });
     res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
 
-    console.log("[TEST_ADMIN_LOGIN]", {
-      email: TEST_ADMIN.email,
-      role: TEST_ADMIN.role,
-    });
+    console.log("[HARDCODED_LOGIN_SUCCESS]", { email: hardcodedUser.email, role: hardcodedUser.role });
 
-    return res.status(200).json({
-      message: "Login_successful",
-      token,
-      user: {
-        email: TEST_ADMIN.email,
-        role: TEST_ADMIN.role,
-        name: TEST_ADMIN.name,
-        contactCodes: TEST_ADMIN.contactCodes,
-      },
-      showPassword: true,
-    });
+    const userResponse = { ...tokenPayload };
+    return res.status(200).json({ message: "Login_successful", token, user: userResponse, showPassword: true });
   }
-
-  // -------------------- Hardcoded Saurabh Admin Login --------------------
-if (email === "saurabh.b@dbllp.co.in") {
-  if (!password) {
-    return res.status(200).json({
-      message: "SHOW_PASSWORD_FIELD",
-      showPassword: true,
-    });
-  }
-
-  if (password !== "saurabh.b@dbllp.co.in") {
-    return res.status(401).json({ message: "Incorrect Password" });
-  }
-
-  const token = jwt.sign(
-    {
-      email: "saurabh.b@dbllp.co.in",
-      role: "admin",
-      name: "Saurabh Admin",
-      contactCodes: ["SAURABH_ADMIN"],
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "6h" }
-  );
-
-  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-  console.log("[SAURABH_HARDCODED_LOGIN_SUCCESS]", {
-    email: "saurabh.b@dbllp.co.in",
-    role: "admin",
-  });
-
-  return res.status(200).json({
-    message: "Login_successful",
-    token,
-    user: {
-      email: "saurabh.b@dbllp.co.in",
-      role: "admin",
-      name: "Saurabh",
-      contactCodes: ["SAURABH_ADMIN"],
-    },
-    showPassword: true,
-  });
-}
-
-if (email === "durga@densitypharmachem.com") {
-  if (!password) {
-    return res.status(200).json({
-      message: "SHOW_PASSWORD_FIELD",
-      showPassword: true,
-    });
-  }
-
-  if (password !== "durga@densitypharmachem.com") {
-    return res.status(401).json({ message: "Incorrect Password" });
-  }
-
-  const token = jwt.sign(
-    {
-      email: "durga@densitypharmachem.com",
-      role: "admin",
-      name: "Durga",
-      contactCodes: ["DURGA"],
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "6h" }
-  );
-
-  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-  console.log("[SAURABH_HARDCODED_LOGIN_SUCCESS]", {
-    email: "durga@densitypharmachem.com",
-    role: "admin",
-  });
-
-  return res.status(200).json({
-    message: "Login_successful",
-    token,
-    user: {
-      email: "durga@densitypharmachem.com",
-      role: "admin",
-      name: "Durga",
-      contactCodes: ["DURGA"],
-    },
-    showPassword: true,
-  });
-}
-
-
-
-
-// -------------------- Hardcoded Mahesh Sales Login --------------------
-if (email === "mahesh@testing.com") {
-  if (!password) {
-    return res.status(200).json({
-      message: "SHOW_PASSWORD_FIELD",
-      showPassword: true,
-    });
-  }
-
-  if (password !== "Mahesh@123") {
-    return res.status(401).json({ message: "Incorrect Password" });
-  }
-
-  const token = jwt.sign(
-    {
-      email: "mahesh@example.com",
-      role: "sales_person",
-      name: "Mahesh",
-      contactCodes: ["8"], // Using SlpCode 8
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "6h" }
-  );
-
-  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-  console.log("[MAHESH_HARDCODED_LOGIN_SUCCESS]", {
-    email: "mahesh@example.com",
-    role: "sales_person",
-    slpCode: "8",
-  });
-
-  return res.status(200).json({
-    message: "Login_successful",
-    token,
-    user: {
-      email: "mahesh@example.com",
-      role: "sales_person",
-      name: "Mahesh",
-      contactCodes: ["8"],
-    },
-    showPassword: true,
-  });
-}
-
-// -------------------- Hardcoded Maneesh Sales Login --------------------
-if (email === "maneesh@testing.com") {
-  if (!password) {
-    return res.status(200).json({
-      message: "SHOW_PASSWORD_FIELD",
-      showPassword: true,
-    });
-  }
-
-  if (password !== "maneesh@123") {
-    return res.status(401).json({ message: "Incorrect Password" });
-  }
-
-  const token = jwt.sign(
-    {
-      email: "maneesh@testing.com",
-      role: "sales_person",
-      name: "Maneesh",
-      contactCodes: ["11"],
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "6h" }
-  );
-
-  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-  console.log("[MANEESH_HARDCODED_LOGIN_SUCCESS]", {
-    email: "maneesh@testing.com",
-    role: "sales_person",
-    slpCode: "11",
-  });
-
-  return res.status(200).json({
-    message: "Login_successful",
-    token,
-    user: {
-      email: "maneesh@testing.com",
-      role: "sales_person",
-      name: "Maneesh",
-      contactCodes: ["11"],
-    },
-    showPassword: true,
-  });
-}
-
-// -------------------- Hardcoded 3ASenrise Login --------------------
-// if (email === "3ASenrise@densitydashboard.com") {
-//   if (!password) {
-//     return res.status(200).json({
-//       message: "SHOW_PASSWORD_FIELD",
-//       showPassword: true,
-//     });
-//   }
-
-//   if (password !== "3ASenrise") {
-//     return res.status(401).json({ message: "Incorrect Password" });
-//   }
-
-//   const token = jwt.sign(
-//     {
-//       email: "3ASenrise@densitydashboard.com",
-//       role: "3ASenrise",
-//       name: "3ASenrise",
-//       contactCodes: [""], // You can adjust this code as needed
-//     },
-//     process.env.JWT_SECRET,
-//     { expiresIn: "6h" }
-//   );
-
-//   res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-//   console.log("[3ASENRISE_HARDCODED_LOGIN_SUCCESS]", {
-//     email: "3ASenrise",
-//     role: "3ASenrise",
-//   });
-
-//   return res.status(200).json({
-//     message: "Login_successful",
-//     token,
-//     user: {
-//       email: "3ASenrise@densitydashboard.com",
-//       role: "3ASenrise",
-//       name: "3ASenrise",
-//       contactCodes: ["3ASENRISE"],
-//     },
-//     showPassword: true,
-//   });
-// }
-// -------------------- Hardcoded 3ASenrise Login --------------------
-if (email === "3ASenrise@densitydashboard.com") {
-  if (!password) {
-    return res.status(200).json({
-      message: "SHOW_PASSWORD_FIELD",
-      showPassword: true,
-    });
-  }
-
-  if (password !== "3ASenrise") {
-    return res.status(401).json({ message: "Incorrect Password" });
-  }
-
-  const token = jwt.sign(
-    {
-      email: "3ASenrise@densitydashboard.com",
-      role: "3ASenrise",
-      name: "3ASenrise",
-      // ✅ Important: Use empty arrays, not arrays with empty strings
-      contactCodes: [], // Empty array - no contact code filtering
-      cardCodes: [], // Empty array - no customer code filtering
-      // ✅ Add category filtering information
-      filterByCategory: true,
-      category: "3A Chemicals",
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: "6h" }
-  );
-
-  res.setHeader("Set-Cookie", serialize("token", token, COOKIE_OPTIONS));
-
-  // console.log("[3ASENRISE_HARDCODED_LOGIN_SUCCESS]", {
-  //   email: "3ASenrise",
-  //   role: "3ASenrise",
-  //   categoryFilter: "3A Chemicals",
-  // });
-
-  return res.status(200).json({
-    message: "Login_successful",
-    token,
-    user: {
-      email: "3ASenrise@densitydashboard.com",
-      role: "3ASenrise",
-      name: "3ASenrise",
-      // ✅ Match the JWT: empty arrays and category info
-      contactCodes: [],
-      cardCodes: [],
-      filterByCategory: true,
-      category: "3A Chemicals",
-    },
-    showPassword: true,
-  });
-}
   // -------------------- Salesperson and Admin Login --------------------
   try {
     const salesResults = await queryDatabase(
