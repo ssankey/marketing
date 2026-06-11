@@ -53,6 +53,7 @@ export default async function handler(req, res) {
     // - Use OIBT.Quantity > 0 to filter active batches
     // - Use DISTINCT to avoid any edge-case duplicates
     // - NO IBT1 join — that table has one row per transaction = duplicates
+    // ✅ Updated batchesQuery - shows all batch history, no quantity filter
     const batchesQuery = `
       SELECT DISTINCT
         W.WhsCode                                         AS location,
@@ -67,7 +68,7 @@ export default async function handler(req, res) {
             THEN ''
           WHEN ISNULL(B.U_vendorbatchno, '') <> ''
             THEN 'https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/' +
-                 LEFT(@itemCode, CHARINDEX('-', @itemCode + '-') - 1) + '_' + B.U_vendorbatchno + '.pdf'
+                LEFT(@itemCode, CHARINDEX('-', @itemCode + '-') - 1) + '_' + B.U_vendorbatchno + '.pdf'
           ELSE ''
         END AS energyCoaUrl,
         CASE
@@ -77,12 +78,10 @@ export default async function handler(req, res) {
           ELSE 'NONE'
         END AS coaSource
       FROM OIBT B
-      LEFT JOIN OITW W  ON B.ItemCode = W.ItemCode
-                        AND W.OnHand   > 0
+      LEFT JOIN OITW W  ON B.ItemCode = W.ItemCode  -- ✅ no OnHand filter
       LEFT JOIN OWHS WH ON W.WhsCode  = WH.WhsCode
-      WHERE B.ItemCode = @itemCode
-        AND B.Quantity  > 0
-      ORDER BY B.Quantity DESC, B.U_vendorbatchno;
+      WHERE B.ItemCode = @itemCode                  -- ✅ no Quantity filter = all history
+      ORDER BY B.Quantity DESC, VendorBatchNo;      -- ✅ alias not column name
     `;
 
     const [productRows, batchRows] = await Promise.all([
