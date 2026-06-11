@@ -40,8 +40,8 @@ export default async function handler(req, res) {
       ]
     );
 
-    // await sendOtpEmail(email, otp);
-    await sendOtpEmail('chandraprakashyadav1110@gmail.com', otp);
+    await sendOtpEmail(email, otp);
+    // await sendOtpEmail('chandraprakashyadav1110@gmail.com', otp);
 
     return res.status(200).json({ message: 'Verification code sent to your email' });
   } catch (error) {
