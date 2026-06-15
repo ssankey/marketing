@@ -275,7 +275,7 @@ export const tableColumns = (handlers) => [
 },
 {
   accessorKey: "ExchangeRate",
-  header: "Doc Rate",
+  header: "Conversion Rate",
   cell: ({ getValue }) => getValue() || 1,
 },
 {
@@ -301,6 +301,11 @@ export const tableColumns = (handlers) => [
 {
   accessorKey: "Quantity",
   header: "Order Qty",
+  cell: ({ getValue }) => getValue() || "0",
+},
+{
+  accessorKey: "LineTotalCurrency",
+  header: "Line Total (Currency)",
   cell: ({ getValue }) => getValue() || "0",
 },
 {

@@ -231,12 +231,13 @@ export default async function handler(req, res) {
         -- ── Currency block ──
         T0.DocCur                                        AS [Currency],
         T1.Price                                         AS [Unit_Price],
-        T0.DocRate                                       AS [Doc_Rate],
+        T0.DocRate                                       AS [Conversion_Rate],
         ROUND(T1.Price * T0.DocRate, 2)                  AS [Unit_Price_INR],
         ROUND(T1.OpenQty, 2)                             AS [Open_Qty],
         ROUND(T1.OpenQty * T1.Price * T0.DocRate, 2)     AS [Open_Amount_INR],
         ROUND(T1.DelivrdQty, 2)                          AS [Delivered_Qty],
         T1.Quantity                                      AS [Quantity],
+        ROUND(T1.Quantity * T1.Price, 2)                 AS [Line_Total_Currency],
         T1.LineTotal                                     AS [Line_Total_INR]
       FROM ORDR T0
       JOIN RDR1 T1   ON T0.DocEntry = T1.DocEntry AND T1.LineStatus = 'O'
