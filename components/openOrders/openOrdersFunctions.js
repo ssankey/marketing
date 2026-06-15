@@ -228,7 +228,9 @@ export const useOpenOrdersData = (initialStatus = "all", initialPage = 1, pageSi
         return;
       }
 
-      const numberFields = new Set(["Price", "OpenAmount"]);
+      // const numberFields = new Set(["Price", "OpenAmount"]);
+      const numberFields = new Set(["Price", "OpenAmount", "ExchangeRate", "UnitPriceOrig", "LineTotalINR"]);
+
       const dateFields = new Set(["PostingDate", "PODate", "DeliveryDate"]);
 
       const exportData = allFilteredOrders.map((row) => {

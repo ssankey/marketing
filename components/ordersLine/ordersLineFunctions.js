@@ -221,7 +221,13 @@ export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSi
         return;
       }
 
-      const currencyFields = new Set(["Price", "OpenAmount"]);
+      const currencyFields = new Set([
+          "Price",
+          "UnitPriceOrig",
+          "OpenAmount",
+          "LineTotalINR",
+          "ExchangeRate",
+        ]);
       const dateFields = new Set(["PostingDate", "PODate", "DeliveryDate"]);
 
       const exportData = allFilteredOrdersLine.map((row) => {
