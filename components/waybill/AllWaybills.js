@@ -31,6 +31,26 @@ async function downloadPdf(awbNo, token) {
   } catch (e) { alert("Failed to download PDF"); }
 }
 
+async function downloadNonHazPdf(awbNo, token) {
+  try {
+    const res = await fetch(`/api/bluedart/non-haz-pdf?awbNo=${awbNo}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Failed to generate Non-Haz PDF");
+      return;
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = `NonHaz_${awbNo}.pdf`;
+    link.click(); URL.revokeObjectURL(url);
+  } catch (e) {
+    alert("Failed to download Non-Haz PDF");
+  }
+}
+
 // ── Tracking Modal ────────────────────────────────────────────────────────────
 function TrackingModal({ awbNo, token, onClose }) {
   const [loading, setLoading] = useState(true);

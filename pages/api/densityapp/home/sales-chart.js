@@ -41,8 +41,18 @@ export default async function handler(req, res) {
     const cardCodes   = getMulti(req.query, 'cardCode');
     const adminSlpCodes = isAdmin ? getMulti(req.query, 'slpCode') : []; // only admin can filter by slpCode
 
+     const EXCLUDED_INVOICE_DOCNUMS = [
+      26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574,
+      26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894,
+      26212898, 26212899,
+    ];
+
     // ── WHERE clauses ──
-    const whereClauses = ["T0.CANCELED = 'N'", "T0.[IssReason] <> '4'"];
+     const whereClauses = [
+      "T0.CANCELED = 'N'",
+      "T0.[IssReason] <> '4'",
+      `T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(',')})`,
+    ];
     const params = [];
 
     // Role-based scoping
