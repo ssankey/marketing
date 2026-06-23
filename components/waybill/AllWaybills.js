@@ -224,6 +224,7 @@ export default function AllWaybills() {
                 <thead>
                   <tr>
                     <th>AWB No</th>
+                    <th>Non-Haz PDF</th>
                     <th>Invoice No</th>
                     <th>Customer Name</th>
                     <th>Product</th>
@@ -247,7 +248,12 @@ export default function AllWaybills() {
                               📄
                             </button>
                           </div>
-                        </td>
+                      </td>
+                      <td>
+                             <button className={s.pdfBtn} title="Download Non-Hazardous Cargo Certificate" onClick={() => downloadNonHazPdf(w.AWBNo, token)}>
+                                 📄 Non-Haz
+                            </button>
+                      </td>
                       <td><span className={s.invoiceNo}>#{w.DocNum}</span></td>
                       <td className={s.customerName}>{w.CardName}</td>
                       <td>
