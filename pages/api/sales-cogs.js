@@ -74,6 +74,15 @@ export default async function handler(req, res) {
     const whereClauses = ["T0.CANCELED = 'N'"];
     const params = [];
 
+    const EXCLUDED_INVOICE_DOCNUMS = [
+      26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574,
+      26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894,
+      26212898, 26212899,
+    ];
+    if (EXCLUDED_INVOICE_DOCNUMS.length > 0) {
+      whereClauses.push(`T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(",")})`);
+    }
+
     // Role-based scoping
     if (!isAdmin) {
       if (is3ASenrise && filterByCategory && category) {
@@ -126,6 +135,8 @@ export default async function handler(req, res) {
     whereClauses.push(`T0.[IssReason] <> '4'`);
 
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
+    console.log("DEBUG whereSQL:", whereSQL);
+
 
     // Order WHERE — same minus IssReason
     const orderWhereClauses = whereClauses.filter(c => !c.includes("IssReason"));
