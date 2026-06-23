@@ -101,7 +101,11 @@ export default async function handler(req, res) {
     const cardCodes = decoded.cardCodes || [];
 
     // Build WHERE conditions and parameters
-    const whereConditions = ["OINV.CANCELED = 'N'"];
+     const whereConditions = [
+      "OINV.CANCELED = 'N'",
+      "OINV.IssReason <> '4'",
+      `OINV.DocNum NOT IN (26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574, 26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894, 26212898, 26212899)`,
+    ];
     const params = [];
 
     // Date range filter (Financial Year)
