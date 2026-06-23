@@ -39,6 +39,7 @@ export default async function handler(req, res) {
         T3.State                  AS State,
         T3.ZipCode                AS Pincode,
         T1.Dscription              AS ItemName,
+        T1.ItemCode                AS ItemCode,
         T1.Quantity                AS Quantity,
         T1.LineNum                 AS LineNum
       FROM OINV T0
@@ -67,12 +68,22 @@ export default async function handler(req, res) {
     // Destination airport — use City from SAP (e.g. Thane)
     const destAirport = first.City || "—";
 
+    // Pack size lives in the ItemCode suffix after the first hyphen (e.g. "ABC-100g" -> "100g"),
+    // same convention used by /api/density-labels/pack-sizes.
+    const packSizeFromItemCode = (itemCode) => {
+      const idx = itemCode ? itemCode.indexOf("-") : -1;
+      return idx === -1 ? "" : itemCode.slice(idx + 1);
+    };
+
     // One row per invoice line item
-    const items = rows.map(r => ({
-      packages:    "1 Package",
-      description: r.ItemName || "",
-      netQty:      r.Quantity ? `1 X ${r.Quantity}` : "",
-    }));
+    const items = rows.map(r => {
+      const packSize = packSizeFromItemCode(r.ItemCode);
+      return {
+        packages:    "1 Package",
+        description: r.ItemName || "",
+        netQty:      packSize ? `${r.Quantity}x${packSize}` : (r.Quantity ? `${r.Quantity}` : ""),
+      };
+    });
 
     const pdfBytes = await generateNonHazPdf({
       awbNo:            safeAwb,
