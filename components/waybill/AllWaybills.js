@@ -31,24 +31,39 @@ async function downloadPdf(awbNo, token) {
   } catch (e) { alert("Failed to download PDF"); }
 }
 
-async function downloadNonHazPdf(awbNo, token) {
+async function downloadNonHazPdfFile(awbNo, token) {
   try {
     const res = await fetch(`/api/bluedart/non-haz-pdf?awbNo=${awbNo}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
+    if (res.status === 409) {
+      const data = await res.json().catch(() => ({}));
+      return { needsPieceCount: true, message: data.error };
+    }
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || "Failed to generate Non-Haz PDF");
-      return;
+      return { error: data.error || "Failed to generate Non-Haz PDF" };
     }
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url; link.download = `NonHaz_${awbNo}.pdf`;
     link.click(); URL.revokeObjectURL(url);
+    return { success: true };
   } catch (e) {
-    alert("Failed to download Non-Haz PDF");
+    return { error: "Failed to download Non-Haz PDF" };
   }
+}
+
+async function savePieceCount(waybillNo, pieceCount, token) {
+  const res = await fetch(`/api/bluedart/save-piece-count`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ waybillNo, pieceCount }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to save piece count");
+  return data;
 }
 
 // ── Tracking Modal ────────────────────────────────────────────────────────────
@@ -147,6 +162,69 @@ function TrackingModal({ awbNo, token, onClose }) {
   );
 }
 
+// ── Piece Count Modal ─────────────────────────────────────────────────────────
+function PieceCountModal({ awbNo, token, onClose, onSaved }) {
+  const [pieceCount, setPieceCount] = useState("");
+  const [saving, setSaving]         = useState(false);
+  const [error, setError]           = useState("");
+
+  const handleSave = async () => {
+    const pc = parseInt(pieceCount);
+    if (!pc || pc <= 0) { setError("Enter a valid piece count"); return; }
+    setSaving(true); setError("");
+    try {
+      await savePieceCount(awbNo, pc, token);
+      onSaved();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className={s.modalOverlay} onClick={onClose}>
+      <div className={s.modal} style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+        <div className={s.modalHeader}>
+          <div>
+            <div className={s.modalTitle}>Piece Count Required</div>
+            <div className={s.modalAwb}>AWB # {awbNo}</div>
+          </div>
+          <button className={s.modalClose} onClick={onClose}>✕</button>
+        </div>
+        <div className={s.modalBody}>
+          <p style={{ fontSize: 13, color: "#475569", marginBottom: 12 }}>
+            This waybill isn't one we generated, so we don't have a piece count for it.
+            Enter it once below — it'll be saved for next time.
+          </p>
+          <input
+            type="number"
+            min="1"
+            autoFocus
+            placeholder="e.g. 1"
+            value={pieceCount}
+            onChange={e => { setPieceCount(e.target.value); setError(""); }}
+            onKeyDown={e => e.key === "Enter" && handleSave()}
+            style={{
+              width: "100%", padding: "8px 10px", fontSize: 14,
+              border: "1px solid #cbd5e1", borderRadius: 6, marginBottom: 8,
+            }}
+          />
+          {error && <div style={{ color: "#b91c1c", fontSize: 12.5, marginBottom: 8 }}>{error}</div>}
+          <button
+            className={s.trackBtn}
+            disabled={saving}
+            onClick={handleSave}
+            style={{ width: "100%", justifyContent: "center" }}
+          >
+            {saving ? "Saving..." : "Save & Download"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AllWaybills() {
   const [waybills, setWaybills] = useState([]);
@@ -158,6 +236,7 @@ export default function AllWaybills() {
   const [toDate, setToDate]     = useState("");
   const [product, setProduct]   = useState("");
   const [trackingAwb, setTrackingAwb] = useState(null);
+  const [pieceCountAwb, setPieceCountAwb] = useState(null);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
 
@@ -250,7 +329,18 @@ export default function AllWaybills() {
                           </div>
                       </td>
                       <td>
-                             <button className={s.pdfBtn} title="Download Non-Hazardous Cargo Certificate" onClick={() => downloadNonHazPdf(w.AWBNo, token)}>
+                             <button
+                               className={s.pdfBtn}
+                               title="Download Non-Hazardous Cargo Certificate"
+                               onClick={async () => {
+                                 const result = await downloadNonHazPdfFile(w.AWBNo, token);
+                                 if (result.needsPieceCount) {
+                                   setPieceCountAwb(w.AWBNo);
+                                 } else if (result.error) {
+                                   alert(result.error);
+                                 }
+                               }}
+                             >
                                  📄 Non-Haz
                             </button>
                       </td>
@@ -302,6 +392,20 @@ export default function AllWaybills() {
           awbNo={trackingAwb}
           token={token}
           onClose={() => setTrackingAwb(null)}
+        />
+      )}
+
+      {/* Piece Count Modal */}
+      {pieceCountAwb && (
+        <PieceCountModal
+          awbNo={pieceCountAwb}
+          token={token}
+          onClose={() => setPieceCountAwb(null)}
+          onSaved={async () => {
+            setPieceCountAwb(null);
+            const result = await downloadNonHazPdfFile(pieceCountAwb, token);
+            if (result.error) alert(result.error);
+          }}
         />
       )}
     </div>
