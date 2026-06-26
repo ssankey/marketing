@@ -11,7 +11,7 @@ import { useAccordionButton } from "react-bootstrap/AccordionButton";
 import SimpleBar from "simplebar-react";
 import "simplebar/dist/simplebar.min.css";
 import { People, House, Clipboard, FileText, CurrencyDollar } from "react-bootstrap-icons";
-import { FaMoneyBillWave, FaSignOutAlt, FaUser, FaBox , FaFileAlt} from "react-icons/fa";
+import { FaMoneyBillWave, FaSignOutAlt, FaUser, FaBox , FaFileAlt, FaLock} from "react-icons/fa";
 import { Button } from "react-bootstrap";
 import { useAuth } from "contexts/AuthContext";
 
@@ -306,6 +306,16 @@ const NavbarVertical = (props) => {
                 className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}
               >
                 <FaMoneyBillWave className="me-2" />  Payment Outstanding
+              </Link>
+            </li>
+
+            {/* MSME Report — password protected on the page itself */}
+            <li className="nav-item mb-3">
+              <Link
+                href="/msme-report"
+                className={`nav-link d-flex align-items-center ${router === "/msme-report" ? "active" : ""}`}
+              >
+                <FaLock className="me-2" />  MSME Report
               </Link>
             </li>
 
