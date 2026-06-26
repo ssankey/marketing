@@ -1,0 +1,119 @@
+.pageWrapper {
+  padding: 2rem 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ── Page Header ── */
+.pageHeader {
+  margin-bottom: 2rem;
+}
+
+.pageTitle {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.3px;
+}
+
+.pageSubtitle {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 0;
+}
+
+/* ── Tab Navigation Cards ── */
+.tabGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.tabCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem 0.75rem;
+  background: #ffffff;
+  border: 1.5px solid #e9ecef;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  position: relative;
+  text-decoration: none;
+}
+
+.tabCard:hover {
+  border-color: #0d6efd;
+  background: #f0f4ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(13, 110, 253, 0.12);
+}
+
+.tabCard.active {
+  border-color: #0d6efd;
+  background: #0d6efd;
+  box-shadow: 0 4px 16px rgba(13, 110, 253, 0.25);
+  transform: translateY(-2px);
+}
+
+.tabIcon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.tabLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #495057;
+  line-height: 1.3;
+}
+
+.tabCard.active .tabLabel {
+  color: #ffffff;
+}
+
+.tabBadge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #dc3545;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 20px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ── Panel ── */
+.panel {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .tabGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .pageWrapper {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

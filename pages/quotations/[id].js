@@ -3,7 +3,8 @@
 
 import { useRouter } from "next/router";
 import { Container, Row, Col, Card, Table, Spinner } from "react-bootstrap";
-import { useAuth } from "../../utils/useAuth";
+import { useAuth } from "hooks/useAuth";
+
 
 // Utility function to format dates as 'dd-MMM-yyyy' (e.g., 23-Oct-2024)
 function formatDate(dateString) {

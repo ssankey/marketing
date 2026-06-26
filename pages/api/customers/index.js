@@ -1,6 +1,7 @@
+
+
 // /pages/api/customers/index.js
 import { getCustomers } from 'lib/models/customers';
-// import { validateToken } from 'lib/auth'; // Assume you have this utility
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -8,25 +9,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Validate authentication
-    // const authResult = await validateToken(req);
-    // if (!authResult.isValid) {
-    //   return res.status(401).json({ error: 'Unauthorized' });
-    // }
-
     const {
-      page = 1,
       search = '',
       sortField = 'CardName',
       sortDir = 'asc',
       status = 'all',
-      limit = 20,
       type = 'full' // 'full' for table view, 'dropdown' for select options
     } = req.query;
-
-    // Calculate offset for pagination
-    const ITEMS_PER_PAGE = parseInt(limit, 10);
-    const offset = (parseInt(page, 10) - 1) * ITEMS_PER_PAGE;
 
     // Build base WHERE clause
     let whereClause = "T0.CardType = 'C'"; // Only customers
@@ -38,7 +27,11 @@ export default async function handler(req, res) {
         T0.CardCode LIKE '%${sanitizedSearch}%' OR 
         T0.CardName LIKE '%${sanitizedSearch}%' OR 
         T0.Phone1 LIKE '%${sanitizedSearch}%' OR 
-        T0.E_Mail LIKE '%${sanitizedSearch}%'
+        T0.E_Mail LIKE '%${sanitizedSearch}%' OR
+        T0.City LIKE '%${sanitizedSearch}%' OR
+        T0.State1 LIKE '%${sanitizedSearch}%' OR
+        T0.Country LIKE '%${sanitizedSearch}%' OR
+        T5.SlpName LIKE '%${sanitizedSearch}%'
       )`;
     }
 
@@ -46,18 +39,6 @@ export default async function handler(req, res) {
     if (status && status !== 'all') {
       whereClause += ` AND T0.validFor = '${status === 'active' ? 'Y' : 'N'}'`;
     }
-
-    // Add role-based access control
-    // if (authResult.user.role === 'contact_person') {
-    //   whereClause += ` AND T0.CardCode = '${authResult.user.cardCode}'`;
-    // }
-
-    // Get total count for pagination
-    const countQuery = `
-      SELECT COUNT(*) as total
-      FROM OCRD T0  
-      WHERE ${whereClause};
-    `;
 
     // Build the appropriate query based on type
     let dataQuery;
@@ -77,6 +58,9 @@ export default async function handler(req, res) {
           T0.CardName AS CustomerName,
           T0.Phone1 AS Phone,
           T0.E_Mail AS Email,
+          T0.City,
+          T0.State1 AS State,
+          T0.Country,
           T0.Address AS BillingAddress,
           T0.Balance,
           T0.Currency,
@@ -86,19 +70,12 @@ export default async function handler(req, res) {
         FROM OCRD T0
         LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
         WHERE ${whereClause}
-        ORDER BY ${sortField} ${sortDir.toUpperCase()}
-        OFFSET ${offset} ROWS
-        FETCH NEXT ${ITEMS_PER_PAGE} ROWS ONLY;
+        ORDER BY ${sortField} ${sortDir.toUpperCase()};
       `;
     }
 
-    // Execute queries in parallel
-    const [totalResult, rawCustomers] = await Promise.all([
-      getCustomers(countQuery),
-      getCustomers(dataQuery)
-    ]);
-
-    const totalItems = totalResult[0]?.total || 0;
+    // Execute query
+    const rawCustomers = await getCustomers(dataQuery);
     
     // Transform the data
     const customers = rawCustomers.map(customer => ({
@@ -118,9 +95,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       customers,
-      totalItems,
-      currentPage: parseInt(page, 10),
-      totalPages: Math.ceil(totalItems / ITEMS_PER_PAGE)
+      totalItems: customers.length
     });
 
   } catch (error) {
