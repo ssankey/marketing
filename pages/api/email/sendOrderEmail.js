@@ -267,21 +267,25 @@ export default async function handler(req, res) {
     }
 
     // 3) Build HTML body (updated with Calibri font and smaller text)
-    const lineItems = details.LineItems.map(
-      (item) => `
+    const lineItems = details.LineItems.map((item) => {
+      const isLocalCurrency = item.Currency === "INR";
+      const lineTotalDisplay = isLocalCurrency ? item.LineTotal : item.TotalFrgn;
+
+      return `
         <tr>
           <td style="font-size: 13px;">${item.ItemCode}</td>
           <td style="font-size: 13px;">${item.Description}</td>
           <td style="font-size: 13px;">${item.U_CasNo || "N/A"}</td>
           <td style="font-size: 13px;">${item.Quantity}</td>
           <td style="font-size: 13px;">${item.UnitMsr}</td>
+          <td style="font-size: 13px;">${item.Currency}</td>
           <td style="font-size: 13px;">${formatNumberWithIndianCommas(item.Price)}</td>
-          <td style="font-size: 13px;">${formatNumberWithIndianCommas(item.LineTotal)}</td>
+          <td style="font-size: 13px;">${formatNumberWithIndianCommas(lineTotalDisplay)}</td>
           <td style="font-size: 13px;">${item.StockStatus}</td>
           <td style="font-size: 13px;">${formatDate(item.DeliveryDate)}</td>
         </tr>
-      `
-    ).join("");
+      `;
+    }).join("");
 
     const html = `
       <div style="font-family: Calibri, sans-serif; font-size: 14px;">
@@ -297,6 +301,7 @@ export default async function handler(req, res) {
               <th style="font-size: 13px;">CAS No.</th>
               <th style="font-size: 13px;">Qty</th>
               <th style="font-size: 13px;">Unit</th>
+              <th style="font-size: 13px;">Currency</th>
               <th style="font-size: 13px;">Price</th>
               <th style="font-size: 13px;">Line Total</th>
               <th style="font-size: 13px;">Stock</th>
