@@ -102,6 +102,9 @@
               }
             }
 
+            const isLocalCurrency = item.Currency === "INR";
+            const lineTotalDisplay = isLocalCurrency ? item.LineTotal : item.TotalFrgn;
+
             return `
               <tr>
                 <td>${item.ItemCode}</td>
@@ -109,8 +112,9 @@
                 <td>${item.U_CasNo || "N/A"}</td>
                 <td>${item.Quantity}</td>
                 <td>${item.UnitMsr}</td>
+                <td>${item.Currency}</td>
                 <td>${formatNumberWithIndianCommas(item.Price)}</td>
-                <td>${formatNumberWithIndianCommas(item.LineTotal)}</td>
+                <td>${formatNumberWithIndianCommas(lineTotalDisplay)}</td>
                 <td>${stockDisplay}</td>
                 <td>${formatDate(item.DeliveryDate)}</td>
               </tr>
@@ -127,7 +131,7 @@
                 <thead style="background-color: #007BFF; color: white;">
                   <tr>
                     <th>Item Code</th><th>Description</th><th>CAS No.</th><th>Qty</th><th>Unit</th>
-                    <th>Price</th><th>Line Total</th><th>Stock</th><th>Delivery Date</th>
+                    <th>Currency</th><th>Price</th><th>Line Total</th><th>Stock</th><th>Delivery Date</th>
                   </tr>
                 </thead>
                 <tbody>${lineItems}</tbody>
