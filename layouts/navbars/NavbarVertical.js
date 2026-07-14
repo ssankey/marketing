@@ -276,16 +276,37 @@ const NavbarVertical = (props) => {
               </>
             )}
 
-            {/* Products (Hidden for Admin) */}
+            {/* Products Accordion */}
             {(isAdmin || isSalesPerson) && (
-              <li className="nav-item mb-3">
-                <Link
+              <>
+                <CustomToggle
+                  eventKey="products"
+                  icon={<FaBox className="me-2" />}
                   href="/products"
-                  className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
                 >
-                  <FaBox className="me-2" /> Products
-                </Link>
-              </li>
+                  Products
+                </CustomToggle>
+                <Accordion.Collapse eventKey="products">
+                  <ul className="nav flex-column ms-3">
+                    <li className="nav-item mb-3">
+                      <Link
+                        href="/products"
+                        className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
+                      >
+                        <FaBox className="me-2" /> Products
+                      </Link>
+                    </li>
+                    <li className="nav-item mb-3">
+                      <Link
+                        href="/catalyst-pricing"
+                        className={`nav-link d-flex align-items-center ${router === "/catalyst-pricing" ? "active" : ""}`}
+                      >
+                        <FaBox className="me-2" /> Catalyst Pricing 
+                      </Link>
+                    </li>
+                  </ul>
+                </Accordion.Collapse>
+              </>
             )}
 
             {(isAdmin || isSalesPerson) && (
