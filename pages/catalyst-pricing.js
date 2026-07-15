@@ -1,5 +1,5 @@
 // pages/catalyst-pricing.js
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 
 const MODE_DEFAULT_MARGIN = {
@@ -7,9 +7,34 @@ const MODE_DEFAULT_MARGIN = {
   aragen: 10,
 };
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100, "all"];
+const PAGE_SIZE = 20;
 
 const num = (v) => (v === null || v === undefined || v === "" || isNaN(v) ? null : parseFloat(v));
+
+// Known %Pd / Fabrication charge reference values, keyed by CAS number (confirmed with the
+// business — same Cat No can have multiple CAS variants with different %Pd/Fab charge, e.g.
+// DP00002, so CAS is the real lookup key, not Cat No alone).
+//
+// NOTE: a second DP00006 grade (5% Pd / ₹20 fab charge) was shown in the source sheet but its
+// CAS number wasn't confirmed, so it's left out entirely rather than guessed — add it back once
+// its CAS is known.
+// Ideally this table should live in the database (e.g. a UDT) rather than be hardcoded here;
+// flag if you'd rather I wire it up that way instead.
+const CATALYST_REFERENCE = [
+  { cas: "13965-03-2", catNo: "DP00001", description: "trans-Dichlorobis(triphenylphosphine)palladium(II), Pd 14.0% min", pdPercent: 16, fabCharge: 55 },
+  { cas: "72287-26-4", catNo: "DP00003", description: "[1,1'-Bis(diphenylphosphino)ferrocene]palladium(II) chloride Pd 13%", pdPercent: 15, fabCharge: 95 },
+  { cas: "95464-05-4", catNo: "DP00004", description: "1,1'-Bis(diphenylphosphino)ferrocene]palladium(II) chloride complex with DCM", pdPercent: 15, fabCharge: 95 },
+  { cas: "51364-51-3", catNo: "DP00005", description: "Tris(dibenzylideneacetone)dipalladium(0) Pd 21.5% min", pdPercent: 25, fabCharge: 75 },
+  { cas: "7647-10-1", catNo: "DP00007", description: "Palladium(II) Chloride", pdPercent: 60, fabCharge: 80 },
+  { cas: "3375-31-3", catNo: "DP00010", description: "Palladium(II) acetate trimer Pd 45.9-48.4%", pdPercent: 50, fabCharge: 100 },
+  { cas: "14221-01-3", catNo: "DP00002", description: "Tetrakis(triphenylphosphine)palladium(0) 99.8% (metals basis) Pd 9% min", pdPercent: 10, fabCharge: 85 },
+  { cas: "14221-01-4", catNo: "DP00002", description: "Tetrakis(triphenylphosphine)palladium(0) 99.8% (metals basis) Pd 9% min", pdPercent: 10, fabCharge: 75 },
+  { cas: "14221-01-5", catNo: "DP00002", description: "Tetrakis(triphenylphosphine)palladium(0) 99.8% (metals basis) Pd 9% min", pdPercent: 10, fabCharge: 65 },
+  { cas: "7440-05-3", catNo: "DP00006", description: "10% Palladium on Activated Carbon - Wet form", pdPercent: 10, fabCharge: 10 },
+  { cas: "12135-22-7", catNo: "DP00013", description: "20% Palladium Hydroxide, 50% wet", pdPercent: 15.2, fabCharge: 20 },
+];
+
+const findReferenceByCas = (cas) => CATALYST_REFERENCE.find((r) => r.cas === cas) || null;
 
 function computeRow(item, { metalPrice, handlingPct, targetMarginPct, discountGuidancePct, overrides }) {
   const override = overrides[item.ItemCode] || {};
@@ -19,7 +44,9 @@ function computeRow(item, { metalPrice, handlingPct, targetMarginPct, discountGu
   const pdIsManual = num(item.PdPercent) === null && num(override.pdPercent) !== null;
   const fabIsManual = num(item.FabCharge) === null && num(override.fabCharge) !== null;
 
-  const qty = num(item.QTY) || 0;
+  const qtyOverride = num(override.qty);
+  const qty = qtyOverride !== null ? qtyOverride : num(item.QTY) || 0;
+
   const currentPrice = num(item.WebPrice);
 
   // Total Metal used = QTY x %Pd
@@ -115,7 +142,7 @@ const COLUMNS = [
   { field: "metalCost", label: "Metal Cost" },
   { field: "fabCharge", label: "Fibrication charges/gram on product" },
   { field: "fabricationCharges", label: "Fibrication charges" },
-  { field: "cogs", label: "COGS-Metal+FAB" },
+  { field: "cogs", label: "COGS=Metal+FAB" },
   { field: "handlingPctCol", label: "Handling %", title: "Source sheet column: Density -GM %" },
   { field: "landedCost", label: "Landed Cost", title: "Source sheet column: Density - GM % (COGS x (1 + Handling%))" },
   { field: "newPrice", label: "New WEBPRICE", title: "Source sheet column: NEW WEBPRICE-GM 50%" },
@@ -123,6 +150,7 @@ const COLUMNS = [
   { field: "discountPct", label: "Discount %" },
   { field: "marginPct", label: "Margin %" },
   { field: "status", label: "Status" },
+  { field: "remove", label: "" },
 ];
 
 function getPageNumbers(current, total) {
@@ -133,27 +161,33 @@ function getPageNumbers(current, total) {
     .sort((a, b) => a - b);
 }
 
+let manualIdSeq = 0;
+
 export default function CatalystPricingConsole() {
-  const [items, setItems] = useState([]);
+  const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [formulasOpen, setFormulasOpen] = useState(false);
+
+  const [workingRows, setWorkingRows] = useState([]);
 
   const [metalPrice, setMetalPrice] = useState(2850);
   const [handlingPct, setHandlingPct] = useState(25);
   const [mode, setMode] = useState("standard");
   const [targetMarginPct, setTargetMarginPct] = useState(MODE_DEFAULT_MARGIN.standard);
   const [discountGuidancePct, setDiscountGuidancePct] = useState(45);
-  const [search, setSearch] = useState("");
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchBoxRef = useRef(null);
+
+  const [refOpen, setRefOpen] = useState(false);
+  const [formulasOpen, setFormulasOpen] = useState(false);
 
   const [sortField, setSortField] = useState("ItemCode");
   const [sortDir, setSortDir] = useState("asc");
 
-  const [overrides, setOverrides] = useState({}); // { [ItemCode]: { pdPercent, fabCharge } }
-  const [bulkPdPercent, setBulkPdPercent] = useState("");
-  const [bulkFabCharge, setBulkFabCharge] = useState("");
+  const [overrides, setOverrides] = useState({}); // { [ItemCode]: { pdPercent, fabCharge, qty } }
 
-  const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
 
   const [exporting, setExporting] = useState(false);
@@ -170,11 +204,11 @@ export default function CatalystPricingConsole() {
         const res = await fetch("/api/catalyst/pricing", { headers });
         if (!res.ok) throw new Error("Failed to fetch catalyst pricing data");
         const data = await res.json();
-        setItems(data.items || []);
+        setAllItems(data.items || []);
       } catch (err) {
         console.error("Error fetching catalyst pricing:", err);
         setError(err.message || "Failed to load catalyst pricing data");
-        setItems([]);
+        setAllItems([]);
       } finally {
         setLoading(false);
       }
@@ -183,9 +217,93 @@ export default function CatalystPricingConsole() {
     fetchItems();
   }, []);
 
+  // Close suggestions when clicking outside the search box
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const suggestions = useMemo(() => {
+    const term = searchQuery.trim().toLowerCase();
+    if (!term) return [];
+    const addedCodes = new Set(workingRows.map((r) => r.ItemCode));
+    return allItems
+      .filter(
+        (it) =>
+          !addedCodes.has(it.ItemCode) &&
+          ((it.CatNo || "").toLowerCase().includes(term) ||
+            (it.CAS || "").toLowerCase().includes(term) ||
+            (it.Description || "").toLowerCase().includes(term) ||
+            (it.ItemCode || "").toLowerCase().includes(term))
+      )
+      .slice(0, 8);
+  }, [searchQuery, allItems, workingRows]);
+
   const handleModeChange = (newMode) => {
     setMode(newMode);
     setTargetMarginPct(MODE_DEFAULT_MARGIN[newMode]);
+  };
+
+  const addRow = (item) => {
+    setWorkingRows((prev) => {
+      if (prev.some((r) => r.ItemCode === item.ItemCode)) return prev;
+      return [...prev, item];
+    });
+
+    // Pre-fill %Pd / Fab charge from the known reference table (by CAS) if the live
+    // API hasn't confirmed these UDFs yet. Still fully editable afterward.
+    const ref = item.CAS ? findReferenceByCas(item.CAS) : null;
+    if (ref) {
+      setOverrides((prev) => ({
+        ...prev,
+        [item.ItemCode]: { ...prev[item.ItemCode], pdPercent: ref.pdPercent, fabCharge: ref.fabCharge },
+      }));
+    }
+  };
+
+  const handleAddFromSuggestion = (item) => {
+    addRow(item);
+    setSearchQuery("");
+    setShowSuggestions(false);
+  };
+
+  const handleAddManual = () => {
+    const label = searchQuery.trim();
+    if (!label) return;
+    manualIdSeq += 1;
+    const manualItem = {
+      ItemCode: `MANUAL-${manualIdSeq}`,
+      CAS: "",
+      CatNo: label,
+      Description: label,
+      Category: "Catalyst",
+      WebsiteDisplay: null,
+      StockInIndia: 0,
+      WebPrice: null,
+      PKZ: "",
+      QTY: 0,
+      UOM: "GMS",
+      PdPercent: null,
+      FabCharge: null,
+      isManual: true,
+    };
+    addRow(manualItem);
+    setSearchQuery("");
+    setShowSuggestions(false);
+  };
+
+  const removeRow = (itemCode) => {
+    setWorkingRows((prev) => prev.filter((r) => r.ItemCode !== itemCode));
+    setOverrides((prev) => {
+      const next = { ...prev };
+      delete next[itemCode];
+      return next;
+    });
   };
 
   const handleOverride = (itemCode, field, value) => {
@@ -193,30 +311,6 @@ export default function CatalystPricingConsole() {
       ...prev,
       [itemCode]: { ...prev[itemCode], [field]: value },
     }));
-  };
-
-  // Seeds every row's override with the bulk value; per-row edits made afterward
-  // still take precedence since handleOverride only touches that one row's entry.
-  const applyBulkPd = () => {
-    if (bulkPdPercent === "") return;
-    setOverrides((prev) => {
-      const next = { ...prev };
-      items.forEach((it) => {
-        next[it.ItemCode] = { ...next[it.ItemCode], pdPercent: bulkPdPercent };
-      });
-      return next;
-    });
-  };
-
-  const applyBulkFab = () => {
-    if (bulkFabCharge === "") return;
-    setOverrides((prev) => {
-      const next = { ...prev };
-      items.forEach((it) => {
-        next[it.ItemCode] = { ...next[it.ItemCode], fabCharge: bulkFabCharge };
-      });
-      return next;
-    });
   };
 
   const handleSort = (field) => {
@@ -230,22 +324,11 @@ export default function CatalystPricingConsole() {
 
   const computedRows = useMemo(() => {
     const settings = { metalPrice, handlingPct, targetMarginPct, discountGuidancePct, overrides };
-    return items.map((item) => computeRow(item, settings));
-  }, [items, metalPrice, handlingPct, targetMarginPct, discountGuidancePct, overrides]);
+    return workingRows.map((item) => computeRow(item, settings));
+  }, [workingRows, metalPrice, handlingPct, targetMarginPct, discountGuidancePct, overrides]);
 
   const filteredRows = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    let rows = computedRows;
-    if (term) {
-      rows = rows.filter(
-        (r) =>
-          (r.CatNo || "").toLowerCase().includes(term) ||
-          (r.CAS || "").toLowerCase().includes(term) ||
-          (r.Description || "").toLowerCase().includes(term)
-      );
-    }
-
-    const sorted = [...rows].sort((a, b) => {
+    const sorted = [...computedRows].sort((a, b) => {
       const av = a[sortField];
       const bv = b[sortField];
       if (av === null || av === undefined) return 1;
@@ -255,42 +338,25 @@ export default function CatalystPricingConsole() {
       }
       return sortDir === "asc" ? av - bv : bv - av;
     });
-
     return sorted;
-  }, [computedRows, search, sortField, sortDir]);
+  }, [computedRows, sortField, sortDir]);
 
-  // Reset to page 1 whenever the underlying result set or page size changes
+  // Reset to page 1 whenever the underlying result set changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, sortField, sortDir, pageSize]);
+  }, [sortField, sortDir, workingRows.length]);
 
   const totalRows = filteredRows.length;
-  const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(totalRows / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE));
   const safePage = Math.min(currentPage, totalPages);
 
   const visibleRows = useMemo(() => {
-    if (pageSize === "all") return filteredRows;
-    const start = (safePage - 1) * pageSize;
-    return filteredRows.slice(start, start + pageSize);
-  }, [filteredRows, pageSize, safePage]);
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredRows.slice(start, start + PAGE_SIZE);
+  }, [filteredRows, safePage]);
 
-  const rangeStart = totalRows === 0 ? 0 : pageSize === "all" ? 1 : (safePage - 1) * pageSize + 1;
-  const rangeEnd = pageSize === "all" ? totalRows : Math.min(safePage * pageSize, totalRows);
-
-  const stats = useMemo(() => {
-    const withMargin = computedRows.filter((r) => r.marginPct !== null);
-    const withDiscount = computedRows.filter((r) => r.discountPct !== null);
-    const offGuidance = computedRows.filter((r) => r.status === "Off guidance");
-
-    const avg = (arr, field) => (arr.length ? arr.reduce((s, r) => s + r[field], 0) / arr.length : null);
-
-    return {
-      totalSkus: items.length,
-      avgMargin: avg(withMargin, "marginPct"),
-      avgDiscount: avg(withDiscount, "discountPct"),
-      offGuidanceCount: offGuidance.length,
-    };
-  }, [computedRows, items.length]);
+  const rangeStart = totalRows === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * PAGE_SIZE, totalRows);
 
   const handleExport = async () => {
     setExporting(true);
@@ -315,7 +381,7 @@ export default function CatalystPricingConsole() {
         "Metal Cost": r.metalCost,
         "Fibrication charges/gram on product": r.fabCharge,
         "Fibrication charges": r.fabricationCharges,
-        "COGS-Metal+FAB": r.cogs,
+        "COGS=Metal+FAB": r.cogs,
         "Handling %": handlingPct,
         "Landed Cost": r.landedCost,
         "New WEBPRICE": r.newPrice,
@@ -366,13 +432,55 @@ export default function CatalystPricingConsole() {
         <div className="cc-header-text">
           <h1>Catalyst Pricing Console</h1>
           <p className="cc-header-desc">
-            Live pricing for the Pd catalyst range — replaces the manual Excel workflow.
+            Search a Cat No / CAS to price it — replaces the manual Excel workflow.
           </p>
         </div>
       </div>
 
+      {/* Known reference values */}
+      <div className="cc-ref-panel">
+        <button
+          type="button"
+          className="cc-formula-header"
+          onClick={() => setRefOpen((v) => !v)}
+          aria-expanded={refOpen}
+        >
+          <span className="cc-formula-title">Known Cat No reference values ({CATALYST_REFERENCE.length})</span>
+          <span className={`cc-formula-chevron ${refOpen ? "open" : ""}`}>▸</span>
+        </button>
+
+        {refOpen && (
+          <div className="cc-ref-scroll">
+            <table className="cc-ref-table">
+              <thead>
+                <tr>
+                  <th>Cat No</th>
+                  <th>CAS</th>
+                  <th>Description</th>
+                  <th className="cc-th-right">% Pd (incl. loss)</th>
+                  <th className="cc-th-right">Fab Charge/g</th>
+                  <th className="cc-th-right">Metal Price/g</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CATALYST_REFERENCE.map((r) => (
+                  <tr key={r.cas}>
+                    <td className="cc-catno">{r.catNo}</td>
+                    <td>{r.cas}</td>
+                    <td className="cc-desc" title={r.description}>{r.description}</td>
+                    <td className="cc-th-right">{r.pdPercent}%</td>
+                    <td className="cc-th-right">₹{r.fabCharge}</td>
+                    <td className="cc-th-right">{metalPrice}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       {/* Formula reference panel */}
-      <div className="cc-formula-panel">
+      <div className="cc-ref-panel">
         <button
           type="button"
           className="cc-formula-header"
@@ -425,14 +533,19 @@ export default function CatalystPricingConsole() {
             </div>
             <div className="cc-formula-legend">
               <span className="cc-formula-legend-title">Status:</span>
-              <span className="cc-badge good">On guidance</span>
-              <span className="cc-formula-legend-text">|Discount% − Discount Guidance%| ≤ 5</span>
-              <span className="cc-badge bad">Off guidance</span>
-              <span className="cc-formula-legend-text">deviates &gt; 5 points from guidance</span>
               <span className="cc-badge muted">No list price</span>
               <span className="cc-formula-legend-text">no Present WEBPRICE to compare against</span>
               <span className="cc-badge muted">Needs input</span>
               <span className="cc-formula-legend-text">missing % Pd or Fab charge/gram</span>
+              <span className="cc-badge bad">Off guidance</span>
+              <span className="cc-formula-legend-text">|Discount% − Discount Guidance%| &gt; 5</span>
+              <span className="cc-badge good">On guidance</span>
+              <span className="cc-formula-legend-text">|Discount% − Discount Guidance%| ≤ 5</span>
+            </div>
+            <div className="cc-formula-summary">
+              Status is checked in that order: no list price first, then missing inputs, then the
+              guidance-deviation check — so a row always shows the most relevant reason it isn't
+              "On guidance" rather than a generic flag.
             </div>
           </>
         )}
@@ -500,70 +613,36 @@ export default function CatalystPricingConsole() {
           />
         </div>
 
-        <div className="cc-field">
-          <label>Set % Pd (all rows)</label>
-          <div style={{ display: "flex", gap: 6 }}>
-            <input
-              className="cc-input"
-              type="number"
-              style={{ width: 80 }}
-              placeholder="e.g. 16"
-              value={bulkPdPercent}
-              onChange={(e) => setBulkPdPercent(e.target.value)}
-            />
-            <button type="button" className="cc-apply-btn" onClick={applyBulkPd}>
-              Apply to All
-            </button>
-          </div>
-        </div>
-
-        <div className="cc-field">
-          <label>Set Fab ₹/g (all rows)</label>
-          <div style={{ display: "flex", gap: 6 }}>
-            <input
-              className="cc-input"
-              type="number"
-              style={{ width: 80 }}
-              placeholder="e.g. 55"
-              value={bulkFabCharge}
-              onChange={(e) => setBulkFabCharge(e.target.value)}
-            />
-            <button type="button" className="cc-apply-btn" onClick={applyBulkFab}>
-              Apply to All
-            </button>
-          </div>
-        </div>
-
-        <div className="cc-field">
-          <label>Rows / Page</label>
-          <select
-            className="cc-input"
-            value={pageSize}
-            onChange={(e) => {
-              const v = e.target.value;
-              setPageSize(v === "all" ? "all" : parseInt(v, 10));
-            }}
-          >
-            {PAGE_SIZE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt === "all" ? "All" : opt}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="cc-spacer" />
-
-        <div className="cc-field" style={{ width: 300 }}>
-          <label>Search</label>
+        <div className="cc-field cc-search-field" style={{ width: 720 }} ref={searchBoxRef}>
+          <label>Search &amp; Add Cat No / CAS / Description</label>
           <input
             className="cc-input"
             type="text"
             style={{ width: "100%" }}
-            placeholder="Cat No / CAS / Description"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Type to search catalyst items…"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setShowSuggestions(true);
+            }}
+            onFocus={() => setShowSuggestions(true)}
           />
+          {showSuggestions && searchQuery.trim() && (
+            <div className="cc-suggestions">
+              {suggestions.map((item) => (
+                <div key={item.ItemCode} className="cc-suggestion-item" onClick={() => handleAddFromSuggestion(item)}>
+                  <span className="cc-suggestion-cat">{item.ItemCode}</span>
+                  <span className="cc-suggestion-desc">{item.Description}</span>
+                </div>
+              ))}
+              {!suggestions.length && (
+                <div className="cc-suggestion-empty">No live catalyst SKU matched "{searchQuery}".</div>
+              )}
+              <div className="cc-suggestion-manual" onClick={handleAddManual}>
+                + Add "{searchQuery}" manually (not in SAP catalyst list)
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="cc-field">
@@ -576,41 +655,15 @@ export default function CatalystPricingConsole() {
 
       {error && <div className="cc-error">{error}</div>}
 
-      {/* Stat cards */}
-      <div className="cc-stats">
-        <div className="cc-stat-card">
-          <div className="cc-stat-label">Total SKUs Loaded</div>
-          <div className="cc-stat-value">{stats.totalSkus}</div>
-          <div className="cc-stat-caption">Count of items, Category = Catalyst</div>
-        </div>
-        <div className="cc-stat-card">
-          <div className="cc-stat-label">Avg True Gross Margin</div>
-          <div className={`cc-stat-value ${stats.avgMargin !== null && stats.avgMargin >= targetMarginPct ? "good" : "bad"}`}>
-            {fmt(stats.avgMargin) ?? "—"}%
-          </div>
-          <div className="cc-stat-caption">Avg of (New WEBPRICE − COGS) ÷ New WEBPRICE × 100</div>
-        </div>
-        <div className="cc-stat-card">
-          <div className="cc-stat-label">Avg Discount vs List Price</div>
-          <div className="cc-stat-value">{fmt(stats.avgDiscount) ?? "—"}%</div>
-          <div className="cc-stat-caption">Avg of (Present WEBPRICE − New WEBPRICE) ÷ Present WEBPRICE × 100</div>
-        </div>
-        <div className="cc-stat-card">
-          <div className="cc-stat-label">SKUs Off Guidance</div>
-          <div className={`cc-stat-value ${stats.offGuidanceCount > 0 ? "bad" : "good"}`}>
-            {stats.offGuidanceCount}
-          </div>
-          <div className="cc-stat-caption">Count where |Discount% − Guidance%| &gt; 5</div>
-        </div>
-      </div>
-
       {/* Table */}
       <div className="cc-table-card">
         {loading ? (
           <div className="cc-loading">
             <div className="cc-spinner" />
-            <span>Loading catalyst data…</span>
+            <span>Loading catalyst item list…</span>
           </div>
+        ) : !workingRows.length ? (
+          <div className="cc-empty">Search a Cat No, CAS, or description above and select it to start pricing.</div>
         ) : (
           <>
             <div className="cc-table-scroll">
@@ -620,9 +673,10 @@ export default function CatalystPricingConsole() {
                     {COLUMNS.map((col) => (
                       <th
                         key={col.field}
-                        onClick={() => handleSort(col.field)}
+                        onClick={col.field === "remove" ? undefined : () => handleSort(col.field)}
                         className={col.field === "Description" ? "cc-th-left" : "cc-th-right"}
                         title={col.title}
+                        style={col.field === "remove" ? { cursor: "default" } : undefined}
                       >
                         {col.label} {sortField === col.field ? (sortDir === "asc" ? "▲" : "▼") : ""}
                       </th>
@@ -646,7 +700,12 @@ export default function CatalystPricingConsole() {
                       </td>
                       <td className="cc-num">{row.PKZ || <span className="cc-dash">—</span>}</td>
                       <td className="cc-num">
-                        <Cell value={row.qty} />
+                        <input
+                          className="cc-input cc-cell-input"
+                          type="number"
+                          value={row.qty}
+                          onChange={(e) => handleOverride(row.ItemCode, "qty", e.target.value)}
+                        />
                       </td>
                       <td className="cc-num">{row.UOM || <span className="cc-dash">—</span>}</td>
                       <td className={`cc-num ${row.pdIsManual ? "cc-manual" : ""}`}>
@@ -707,11 +766,15 @@ export default function CatalystPricingConsole() {
                       <td className="cc-num">
                         <span className={`cc-badge ${STATUS_CLASS[row.status]}`}>{row.status}</span>
                       </td>
+                      <td className="cc-num">
+                        <button className="cc-remove-btn" onClick={() => removeRow(row.ItemCode)} title="Remove row">
+                          ×
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {!visibleRows.length && <div className="cc-empty">No catalyst items found.</div>}
             </div>
 
             {/* Pagination footer */}
@@ -729,8 +792,7 @@ export default function CatalystPricingConsole() {
                 >
                   Prev
                 </button>
-                {pageSize !== "all" &&
-                  getPageNumbers(safePage, totalPages).map((p, idx, arr) => (
+                {getPageNumbers(safePage, totalPages).map((p, idx, arr) => (
                     <span key={p} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       {idx > 0 && arr[idx - 1] !== p - 1 && <span className="cc-page-ellipsis">…</span>}
                       <button
@@ -749,11 +811,6 @@ export default function CatalystPricingConsole() {
                   Next
                 </button>
               </div>
-            </div>
-            <div className="cc-formula-summary">
-              COGS = Metal Cost (Total Metal Used × Metal Price/g) + Fibrication charges (rate/g × QTY).
-              Landed Cost = COGS × (1 + Handling%). New WEBPRICE = Landed Cost × (1 + Target Margin%).
-              Rows with an amber left border use a manually entered value — confirm against SAP.
             </div>
           </>
         )}
@@ -774,17 +831,17 @@ const PAGE_STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
 
   .cc {
-    --page-bg: #eef3f7;
+    --page-bg: #e4ebf1;
     --surface: #ffffff;
-    --surface2: #eaf4fb;
-    --surface-green: #eaf8f1;
-    --border: #dde5ec;
-    --text: #1f2937;
-    --muted: #6b7684;
-    --accent: #2f7dd1;
-    --accent-dim: #bcdcf7;
-    --good: #2f9e63;
-    --bad: #d1554a;
+    --surface2: #e0edf9;
+    --surface-green: #dcf3e8;
+    --border: #c5d2dc;
+    --text: #10151c;
+    --muted: #52606d;
+    --accent: #1f68bf;
+    --accent-dim: #a9cdec;
+    --good: #21875a;
+    --bad: #c0402f;
 
     background: var(--page-bg);
     color: var(--text);
@@ -845,7 +902,8 @@ const PAGE_STYLES = `
     color: var(--muted);
     margin: 0 0 10px;
   }
-  .cc-formula-panel {
+
+  .cc-ref-panel {
     background: var(--surface2);
     border: 1px solid var(--border);
     border-left: 3px solid var(--accent);
@@ -880,6 +938,44 @@ const PAGE_STYLES = `
   .cc-formula-chevron.open {
     transform: rotate(90deg);
   }
+
+  .cc-ref-scroll {
+    max-height: 220px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    margin-bottom: 14px;
+  }
+  .cc-ref-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .cc-ref-table th {
+    position: sticky;
+    top: 0;
+    background: var(--surface2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    text-align: left;
+  }
+  .cc-ref-table td {
+    padding: 7px 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .cc-ref-table tr:last-child td { border-bottom: none; }
+
   .cc-formula-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -911,7 +1007,6 @@ const PAGE_STYLES = `
     align-items: center;
     gap: 8px;
     padding-top: 10px;
-    padding-bottom: 12px;
     border-top: 1px solid var(--border);
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -926,6 +1021,12 @@ const PAGE_STYLES = `
   .cc-formula-legend-text {
     color: var(--muted);
     margin-right: 10px;
+  }
+  .cc-formula-summary {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    padding: 10px 0 14px;
   }
 
   .cc-controls {
@@ -948,22 +1049,7 @@ const PAGE_STYLES = `
     display: flex;
     flex-direction: column;
     gap: 6px;
-  }
-
-  .cc-apply-btn {
-    background: var(--surface);
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 5px;
-    padding: 8px 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11.5px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .cc-apply-btn:hover {
-    background: var(--surface2);
+    position: relative;
   }
   .cc-field label {
     font-family: 'IBM Plex Mono', monospace;
@@ -973,6 +1059,7 @@ const PAGE_STYLES = `
     font-weight: 600;
     color: var(--muted);
   }
+
 
   .cc-input {
     background: var(--surface);
@@ -990,6 +1077,65 @@ const PAGE_STYLES = `
   }
   .cc-input::placeholder {
     color: var(--muted);
+  }
+
+  .cc-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(31, 41, 55, 0.15);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 60;
+  }
+  .cc-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+  .cc-suggestion-item:hover {
+    background: var(--surface2);
+  }
+  .cc-suggestion-cat {
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .cc-suggestion-desc {
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cc-suggestion-empty {
+    padding: 10px 12px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .cc-suggestion-manual {
+    padding: 9px 12px;
+    cursor: pointer;
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: var(--surface2);
+  }
+  .cc-suggestion-manual:hover {
+    background: var(--accent-dim);
   }
 
   .cc-mode-toggle {
@@ -1043,42 +1189,6 @@ const PAGE_STYLES = `
     padding: 10px 14px;
     font-size: 13px;
     margin-bottom: 16px;
-  }
-
-  .cc-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 20px;
-  }
-  .cc-stat-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px 18px;
-  }
-  .cc-stat-card:nth-child(even) {
-    background: var(--surface-green);
-  }
-  .cc-stat-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    color: var(--muted);
-    margin-bottom: 8px;
-  }
-  .cc-stat-value {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 6px;
-  }
-  .cc-stat-value.good { color: var(--good); }
-  .cc-stat-value.bad { color: var(--bad); }
-  .cc-stat-caption {
-    font-size: 11.5px;
-    color: var(--muted);
   }
 
   .cc-table-card {
@@ -1179,6 +1289,22 @@ const PAGE_STYLES = `
     text-align: right;
   }
 
+  .cc-remove-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--bad);
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .cc-remove-btn:hover {
+    background: #fdecea;
+    border-color: var(--bad);
+  }
+
   .cc-badge {
     display: inline-block;
     padding: 2px 8px;
@@ -1194,8 +1320,9 @@ const PAGE_STYLES = `
   .cc-empty {
     text-align: center;
     color: var(--muted);
-    padding: 40px 0;
+    padding: 50px 0;
     font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
   }
 
   .cc-pagination {
@@ -1242,12 +1369,5 @@ const PAGE_STYLES = `
     color: var(--muted);
     font-family: 'IBM Plex Mono', monospace;
     font-size: 12px;
-  }
-
-  .cc-formula-summary {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11.5px;
-    color: var(--muted);
-    padding-bottom: 14px;
   }
 `;
