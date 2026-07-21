@@ -1,0 +1,108 @@
+// api/customers/all-delivery-performance.js
+
+import { queryDatabase } from '../../../lib/db';
+import sql from 'mssql';
+import { verify } from 'jsonwebtoken';
+
+export default async function handler(req, res) {
+  const { salesPerson, category, customer, product, contactPerson } = req.query;
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Missing or malformed Authorization header' });
+  }
+
+  let decoded;
+  try {
+    decoded = verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ error: 'Token verification failed' });
+  }
+
+  const isAdmin = decoded.role === 'admin';
+  const contactCodes = decoded.contactCodes || [];
+  const cardCodes = decoded.cardCodes || [];
+
+  /* ── build WHERE + param list on the fly ───────────────────────── */
+  const where = ['OINV.DocDate IS NOT NULL'];
+  const params = [];
+
+  // Role-based filtering
+  if (!isAdmin) {
+    if (contactCodes.length > 0) {
+      where.push(`T0.CntctCode IN (${contactCodes.map((c) => `'${c}'`).join(',')})`);
+    } else if (cardCodes.length > 0) {
+      where.push(`T0.CardCode IN (${cardCodes.map((c) => `'${c}'`).join(',')})`);
+    } else {
+      return res.status(403).json({ error: 'No access: cardCodes or contactCodes not provided' });
+    }
+  }
+
+  if (salesPerson) {
+    where.push('T0.SlpCode = @slpCode');
+    params.push({ name: 'slpCode', type: sql.Int, value: +salesPerson });
+  }
+  if (category) {
+    where.push('IB.ItmsGrpNam = @grpName');
+    params.push({ name: 'grpName', type: sql.NVarChar, value: category });
+  }
+  if (customer) {
+    where.push('T0.CardCode = @cardCode');
+    params.push({ name: 'cardCode', type: sql.NVarChar, value: customer });
+  }
+  if (product) {
+    where.push('T2.ItemCode = @itemCode');
+    params.push({ name: 'itemCode', type: sql.NVarChar, value: product });
+  }
+  if (contactPerson) {
+    where.push('T0.CntctCode = @cntctCode');
+    params.push({ name: 'cntctCode', type: sql.NVarChar, value: contactPerson });
+  }
+
+  /* ── final SQL ─────────────────────────────────────────────────── */
+  const sqlText = `
+    SELECT
+      FORMAT(OINV.DocDate,'MMM-yyyy') AS [Month],
+      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 0  AND 3  THEN 1 END) AS Green,
+      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 4  AND 5  THEN 1 END) AS Orange,
+      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 6  AND 8  THEN 1 END) AS Blue,
+      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 9  AND 10 THEN 1 END) AS Purple,
+      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) > 10 THEN 1 END) AS Red,
+      COUNT(*) AS TotalOrders,
+      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) <= 8 THEN 1 END) AS SLAAchieved,
+      ROUND(
+        100.0 * COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) <= 8 THEN 1 END)
+        / NULLIF(COUNT(*),0), 2
+      ) AS SLAAchievedPercentage
+    FROM  ORDR  T0
+    JOIN  RDR1  T1 ON T0.DocEntry = T1.DocEntry
+    LEFT  JOIN  DLN1 ON T1.DocEntry = DLN1.BaseEntry AND T1.LineNum = DLN1.BaseLine AND DLN1.BaseType = 17
+    LEFT  JOIN  INV1 ON DLN1.DocEntry = INV1.BaseEntry AND DLN1.LineNum = INV1.BaseLine AND INV1.BaseType = 15
+    LEFT  JOIN  OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED = 'N'
+    LEFT  JOIN  OITM T2 ON T1.ItemCode  = T2.ItemCode
+    LEFT  JOIN  OITB IB ON T2.ItmsGrpCod = IB.ItmsGrpCod
+    ${salesPerson ? 'LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode' : ''}
+    WHERE ${where.join(' AND ')}
+    GROUP BY FORMAT(OINV.DocDate,'MMM-yyyy')
+    ORDER BY MIN(OINV.DocDate);
+  `;
+
+  /* ── execute & return ──────────────────────────────────────────── */
+  try {
+    const rows = await queryDatabase(sqlText, params);
+    const data = rows.map(r => ({
+      month : r.Month,
+      green : r.Green  ?? 0,
+      orange: r.Orange ?? 0,
+      blue  : r.Blue   ?? 0,
+      purple: r.Purple ?? 0,
+      red   : r.Red    ?? 0,
+      totalOrders : r.TotalOrders,
+      slaPercentage: r.SLAAchievedPercentage
+    }));
+    res.status(200).json(data);
+  } catch (err) {
+    console.error('all-delivery-performance API error:', err);
+    res.status(500).json({ error: 'Failed to fetch data' });
+  }
+}

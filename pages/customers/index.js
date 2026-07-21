@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect } from "react";
 import LoadingSpinner from "components/LoadingSpinner";
 import CustomersTable from "components/CustomersTable";
@@ -12,11 +14,13 @@ export default function CustomersPage() {
   
   const {
     customers,
+    allCustomers, // For Excel export
     totalItems,
+    totalPages,
     isLoading,
     error,
     currentPage,
-    goToPage,            // Changed from setCurrentPage to goToPage
+    goToPage,
     searchTerm,
     setSearchTerm,
     sortField,
@@ -26,7 +30,7 @@ export default function CustomersPage() {
     status,
     setStatus,
     refreshCustomers,
-    handleSort          // Using the handleSort function from the hook
+    handleSort
   } = useCustomers({
     initialPage: 1,
     initialSearch: "",
@@ -35,15 +39,15 @@ export default function CustomersPage() {
     initialStatus: "all"
   });
 
-  // Update the route change handler to use goToPage
+  // Update the route change handler
   useEffect(() => {
     const handleRouteChange = () => {
       const query = router.query;
-      goToPage(parseInt(query.page || '1', 10));
-      setSearchTerm(query.search || '');
-      setSortField(query.sortField || 'CardName');
-      setSortDir(query.sortDir || 'asc');
-      setStatus(query.status || 'all');
+      if (query.page) goToPage(parseInt(query.page, 10));
+      if (query.search) setSearchTerm(query.search);
+      if (query.sortField) setSortField(query.sortField);
+      if (query.sortDir) setSortDir(query.sortDir);
+      if (query.status) setStatus(query.status);
     };
 
     router.events.on('routeChangeComplete', handleRouteChange);
@@ -69,8 +73,14 @@ export default function CustomersPage() {
 
   if (error) {
     return (
-      <div className="alert alert-danger">
+      <div className="alert alert-danger m-4">
         Error loading customers: {error}
+        <button 
+          className="btn btn-sm btn-outline-danger ms-3"
+          onClick={refreshCustomers}
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -79,16 +89,18 @@ export default function CustomersPage() {
     isAuthenticated ? (
       <CustomersTable
         customers={customers}
+        allCustomers={allCustomers}
         totalItems={totalItems}
-        isLoading={isLoading}
+        totalPages={totalPages}
         currentPage={currentPage}
+        isLoading={isLoading}
+        onPageChange={goToPage}
         searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
         sortField={sortField}
         sortDir={sortDir}
+        onSortChange={handleSort}
         status={status}
-        onPageChange={goToPage}         // Changed from setCurrentPage to goToPage
-        onSearchChange={setSearchTerm}
-        onSortChange={handleSort}       // Using the handleSort function from the hook
         onStatusChange={setStatus}
         onRefresh={refreshCustomers}
       />
@@ -96,7 +108,6 @@ export default function CustomersPage() {
   );
 }
 
-// Static SEO properties for CustomersPage
 CustomersPage.seo = {
   title: "Customers | Density",
   description: "View and manage all your customers.",
