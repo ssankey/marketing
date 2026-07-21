@@ -370,7 +370,8 @@ export default function CustomerDetails({
           from: "shafique@densitypharmachem.com",
 
           to: [email], // customer gets it
-          cc: [salesPersonEmail], // sales-person on CC
+          
+          cc: [salesPersonEmail, "gurpreet@densitypharmachem.com"],
 
           //  from: "prakash@densitypharmachem.com",
           //  to:"chandraprakashyadav1110@gmail.com",
