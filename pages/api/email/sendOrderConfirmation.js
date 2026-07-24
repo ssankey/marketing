@@ -181,7 +181,7 @@
               body: JSON.stringify({
                 from: "customerservice@densitypharmachem.com",
                 to: [toEmail],
-                cc: [SalesPerson_Email],
+                cc: ccList,
                 bcc: bccList,
                 subject: `Order confirmation- SO # ${details.DocNum}`,
                 body: html,
