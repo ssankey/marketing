@@ -3,7 +3,7 @@
 // pages/api/orders.js
 import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
-import { getOrdersFromDatabase } from "../../../lib/models/orders";
+import { getOrdersFromDatabase, getOrdersDateRange } from "../../../lib/models/orders";
 
 /** Utility to validate date strings via date-fns */
 function isValidDate(date) {
@@ -39,6 +39,13 @@ export default async function handler(req, res) {
     const isAdmin = decodedToken.role === "admin";
     const contactCodes = decodedToken.contactCodes || [];
     const cardCodes = decodedToken.cardCodes || [];
+
+    // Lightweight path for the month-filter dropdown — avoids fetching every
+    // order row just to compute the available date range.
+    if (req.query.dateRangeOnly === "true") {
+      const range = await getOrdersDateRange({ isAdmin, contactCodes, cardCodes });
+      return res.status(200).json(range);
+    }
 
     // 4) Parse query params
     const {

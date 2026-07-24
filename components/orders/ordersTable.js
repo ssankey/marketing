@@ -42,7 +42,7 @@ const OrdersTable = ({
     selectedMonth,
     sortField,
     sortDirection,
-    allOrdersForFilters,
+    orderDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
@@ -198,7 +198,7 @@ const OrdersTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
-              orders={allOrdersForFilters} // Use the orders fetched specifically for filters
+              dateRange={orderDateRange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}

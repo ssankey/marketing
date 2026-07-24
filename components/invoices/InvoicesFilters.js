@@ -10,7 +10,7 @@ const InvoicesFilters = ({
   selectedMonth,
   fromDate,
   toDate,
-  invoices = [],
+  dateRange = { minDate: null, maxDate: null },
   onSearch,
   onStatusChange,
   onMonthChange,
@@ -39,105 +39,34 @@ const InvoicesFilters = ({
     });
   };
 
-  // Simplified and more robust function to generate available months
+  // Generate available months from the min/max invoice date range
   const getAvailableMonths = () => {
-    console.log('Getting available months from invoices:', invoices.length);
-    
-    if (!invoices || invoices.length === 0) {
-      console.log('No invoices data available');
-      return [];
-    }
+    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
+    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
 
-    // Extract and parse all valid dates
-    const validDates = [];
-    
-    invoices.forEach((invoice, index) => {
-      const dateValue = invoice["Invoice Posting Dt."];
-      
-      if (!dateValue) return;
-      
-      let parsedDate = null;
-      
-      try {
-        // Handle different date formats
-        if (dateValue instanceof Date) {
-          parsedDate = dateValue;
-        } else if (typeof dateValue === 'string') {
-          // Try direct parsing first
-          parsedDate = new Date(dateValue);
-          
-          // If that fails, try parsing ISO string
-          if (isNaN(parsedDate.getTime())) {
-            // Handle ISO string format (e.g., "2024-01-15T00:00:00.000Z")
-            if (dateValue.includes('T')) {
-              parsedDate = new Date(dateValue.split('T')[0]);
-            } else {
-              // Try parsing various date formats
-              const dateParts = dateValue.split(/[-/]/);
-              if (dateParts.length === 3) {
-                // Try YYYY-MM-DD format first
-                parsedDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-                
-                // If that doesn't work, try DD/MM/YYYY
-                if (isNaN(parsedDate.getTime())) {
-                  parsedDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
-                }
-                
-                // If that doesn't work, try MM/DD/YYYY
-                if (isNaN(parsedDate.getTime())) {
-                  parsedDate = new Date(dateParts[2], dateParts[0] - 1, dateParts[1]);
-                }
-              }
-            }
-          }
-        } else if (typeof dateValue === 'number') {
-          parsedDate = new Date(dateValue);
-        }
-        
-        // Only add valid dates
-        if (parsedDate && !isNaN(parsedDate.getTime())) {
-          validDates.push(parsedDate);
-        } else {
-          console.log(`Failed to parse date at index ${index}:`, dateValue);
-        }
-      } catch (error) {
-        console.log(`Error parsing date at index ${index}:`, dateValue, error);
-      }
-    });
-
-    console.log('Valid dates found:', validDates.length);
-    
-    if (validDates.length === 0) {
-      // Fallback: generate last 12 months if no valid dates found
-      console.log('No valid dates found, generating fallback months');
+    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
+      // Fallback: generate last 12 months if no valid date range found
       const months = [];
       const now = new Date();
-      
+
       for (let i = 0; i < 12; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const year = date.getFullYear();
         const month = date.getMonth();
-        
+
         const monthName = date.toLocaleDateString('en-US', { month: 'short' });
         const displayText = `${monthName} ${year}`;
         const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-        
+
         months.push({
           value: value,
           display: displayText
         });
       }
-      
+
       return months;
     }
 
-    // Sort dates and get range
-    validDates.sort((a, b) => a - b);
-    const minDate = validDates[0];
-    const maxDate = validDates[validDates.length - 1];
-    
-    console.log('Date range:', minDate, 'to', maxDate);
-    
     // Generate all months between min and max date
     const months = [];
     const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
@@ -146,11 +75,11 @@ const InvoicesFilters = ({
     while (current <= end) {
       const year = current.getFullYear();
       const month = current.getMonth();
-      
+
       const monthName = current.toLocaleDateString('en-US', { month: 'short' });
       const displayText = `${monthName} ${year}`;
       const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-      
+
       months.push({
         value: value,
         display: displayText
@@ -159,20 +88,10 @@ const InvoicesFilters = ({
       current.setMonth(current.getMonth() + 1);
     }
 
-    console.log('Generated months:', months.length);
     return months.reverse(); // Show recent months first
   };
 
   const availableMonths = getAvailableMonths();
-  
-  // Debug logging
-  React.useEffect(() => {
-    console.log('InvoicesFilters - invoices prop:', invoices.length);
-    console.log('Available months:', availableMonths.length);
-    if (availableMonths.length > 0) {
-      console.log('First few months:', availableMonths.slice(0, 3));
-    }
-  }, [invoices, availableMonths]);
 
   return (
     <div className="mt-2 mb-2">

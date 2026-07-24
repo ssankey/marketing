@@ -36,7 +36,7 @@ const InvoicesTable = ({
     selectedMonth,
     sortField,
     sortDirection,
-    allInvoicesForFilters,
+    invoiceDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
@@ -172,7 +172,7 @@ const InvoicesTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
-              invoices={allInvoicesForFilters}
+              dateRange={invoiceDateRange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}

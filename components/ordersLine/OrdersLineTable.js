@@ -33,7 +33,7 @@ const OrdersLineTable = ({
     selectedMonth,
     sortField,
     sortDirection,
-    allOrdersLineForFilters,
+    orderLineDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
@@ -164,7 +164,7 @@ const OrdersLineTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
-              ordersLine={allOrdersLineForFilters}
+              dateRange={orderLineDateRange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}
