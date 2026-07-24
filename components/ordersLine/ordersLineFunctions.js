@@ -20,7 +20,7 @@ export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSi
   const [sortDirection, setSortDirection] = useState("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [allOrdersLineForFilters, setAllOrdersLineForFilters] = useState([]);
+  const [orderLineDateRange, setOrderLineDateRange] = useState({ minDate: null, maxDate: null });
   const [shouldResetPage, setShouldResetPage] = useState(false);
 
   const debouncedSearch = useMemo(
@@ -82,27 +82,27 @@ export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSi
     }
   }, []);
 
-  const fetchAllOrdersLineForFilters = useCallback(async () => {
+  const fetchOrderLineDateRange = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      
-      const response = await fetch(`/api/orders-line?getAll=true&fields=PostingDate`, {
+
+      const response = await fetch(`/api/orders-line?dateRangeOnly=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAllOrdersLineForFilters(data.ordersLine || []);
+        setOrderLineDateRange({ minDate: data.minDate || null, maxDate: data.maxDate || null });
       }
     } catch (error) {
-      console.error("Error fetching order lines for filters:", error);
+      console.error("Error fetching order line date range:", error);
     }
   }, []);
 
   useEffect(() => {
     fetchOrdersLine();
-    fetchAllOrdersLineForFilters();
+    fetchOrderLineDateRange();
   }, []);
 
   useEffect(() => {
@@ -281,7 +281,7 @@ export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSi
     toDate,
     sortField,
     sortDirection,
-    allOrdersLineForFilters,
+    orderLineDateRange,
     setGlobalFilter: handleSearch,
     setStatusFilter: setStatusFilterWrapper,
     setSelectedMonth: setSelectedMonthWrapper,

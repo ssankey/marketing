@@ -6,7 +6,7 @@ const OrdersLineFilters = ({
   globalFilter,
   statusFilter,
   selectedMonth,
-  ordersLine = [],
+  dateRange = { minDate: null, maxDate: null },
   onSearch,
   onStatusChange,
   onMonthChange,
@@ -35,68 +35,31 @@ const OrdersLineFilters = ({
   };
 
   const getAvailableMonths = () => {
-    if (!ordersLine || ordersLine.length === 0) {
-      return [];
-    }
+    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
+    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
 
-    const validDates = [];
-    
-    ordersLine.forEach((order) => {
-      const dateValue = order.PostingDate;
-      
-      if (!dateValue) return;
-      
-      let parsedDate = null;
-      
-      try {
-        if (dateValue instanceof Date) {
-          parsedDate = dateValue;
-        } else if (typeof dateValue === 'string') {
-          parsedDate = new Date(dateValue);
-          
-          if (isNaN(parsedDate.getTime())) {
-            if (dateValue.includes('T')) {
-              parsedDate = new Date(dateValue.split('T')[0]);
-            }
-          }
-        } else if (typeof dateValue === 'number') {
-          parsedDate = new Date(dateValue);
-        }
-        
-        if (parsedDate && !isNaN(parsedDate.getTime())) {
-          validDates.push(parsedDate);
-        }
-      } catch (error) {
-        console.log(`Error parsing date:`, dateValue, error);
-      }
-    });
-
-    if (validDates.length === 0) {
+    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
       const months = [];
       const now = new Date();
-      
+
       for (let i = 0; i < 12; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const year = date.getFullYear();
         const month = date.getMonth();
-        
+
         const monthName = date.toLocaleDateString('en-US', { month: 'short' });
         const displayText = `${monthName} ${year}`;
         const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-        
+
         months.push({
           value: value,
           display: displayText
         });
       }
-      
+
       return months;
     }
 
-    validDates.sort((a, b) => a - b);
-    const minDate = validDates[0];
-    const maxDate = validDates[validDates.length - 1];
-    
     const months = [];
     const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
     const end = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
@@ -104,11 +67,11 @@ const OrdersLineFilters = ({
     while (current <= end) {
       const year = current.getFullYear();
       const month = current.getMonth();
-      
+
       const monthName = current.toLocaleDateString('en-US', { month: 'short' });
       const displayText = `${monthName} ${year}`;
       const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-      
+
       months.push({
         value: value,
         display: displayText

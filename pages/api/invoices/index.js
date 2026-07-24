@@ -3,7 +3,7 @@
 // pages/api/invoices.js
 import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
-import { getInvoicesList } from "../../../lib/models/invoices";
+import { getInvoicesList, getInvoicesDateRange } from "../../../lib/models/invoices";
 
 function isValidDate(date) {
   return date && isValid(parseISO(date));
@@ -38,6 +38,13 @@ export default async function handler(req, res) {
     const isAdmin = decodedToken.role === "admin";
     const contactCodes = decodedToken.contactCodes || [];
     const cardCodes = decodedToken.cardCodes || [];
+
+    // Lightweight path for the month-filter dropdown — avoids fetching every
+    // invoice-line row just to compute the available date range.
+    if (req.query.dateRangeOnly === "true") {
+      const range = await getInvoicesDateRange({ isAdmin, contactCodes, cardCodes });
+      return res.status(200).json(range);
+    }
 
     // 4) Parse query params
     const {

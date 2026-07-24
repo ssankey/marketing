@@ -21,7 +21,7 @@ export const useOrdersData = (initialStatus = "all", initialPage = 1, pageSize =
   const [sortDirection, setSortDirection] = useState("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [allOrdersForFilters, setAllOrdersForFilters] = useState([]);
+  const [orderDateRange, setOrderDateRange] = useState({ minDate: null, maxDate: null });
   const [shouldResetPage, setShouldResetPage] = useState(false);
 
   const debouncedSearch = useMemo(
@@ -84,29 +84,29 @@ export const useOrdersData = (initialStatus = "all", initialPage = 1, pageSize =
     }
   }, []);
 
-  // Fetch all orders for month dropdown
-  const fetchAllOrdersForFilters = useCallback(async () => {
+  // Fetch min/max order date for the month dropdown — lightweight, no full-table fetch
+  const fetchOrderDateRange = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      
-      const response = await fetch(`/api/orders?getAll=true&fields=DocDate`, {
+
+      const response = await fetch(`/api/orders?dateRangeOnly=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAllOrdersForFilters(data.orders || []);
+        setOrderDateRange({ minDate: data.minDate || null, maxDate: data.maxDate || null });
       }
     } catch (error) {
-      console.error("Error fetching orders for filters:", error);
+      console.error("Error fetching order date range:", error);
     }
   }, []);
 
   // Initial load
   useEffect(() => {
     fetchOrders();
-    fetchAllOrdersForFilters();
+    fetchOrderDateRange();
   }, []);
 
   // Handle filter changes - reset to page 1
@@ -310,7 +310,7 @@ export const useOrdersData = (initialStatus = "all", initialPage = 1, pageSize =
     toDate,
     sortField,
     sortDirection,
-    allOrdersForFilters,
+    orderDateRange,
     setGlobalFilter: handleSearch,
     setStatusFilter: setStatusFilterWrapper,
     setSelectedMonth: setSelectedMonthWrapper,

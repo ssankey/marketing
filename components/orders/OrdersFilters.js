@@ -7,7 +7,7 @@ const OrdersFilters = ({
   globalFilter,
   statusFilter,
   selectedMonth,
-  orders = [], // Array of orders to extract date range from
+  dateRange = { minDate: null, maxDate: null },
   onSearch,
   onStatusChange,
   onMonthChange,
@@ -36,97 +36,14 @@ const OrdersFilters = ({
     });
   };
 
-  // Generate available months from order date range
+  // Generate available months from the min/max order date range
   const getAvailableMonths = () => {
-    console.log('Orders data:', orders);
-    
-    if (!orders || orders.length === 0) {
-      console.log('No orders found or empty orders array');
+    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
+    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
+
+    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
       return [];
     }
-
-    // Debug: Check the structure of the first order
-    console.log('Sample order structure:', orders[0]);
-    console.log('Order keys:', Object.keys(orders[0] || {}));
-
-    // Extract all order dates and find min/max
-    const orderDates = orders
-      .map(order => {
-        // Try multiple possible date field names
-        let dateValue = order.DocDate
-                     ;
-        
-        console.log('Raw date value:', dateValue, 'from order:', order);
-        
-        // Handle different date formats
-        let date;
-        if (!dateValue) {
-          console.log('No date found in order:', order);
-          return null;
-        }
-        
-        // If it's already a Date object
-        if (dateValue instanceof Date) {
-          date = dateValue;
-        }
-        // If it's a string, try to parse it
-        else if (typeof dateValue === 'string') {
-          // Handle various date formats
-          date = new Date(dateValue);
-          
-          // If that fails, try parsing different formats
-          if (isNaN(date.getTime())) {
-            // Try parsing formats like "DD/MM/YYYY", "MM/DD/YYYY", etc.
-            const dateParts = dateValue.split(/[-/]/);
-            if (dateParts.length === 3) {
-              // Try different arrangements
-              const formats = [
-                new Date(dateParts[2], dateParts[1] - 1, dateParts[0]), // DD/MM/YYYY
-                new Date(dateParts[2], dateParts[0] - 1, dateParts[1]), // MM/DD/YYYY
-                new Date(dateParts[0], dateParts[1] - 1, dateParts[2])  // YYYY/MM/DD
-              ];
-              
-              for (const format of formats) {
-                if (!isNaN(format.getTime())) {
-                  date = format;
-                  break;
-                }
-              }
-            }
-          }
-        }
-        // If it's a number (timestamp)
-        else if (typeof dateValue === 'number') {
-          date = new Date(dateValue);
-        }
-        else {
-          console.log('Unknown date format:', dateValue);
-          return null;
-        }
-        
-        console.log('Extracted date:', date, 'Valid:', !isNaN(date.getTime()));
-        return date;
-      })
-      .filter(date => {
-        const isValid = date && !isNaN(date.getTime());
-        if (!isValid) {
-          console.log('Invalid date filtered out:', date);
-        }
-        return isValid;
-      })
-      .sort((a, b) => a - b);
-
-    console.log('Valid order dates:', orderDates);
-
-    if (orderDates.length === 0) {
-      console.log('No valid dates found');
-      return [];
-    }
-
-    const minDate = orderDates[0];
-    const maxDate = orderDates[orderDates.length - 1];
-    
-    console.log('Min date:', minDate, 'Max date:', maxDate);
 
     // Generate all months between min and max date
     const months = [];
@@ -136,14 +53,14 @@ const OrdersFilters = ({
     while (current <= end) {
       const year = current.getFullYear();
       const month = current.getMonth();
-      
+
       // Format as "Jan 2024"
       const monthName = current.toLocaleDateString('en-US', { month: 'short' });
       const displayText = `${monthName} ${year}`;
-      
+
       // Value format for filtering (YYYY-MM)
       const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-      
+
       months.push({
         value: value,
         display: displayText
@@ -152,14 +69,10 @@ const OrdersFilters = ({
       current.setMonth(current.getMonth() + 1);
     }
 
-    console.log('Generated months:', months);
     return months.reverse(); // Show recent months first
   };
 
   const availableMonths = getAvailableMonths();
-  
-  // Console log for debugging
-  console.log('Available months:', availableMonths);
 
   return (
     <div className="mt-2 mb-2">

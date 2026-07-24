@@ -18,6 +18,8 @@ export const sendDispatchEmail = async (
     
     // Build BCC list based on CardCode
     const bccList = [];
+
+    
     
     // Add prashant@densitypharmachem.com if CardCode matches
     if (specialCardCodes.includes(cardCode)) {
@@ -32,6 +34,12 @@ export const sendDispatchEmail = async (
     if (cardCode === 'C000224') {
         ccList.push("Invoices@mankindpharma.com", "aman.bhatt@mankindpharma.com");
         console.log(`📌 Added Mankind Pharma emails to CC for CardCode: ${cardCode}`);
+    }
+
+    // Add Jubilant Biosys email if CardCode is C000072
+    if (cardCode === 'C000072') {
+        ccList.push("Store.BiosysNoida@jubilantbiosys.com");
+        console.log(`📌 Added Jubilant Biosys email to CC for CardCode: ${cardCode}`);
     }
     
     const sendRes = await fetch(
