@@ -163,6 +163,15 @@
             console.log(`📌 Added Prashant to BCC for CardCode: ${order.CardCode}`);
           }
 
+          // Build CC list - start with sales person email
+          const ccList = [SalesPerson_Email];
+
+          // Add Jubilant Biosys email if CardCode is C000072
+          if (order.CardCode === 'C000072') {
+            ccList.push("Store.BiosysNoida@jubilantbiosys.com");
+            console.log(`📌 Added Jubilant Biosys email to CC for CardCode: ${order.CardCode}`);
+          }
+
           // ✉️ Step 6: Send mail
           const emailRes = await fetch(
             `${process.env.API_BASE_URL}/api/email/base_mail`,
