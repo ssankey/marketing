@@ -14,6 +14,8 @@ export default async function handler(req, res) {
       sortDir = "asc",
       status,
       category = "",
+      webDisplay = "",
+      priceSet = "",
       getAll = false
     } = req.query;
 
@@ -54,7 +56,7 @@ export default async function handler(req, res) {
     }
 
     // Build cache key including user role
-    const cacheKey = `products:api:${userRole}:${validPageNumber}:${search}:${sortField}:${sortDir}:${status}:${category}:${getAll}`;
+    const cacheKey = `products:api:${userRole}:${validPageNumber}:${search}:${sortField}:${sortDir}:${status}:${category}:${webDisplay}:${priceSet}:${getAll}`;
 
     try {
       // Check if cached data exists
@@ -73,6 +75,8 @@ export default async function handler(req, res) {
         offset: getAll ? 0 : offset,
         ITEMS_PER_PAGE,
         status,
+        webDisplay,
+        priceSet,
         getAll: getAll === 'true',
         userRole // Pass the user role
       });

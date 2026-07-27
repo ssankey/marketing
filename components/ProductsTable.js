@@ -157,6 +157,8 @@ export default function ProductsTable({
   const [searchInput, setSearchInput] = useState(() => router.query.search || "");
   const [selectedCategory, setSelectedCategory] = useState(() => router.query.category || "");
   const [categorySearch, setCategorySearch] = useState(() => router.query.category || "");
+  const [webDisplayFilter, setWebDisplayFilter] = useState(() => router.query.webDisplay || "all");
+  const [priceSetFilter, setPriceSetFilter] = useState(() => router.query.priceSet || "all");
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState(initialProducts);
@@ -171,7 +173,9 @@ export default function ProductsTable({
     category: selectedCategory,
     sortField,
     sortDir: sortDirection,
-  }), [currentPage, searchTerm, status, selectedCategory, sortField, sortDirection]);
+    webDisplay: webDisplayFilter === "all" ? "" : webDisplayFilter,
+    priceSet: priceSetFilter === "all" ? "" : priceSetFilter,
+  }), [currentPage, searchTerm, status, selectedCategory, sortField, sortDirection, webDisplayFilter, priceSetFilter]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -298,6 +302,44 @@ export default function ProductsTable({
     );
   };
 
+  const handleWebDisplayChangeInternal = (value) => {
+    setWebDisplayFilter(value);
+    setCurrentPage(1);
+
+    const newQuery = { ...router.query };
+    if (value && value !== "all") {
+      newQuery.webDisplay = value;
+    } else {
+      delete newQuery.webDisplay;
+    }
+    newQuery.page = 1;
+
+    router.replace(
+      { pathname: "/products", query: newQuery },
+      undefined,
+      { shallow: true }
+    );
+  };
+
+  const handlePriceSetChangeInternal = (value) => {
+    setPriceSetFilter(value);
+    setCurrentPage(1);
+
+    const newQuery = { ...router.query };
+    if (value && value !== "all") {
+      newQuery.priceSet = value;
+    } else {
+      delete newQuery.priceSet;
+    }
+    newQuery.page = 1;
+
+    router.replace(
+      { pathname: "/products", query: newQuery },
+      undefined,
+      { shallow: true }
+    );
+  };
+
   const handleSortInternal = (field) => {
     let direction = "asc";
     if (sortField === field && sortDirection === "asc") {
@@ -359,6 +401,8 @@ export default function ProductsTable({
     setSortField("ItemCode");
     setSortDirection("asc");
     onStatusChange("all");
+    setWebDisplayFilter("all");
+    setPriceSetFilter("all");
     setCurrentPage(1);
 
     router.replace(
@@ -402,6 +446,8 @@ export default function ProductsTable({
     },
     { label: "Item Name", field: "ItemName", sortable: true },
     { label: "Category", field: "Category", sortable: true },
+    { label: "Web Display", field: "WebsiteDisplay", sortable: false },
+    { label: "Price Set", field: "PriceSet", sortable: false },
     { label: "Stock", field: "OnHand", sortable: true },
     {
       label: "Created Date",
@@ -491,18 +537,18 @@ export default function ProductsTable({
 
       <div className="pt-card">
         <div className="pt-header">
-          <h1>Products</h1>
+          <h1>Product Master</h1>
           <p className="pt-header-desc">Browse the full catalogue — stock, CAS numbers, and documents.</p>
         </div>
 
         <div className="pt-controls">
-          <div className="pt-field" style={{ width: 340 }}>
+          <div className="pt-field" style={{ width: 260 }}>
             <label>Search</label>
             <input
               className="pt-input"
               type="text"
               style={{ width: "100%" }}
-              placeholder="Search by CAT No., Item Name, CAS No...."
+              placeholder="CAT No., Item Name, CAS No…."
               value={searchInput}
               onChange={(e) => handleSearchInput(e.target.value)}
             />
@@ -535,8 +581,62 @@ export default function ProductsTable({
             </div>
           </div>
 
+          <div className="pt-field">
+            <label>Web Display</label>
+            <div className="pt-mode-toggle">
+              <button
+                type="button"
+                className={`pt-mode-btn ${webDisplayFilter === "all" ? "active" : ""}`}
+                onClick={() => handleWebDisplayChangeInternal("all")}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={`pt-mode-btn ${webDisplayFilter === "yes" ? "active" : ""}`}
+                onClick={() => handleWebDisplayChangeInternal("yes")}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                className={`pt-mode-btn ${webDisplayFilter === "no" ? "active" : ""}`}
+                onClick={() => handleWebDisplayChangeInternal("no")}
+              >
+                No
+              </button>
+            </div>
+          </div>
+
+          <div className="pt-field">
+            <label>Price Set</label>
+            <div className="pt-mode-toggle">
+              <button
+                type="button"
+                className={`pt-mode-btn ${priceSetFilter === "all" ? "active" : ""}`}
+                onClick={() => handlePriceSetChangeInternal("all")}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={`pt-mode-btn ${priceSetFilter === "yes" ? "active" : ""}`}
+                onClick={() => handlePriceSetChangeInternal("yes")}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                className={`pt-mode-btn ${priceSetFilter === "no" ? "active" : ""}`}
+                onClick={() => handlePriceSetChangeInternal("no")}
+              >
+                No
+              </button>
+            </div>
+          </div>
+
           {categories.length > 0 && (
-            <div className="pt-field" style={{ width: 220 }} ref={categoryContainerRef}>
+            <div className="pt-field" style={{ width: 190 }} ref={categoryContainerRef}>
               <label>Category</label>
               <input
                 className="pt-input"
@@ -603,6 +703,8 @@ export default function ProductsTable({
                       <SortHeader label="Stock Status" field="stockStatus" className="pt-th-left" />
                       <SortHeader label="Item Name" field="ItemName" className="pt-th-left" />
                       <SortHeader label="Category" field="Category" className="pt-th-left" />
+                      <th className="pt-th-left">Web Display</th>
+                      <th className="pt-th-left">Price Set</th>
                       <SortHeader label="Stock" field="OnHand" className="pt-th-right" />
                       <th className="pt-th-right">Units Sold</th>
                       <th className="pt-th-right">No. of Customers</th>
@@ -629,6 +731,16 @@ export default function ProductsTable({
                         </td>
                         <td className="pt-desc" title={product.ItemName}>{product.ItemName}</td>
                         <td>{product.Category}</td>
+                        <td>
+                          <span className={`pt-badge ${product.WebsiteDisplay === "YES" ? "good" : "bad"}`}>
+                            {product.WebsiteDisplay === "YES" ? "Yes" : "No"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`pt-badge ${product.PriceSet === "YES" ? "good" : "bad"}`}>
+                            {product.PriceSet === "YES" ? "Yes" : "No"}
+                          </span>
+                        </td>
                         <td className="pt-num">{product.OnHand}</td>
                         <td className="pt-num">{product.UnitsSold}</td>
                         <td className="pt-num">{product.NumberOfCustomers}</td>
@@ -738,10 +850,10 @@ const PAGE_STYLES = `
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 18px 20px;
+    padding: 14px 18px;
     display: flex;
     flex-wrap: wrap;
-    gap: 14px;
+    gap: 10px 12px;
     align-items: flex-end;
     margin-bottom: 20px;
     box-shadow: 0 6px 16px rgba(31, 41, 55, 0.12);
@@ -818,12 +930,12 @@ const PAGE_STYLES = `
   }
   .pt-mode-btn {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
     background: var(--surface);
     color: var(--muted);
     border: none;
-    padding: 8px 14px;
+    padding: 7px 10px;
     cursor: pointer;
     white-space: nowrap;
   }
