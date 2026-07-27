@@ -106,7 +106,7 @@ const NavbarVertical = (props) => {
                   href="/products"
                   className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
                 >
-                  <FaBox className="me-2" /> Products
+                  <FaBox className="me-2" /> Product Master
                 </Link>
               </li>
                 <li className="nav-item mb-3">
@@ -293,7 +293,7 @@ const NavbarVertical = (props) => {
                         href="/products"
                         className={`nav-link d-flex align-items-center ${router === "/products" ? "active" : ""}`}
                       >
-                        <FaBox className="me-2" /> Products
+                        <FaBox className="me-2" /> Product Master
                       </Link>
                     </li>
                     <li className="nav-item mb-3">
@@ -301,9 +301,17 @@ const NavbarVertical = (props) => {
                         href="/catalyst-pricing"
                         className={`nav-link d-flex align-items-center ${router === "/catalyst-pricing" ? "active" : ""}`}
                       >
-                        <FaBox className="me-2" /> Catalyst Pricing 
+                        <FaBox className="me-2" /> Catalyst Pricing
                       </Link>
                     </li>
+                    {/* <li className="nav-item mb-3">
+                      <Link
+                        href="/products/fd-cell-catalogue"
+                        className={`nav-link d-flex align-items-center ${router === "/products/fd-cell-catalogue" ? "active" : ""}`}
+                      >
+                        <FaBox className="me-2" /> FD Cell Catalogue
+                      </Link>
+                    </li> */}
                   </ul>
                 </Accordion.Collapse>
               </>

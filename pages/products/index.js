@@ -43,7 +43,7 @@ useEffect(() => {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc", category = "" } = router.query;
+      const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc", category = "", webDisplay = "", priceSet = "" } = router.query;
       // Determine protocol: this example assumes HTTPS
       const host = window.location.host;
       const apiUrl = `https://${host}/api/products`;
@@ -57,7 +57,7 @@ useEffect(() => {
       }
 
       const res = await fetch(
-        `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}&category=${encodeURIComponent(category)}`,
+        `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}&category=${encodeURIComponent(category)}&webDisplay=${webDisplay}&priceSet=${priceSet}`,
         { headers }
       );
 
@@ -112,7 +112,7 @@ useEffect(() => {
 
 // Static SEO properties for ProductsPage
 ProductsPage.seo = {
-  title: "Products | Density",
+  title: "Product Master | Density",
   description: "View and manage all your products.",
   keywords: "products, density",
 };
@@ -127,6 +127,8 @@ export async function getServerSideProps(context) {
     sortDir = "asc",
     status = "all",
     category = "",
+    webDisplay = "",
+    priceSet = "",
   } = context.query;
 
   const protocol = context.req.headers["x-forwarded-proto"] || "http";
@@ -143,7 +145,7 @@ export async function getServerSideProps(context) {
     }
 
     const res = await fetch(
-      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}&category=${encodeURIComponent(category)}`,
+      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}&category=${encodeURIComponent(category)}&webDisplay=${webDisplay}&priceSet=${priceSet}`,
       { headers }
     );
 
