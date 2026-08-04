@@ -304,6 +304,14 @@ const NavbarVertical = (props) => {
                         <FaBox className="me-2" /> Catalyst Pricing
                       </Link>
                     </li>
+                    <li className="nav-item mb-3">
+                      <Link
+                        href="/products/energy-seal"
+                        className={`nav-link d-flex align-items-center ${router === "/products/energy-seal" ? "active" : ""}`}
+                      >
+                        <FaBox className="me-2" /> Energy Seal
+                      </Link>
+                    </li>
                     {/* <li className="nav-item mb-3">
                       <Link
                         href="/products/fd-cell-catalogue"
