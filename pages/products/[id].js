@@ -396,7 +396,12 @@ export default function ProductDetails({ initialProduct, initialKpiData, initial
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      datalabels: { display: false },
+      // `false` fully disables the globally-registered chartjs-plugin-datalabels
+      // for this chart instance — `{ display: false }` only hides the labels but
+      // still runs the plugin's beforeUpdate/afterDatasetsDraw hooks against this
+      // chart's dataset, which crashes when the dataset shape doesn't match what
+      // the plugin expects (Cannot read properties of undefined reading '_labels').
+      datalabels: false,
       legend: { position: 'top' },
       tooltip: {
         callbacks: {
@@ -561,7 +566,11 @@ export default function ProductDetails({ initialProduct, initialKpiData, initial
           {fySalesTrend.length > 0 ? (
             <>
               <div className="pd-chart-card">
-                <Bar data={salesTrendChartData} options={salesTrendChartOptions} />
+                <Bar
+                  key={`${product.ItemCode}-${selectedFy}`}
+                  data={salesTrendChartData}
+                  options={salesTrendChartOptions}
+                />
               </div>
               <div className="pd-table-card">
                 <div className="pd-table-scroll">
