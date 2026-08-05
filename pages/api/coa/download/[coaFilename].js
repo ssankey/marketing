@@ -19,10 +19,13 @@ export default async function handler(req, res) {
     headers: req.headers
   });
 
-  // Validate request
-  if (req.method !== 'GET') {
+  // Validate request — also accept HEAD, used by the client to check COA
+  // availability before showing the download button, without transferring the file.
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
+
+  const isHead = req.method === 'HEAD';
 
   if (!coaFilename) {
     console.error('No COA filename provided');
@@ -85,9 +88,19 @@ export default async function handler(req, res) {
         
         // Check read permissions
         await fs.promises.access(filePath, fs.constants.R_OK);
+
+        if (isHead) {
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Length', stats.size);
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+          return res.status(200).end();
+        }
+
         fileData = await readFile(filePath);
         console.log('Successfully read file, size:', fileData.length);
-        
+
       } catch (err) {
         console.error('Windows file access error:', {
           code: err.code,
@@ -119,13 +132,30 @@ export default async function handler(req, res) {
         });
         
         await fs.promises.access(filePath, fs.constants.R_OK);
+
+        if (isHead) {
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Length', stats.size);
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Access-Control-Allow-Origin', '*');
+          res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
+          return res.status(200).end();
+        }
+
         fileData = await readFile(filePath);
         console.log('Successfully read from mounted path, size:', fileData.length);
-        
+
       } catch (err) {
         console.log('Mounted path failed:', err.message);
+
+        if (isHead) {
+          // Don't fall through to the smbclient download just to answer a HEAD
+          // existence check — the mounted-path miss is enough to say "not found".
+          return res.status(404).json({ message: 'COA file not found or not accessible', path: filePath });
+        }
+
         console.log('Trying smbclient approach');
-        
+
         // Fallback to smbclient if available
         try {
           const networkPath = `//172.50.10.9/SAP-Attachments/Attachment/${safeFilename}`;
@@ -204,7 +234,7 @@ export default async function handler(req, res) {
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
 
     console.log('Sending PDF file, size:', fileData.length);
     return res.send(fileData);

@@ -2,13 +2,17 @@
 // This handles Energy COA downloads by proxying the external URL
 
 export default async function handler(req, res) {
-    if (req.method !== 'GET') {
+    // Also accept HEAD — used by the client to check COA availability before
+    // showing the download button, without proxying the full file body.
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    const isHead = req.method === 'HEAD';
+
     try {
         const { params } = req.query;
-        
+
         if (!params || !Array.isArray(params)) {
             return res.status(400).json({ error: 'Invalid parameters' });
         }
@@ -16,7 +20,7 @@ export default async function handler(req, res) {
         // Reconstruct the Energy COA URL from parameters
         // Expected format: /api/coa/download-energy/ItemCode/BatchNumber
         const [itemCode, batchNumber] = params;
-        
+
         if (!itemCode || !batchNumber) {
             return res.status(400).json({ error: 'Missing itemCode or batchNumber' });
         }
@@ -24,12 +28,24 @@ export default async function handler(req, res) {
         // Construct the Energy COA URL
         const baseItemCode = itemCode.split('-')[0]; // Get the part before first dash
         const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${baseItemCode}_${batchNumber}.pdf`;
-        
+
+        if (isHead) {
+            // The upstream OSS bucket supports HEAD directly — no need to pull the
+            // PDF through this proxy just to answer an availability check.
+            const headResponse = await fetch(energyUrl, { method: 'HEAD' });
+            if (!headResponse.ok) {
+                return res.status(404).json({ error: 'COA not found' });
+            }
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Cache-Control', 'no-cache');
+            return res.status(200).end();
+        }
+
         console.log(`Proxying Energy COA: ${energyUrl}`);
 
         // Fetch the PDF from Energy URL
         const response = await fetch(energyUrl);
-        
+
         if (!response.ok) {
             if (response.status === 404) {
                 return res.status(404).json({ error: 'COA not found' });
