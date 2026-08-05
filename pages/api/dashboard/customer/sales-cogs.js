@@ -1,31 +1,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import sql from "mssql";
 import { queryDatabase } from "../../../../lib/db";
 

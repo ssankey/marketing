@@ -1,410 +1,290 @@
 
-
-
-// import { verify } from "jsonwebtoken";
-// import sql from "mssql";
-// import { queryDatabase } from "../../lib/db";
-// import { getCache, setCache } from "../../lib/redis";
-
-// export default async function handler(req, res) {
-//   try {
-//     const { year, slpCode, itmsGrpCod, itemCode } = req.query;
-//     const authHeader = req.headers.authorization;
-
-//     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-//       return res.status(401).json({
-//         error: "Missing or malformed Authorization header",
-//         received: authHeader,
-//       });
-//     }
-
-//     const token = authHeader.split(" ")[1];
-//     let decoded;
-
-//     try {
-//       decoded = verify(token, process.env.JWT_SECRET);
-//     } catch (verifyError) {
-//       console.error("Token verification failed:", verifyError);
-//       return res.status(401).json({ error: "Token verification failed" });
-//     }
-
-//     // Create a unique cache key based on query parameters and user permissions
-//     const userIdentifier = decoded.isAdmin
-//       ? "admin"
-//       : decoded.cardCodes?.join("-") || "noCards";
-//     const cacheKey = `sales-data:${userIdentifier}:${year || "all"}:${
-//       slpCode || "all"
-//     }:${itmsGrpCod || "all"}:${itemCode || "all"}`;
-
-//     // Try to get data from cache first
-//     const cachedResult = await getCache(cacheKey);
-//     if (cachedResult) {
-//       return res.status(200).json(cachedResult);
-//     }
-
-//     let baseQuery = `
-//             SELECT 
-//                 DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)),2) AS [Month-Year],
-//                 YEAR(T0.DocDate) AS year,
-//                 MONTH(T0.DocDate) AS monthNumber,
-//                 ROUND(SUM(
-//                     CASE 
-//                         WHEN T1.InvQty = 0 THEN T1.LineTotal
-//                         WHEN T4.Quantity IS NULL THEN T1.LineTotal
-//                         ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-//                     END
-//                 ), 2) AS TotalSales,
-//                 ROUND(SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0)), 2) AS TotalCOGS,
-//                 ROUND(CASE 
-//                     WHEN SUM(
-//                         CASE 
-//                             WHEN T1.InvQty = 0 THEN T1.LineTotal
-//                             WHEN T4.Quantity IS NULL THEN T1.LineTotal
-//                             ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-//                         END
-//                     ) = 0 THEN 0
-//                     ELSE 
-//                         ((SUM(
-//                             CASE 
-//                                 WHEN T1.InvQty = 0 THEN T1.LineTotal
-//                                 WHEN T4.Quantity IS NULL THEN T1.LineTotal
-//                                 ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-//                             END
-//                         ) - SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0))) * 100.0 
-//                         / SUM(
-//                             CASE 
-//                                 WHEN T1.InvQty = 0 THEN T1.LineTotal
-//                                 WHEN T4.Quantity IS NULL THEN T1.LineTotal
-//                                 ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-//                             END
-//                         ))
-//                 END, 2) AS GrossMarginPct
-//             FROM OINV T0
-//             INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-//             LEFT JOIN DLN1 T2 
-//                 ON T2.ItemCode = T1.ItemCode 
-//                 AND T2.DocEntry = T1.BaseEntry 
-//                 AND T1.BaseType = 15 
-//                 AND T1.BaseLine = T2.LineNum
-//             LEFT JOIN ODLN T3 
-//                 ON T3.DocEntry = T2.DocEntry
-//             LEFT JOIN IBT1 T4 
-//                 ON T4.BsDocType = 17 
-//                 AND T4.CardCode = T3.CardCode 
-//                 AND T4.ItemCode = T2.ItemCode 
-//                 AND T4.BaseNum = T3.DocNum 
-//                 AND T4.BaseEntry = T3.DocEntry 
-//                 AND T4.BaseType = 15 
-//                 AND T4.BaseLinNum = T2.LineNum 
-//                 AND T4.Direction = 1
-//             INNER JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-//             INNER JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-//             WHERE T0.CANCELED = 'N'
-//         `;
-
-//     let whereClauses = [];
-//     let params = [];
-
-//     if (decoded.role !== "admin") {
-//       if (decoded.cardCodes && decoded.cardCodes.length > 0) {
-//         whereClauses.push(
-//           `T0.CardCode IN (${decoded.cardCodes
-//             .map((_, i) => `@cardCode${i}`)
-//             .join(", ")})`
-//         );
-//         decoded.cardCodes.forEach((cardCode, i) => {
-//           params.push({
-//             name: `cardCode${i}`,
-//             type: sql.VarChar,
-//             value: cardCode,
-//           });
-//         });
-//       } else if (decoded.contactCodes && decoded.contactCodes.length > 0) {
-//         whereClauses.push(
-//           `T0.SlpCode IN (${decoded.contactCodes
-//             .map((_, i) => `@contactCode${i}`)
-//             .join(", ")})`
-//         );
-//         decoded.contactCodes.forEach((contactCode, i) => {
-//           params.push({
-//             name: `contactCode${i}`,
-//             type: sql.Int,
-//             value: parseInt(contactCode),
-//           });
-//         });
-//       } else {
-//         return res
-//           .status(403)
-//           .json({ error: "No access: cardCodes or contactCodes not provided" });
-//       }
-//     }
-
-//     if (year) {
-//       whereClauses.push(`YEAR(T0.DocDate) = @year`);
-//       params.push({ name: "year", type: sql.Int, value: parseInt(year) });
-//     }
-
-//     if (slpCode) {
-//       whereClauses.push(`T0.SlpCode = @slpCode`);
-//       params.push({ name: "slpCode", type: sql.Int, value: parseInt(slpCode) });
-//     }
-
-//     if (itmsGrpCod) {
-//       whereClauses.push(`T6.ItmsGrpNam = @itmsGrpCod`);
-//       params.push({ name: "itmsGrpCod", type: sql.VarChar, value: itmsGrpCod });
-//     }
-
-//     if (itemCode) {
-//       whereClauses.push(`T5.ItemCode = @itemCode`);
-//       params.push({ name: "itemCode", type: sql.VarChar, value: itemCode });
-//     }
-
-//     if (whereClauses.length > 0) {
-//       baseQuery += ` AND ` + whereClauses.join(" AND ");
-//     }
-
-//     const fullQuery = `
-//             ${baseQuery}
-//             GROUP BY DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)),2),
-//                      YEAR(T0.DocDate), MONTH(T0.DocDate)
-//             ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate)
-//         `;
-
-//     const results = await queryDatabase(fullQuery, params);
-//     const data = results.map((row) => ({
-//       monthYear: row["Month-Year"],
-//       year: row.year,
-//       monthNumber: row.monthNumber,
-//       totalSales: parseFloat(row.TotalSales) || 0,
-//       totalCogs: parseFloat(row.TotalCOGS) || 0,
-//       grossMarginPct: parseFloat(row.GrossMarginPct) || 0,
-//     }));
-
-//     // Use cached years if available, otherwise fetch them
-//     const yearsCacheKey = "sales-data:available-years";
-//     let availableYears = await getCache(yearsCacheKey);
-
-//     if (!availableYears) {
-//       const yearsQuery = `
-//                 SELECT DISTINCT YEAR(DocDate) as year
-//                 FROM OINV
-//                 WHERE CANCELED = 'N'
-//                 ORDER BY year DESC
-//             `;
-//       const yearsResult = await queryDatabase(yearsQuery);
-//       availableYears = yearsResult.map((row) => row.year);
-
-//       // Cache the years for a longer period (24 hours) as they don't change frequently
-//       await setCache(yearsCacheKey, availableYears, 86400);
-//     }
-
-//     const responseData = { data, availableYears };
-
-//     // Cache the response data for 30 minutes
-//     // Sales data can change but 30 minutes is typically a good balance
-//     await setCache(cacheKey, responseData, 1800);
-
-//     return res.status(200).json(responseData);
-//   } catch (error) {
-//     console.error("API handler error:", error);
-//     return res.status(500).json({
-//       error: "Internal server error",
-//       details:
-//         process.env.NODE_ENV === "development" ? error.message : undefined,
-//     });
-//   }
-// }
-
+// pages/api/sales-cogs.js
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
 import { queryDatabase } from "../../lib/db";
 import { getCache, setCache } from "../../lib/redis";
 
+// Helper: parse a query param that may appear multiple times
+// e.g. ?slpCode=1&slpCode=2  →  [1, 2]
+const getMulti = (query, key) => {
+  const val = query[key];
+  if (!val) return [];
+  return Array.isArray(val) ? val : [val];
+};
+
 export default async function handler(req, res) {
   try {
-    const { year, slpCode, itmsGrpCod, itemCode } = req.query;
+    const {
+      year,
+    } = req.query;
+
+    // ── Multi-value params ──────────────────────────────────
+    const slpCodes    = getMulti(req.query, 'slpCode');
+    const cntctCodes  = getMulti(req.query, 'cntctCode');
+    const itmsGrpNams = getMulti(req.query, 'itmsGrpNam');  // category NAME not code
+    const itemCodes   = getMulti(req.query, 'itemCode');
+    const cardCodes   = getMulti(req.query, 'cardCode');
+
+    // ── Auth ────────────────────────────────────────────────
     const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        error: "Missing or malformed Authorization header",
-        received: authHeader,
-      });
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or malformed Authorization header" });
     }
-
     const token = authHeader.split(" ")[1];
     let decoded;
-
     try {
       decoded = verify(token, process.env.JWT_SECRET);
-    } catch (verifyError) {
-      console.error("Token verification failed:", verifyError);
+    } catch (e) {
+      console.error("Token verification failed:", e);
       return res.status(401).json({ error: "Token verification failed" });
     }
 
-    const isAdmin = decoded.role === "admin";
-    const contactCodes = decoded.contactCodes || [];
-    const cardCodes = decoded.cardCodes || [];
+    const isAdmin          = decoded.role === "admin";
+    const is3ASenrise      = decoded.role === "3ASenrise";
+    const tokenContactCodes = decoded.contactCodes || [];
+    const tokenCardCodes    = decoded.cardCodes    || [];
+    const filterByCategory  = decoded.filterByCategory || false;
+    const category          = decoded.category || "";
 
+    // ── Cache key ───────────────────────────────────────────
     const userIdentifier = isAdmin
       ? "admin"
-      : contactCodes.length
-      ? contactCodes.join("-")
-      : cardCodes.join("-");
-    const cacheKey = `sales-data:${userIdentifier}:${year || "all"}:${
-      slpCode || "all"
-    }:${itmsGrpCod || "all"}:${itemCode || "all"}`;
+      : is3ASenrise
+      ? `3ASenrise-${category}`
+      : tokenContactCodes.length
+      ? tokenContactCodes.join("-")
+      : tokenCardCodes.join("-");
 
-    const cachedResult = await getCache(cacheKey);
-    if (cachedResult) {
-      return res.status(200).json(cachedResult);
+    const cacheKey = [
+      "sales-data",
+      userIdentifier,
+      year || "all",
+      slpCodes.join(",")    || "all",
+      cardCodes.join(",")   || "all",
+      cntctCodes.join(",")  || "all",
+      itmsGrpNams.join(",") || "all",
+      itemCodes.join(",")   || "all",
+    ].join(":");
+
+    const cached = await getCache(cacheKey);
+    if (cached) return res.status(200).json(cached);
+
+    // ── WHERE clauses ───────────────────────────────────────
+    const whereClauses = ["T0.CANCELED = 'N'"];
+    const params = [];
+
+    const EXCLUDED_INVOICE_DOCNUMS = [
+      26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574,
+      26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894,
+      26212898, 26212899,
+    ];
+    if (EXCLUDED_INVOICE_DOCNUMS.length > 0) {
+      whereClauses.push(`T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(",")})`);
     }
 
-    let baseQuery = `
-      SELECT 
-          DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)),2) AS [Month-Year],
-          YEAR(T0.DocDate) AS year,
-          MONTH(T0.DocDate) AS monthNumber,
-          ROUND(SUM(
-              CASE 
-                  WHEN T1.InvQty = 0 THEN T1.LineTotal
-                  WHEN T4.Quantity IS NULL THEN T1.LineTotal
-                  ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-              END
-          ), 2) AS TotalSales,
-          ROUND(SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0)), 2) AS TotalCOGS,
-          ROUND(CASE 
-              WHEN SUM(
-                  CASE 
-                      WHEN T1.InvQty = 0 THEN T1.LineTotal
-                      WHEN T4.Quantity IS NULL THEN T1.LineTotal
-                      ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-                  END
-              ) = 0 THEN 0
-              ELSE 
-                  ((SUM(
-                      CASE 
-                          WHEN T1.InvQty = 0 THEN T1.LineTotal
-                          WHEN T4.Quantity IS NULL THEN T1.LineTotal
-                          ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-                      END
-                  ) - SUM(T1.GrossBuyPr * ISNULL(T4.Quantity, 0))) * 100.0 
-                  / SUM(
-                      CASE 
-                          WHEN T1.InvQty = 0 THEN T1.LineTotal
-                          WHEN T4.Quantity IS NULL THEN T1.LineTotal
-                          ELSE ((T1.LineTotal / T1.InvQty) * T4.Quantity)
-                      END
-                  ))
-          END, 2) AS GrossMarginPct
-      FROM OINV T0
-      INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-      LEFT JOIN DLN1 T2 
-          ON T2.ItemCode = T1.ItemCode 
-          AND T2.DocEntry = T1.BaseEntry 
-          AND T1.BaseType = 15 
-          AND T1.BaseLine = T2.LineNum
-      LEFT JOIN ODLN T3 
-          ON T3.DocEntry = T2.DocEntry
-      LEFT JOIN IBT1 T4 
-          ON T4.BsDocType = 17 
-          AND T4.CardCode = T3.CardCode 
-          AND T4.ItemCode = T2.ItemCode 
-          AND T4.BaseNum = T3.DocNum 
-          AND T4.BaseEntry = T3.DocEntry 
-          AND T4.BaseType = 15 
-          AND T4.BaseLinNum = T2.LineNum 
-          AND T4.Direction = 1
-      INNER JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-      INNER JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-      WHERE T0.CANCELED = 'N'
-    `;
-
-    let whereClauses = [];
-    let params = [];
-
+    // Role-based scoping
     if (!isAdmin) {
-      if (contactCodes.length > 0) {
-        whereClauses.push(
-          `T0.SlpCode IN (${contactCodes.map((code) => `'${code}'`).join(",")})`
-        );
-      } else if (cardCodes.length > 0) {
-        whereClauses.push(
-          `T0.CardCode IN (${cardCodes.map((code) => `'${code}'`).join(",")})`
-        );
+      if (is3ASenrise && filterByCategory && category) {
+        whereClauses.push(`T6.ItmsGrpNam = @tokenCategory`);
+        params.push({ name: "tokenCategory", type: sql.VarChar, value: category });
+      } else if (tokenContactCodes.length > 0) {
+        whereClauses.push(`T0.SlpCode IN (${tokenContactCodes.map(c => `'${c}'`).join(",")})`);
+      } else if (tokenCardCodes.length > 0) {
+        whereClauses.push(`T0.CardCode IN (${tokenCardCodes.map(c => `'${c}'`).join(",")})`);
       } else {
-        return res
-          .status(403)
-          .json({ error: "No access: cardCodes or contactCodes not provided" });
+        return res.status(403).json({ error: "No access: contactCodes or cardCodes not in token" });
       }
     }
 
+    // Year filter
     if (year) {
       whereClauses.push(`YEAR(T0.DocDate) = @year`);
       params.push({ name: "year", type: sql.Int, value: parseInt(year) });
     }
 
-    if (slpCode) {
-      whereClauses.push(`T0.SlpCode = @slpCode`);
-      params.push({ name: "slpCode", type: sql.Int, value: parseInt(slpCode) });
+    // ── Multi-value filter helpers ──
+    // Admin-only slpCode filter (sales_person scoped via token above)
+    if (isAdmin && slpCodes.length > 0) {
+      whereClauses.push(`T0.SlpCode IN (${slpCodes.map(c => `'${c}'`).join(",")})`);
     }
 
-    if (itmsGrpCod) {
-      whereClauses.push(`T6.ItmsGrpNam = @itmsGrpCod`);
-      params.push({ name: "itmsGrpCod", type: sql.VarChar, value: itmsGrpCod });
+    if (cntctCodes.length > 0) {
+      whereClauses.push(`T0.CntctCode IN (${cntctCodes.map(c => `'${c}'`).join(",")})`);
     }
 
-    if (itemCode) {
-      whereClauses.push(`T5.ItemCode = @itemCode`);
-      params.push({ name: "itemCode", type: sql.VarChar, value: itemCode });
+    // Category by NAME (ItmsGrpNam) — multi
+    if (itmsGrpNams.length > 0) {
+      const escaped = itmsGrpNams.map(n => `'${n.replace(/'/g, "''")}'`).join(",");
+      whereClauses.push(`T6.ItmsGrpNam IN (${escaped})`);
     }
 
-    if (whereClauses.length > 0) {
-      baseQuery += ` AND ` + whereClauses.join(" AND ");
+    // Product — multi
+    if (itemCodes.length > 0) {
+      const escaped = itemCodes.map(c => `'${c.replace(/'/g, "''")}'`).join(",");
+      whereClauses.push(`T5.ItemCode IN (${escaped})`);
     }
 
-    const fullQuery = `
-      ${baseQuery}
-      GROUP BY DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)),2),
-               YEAR(T0.DocDate), MONTH(T0.DocDate)
-      ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate)
+    // Customer — multi
+    if (cardCodes.length > 0) {
+      const escaped = cardCodes.map(c => `'${c.replace(/'/g, "''")}'`).join(",");
+      whereClauses.push(`T0.CardCode IN (${escaped})`);
+    }
+
+    // IssReason only for OINV
+    whereClauses.push(`T0.[IssReason] <> '4'`);
+
+    const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
+    console.log("DEBUG whereSQL:", whereSQL);
+
+
+    // Order WHERE — same minus IssReason
+    const orderWhereClauses = whereClauses.filter(c => !c.includes("IssReason"));
+    const orderWhereSQL = orderWhereClauses.length ? `WHERE ${orderWhereClauses.join(" AND ")}` : "";
+
+    // ── Query 1: Sales + COGS + GM% ─────────────────────────
+    const salesQuery = `
+      SELECT
+        DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
+        YEAR(T0.DocDate)  AS year,
+        MONTH(T0.DocDate) AS monthNumber,
+        SUM(T1.LineTotal) AS TotalSales,
+        SUM(T1.GrossBuyPr * T1.Quantity) AS TotalCOGS,
+        CASE
+          WHEN SUM(T1.LineTotal) = 0 THEN 0
+          ELSE ROUND(((SUM(T1.LineTotal) - SUM(T1.GrossBuyPr * T1.Quantity)) * 100.0) / SUM(T1.LineTotal), 2)
+        END AS GrossMarginPct
+      FROM OINV T0
+      JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+      LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+      LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+      ${whereSQL}
+      GROUP BY
+        DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2),
+        YEAR(T0.DocDate), MONTH(T0.DocDate)
+      ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate);
     `;
 
-    const results = await queryDatabase(fullQuery, params);
-    const data = results.map((row) => ({
-      monthYear: row["Month-Year"],
-      year: row.year,
-      monthNumber: row.monthNumber,
-      totalSales: parseFloat(row.TotalSales) || 0,
-      totalCogs: parseFloat(row.TotalCOGS) || 0,
-      grossMarginPct: parseFloat(row.GrossMarginPct) || 0,
-    }));
+    // ── Query 2: Invoice line count ──────────────────────────
+    const invoiceCountQuery = `
+      SELECT
+        DATENAME(MONTH, H.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(H.DocDate)), 2) AS [Month-Year],
+        COUNT(*) AS InvoiceCount
+      FROM INV1 L
+      JOIN OINV H ON L.DocEntry = H.DocEntry
+      JOIN OITM I ON L.ItemCode = I.ItemCode
+      JOIN OITB B ON I.ItmsGrpCod = B.ItmsGrpCod
+      ${whereSQL.replace(/T0/g, "H").replace(/T5/g, "I").replace(/T6/g, "B")}
+      GROUP BY
+        DATENAME(MONTH, H.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(H.DocDate)), 2),
+        YEAR(H.DocDate), MONTH(H.DocDate);
+    `;
 
+    // ── Query 3: Order value ─────────────────────────────────
+    const hasItemOrCat = itemCodes.length > 0 || itmsGrpNams.length > 0 ||
+      (is3ASenrise && filterByCategory && category);
+
+    const orderValueQuery = hasItemOrCat
+      ? `
+        SELECT
+          DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
+          YEAR(T0.DocDate)  AS year,
+          MONTH(T0.DocDate) AS monthNumber,
+          SUM(T1.LineTotal) AS TotalOrderValue
+        FROM ORDR T0
+        JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
+        JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+        JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        ${orderWhereSQL}
+        GROUP BY
+          DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2),
+          YEAR(T0.DocDate), MONTH(T0.DocDate)
+        ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate);
+      `
+      : `
+        SELECT [Month-Year], year, monthNumber, SUM(TotalOrderValue) AS TotalOrderValue
+        FROM (
+          SELECT DISTINCT
+            DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
+            YEAR(T0.DocDate)  AS year,
+            MONTH(T0.DocDate) AS monthNumber,
+            T0.DocEntry,
+            T0.DocTotal - T0.VatSum AS TotalOrderValue
+          FROM ORDR T0
+          ${orderWhereSQL}
+        ) AS F
+        GROUP BY [Month-Year], year, monthNumber
+        ORDER BY year, monthNumber;
+      `;
+
+    // ── Run in parallel ──────────────────────────────────────
+    const [salesRes, invoiceRes, orderRes] = await Promise.all([
+      queryDatabase(salesQuery, params),
+      queryDatabase(invoiceCountQuery, params),
+      queryDatabase(orderValueQuery, params),
+    ]);
+
+    // ── Merge ────────────────────────────────────────────────
+    const salesMap = {};
+    salesRes.forEach(r => {
+      salesMap[r["Month-Year"]] = {
+        monthYear: r["Month-Year"], year: r.year, monthNumber: r.monthNumber,
+        totalSales: parseFloat(r.TotalSales) || 0,
+        totalCogs:  parseFloat(r.TotalCOGS)  || 0,
+        grossMarginPct: parseFloat(r.GrossMarginPct) || 0,
+      };
+    });
+
+    const invoiceMap = {};
+    invoiceRes.forEach(r => {
+      invoiceMap[r["Month-Year"]] = { invoiceCount: parseInt(r.InvoiceCount) || 0 };
+    });
+
+    const orderMap = {};
+    orderRes.forEach(r => {
+      orderMap[r["Month-Year"]] = {
+        year: r.year, monthNumber: r.monthNumber,
+        orderValue: parseFloat(r.TotalOrderValue) || 0,
+      };
+    });
+
+    const allKeys = new Set([
+      ...Object.keys(salesMap),
+      ...Object.keys(invoiceMap),
+      ...Object.keys(orderMap),
+    ]);
+
+    const data = Array.from(allKeys).map(key => ({
+      monthYear:      key,
+      year:           salesMap[key]?.year        ?? orderMap[key]?.year        ?? null,
+      monthNumber:    salesMap[key]?.monthNumber  ?? orderMap[key]?.monthNumber ?? null,
+      totalSales:     salesMap[key]?.totalSales     || 0,
+      totalCogs:      salesMap[key]?.totalCogs      || 0,
+      grossMarginPct: salesMap[key]?.grossMarginPct || 0,
+      invoiceCount:   invoiceMap[key]?.invoiceCount  || 0,
+      orderValue:     orderMap[key]?.orderValue      || 0,
+    })).sort((a, b) => a.year !== b.year ? a.year - b.year : a.monthNumber - b.monthNumber);
+
+    // ── Available years ──────────────────────────────────────
     const yearsCacheKey = "sales-data:available-years";
     let availableYears = await getCache(yearsCacheKey);
-
     if (!availableYears) {
-      const yearsQuery = `
-        SELECT DISTINCT YEAR(DocDate) as year
-        FROM OINV
-        WHERE CANCELED = 'N'
-        ORDER BY year DESC
-      `;
-      const yearsResult = await queryDatabase(yearsQuery);
-      availableYears = yearsResult.map((row) => row.year);
+      const yr = await queryDatabase(`
+        SELECT DISTINCT YEAR(DocDate) AS year FROM OINV WHERE CANCELED = 'N' ORDER BY year DESC;
+      `);
+      availableYears = yr.map(r => r.year);
       await setCache(yearsCacheKey, availableYears, 86400);
     }
 
     const responseData = { data, availableYears };
     await setCache(cacheKey, responseData, 1800);
-
     return res.status(200).json(responseData);
+
   } catch (error) {
     console.error("API handler error:", error);
     return res.status(500).json({
       error: "Internal server error",
-      details:
-        process.env.NODE_ENV === "development" ? error.message : undefined,
+      details: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 }

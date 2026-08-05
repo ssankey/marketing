@@ -1,0 +1,61 @@
+// utils/brandwise/constants.js
+export const FINANCIAL_YEARS = ["Complete", "FY 2024-25", "FY 2025-26"];
+
+export const SALES_PERSONS = [
+  { code: "21", name: "Aditya Deshpande" },
+  { code: "22", name: "Ashish Tripathi" },
+  { code: "20", name: "Ashwani Sharma" },
+  { code: "1", name: "Bhavani Shanker" },
+  { code: "6", name: "Christy Samuel" },
+  { code: "12", name: "Dr. Prashant Kadam" },
+  { code: "18", name: "Hemanth V" },
+  { code: "3", name: "J Dinesh kumar" },
+  { code: "13", name: "Jagadish Naidu M" },
+  { code: "14", name: "Kamal Kurra" },
+  { code: "8", name: "Mahesh Shegar" },
+  { code: "11", name: "Maneesh S" },
+  { code: "-1", name: "-No Sales Employee-" },
+  { code: "7", name: "Pratik Patil" },
+  { code: "17", name: "Pratiksha Dabhane" },
+  { code: "16", name: "R Kalyan Babu" },
+  { code: "10", name: "Raghu B" },
+  { code: "2", name: "RAMAKRISHNAN SUNDARAM" },
+  { code: "15", name: "Ravindra Patil" },
+  { code: "5", name: "Saroj Kumar Purohit" },
+  { code: "4", name: "Satish Nagaraj" },
+  { code: "9", name: "Shafique" },
+];
+
+export const REGIONS = [
+  "Overseas",
+  "Central",
+  "South",
+  "West 1",
+  "North",
+  "West 2",
+  "East",
+];
+
+export const STATES = [
+  "Overseas",
+  "Telangana",
+  "Maharashtra",
+  "Tamil Nadu",
+  "Uttar Pradesh",
+  "Gujarat",
+  "Karnataka",
+  "Madhya Pradesh",
+  "West Bengal",
+  "Delhi",
+  "Goa",
+  "Andhra Pradesh",
+  "Punjab",
+  "Haryana",
+  "Rajasthan",
+  "Jharkhand",
+  "Kerala",
+  "Uttarakhand",
+  "Assam",
+  "Himachal Pradesh",
+  "Chandigarh",
+];
