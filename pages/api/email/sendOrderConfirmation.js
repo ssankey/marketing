@@ -92,15 +92,12 @@
 
           // 📧 Step 4: Prepare email body
           const lineItems = details.LineItems.map((item) => {
-            let stockDisplay = item.StockStatus;
-
-            if (item.StockStatus?.toLowerCase() === "out of stock") {
-              if (item.Timeline && item.Timeline.trim() !== "") {
-                stockDisplay = item.Timeline; // use timeline if available
-              } else {
-                stockDisplay = "Out of Stock"; // fallback
-              }
-            }
+            // Timeline takes priority regardless of stock status; only fall
+            // back to the actual stock status when Timeline is missing/empty.
+            const stockDisplay =
+              item.Timeline && item.Timeline.trim() !== ""
+                ? item.Timeline
+                : item.StockStatus;
 
             const isLocalCurrency = item.Currency === "INR";
             const lineTotalDisplay = isLocalCurrency ? item.LineTotal : item.TotalFrgn;
