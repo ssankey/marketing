@@ -123,20 +123,41 @@ export default async function handler(req, res) {
 
     const query = `
       WITH CategorySales AS (
-          SELECT 
-              T4.ItmsGrpNam AS Category,
-              FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
-              SUM(INV1.LineTotal) AS Amount
-          FROM OINV
-          INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-          INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-          INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-          WHERE OINV.CANCELED = 'N'
-          AND OINV.CardCode = @cardCode
-          ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
-          ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}
-          ${contactPerson ? 'AND OINV.CntctCode = @contactPersonCode' : ''}
-          GROUP BY T4.ItmsGrpNam, FORMAT(OINV.DocDate, 'MMM yyyy')
+          SELECT Category, MonthYear, SUM(Amount) AS Amount
+          FROM (
+              SELECT
+                  T4.ItmsGrpNam AS Category,
+                  FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
+                  INV1.LineTotal AS Amount
+              FROM OINV
+              INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+              INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+              INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+              WHERE OINV.CANCELED = 'N'
+              AND OINV.CardCode = @cardCode
+              ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
+              ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}
+              ${contactPerson ? 'AND OINV.CntctCode = @contactPersonCode' : ''}
+
+              UNION ALL
+
+              -- Credit notes (ORIN/RIN1) aliased as OINV/INV1 so the same WHERE
+              -- conditions above stay valid — ORIN mirrors OINV's columns.
+              SELECT
+                  T4.ItmsGrpNam AS Category,
+                  FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
+                  -INV1.LineTotal AS Amount
+              FROM ORIN OINV
+              INNER JOIN RIN1 INV1 ON OINV.DocEntry = INV1.DocEntry
+              INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+              INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+              WHERE OINV.CANCELED = 'N'
+              AND OINV.CardCode = @cardCode
+              ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
+              ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}
+              ${contactPerson ? 'AND OINV.CntctCode = @contactPersonCode' : ''}
+          ) AS Combined
+          GROUP BY Category, MonthYear
       )
       SELECT * FROM (
           SELECT Category, MonthYear, Amount FROM CategorySales

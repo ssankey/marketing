@@ -6,16 +6,24 @@ export default async function handler(req, res) {
   try {
     const { type = "region", year = "FY 2025-26" } = req.query;
 
-    const whereClauses = ["T0.CANCELED = 'N'", "T0.[IssReason] <> '4'"];
+    // Base filters shared between the invoice branch (OINV/INV1) and the
+    // credit note branch (ORIN/RIN1) netted together in each query below.
+    const baseWhereClauses = ["T0.CANCELED = 'N'"];
 
     if (year && year !== "Complete") {
       const fyYear = parseInt(year.split(" ")[1].split("-")[0]);
-      whereClauses.push(
+      baseWhereClauses.push(
         `((YEAR(T0.DocDate) = ${fyYear} AND MONTH(T0.DocDate) >= 4) OR (YEAR(T0.DocDate) = ${fyYear + 1} AND MONTH(T0.DocDate) <= 3))`
       );
     }
 
+    // ── Invoice WHERE (OINV/INV1) — base + invoice-only IssReason ──
+    const whereClauses = [...baseWhereClauses, "T0.[IssReason] <> '4'"];
     const whereSQL = whereClauses.join(" AND ");
+
+    // ── Credit note WHERE (ORIN/RIN1) — same base filters, no IssReason ──
+    const creditNoteWhereClauses = [...baseWhereClauses];
+    const creditNoteWhereSQL = creditNoteWhereClauses.join(" AND ");
 
     let query = "";
 
@@ -23,26 +31,56 @@ export default async function handler(req, res) {
       case "category":
         query = `
           WITH CategoryData AS (
-            SELECT 
-              T6.ItmsGrpNam AS [Field],
-              SUM(CASE WHEN ISNULL(C1.Country, '') = 'IN' THEN T1.LineTotal ELSE 0 END) AS [IndiaSales],
-              SUM(CASE WHEN ISNULL(C1.Country, '') <> 'IN' THEN T1.LineTotal ELSE 0 END) AS [OverseasSales],
-              SUM(T1.LineTotal) AS [TotalSales],
-              SUM(T1.GrossBuyPr * T1.Quantity) AS [TotalCOGS],
-              SUM(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS [GrossProfit]
-            FROM OINV T0
-            JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-            JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-            JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-            JOIN OCRD C ON T0.CardCode = C.CardCode
-            OUTER APPLY (
-              SELECT TOP 1 Country
-              FROM CRD1 
-              WHERE CardCode = C.CardCode AND AdresType = 'B'
-              ORDER BY Address
-            ) AS C1
-            WHERE ${whereSQL}
-            GROUP BY T6.ItmsGrpNam
+            SELECT [Field],
+              SUM(IndiaSales) AS [IndiaSales],
+              SUM(OverseasSales) AS [OverseasSales],
+              SUM(TotalSales) AS [TotalSales],
+              SUM(TotalCOGS) AS [TotalCOGS],
+              SUM(GrossProfit) AS [GrossProfit]
+            FROM (
+              SELECT
+                T6.ItmsGrpNam AS [Field],
+                CASE WHEN ISNULL(C1.Country, '') = 'IN' THEN T1.LineTotal ELSE 0 END AS IndiaSales,
+                CASE WHEN ISNULL(C1.Country, '') <> 'IN' THEN T1.LineTotal ELSE 0 END AS OverseasSales,
+                T1.LineTotal AS TotalSales,
+                T1.GrossBuyPr * T1.Quantity AS TotalCOGS,
+                T1.LineTotal - (T1.GrossBuyPr * T1.Quantity) AS GrossProfit
+              FROM OINV T0
+              JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OCRD C ON T0.CardCode = C.CardCode
+              OUTER APPLY (
+                SELECT TOP 1 Country
+                FROM CRD1
+                WHERE CardCode = C.CardCode AND AdresType = 'B'
+                ORDER BY Address
+              ) AS C1
+              WHERE ${whereSQL}
+
+              UNION ALL
+
+              SELECT
+                T6.ItmsGrpNam AS [Field],
+                -(CASE WHEN ISNULL(C1.Country, '') = 'IN' THEN T1.LineTotal ELSE 0 END) AS IndiaSales,
+                -(CASE WHEN ISNULL(C1.Country, '') <> 'IN' THEN T1.LineTotal ELSE 0 END) AS OverseasSales,
+                -T1.LineTotal AS TotalSales,
+                -(T1.GrossBuyPr * T1.Quantity) AS TotalCOGS,
+                -(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS GrossProfit
+              FROM ORIN T0
+              JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OCRD C ON T0.CardCode = C.CardCode
+              OUTER APPLY (
+                SELECT TOP 1 Country
+                FROM CRD1
+                WHERE CardCode = C.CardCode AND AdresType = 'B'
+                ORDER BY Address
+              ) AS C1
+              WHERE ${creditNoteWhereSQL}
+            ) AS Combined
+            GROUP BY [Field]
           ),
           Total AS (
             SELECT SUM(TotalSales) AS GrandTotalSales FROM CategoryData
@@ -67,79 +105,104 @@ export default async function handler(req, res) {
       case "state":
         query = `
           WITH StateData AS (
-            SELECT 
-              CASE 
-                WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
-                WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
-                WHEN C1.State = 'AP' THEN 'Andhra Pradesh'
-                WHEN C1.State = 'AS' THEN 'Assam'
-                WHEN C1.State = 'CH' THEN 'Chandigarh'
-                WHEN C1.State = 'DL' THEN 'Delhi'
-                WHEN C1.State = 'DN' THEN 'Dadra & Nagar Haveli and Daman & Diu'
-                WHEN C1.State = 'GJ' THEN 'Gujarat'
-                WHEN C1.State = 'GO' THEN 'Goa'
-                WHEN C1.State = 'HP' THEN 'Himachal Pradesh'
-                WHEN C1.State = 'HR' THEN 'Haryana'
-                WHEN C1.State = 'JH' THEN 'Jharkhand'
-                WHEN C1.State = 'KL' THEN 'Kerala'
-                WHEN C1.State = 'KT' THEN 'Karnataka'
-                WHEN C1.State = 'ME' THEN 'Meghalaya'
-                WHEN C1.State = 'MH' THEN 'Maharashtra'
-                WHEN C1.State = 'MP' THEN 'Madhya Pradesh'
-                WHEN C1.State = 'PC' THEN 'Puducherry'
-                WHEN C1.State = 'PU' THEN 'Punjab'
-                WHEN C1.State = 'RJ' THEN 'Rajasthan'
-                WHEN C1.State = 'TE' THEN 'Telangana'
-                WHEN C1.State = 'TN' THEN 'Tamil Nadu'
-                WHEN C1.State = 'UP' THEN 'Uttar Pradesh'
-                WHEN C1.State = 'UT' THEN 'Uttarakhand'
-                WHEN C1.State = 'WB' THEN 'West Bengal'
-                ELSE 'Unknown'
-              END AS [Field],
-              SUM(T1.LineTotal) AS [TotalSales],
-              SUM(T1.GrossBuyPr * T1.Quantity) AS [TotalCOGS],
-              SUM(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS [GrossProfit]
-            FROM OINV T0
-            JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-            JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-            JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-            JOIN OCRD C ON T0.CardCode = C.CardCode
-            OUTER APPLY (
-              SELECT TOP 1 State, Country
-              FROM CRD1 
-              WHERE CardCode = C.CardCode AND AdresType = 'B'
-              ORDER BY Address
-            ) AS C1
-            WHERE ${whereSQL}
-            GROUP BY 
-              CASE 
-                WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
-                WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
-                WHEN C1.State = 'AP' THEN 'Andhra Pradesh'
-                WHEN C1.State = 'AS' THEN 'Assam'
-                WHEN C1.State = 'CH' THEN 'Chandigarh'
-                WHEN C1.State = 'DL' THEN 'Delhi'
-                WHEN C1.State = 'DN' THEN 'Dadra & Nagar Haveli and Daman & Diu'
-                WHEN C1.State = 'GJ' THEN 'Gujarat'
-                WHEN C1.State = 'GO' THEN 'Goa'
-                WHEN C1.State = 'HP' THEN 'Himachal Pradesh'
-                WHEN C1.State = 'HR' THEN 'Haryana'
-                WHEN C1.State = 'JH' THEN 'Jharkhand'
-                WHEN C1.State = 'KL' THEN 'Kerala'
-                WHEN C1.State = 'KT' THEN 'Karnataka'
-                WHEN C1.State = 'ME' THEN 'Meghalaya'
-                WHEN C1.State = 'MH' THEN 'Maharashtra'
-                WHEN C1.State = 'MP' THEN 'Madhya Pradesh'
-                WHEN C1.State = 'PC' THEN 'Puducherry'
-                WHEN C1.State = 'PU' THEN 'Punjab'
-                WHEN C1.State = 'RJ' THEN 'Rajasthan'
-                WHEN C1.State = 'TE' THEN 'Telangana'
-                WHEN C1.State = 'TN' THEN 'Tamil Nadu'
-                WHEN C1.State = 'UP' THEN 'Uttar Pradesh'
-                WHEN C1.State = 'UT' THEN 'Uttarakhand'
-                WHEN C1.State = 'WB' THEN 'West Bengal'
-                ELSE 'Unknown'
-              END
+            SELECT [Field],
+              SUM(TotalSales) AS [TotalSales],
+              SUM(TotalCOGS) AS [TotalCOGS],
+              SUM(GrossProfit) AS [GrossProfit]
+            FROM (
+              SELECT
+                CASE
+                  WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
+                  WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
+                  WHEN C1.State = 'AP' THEN 'Andhra Pradesh'
+                  WHEN C1.State = 'AS' THEN 'Assam'
+                  WHEN C1.State = 'CH' THEN 'Chandigarh'
+                  WHEN C1.State = 'DL' THEN 'Delhi'
+                  WHEN C1.State = 'DN' THEN 'Dadra & Nagar Haveli and Daman & Diu'
+                  WHEN C1.State = 'GJ' THEN 'Gujarat'
+                  WHEN C1.State = 'GO' THEN 'Goa'
+                  WHEN C1.State = 'HP' THEN 'Himachal Pradesh'
+                  WHEN C1.State = 'HR' THEN 'Haryana'
+                  WHEN C1.State = 'JH' THEN 'Jharkhand'
+                  WHEN C1.State = 'KL' THEN 'Kerala'
+                  WHEN C1.State = 'KT' THEN 'Karnataka'
+                  WHEN C1.State = 'ME' THEN 'Meghalaya'
+                  WHEN C1.State = 'MH' THEN 'Maharashtra'
+                  WHEN C1.State = 'MP' THEN 'Madhya Pradesh'
+                  WHEN C1.State = 'PC' THEN 'Puducherry'
+                  WHEN C1.State = 'PU' THEN 'Punjab'
+                  WHEN C1.State = 'RJ' THEN 'Rajasthan'
+                  WHEN C1.State = 'TE' THEN 'Telangana'
+                  WHEN C1.State = 'TN' THEN 'Tamil Nadu'
+                  WHEN C1.State = 'UP' THEN 'Uttar Pradesh'
+                  WHEN C1.State = 'UT' THEN 'Uttarakhand'
+                  WHEN C1.State = 'WB' THEN 'West Bengal'
+                  ELSE 'Unknown'
+                END AS [Field],
+                T1.LineTotal AS TotalSales,
+                T1.GrossBuyPr * T1.Quantity AS TotalCOGS,
+                T1.LineTotal - (T1.GrossBuyPr * T1.Quantity) AS GrossProfit
+              FROM OINV T0
+              JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OCRD C ON T0.CardCode = C.CardCode
+              OUTER APPLY (
+                SELECT TOP 1 State, Country
+                FROM CRD1
+                WHERE CardCode = C.CardCode AND AdresType = 'B'
+                ORDER BY Address
+              ) AS C1
+              WHERE ${whereSQL}
+
+              UNION ALL
+
+              SELECT
+                CASE
+                  WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
+                  WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
+                  WHEN C1.State = 'AP' THEN 'Andhra Pradesh'
+                  WHEN C1.State = 'AS' THEN 'Assam'
+                  WHEN C1.State = 'CH' THEN 'Chandigarh'
+                  WHEN C1.State = 'DL' THEN 'Delhi'
+                  WHEN C1.State = 'DN' THEN 'Dadra & Nagar Haveli and Daman & Diu'
+                  WHEN C1.State = 'GJ' THEN 'Gujarat'
+                  WHEN C1.State = 'GO' THEN 'Goa'
+                  WHEN C1.State = 'HP' THEN 'Himachal Pradesh'
+                  WHEN C1.State = 'HR' THEN 'Haryana'
+                  WHEN C1.State = 'JH' THEN 'Jharkhand'
+                  WHEN C1.State = 'KL' THEN 'Kerala'
+                  WHEN C1.State = 'KT' THEN 'Karnataka'
+                  WHEN C1.State = 'ME' THEN 'Meghalaya'
+                  WHEN C1.State = 'MH' THEN 'Maharashtra'
+                  WHEN C1.State = 'MP' THEN 'Madhya Pradesh'
+                  WHEN C1.State = 'PC' THEN 'Puducherry'
+                  WHEN C1.State = 'PU' THEN 'Punjab'
+                  WHEN C1.State = 'RJ' THEN 'Rajasthan'
+                  WHEN C1.State = 'TE' THEN 'Telangana'
+                  WHEN C1.State = 'TN' THEN 'Tamil Nadu'
+                  WHEN C1.State = 'UP' THEN 'Uttar Pradesh'
+                  WHEN C1.State = 'UT' THEN 'Uttarakhand'
+                  WHEN C1.State = 'WB' THEN 'West Bengal'
+                  ELSE 'Unknown'
+                END AS [Field],
+                -T1.LineTotal AS TotalSales,
+                -(T1.GrossBuyPr * T1.Quantity) AS TotalCOGS,
+                -(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS GrossProfit
+              FROM ORIN T0
+              JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OCRD C ON T0.CardCode = C.CardCode
+              OUTER APPLY (
+                SELECT TOP 1 State, Country
+                FROM CRD1
+                WHERE CardCode = C.CardCode AND AdresType = 'B'
+                ORDER BY Address
+              ) AS C1
+              WHERE ${creditNoteWhereSQL}
+            ) AS Combined
+            GROUP BY [Field]
           ),
           Total AS (
             SELECT SUM(TotalSales) AS GrandTotalSales FROM StateData
@@ -162,79 +225,104 @@ export default async function handler(req, res) {
       case "region":
         query = `
           WITH RegionData AS (
-            SELECT 
-              CASE 
-                WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
-                WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
-                WHEN C1.State = 'AP' THEN 'Central'
-                WHEN C1.State = 'AS' THEN 'East'
-                WHEN C1.State = 'CH' THEN 'North'
-                WHEN C1.State = 'DL' THEN 'North'
-                WHEN C1.State = 'DN' THEN 'West 1'
-                WHEN C1.State = 'GJ' THEN 'West 2'
-                WHEN C1.State = 'GO' THEN 'West 1'
-                WHEN C1.State = 'HP' THEN 'North'
-                WHEN C1.State = 'HR' THEN 'North'
-                WHEN C1.State = 'JH' THEN 'East'
-                WHEN C1.State = 'KL' THEN 'South'
-                WHEN C1.State = 'KT' THEN 'South'
-                WHEN C1.State = 'ME' THEN 'East'
-                WHEN C1.State = 'MH' THEN 'West 1'
-                WHEN C1.State = 'MP' THEN 'North'
-                WHEN C1.State = 'PC' THEN 'South'
-                WHEN C1.State = 'PU' THEN 'North'
-                WHEN C1.State = 'RJ' THEN 'North'
-                WHEN C1.State = 'TE' THEN 'Central'
-                WHEN C1.State = 'TN' THEN 'South'
-                WHEN C1.State = 'UP' THEN 'North'
-                WHEN C1.State = 'UT' THEN 'North'
-                WHEN C1.State = 'WB' THEN 'East'
-                ELSE 'Unknown'
-              END AS [Field],
-              SUM(T1.LineTotal) AS [TotalSales],
-              SUM(T1.GrossBuyPr * T1.Quantity) AS [TotalCOGS],
-              SUM(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS [GrossProfit]
-            FROM OINV T0
-            JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-            JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-            JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-            JOIN OCRD C ON T0.CardCode = C.CardCode
-            OUTER APPLY (
-              SELECT TOP 1 State, Country
-              FROM CRD1 
-              WHERE CardCode = C.CardCode AND AdresType = 'B'
-              ORDER BY Address
-            ) AS C1
-            WHERE ${whereSQL}
-            GROUP BY 
-              CASE 
-                WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
-                WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
-                WHEN C1.State = 'AP' THEN 'Central'
-                WHEN C1.State = 'AS' THEN 'East'
-                WHEN C1.State = 'CH' THEN 'North'
-                WHEN C1.State = 'DL' THEN 'North'
-                WHEN C1.State = 'DN' THEN 'West 1'
-                WHEN C1.State = 'GJ' THEN 'West 2'
-                WHEN C1.State = 'GO' THEN 'West 1'
-                WHEN C1.State = 'HP' THEN 'North'
-                WHEN C1.State = 'HR' THEN 'North'
-                WHEN C1.State = 'JH' THEN 'East'
-                WHEN C1.State = 'KL' THEN 'South'
-                WHEN C1.State = 'KT' THEN 'South'
-                WHEN C1.State = 'ME' THEN 'East'
-                WHEN C1.State = 'MH' THEN 'West 1'
-                WHEN C1.State = 'MP' THEN 'North'
-                WHEN C1.State = 'PC' THEN 'South'
-                WHEN C1.State = 'PU' THEN 'North'
-                WHEN C1.State = 'RJ' THEN 'North'
-                WHEN C1.State = 'TE' THEN 'Central'
-                WHEN C1.State = 'TN' THEN 'South'
-                WHEN C1.State = 'UP' THEN 'North'
-                WHEN C1.State = 'UT' THEN 'North'
-                WHEN C1.State = 'WB' THEN 'East'
-                ELSE 'Unknown'
-              END
+            SELECT [Field],
+              SUM(TotalSales) AS [TotalSales],
+              SUM(TotalCOGS) AS [TotalCOGS],
+              SUM(GrossProfit) AS [GrossProfit]
+            FROM (
+              SELECT
+                CASE
+                  WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
+                  WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
+                  WHEN C1.State = 'AP' THEN 'Central'
+                  WHEN C1.State = 'AS' THEN 'East'
+                  WHEN C1.State = 'CH' THEN 'North'
+                  WHEN C1.State = 'DL' THEN 'North'
+                  WHEN C1.State = 'DN' THEN 'West 1'
+                  WHEN C1.State = 'GJ' THEN 'West 2'
+                  WHEN C1.State = 'GO' THEN 'West 1'
+                  WHEN C1.State = 'HP' THEN 'North'
+                  WHEN C1.State = 'HR' THEN 'North'
+                  WHEN C1.State = 'JH' THEN 'East'
+                  WHEN C1.State = 'KL' THEN 'South'
+                  WHEN C1.State = 'KT' THEN 'South'
+                  WHEN C1.State = 'ME' THEN 'East'
+                  WHEN C1.State = 'MH' THEN 'West 1'
+                  WHEN C1.State = 'MP' THEN 'North'
+                  WHEN C1.State = 'PC' THEN 'South'
+                  WHEN C1.State = 'PU' THEN 'North'
+                  WHEN C1.State = 'RJ' THEN 'North'
+                  WHEN C1.State = 'TE' THEN 'Central'
+                  WHEN C1.State = 'TN' THEN 'South'
+                  WHEN C1.State = 'UP' THEN 'North'
+                  WHEN C1.State = 'UT' THEN 'North'
+                  WHEN C1.State = 'WB' THEN 'East'
+                  ELSE 'Unknown'
+                END AS [Field],
+                T1.LineTotal AS TotalSales,
+                T1.GrossBuyPr * T1.Quantity AS TotalCOGS,
+                T1.LineTotal - (T1.GrossBuyPr * T1.Quantity) AS GrossProfit
+              FROM OINV T0
+              JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OCRD C ON T0.CardCode = C.CardCode
+              OUTER APPLY (
+                SELECT TOP 1 State, Country
+                FROM CRD1
+                WHERE CardCode = C.CardCode AND AdresType = 'B'
+                ORDER BY Address
+              ) AS C1
+              WHERE ${whereSQL}
+
+              UNION ALL
+
+              SELECT
+                CASE
+                  WHEN ISNULL(C1.Country, '') <> 'IN' THEN 'Overseas'
+                  WHEN ISNULL(C1.State, '') = '' THEN 'Unknown'
+                  WHEN C1.State = 'AP' THEN 'Central'
+                  WHEN C1.State = 'AS' THEN 'East'
+                  WHEN C1.State = 'CH' THEN 'North'
+                  WHEN C1.State = 'DL' THEN 'North'
+                  WHEN C1.State = 'DN' THEN 'West 1'
+                  WHEN C1.State = 'GJ' THEN 'West 2'
+                  WHEN C1.State = 'GO' THEN 'West 1'
+                  WHEN C1.State = 'HP' THEN 'North'
+                  WHEN C1.State = 'HR' THEN 'North'
+                  WHEN C1.State = 'JH' THEN 'East'
+                  WHEN C1.State = 'KL' THEN 'South'
+                  WHEN C1.State = 'KT' THEN 'South'
+                  WHEN C1.State = 'ME' THEN 'East'
+                  WHEN C1.State = 'MH' THEN 'West 1'
+                  WHEN C1.State = 'MP' THEN 'North'
+                  WHEN C1.State = 'PC' THEN 'South'
+                  WHEN C1.State = 'PU' THEN 'North'
+                  WHEN C1.State = 'RJ' THEN 'North'
+                  WHEN C1.State = 'TE' THEN 'Central'
+                  WHEN C1.State = 'TN' THEN 'South'
+                  WHEN C1.State = 'UP' THEN 'North'
+                  WHEN C1.State = 'UT' THEN 'North'
+                  WHEN C1.State = 'WB' THEN 'East'
+                  ELSE 'Unknown'
+                END AS [Field],
+                -T1.LineTotal AS TotalSales,
+                -(T1.GrossBuyPr * T1.Quantity) AS TotalCOGS,
+                -(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS GrossProfit
+              FROM ORIN T0
+              JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OCRD C ON T0.CardCode = C.CardCode
+              OUTER APPLY (
+                SELECT TOP 1 State, Country
+                FROM CRD1
+                WHERE CardCode = C.CardCode AND AdresType = 'B'
+                ORDER BY Address
+              ) AS C1
+              WHERE ${creditNoteWhereSQL}
+            ) AS Combined
+            GROUP BY [Field]
           ),
           Total AS (
             SELECT SUM(TotalSales) AS GrandTotalSales FROM RegionData
@@ -265,18 +353,38 @@ export default async function handler(req, res) {
       case "salesperson":
         query = `
           WITH SalespersonData AS (
-            SELECT 
-              S.SlpName AS [Field],
-              SUM(T1.LineTotal) AS [TotalSales],
-              SUM(T1.GrossBuyPr * T1.Quantity) AS [TotalCOGS],
-              SUM(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS [GrossProfit]
-            FROM OINV T0
-            JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-            JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-            JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-            JOIN OSLP S ON T0.SlpCode = S.SlpCode
-            WHERE ${whereSQL}
-            GROUP BY S.SlpName
+            SELECT [Field],
+              SUM(TotalSales) AS [TotalSales],
+              SUM(TotalCOGS) AS [TotalCOGS],
+              SUM(GrossProfit) AS [GrossProfit]
+            FROM (
+              SELECT
+                S.SlpName AS [Field],
+                T1.LineTotal AS TotalSales,
+                T1.GrossBuyPr * T1.Quantity AS TotalCOGS,
+                T1.LineTotal - (T1.GrossBuyPr * T1.Quantity) AS GrossProfit
+              FROM OINV T0
+              JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OSLP S ON T0.SlpCode = S.SlpCode
+              WHERE ${whereSQL}
+
+              UNION ALL
+
+              SELECT
+                S.SlpName AS [Field],
+                -T1.LineTotal AS TotalSales,
+                -(T1.GrossBuyPr * T1.Quantity) AS TotalCOGS,
+                -(T1.LineTotal - (T1.GrossBuyPr * T1.Quantity)) AS GrossProfit
+              FROM ORIN T0
+              JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+              JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+              JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+              JOIN OSLP S ON T0.SlpCode = S.SlpCode
+              WHERE ${creditNoteWhereSQL}
+            ) AS Combined
+            GROUP BY [Field]
           ),
           Total AS (
             SELECT SUM(TotalSales) AS GrandTotalSales FROM SalespersonData

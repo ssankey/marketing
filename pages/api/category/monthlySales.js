@@ -29,7 +29,7 @@ const queries = {
 
     DECLARE @sql NVARCHAR(MAX) = '
     WITH BaseData AS (
-        SELECT OCRD.CardName AS [Customer Name], 
+        SELECT OCRD.CardName AS [Customer Name],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
                INV1.GrossBuyPr * INV1.Quantity AS COGS,
@@ -47,9 +47,30 @@ const queries = {
         }
         WHERE OINV.CANCELED = ''N''
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+
+        UNION ALL
+
+        SELECT OCRD.CardName AS [Customer Name],
+               FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
+        ${
+          categoryFilter
+            ? `
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        `
+            : ""
+        }
+        WHERE ORIN.CANCELED = ''N''
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ),
     Aggregated AS (
-        SELECT [Customer Name], 
+        SELECT [Customer Name],
                ROUND(SUM(LineTotal), 0) AS [Total Sales], 
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
@@ -146,9 +167,30 @@ const queries = {
         }
         WHERE OINV.CANCELED = ''N''
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+
+        UNION ALL
+
+        SELECT OSLP.SlpName AS [Sales Person Name],
+               FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OSLP ON ORIN.SlpCode = OSLP.SlpCode
+        ${
+          categoryFilter
+            ? `
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        `
+            : ""
+        }
+        WHERE ORIN.CANCELED = ''N''
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ),
     Aggregated AS (
-        SELECT [Sales Person Name], 
+        SELECT [Sales Person Name],
                ROUND(SUM(LineTotal), 0) AS [Total Sales], 
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
@@ -225,7 +267,7 @@ const queries = {
 
     DECLARE @sql NVARCHAR(MAX) = '
     WITH BaseData AS (
-        SELECT COALESCE(CRD1.State, ''Unknown'') AS [State], 
+        SELECT COALESCE(CRD1.State, ''Unknown'') AS [State],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
                INV1.GrossBuyPr * INV1.Quantity AS COGS,
@@ -244,9 +286,31 @@ const queries = {
         }
         WHERE OINV.CANCELED = ''N''
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+
+        UNION ALL
+
+        SELECT COALESCE(CRD1.State, ''Unknown'') AS [State],
+               FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
+        LEFT JOIN CRD1 ON OCRD.CardCode = CRD1.CardCode AND CRD1.AdresType = ''B''
+        ${
+          categoryFilter
+            ? `
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        `
+            : ""
+        }
+        WHERE ORIN.CANCELED = ''N''
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ),
     Aggregated AS (
-        SELECT [State], 
+        SELECT [State],
                ROUND(SUM(LineTotal), 0) AS [Total Sales], 
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
@@ -324,7 +388,7 @@ const queries = {
 
     DECLARE @sql NVARCHAR(MAX) = '
     WITH BaseData AS (
-        SELECT T4.ItmsGrpNam AS [Category], 
+        SELECT T4.ItmsGrpNam AS [Category],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
                INV1.GrossBuyPr * INV1.Quantity AS COGS,
@@ -334,9 +398,22 @@ const queries = {
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
         WHERE OINV.CANCELED = ''N''
+
+        UNION ALL
+
+        SELECT T4.ItmsGrpNam AS [Category],
+               FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        WHERE ORIN.CANCELED = ''N''
     ),
     Aggregated AS (
-        SELECT [Category], 
+        SELECT [Category],
                ROUND(SUM(LineTotal), 0) AS [Total Sales], 
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
