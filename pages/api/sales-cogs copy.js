@@ -71,61 +71,8 @@ export default async function handler(req, res) {
     if (cached) return res.status(200).json(cached);
 
     // ── WHERE clauses ───────────────────────────────────────
-    // Base filters shared between the invoice branch (OINV/INV1) and the
-    // credit note branch (ORIN/RIN1) of the sales/COGS UNION ALL below.
-    const baseWhereClauses = ["T0.CANCELED <> 'Y'", "T0.CANCELED <> 'C'"];
+    const whereClauses = ["T0.CANCELED = 'N'"];
     const params = [];
-
-    // Role-based scoping
-    if (!isAdmin) {
-      if (is3ASenrise && filterByCategory && category) {
-        baseWhereClauses.push(`T6.ItmsGrpNam = @tokenCategory`);
-        params.push({ name: "tokenCategory", type: sql.VarChar, value: category });
-      } else if (tokenContactCodes.length > 0) {
-        baseWhereClauses.push(`T0.SlpCode IN (${tokenContactCodes.map(c => `'${c}'`).join(",")})`);
-      } else if (tokenCardCodes.length > 0) {
-        baseWhereClauses.push(`T0.CardCode IN (${tokenCardCodes.map(c => `'${c}'`).join(",")})`);
-      } else {
-        return res.status(403).json({ error: "No access: contactCodes or cardCodes not in token" });
-      }
-    }
-
-    // Year filter
-    if (year) {
-      baseWhereClauses.push(`YEAR(T0.DocDate) = @year`);
-      params.push({ name: "year", type: sql.Int, value: parseInt(year) });
-    }
-
-    // ── Multi-value filter helpers ──
-    // Admin-only slpCode filter (sales_person scoped via token above)
-    if (isAdmin && slpCodes.length > 0) {
-      baseWhereClauses.push(`T0.SlpCode IN (${slpCodes.map(c => `'${c}'`).join(",")})`);
-    }
-
-    if (cntctCodes.length > 0) {
-      baseWhereClauses.push(`T0.CntctCode IN (${cntctCodes.map(c => `'${c}'`).join(",")})`);
-    }
-
-    // Category by NAME (ItmsGrpNam) — multi
-    if (itmsGrpNams.length > 0) {
-      const escaped = itmsGrpNams.map(n => `'${n.replace(/'/g, "''")}'`).join(",");
-      baseWhereClauses.push(`T6.ItmsGrpNam IN (${escaped})`);
-    }
-
-    // Product — multi
-    if (itemCodes.length > 0) {
-      const escaped = itemCodes.map(c => `'${c.replace(/'/g, "''")}'`).join(",");
-      baseWhereClauses.push(`T5.ItemCode IN (${escaped})`);
-    }
-
-    // Customer — multi
-    if (cardCodes.length > 0) {
-      const escaped = cardCodes.map(c => `'${c.replace(/'/g, "''")}'`).join(",");
-      baseWhereClauses.push(`T0.CardCode IN (${escaped})`);
-    }
-
-    // ── Invoice WHERE (OINV/INV1) — base filters + invoice-only exclusions ──
-    const whereClauses = [...baseWhereClauses];
 
     const EXCLUDED_INVOICE_DOCNUMS = [
       26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574,
@@ -136,64 +83,86 @@ export default async function handler(req, res) {
       whereClauses.push(`T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(",")})`);
     }
 
+    // Role-based scoping
+    if (!isAdmin) {
+      if (is3ASenrise && filterByCategory && category) {
+        whereClauses.push(`T6.ItmsGrpNam = @tokenCategory`);
+        params.push({ name: "tokenCategory", type: sql.VarChar, value: category });
+      } else if (tokenContactCodes.length > 0) {
+        whereClauses.push(`T0.SlpCode IN (${tokenContactCodes.map(c => `'${c}'`).join(",")})`);
+      } else if (tokenCardCodes.length > 0) {
+        whereClauses.push(`T0.CardCode IN (${tokenCardCodes.map(c => `'${c}'`).join(",")})`);
+      } else {
+        return res.status(403).json({ error: "No access: contactCodes or cardCodes not in token" });
+      }
+    }
+
+    // Year filter
+    if (year) {
+      whereClauses.push(`YEAR(T0.DocDate) = @year`);
+      params.push({ name: "year", type: sql.Int, value: parseInt(year) });
+    }
+
+    // ── Multi-value filter helpers ──
+    // Admin-only slpCode filter (sales_person scoped via token above)
+    if (isAdmin && slpCodes.length > 0) {
+      whereClauses.push(`T0.SlpCode IN (${slpCodes.map(c => `'${c}'`).join(",")})`);
+    }
+
+    if (cntctCodes.length > 0) {
+      whereClauses.push(`T0.CntctCode IN (${cntctCodes.map(c => `'${c}'`).join(",")})`);
+    }
+
+    // Category by NAME (ItmsGrpNam) — multi
+    if (itmsGrpNams.length > 0) {
+      const escaped = itmsGrpNams.map(n => `'${n.replace(/'/g, "''")}'`).join(",");
+      whereClauses.push(`T6.ItmsGrpNam IN (${escaped})`);
+    }
+
+    // Product — multi
+    if (itemCodes.length > 0) {
+      const escaped = itemCodes.map(c => `'${c.replace(/'/g, "''")}'`).join(",");
+      whereClauses.push(`T5.ItemCode IN (${escaped})`);
+    }
+
+    // Customer — multi
+    if (cardCodes.length > 0) {
+      const escaped = cardCodes.map(c => `'${c.replace(/'/g, "''")}'`).join(",");
+      whereClauses.push(`T0.CardCode IN (${escaped})`);
+    }
+
     // IssReason only for OINV
     whereClauses.push(`T0.[IssReason] <> '4'`);
 
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
     console.log("DEBUG whereSQL:", whereSQL);
 
-    // ── Credit note WHERE (ORIN/RIN1) — same base filters as the invoice
-    // branch, minus the invoice-only IssReason condition (ORIN has no such
-    // column/logic) and EXCLUDED_INVOICE_DOCNUMS (an OINV DocNum exclusion
-    // list, not applicable to ORIN docnums). No BaseType/BaseEntry matching —
-    // ORIN rows are netted against the same date range and role/customer/
-    // category filters as OINV, not tied to a specific source invoice. ──
-    const creditNoteWhereClauses = [...baseWhereClauses];
-    const creditNoteWhereSQL = `WHERE ${creditNoteWhereClauses.join(" AND ")}`;
-    console.log("DEBUG creditNoteWhereSQL:", creditNoteWhereSQL);
 
-    // Order WHERE — same as invoice minus IssReason
+    // Order WHERE — same minus IssReason
     const orderWhereClauses = whereClauses.filter(c => !c.includes("IssReason"));
     const orderWhereSQL = orderWhereClauses.length ? `WHERE ${orderWhereClauses.join(" AND ")}` : "";
 
-    // ── Query 1: Sales + COGS + GM% (invoices net of credit notes) ─────
+    // ── Query 1: Sales + COGS + GM% ─────────────────────────
     const salesQuery = `
-      SELECT [Month-Year], year, monthNumber,
-        SUM(LineTotalAmt) AS TotalSales,
-        SUM(CogsAmt) AS TotalCOGS,
+      SELECT
+        DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
+        YEAR(T0.DocDate)  AS year,
+        MONTH(T0.DocDate) AS monthNumber,
+        SUM(T1.LineTotal) AS TotalSales,
+        SUM(T1.GrossBuyPr * T1.Quantity) AS TotalCOGS,
         CASE
-          WHEN SUM(LineTotalAmt) = 0 THEN 0
-          ELSE ROUND(((SUM(LineTotalAmt) - SUM(CogsAmt)) * 100.0) / SUM(LineTotalAmt), 2)
+          WHEN SUM(T1.LineTotal) = 0 THEN 0
+          ELSE ROUND(((SUM(T1.LineTotal) - SUM(T1.GrossBuyPr * T1.Quantity)) * 100.0) / SUM(T1.LineTotal), 2)
         END AS GrossMarginPct
-      FROM (
-        SELECT
-          DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
-          YEAR(T0.DocDate)  AS year,
-          MONTH(T0.DocDate) AS monthNumber,
-          T1.LineTotal AS LineTotalAmt,
-          T1.GrossBuyPr * T1.Quantity AS CogsAmt
-        FROM OINV T0
-        JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-        LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-        LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-        ${whereSQL}
-
-        UNION ALL
-
-        SELECT
-          DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
-          YEAR(T0.DocDate)  AS year,
-          MONTH(T0.DocDate) AS monthNumber,
-          -T1.LineTotal AS LineTotalAmt,
-          -(T1.GrossBuyPr * T1.Quantity) AS CogsAmt
-        FROM ORIN T0
-        JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
-        LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-        LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-        ${creditNoteWhereSQL}
-      ) AS Combined
-      GROUP BY [Month-Year], year, monthNumber
-      ORDER BY year, monthNumber;
+      FROM OINV T0
+      JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+      LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+      LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+      ${whereSQL}
+      GROUP BY
+        DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2),
+        YEAR(T0.DocDate), MONTH(T0.DocDate)
+      ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate);
     `;
 
     // ── Query 2: Invoice line count ──────────────────────────

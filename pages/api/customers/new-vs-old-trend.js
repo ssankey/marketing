@@ -224,35 +224,69 @@ export default async function handler(req, res) {
         `}
       ),
       -- Step 4: Invoice sales — sum INV1.LineTotal at line level when category
-      --         filter active (same logic as sales-cogs.js TotalSales query)
+      --         filter active (same logic as sales-cogs.js TotalSales query),
+      --         net of credit notes (ORIN/RIN1) for the same scope.
       InvoiceSales AS (
         ${hasCategoryFilter ? `
-        SELECT
-          T0.CardCode,
-          SUM(IL.LineTotal) AS Sales
-        FROM OINV T0
-        INNER JOIN INV1 IL ON T0.DocEntry   = IL.DocEntry
-        INNER JOIN OITM IM ON IL.ItemCode   = IM.ItemCode
-        INNER JOIN OITB IB ON IM.ItmsGrpCod = IB.ItmsGrpCod
-        WHERE T0.CANCELED = 'N'
-          AND T0.[IssReason] <> '4'
-          AND T0.DocDate >= ${SD}
-          AND T0.DocDate <= ${ED}
-          AND IB.ItmsGrpNam = @itmsGrpCod
-          ${slpCode  ? `AND T0.SlpCode  = @slpCode`  : ""}
-          ${cardCode ? `AND T0.CardCode = @cardCode` : ""}
-        GROUP BY T0.CardCode
+        SELECT CardCode, SUM(Sales) AS Sales
+        FROM (
+          SELECT
+            T0.CardCode,
+            IL.LineTotal AS Sales
+          FROM OINV T0
+          INNER JOIN INV1 IL ON T0.DocEntry   = IL.DocEntry
+          INNER JOIN OITM IM ON IL.ItemCode   = IM.ItemCode
+          INNER JOIN OITB IB ON IM.ItmsGrpCod = IB.ItmsGrpCod
+          WHERE T0.CANCELED = 'N'
+            AND T0.[IssReason] <> '4'
+            AND T0.DocDate >= ${SD}
+            AND T0.DocDate <= ${ED}
+            AND IB.ItmsGrpNam = @itmsGrpCod
+            ${slpCode  ? `AND T0.SlpCode  = @slpCode`  : ""}
+            ${cardCode ? `AND T0.CardCode = @cardCode` : ""}
+
+          UNION ALL
+
+          SELECT
+            T0.CardCode,
+            -IL.LineTotal AS Sales
+          FROM ORIN T0
+          INNER JOIN RIN1 IL ON T0.DocEntry   = IL.DocEntry
+          INNER JOIN OITM IM ON IL.ItemCode   = IM.ItemCode
+          INNER JOIN OITB IB ON IM.ItmsGrpCod = IB.ItmsGrpCod
+          WHERE T0.CANCELED = 'N'
+            AND T0.DocDate >= ${SD}
+            AND T0.DocDate <= ${ED}
+            AND IB.ItmsGrpNam = @itmsGrpCod
+            ${slpCode  ? `AND T0.SlpCode  = @slpCode`  : ""}
+            ${cardCode ? `AND T0.CardCode = @cardCode` : ""}
+        ) AS Combined
+        GROUP BY CardCode
         ` : `
-        SELECT T0.CardCode, SUM(IL.LineTotal) AS Sales
-        FROM OINV T0
-        INNER JOIN INV1 IL ON T0.DocEntry = IL.DocEntry
-        ${geoJoin.replace(/T0\./g,"T0.")}
-        WHERE T0.CANCELED = 'N'
-          AND T0.[IssReason] <> '4'
-          AND T0.DocDate >= ${SD}
-          AND T0.DocDate <= ${ED}
-          ${extraSQL.replace(/T0\.SlpCode/g,"T0.SlpCode").replace(/T0\.CardCode/g,"T0.CardCode")}
-        GROUP BY T0.CardCode
+        SELECT CardCode, SUM(Sales) AS Sales
+        FROM (
+          SELECT T0.CardCode, IL.LineTotal AS Sales
+          FROM OINV T0
+          INNER JOIN INV1 IL ON T0.DocEntry = IL.DocEntry
+          ${geoJoin}
+          WHERE T0.CANCELED = 'N'
+            AND T0.[IssReason] <> '4'
+            AND T0.DocDate >= ${SD}
+            AND T0.DocDate <= ${ED}
+            ${extraSQL}
+
+          UNION ALL
+
+          SELECT T0.CardCode, -IL.LineTotal AS Sales
+          FROM ORIN T0
+          INNER JOIN RIN1 IL ON T0.DocEntry = IL.DocEntry
+          ${geoJoin}
+          WHERE T0.CANCELED = 'N'
+            AND T0.DocDate >= ${SD}
+            AND T0.DocDate <= ${ED}
+            ${extraSQL}
+        ) AS Combined
+        GROUP BY CardCode
         `}
       )
       SELECT

@@ -32,22 +32,40 @@ export default async function handler(req, res) {
       { name: "month", type: sql.Int, value: monthNum },
     ];
 
-    // Sales value + line-item count come from invoices (OINV/INV1) —
-    // mirrors pages/api/sales-cogs.js's TotalSales / InvoiceCount queries.
+    // Sales value + line-item count come from invoices (OINV/INV1), net of
+    // credit notes (ORIN/RIN1) for the same scope — mirrors pages/api/sales-cogs.js's
+    // TotalSales / InvoiceCount queries.
     const salesQuery = `
-      SELECT
-        ${fieldExpr} AS Field,
-        SUM(T1.LineTotal) AS SalesValue,
-        COUNT(*) AS LineItems
-      FROM OINV T0
-      JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-      ${joinSQL}
-      WHERE T0.CANCELED = 'N'
-        AND T0.[IssReason] <> '4'
-        AND T1.ItemCode IN (${itemList})
-        AND YEAR(T0.DocDate) = @year
-        AND MONTH(T0.DocDate) = @month
-      GROUP BY ${fieldExpr};
+      SELECT Field, SUM(SalesValue) AS SalesValue, SUM(LineItems) AS LineItems
+      FROM (
+        SELECT
+          ${fieldExpr} AS Field,
+          T1.LineTotal AS SalesValue,
+          1 AS LineItems
+        FROM OINV T0
+        JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+        ${joinSQL}
+        WHERE T0.CANCELED = 'N'
+          AND T0.[IssReason] <> '4'
+          AND T1.ItemCode IN (${itemList})
+          AND YEAR(T0.DocDate) = @year
+          AND MONTH(T0.DocDate) = @month
+
+        UNION ALL
+
+        SELECT
+          ${fieldExpr} AS Field,
+          -T1.LineTotal AS SalesValue,
+          -1 AS LineItems
+        FROM ORIN T0
+        JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+        ${joinSQL}
+        WHERE T0.CANCELED = 'N'
+          AND T1.ItemCode IN (${itemList})
+          AND YEAR(T0.DocDate) = @year
+          AND MONTH(T0.DocDate) = @month
+      ) AS Combined
+      GROUP BY Field;
     `;
 
     // Order value comes from open sales orders (ORDR/RDR1) — a separate

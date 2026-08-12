@@ -30,41 +30,49 @@ export default async function handler(req, res) {
     const cached = await getCache(cacheKey);
     if (cached) return res.status(200).json(cached);
 
-    const whereClauses = ["T0.CANCELED = 'N'", "T0.[IssReason] <> '4'"];
+    // Base filters shared between the invoice branch (OINV/INV1) and the
+    // credit note branch (ORIN/RIN1) netted together in salesQuery below.
+    const baseWhereClauses = ["T0.CANCELED = 'N'"];
     const params = [];
 
     if (!isAdmin) {
       if (contactCodes.length > 0)
-        whereClauses.push(`T0.SlpCode IN (${contactCodes.map(c => `'${c}'`).join(",")})`);
+        baseWhereClauses.push(`T0.SlpCode IN (${contactCodes.map(c => `'${c}'`).join(",")})`);
       else if (cardCodes.length > 0)
-        whereClauses.push(`T0.CardCode IN (${cardCodes.map(c => `'${c}'`).join(",")})`);
+        baseWhereClauses.push(`T0.CardCode IN (${cardCodes.map(c => `'${c}'`).join(",")})`);
       else
         return res.status(403).json({ error: "No access" });
     }
 
-    if (year)  { whereClauses.push(`YEAR(T0.DocDate)  = @year`);  params.push({ name: "year",  type: sql.Int,     value: parseInt(year)  }); }
-    if (month) { whereClauses.push(`MONTH(T0.DocDate) = @month`); params.push({ name: "month", type: sql.Int,     value: parseInt(month) }); }
-    if (slpCode)    { whereClauses.push(`T0.SlpCode = @slpCode`);       params.push({ name: "slpCode",    type: sql.Int,     value: parseInt(slpCode)    }); }
-    if (cntctCode)  { whereClauses.push(`T0.CntctCode = @cntctCode`);   params.push({ name: "cntctCode",  type: sql.Int,     value: parseInt(cntctCode)  }); }
-    // if (itmsGrpCod) { whereClauses.push(`T3.ItmsGrpCod = @itmsGrpCod`); params.push({ name: "itmsGrpCod", type: sql.Int,     value: parseInt(itmsGrpCod) }); }
+    if (year)  { baseWhereClauses.push(`YEAR(T0.DocDate)  = @year`);  params.push({ name: "year",  type: sql.Int,     value: parseInt(year)  }); }
+    if (month) { baseWhereClauses.push(`MONTH(T0.DocDate) = @month`); params.push({ name: "month", type: sql.Int,     value: parseInt(month) }); }
+    if (slpCode)    { baseWhereClauses.push(`T0.SlpCode = @slpCode`);       params.push({ name: "slpCode",    type: sql.Int,     value: parseInt(slpCode)    }); }
+    if (cntctCode)  { baseWhereClauses.push(`T0.CntctCode = @cntctCode`);   params.push({ name: "cntctCode",  type: sql.Int,     value: parseInt(cntctCode)  }); }
     if (itmsGrpCod) {
-        whereClauses.push(`EXISTS (
+        baseWhereClauses.push(`EXISTS (
             SELECT 1 FROM OITM I2
             WHERE I2.ItemCode = T1.ItemCode
             AND I2.ItmsGrpCod = @itmsGrpCod
         )`);
         params.push({ name: "itmsGrpCod", type: sql.Int, value: parseInt(itmsGrpCod) });
         }
-    if (cardCode)   { whereClauses.push(`T0.CardCode = @cardCode`);      params.push({ name: "cardCode",   type: sql.VarChar, value: cardCode             }); }
-    if (itemCode)   { whereClauses.push(`T1.ItemCode = @itemCode`);      params.push({ name: "itemCode",   type: sql.VarChar, value: itemCode             }); }
+    if (cardCode)   { baseWhereClauses.push(`T0.CardCode = @cardCode`);      params.push({ name: "cardCode",   type: sql.VarChar, value: cardCode             }); }
+    if (itemCode)   { baseWhereClauses.push(`T1.ItemCode = @itemCode`);      params.push({ name: "itemCode",   type: sql.VarChar, value: itemCode             }); }
 
+    // ── Invoice WHERE (OINV/INV1) — base + invoice-only IssReason ──
+    const whereClauses = [...baseWhereClauses, "T0.[IssReason] <> '4'"];
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
 
-    const query = `
+    // ── Credit note WHERE (ORIN/RIN1) — same base filters, no IssReason ──
+    const creditNoteWhereClauses = [...baseWhereClauses];
+    const creditNoteWhereSQL = `WHERE ${creditNoteWhereClauses.join(" AND ")}`;
+
+    // Invoice count is NOT netted — a credit note doesn't "un-count" the
+    // original invoice document, so this stays a plain OINV/INV1 count.
+    const invoiceCountQuery = `
       SELECT
-        DAY(T0.DocDate)               AS [Day],
-        COUNT(DISTINCT T0.DocNum)     AS [InvoiceCount],
-        SUM(T1.LineTotal)             AS [TotalValue]
+        DAY(T0.DocDate)           AS [Day],
+        COUNT(DISTINCT T0.DocNum) AS [InvoiceCount]
       FROM OINV T0
       INNER JOIN INV1 T1  ON T0.DocEntry = T1.DocEntry
       LEFT  JOIN OITM T3  ON T1.ItemCode = T3.ItemCode
@@ -73,11 +81,52 @@ export default async function handler(req, res) {
       ORDER BY DAY(T0.DocDate) ASC;
     `;
 
-    const results = await queryDatabase(query, params);
-    const chartData = results.map(row => ({
-      day:          row.Day,
-      invoiceCount: row.InvoiceCount || 0,
-      totalValue:   row.TotalValue   || 0,
+    // Total value net of credit notes for the same day/scope
+    const salesQuery = `
+      SELECT [Day], SUM(LineTotalAmt) AS TotalValue
+      FROM (
+        SELECT
+          DAY(T0.DocDate) AS [Day],
+          T1.LineTotal    AS LineTotalAmt
+        FROM OINV T0
+        INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+        LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
+        ${whereSQL}
+
+        UNION ALL
+
+        SELECT
+          DAY(T0.DocDate) AS [Day],
+          -T1.LineTotal   AS LineTotalAmt
+        FROM ORIN T0
+        INNER JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+        LEFT JOIN OITM T3 ON T1.ItemCode = T3.ItemCode
+        ${creditNoteWhereSQL}
+      ) AS Combined
+      GROUP BY [Day]
+      ORDER BY [Day] ASC;
+    `;
+
+    const [invoiceCountRes, salesRes] = await Promise.all([
+      queryDatabase(invoiceCountQuery, params),
+      queryDatabase(salesQuery, params),
+    ]);
+
+    const invoiceCountMap = {};
+    invoiceCountRes.forEach(row => { invoiceCountMap[row.Day] = row.InvoiceCount || 0; });
+
+    const salesMap = {};
+    salesRes.forEach(row => { salesMap[row.Day] = row.TotalValue || 0; });
+
+    const allDays = Array.from(new Set([
+      ...invoiceCountRes.map(row => row.Day),
+      ...salesRes.map(row => row.Day),
+    ])).sort((a, b) => a - b);
+
+    const chartData = allDays.map(day => ({
+      day,
+      invoiceCount: invoiceCountMap[day] || 0,
+      totalValue:   salesMap[day]        || 0,
     }));
 
     await setCache(cacheKey, chartData, 1800);

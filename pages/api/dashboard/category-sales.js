@@ -101,16 +101,14 @@ export default async function handler(req, res) {
     const cardCodes = decoded.cardCodes || [];
 
     // Build WHERE conditions and parameters
-     const whereConditions = [
-      "OINV.CANCELED = 'N'",
-      "OINV.IssReason <> '4'",
-      `OINV.DocNum NOT IN (26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574, 26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894, 26212898, 26212899)`,
-    ];
+    // Base conditions shared between the invoice branch (OINV/INV1) and the
+    // credit note branch (ORIN/RIN1) netted together in salesQuery below.
+    const baseWhereConditions = ["OINV.CANCELED = 'N'"];
     const params = [];
 
     // Date range filter (Financial Year)
     if (fromDate && toDate) {
-      whereConditions.push(
+      baseWhereConditions.push(
         "OINV.DocDate >= @fromDate AND OINV.DocDate <= @toDate"
       );
       params.push({
@@ -130,15 +128,15 @@ export default async function handler(req, res) {
       const isSalesPerson = decoded.role === "sales_person";
 
       if (isSalesPerson && contactCodes.length > 0) {
-        whereConditions.push(
+        baseWhereConditions.push(
           `OINV.SlpCode IN (${contactCodes.map((c) => parseInt(c, 10)).join(",")})`
         );
       } else if (cardCodes.length > 0) {
-        whereConditions.push(
+        baseWhereConditions.push(
           `OINV.CardCode IN (${cardCodes.map((c) => `'${c}'`).join(",")})`
         );
       } else if (contactCodes.length > 0) {
-        whereConditions.push(
+        baseWhereConditions.push(
           `OINV.CntctCode IN (${contactCodes.map((c) => `'${c}'`).join(",")})`
         );
       } else {
@@ -150,11 +148,11 @@ export default async function handler(req, res) {
 
     // Add filter conditions
     if (cardCode) {
-      whereConditions.push("OINV.CardCode = @cardCode");
+      baseWhereConditions.push("OINV.CardCode = @cardCode");
       params.push({ name: "cardCode", type: sql.NVarChar(20), value: cardCode });
     }
     if (salesPerson) {
-      whereConditions.push("OINV.SlpCode = @salesPersonCode");
+      baseWhereConditions.push("OINV.SlpCode = @salesPersonCode");
       params.push({
         name: "salesPersonCode",
         type: sql.Int,
@@ -162,7 +160,7 @@ export default async function handler(req, res) {
       });
     }
     if (category) {
-      whereConditions.push("T4.ItmsGrpNam = @categoryName");
+      baseWhereConditions.push("T4.ItmsGrpNam = @categoryName");
       params.push({
         name: "categoryName",
         type: sql.NVarChar(100),
@@ -170,7 +168,7 @@ export default async function handler(req, res) {
       });
     }
     if (customer) {
-      whereConditions.push("OINV.CardCode = @customerCode");
+      baseWhereConditions.push("OINV.CardCode = @customerCode");
       params.push({
         name: "customerCode",
         type: sql.NVarChar(20),
@@ -178,7 +176,7 @@ export default async function handler(req, res) {
       });
     }
     if (contactPerson) {
-      whereConditions.push("OINV.CntctCode = @contactPersonCode");
+      baseWhereConditions.push("OINV.CntctCode = @contactPersonCode");
       params.push({
         name: "contactPersonCode",
         type: sql.NVarChar(20),
@@ -186,7 +184,17 @@ export default async function handler(req, res) {
       });
     }
 
+    // ── Invoice WHERE (OINV/INV1) — base + invoice-only exclusions ──
+    const whereConditions = [
+      ...baseWhereConditions,
+      "OINV.IssReason <> '4'",
+      `OINV.DocNum NOT IN (26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574, 26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894, 26212898, 26212899)`,
+    ];
     const whereClause = whereConditions.join(" AND ");
+
+    // ── Credit note WHERE (ORIN/RIN1) — same base conditions, minus the
+    // invoice-only IssReason condition and DocNum exclusion list. ──
+    const creditNoteWhereClause = baseWhereConditions.join(" AND ");
 
     // Always use parameterised path (params always has at least fromDate/toDate)
     // Get distinct months within the filtered range
@@ -210,20 +218,39 @@ export default async function handler(req, res) {
       return res.status(200).json({ labels: [], datasets: [] });
     }
 
-    // Get the category sales data
+    // Get the category sales data (invoices net of credit notes)
     const salesQuery = `
-      SELECT 
-        ISNULL(T4.ItmsGrpNam, 'Uncategorized') AS Category,
-        FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
-        SUM(INV1.LineTotal) AS Amount
-      FROM OINV
-      JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
-      LEFT JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
-      LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-      ${customer || contactPerson ? "LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode" : ""}
-      WHERE ${whereClause}
-      GROUP BY ISNULL(T4.ItmsGrpNam, 'Uncategorized'), FORMAT(OINV.DocDate, 'MMM yyyy')
-      ORDER BY ISNULL(T4.ItmsGrpNam, 'Uncategorized')
+      SELECT Category, MonthYear, SUM(Amount) AS Amount
+      FROM (
+        SELECT
+          ISNULL(T4.ItmsGrpNam, 'Uncategorized') AS Category,
+          FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
+          INV1.LineTotal AS Amount
+        FROM OINV
+        JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+        LEFT JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+        LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ${customer || contactPerson ? "LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode" : ""}
+        WHERE ${whereClause}
+
+        UNION ALL
+
+        -- Credit notes (ORIN/RIN1) aliased as OINV/INV1 so the WHERE condition
+        -- strings built above (which reference "OINV."/"T4.") stay valid — ORIN
+        -- mirrors OINV's column structure.
+        SELECT
+          ISNULL(T4.ItmsGrpNam, 'Uncategorized') AS Category,
+          FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
+          -INV1.LineTotal AS Amount
+        FROM ORIN OINV
+        JOIN RIN1 INV1 ON OINV.DocEntry = INV1.DocEntry
+        LEFT JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+        LEFT JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ${customer || contactPerson ? "LEFT JOIN OCRD C ON OINV.CardCode = C.CardCode" : ""}
+        WHERE ${creditNoteWhereClause}
+      ) AS Combined
+      GROUP BY Category, MonthYear
+      ORDER BY Category
     `;
 
     const salesResult = await queryDatabase(salesQuery, params);

@@ -10,7 +10,9 @@ export default async function handler(req, res) {
     console.log("📊 API Request Params:", { year, slpCode, region, state });
 
     // Build WHERE clauses
-    const whereClauses = ["T0.CANCELED = 'N'", "T0.[IssReason] <> '4'"];
+    // Base filters shared between the invoice branch (OINV/INV1) and the
+    // credit note branch (ORIN/RIN1) netted together in the query below.
+    const baseWhereClauses = ["T0.CANCELED = 'N'"];
 
     // Filter by year if provided and not "Complete" or empty
     if (year && year !== "Complete" && year !== "") {
@@ -25,7 +27,7 @@ export default async function handler(req, res) {
         console.log("📅 Parsed fiscal year:", { fyStartYear, fullEndYear });
         
         // Financial year: Apr of fyStartYear to Mar of fullEndYear
-        whereClauses.push(
+        baseWhereClauses.push(
           `((YEAR(T0.DocDate) = ${fyStartYear} AND MONTH(T0.DocDate) >= 4) OR ` +
           `(YEAR(T0.DocDate) = ${fullEndYear} AND MONTH(T0.DocDate) <= 3))`
         );
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
     if (slpCode && slpCode !== "") {
       const salesCode = parseInt(slpCode);
       if (!isNaN(salesCode)) {
-         whereClauses.push(`T0.SlpCode = ${salesCode}`);
+         baseWhereClauses.push(`T0.SlpCode = ${salesCode}`);
         console.log("👤 Salesperson filter applied:", salesCode);
       } else {
         console.warn("⚠️ Invalid slpCode:", slpCode);
@@ -103,37 +105,62 @@ export default async function handler(req, res) {
       }
 
       if (regionStateFilter) {
-        whereClauses.push(regionStateFilter);
+        baseWhereClauses.push(regionStateFilter);
       }
     }
 
+    // ── Invoice WHERE (OINV/INV1) — base + invoice-only IssReason ──
+    const whereClauses = [...baseWhereClauses, "T0.[IssReason] <> '4'"];
     const whereSQL = whereClauses.join(" AND ");
+
+    // ── Credit note WHERE (ORIN/RIN1) — same base filters, no IssReason ──
+    const creditNoteWhereClauses = [...baseWhereClauses];
+    const creditNoteWhereSQL = creditNoteWhereClauses.join(" AND ");
 
     console.log("🔍 Final WHERE clause:", whereSQL);
     console.log("🔍 Total WHERE conditions:", whereClauses.length);
 
     // ⭐ FIX #1: Order by Year ASC, MonthNumber ASC for oldest first
+    // Sales/Margin are net of credit notes (ORIN/RIN1), same scope as OINV/INV1.
     const query = `
-      SELECT 
-        YEAR(T0.DocDate) AS Year,
-        MONTH(T0.DocDate) AS MonthNumber,
-        DATENAME(MONTH, T0.DocDate) AS Month,
-        ISNULL(T6.ItmsGrpNam, 'Uncategorized') AS Category,
-        SUM(T1.LineTotal) AS Sales,
-        CASE 
-          WHEN SUM(T1.LineTotal) = 0 THEN 0
-          ELSE ROUND(
-            ((SUM(T1.LineTotal) - SUM(T1.GrossBuyPr * T1.Quantity)) * 100.0) / SUM(T1.LineTotal),
-            2
-          )
+      SELECT Year, MonthNumber, Month, Category,
+        SUM(Sales) AS Sales,
+        CASE
+          WHEN SUM(Sales) = 0 THEN 0
+          ELSE ROUND(((SUM(Sales) - SUM(Cogs)) * 100.0) / SUM(Sales), 2)
         END AS Margin
-      FROM OINV T0
-      JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-      LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-      LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-      ${regionStateJoin}
-      WHERE ${whereSQL}
-      GROUP BY YEAR(T0.DocDate), MONTH(T0.DocDate), DATENAME(MONTH, T0.DocDate), ISNULL(T6.ItmsGrpNam, 'Uncategorized')
+      FROM (
+        SELECT
+          YEAR(T0.DocDate) AS Year,
+          MONTH(T0.DocDate) AS MonthNumber,
+          DATENAME(MONTH, T0.DocDate) AS Month,
+          ISNULL(T6.ItmsGrpNam, 'Uncategorized') AS Category,
+          T1.LineTotal AS Sales,
+          T1.GrossBuyPr * T1.Quantity AS Cogs
+        FROM OINV T0
+        JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+        LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+        LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        ${regionStateJoin}
+        WHERE ${whereSQL}
+
+        UNION ALL
+
+        SELECT
+          YEAR(T0.DocDate) AS Year,
+          MONTH(T0.DocDate) AS MonthNumber,
+          DATENAME(MONTH, T0.DocDate) AS Month,
+          ISNULL(T6.ItmsGrpNam, 'Uncategorized') AS Category,
+          -T1.LineTotal AS Sales,
+          -(T1.GrossBuyPr * T1.Quantity) AS Cogs
+        FROM ORIN T0
+        JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+        LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+        LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        ${regionStateJoin}
+        WHERE ${creditNoteWhereSQL}
+      ) AS Combined
+      GROUP BY Year, MonthNumber, Month, Category
       ORDER BY Year ASC, MonthNumber ASC
     `;
 
