@@ -3,13 +3,34 @@ import React, { useState } from 'react';
 import { Download, Loader, AlertCircle, Printer } from 'lucide-react';
 import msdsMap from 'public/data/msds-map.json';
 
+const COMPANY_ADDRESS = {
+  name: 'Density Pharmachem Private Limited',
+  lines: [
+    'Survey number 615/A & 624/2/1 Pudur Village,',
+    'Medchal mandal, Medchal-Malkajgiri District,',
+    'Hyderabad, Telangana, India, 501401',
+  ],
+  website: 'www.densitypharmachem.com',
+  email: 'sales@densitypharmachem.com',
+};
+
+// Which COA source each COA card resolves against — mirrors the CoaSource
+// logic already used on the product detail page / header invoices:
+// ENERGY = foreign vendor batch, hosted on the Aliyun COA_FOREIGN bucket ("3A")
+// LOCAL  = our own SAP attachment (OIBT.U_COA / its "-SPEC" fallback) ("Density")
+const COA_SOURCE_BY_CARD = {
+  '3A COA': 'ENERGY',
+  'Density COA': 'LOCAL',
+};
+
 const VerticalCards = () => {
   const [inputs, setInputs] = useState({
+    'Invoice': { invoiceno: '' },
+    '3A COA': { itemcode: '', packsize: '', batchnum: '' },
+    'Density COA': { itemcode: '', packsize: '', batchnum: '' },
     '3A Label': { itemcode: '', packsize: '', batchnum: '' },
     'Density Label': { itemcode: '', packsize: '', batchnum: '' },
     'QR': { itemcode: '', packsize: '', batchnum: '' },
-    'Invoice': { invoiceno: '' },
-    '3A MSDS': { itemcode: '', packsize: '' }
   });
 
   const [loading, setLoading] = useState({});
@@ -18,13 +39,16 @@ const VerticalCards = () => {
   const [showSuggestions, setShowSuggestions] = useState({});
   const [packSizes, setPackSizes] = useState({});
   const [batchNums, setBatchNums] = useState({});
+  // Only populated for the two COA cards: cardTitle -> { [batchNum]: localCOAFilename }
+  const [coaFileLookup, setCoaFileLookup] = useState({});
 
   const cards = [
-    { id: 1, title: '3A Label', icon: '🏷️', inputs: ['itemcode', 'packsize', 'batchnum'] },
-    { id: 2, title: 'Density Label', icon: '📊', inputs: ['itemcode', 'packsize', 'batchnum'] },
-    { id: 3, title: 'QR', icon: '🔲', inputs: ['itemcode', 'packsize', 'batchnum'] },
-    { id: 4, title: 'Invoice', icon: '🧾', inputs: ['invoiceno'] },
-    { id: 5, title: '3A MSDS', icon: '📄', inputs: ['itemcode', 'packsize'] }
+    { id: 1, title: 'Invoice', icon: '🧾', inputs: ['invoiceno'] },
+    { id: 2, title: '3A COA', icon: '📑', inputs: ['itemcode', 'packsize', 'batchnum'] },
+    { id: 3, title: 'Density COA', icon: '📃', inputs: ['itemcode', 'packsize', 'batchnum'] },
+    { id: 4, title: '3A Label', icon: '🏷️', inputs: ['itemcode', 'packsize', 'batchnum'] },
+    { id: 5, title: 'Density Label', icon: '📊', inputs: ['itemcode', 'packsize', 'batchnum'] },
+    { id: 6, title: 'QR', icon: '🔲', inputs: ['itemcode', 'packsize', 'batchnum'] },
   ];
 
   // 🔹 Handle typing
@@ -53,6 +77,67 @@ const VerticalCards = () => {
       }
     } else if (inputType === 'itemcode') {
       setShowSuggestions(prev => ({ ...prev, [cardTitle]: false }));
+    }
+  };
+
+  // 🔹 Once a pack size is picked, fetch the lot numbers available for it.
+  // COA cards look up COA-specific batch info (filtered to their source);
+  // everything else keeps the existing vendor-batch-number lookup.
+  const handlePackSizeSelect = async (cardTitle, selectedPackSize, selectedObj) => {
+    setInputs((prev) => ({
+      ...prev,
+      [cardTitle]: {
+        ...prev[cardTitle],
+        packsize: selectedPackSize,
+        catSizeMain: selectedObj?.Cat_size_main || '',
+        batchnum: '',
+      },
+    }));
+
+    setBatchNums(prev => ({ ...prev, [cardTitle]: [] }));
+    setCoaFileLookup(prev => ({ ...prev, [cardTitle]: {} }));
+
+    if (!selectedObj?.Cat_size_main) return;
+
+    const coaSource = COA_SOURCE_BY_CARD[cardTitle];
+
+    try {
+      if (coaSource) {
+        // 3A COA / Density COA — look up batches for this exact COA source
+        const res = await fetch(`/api/coa/lookup/${encodeURIComponent(selectedObj.Cat_size_main)}`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        const rows = (data.batches || []).filter((b) => b.CoaSource === coaSource);
+
+        const lotField = coaSource === 'ENERGY' ? 'VendorBatchNum' : 'BatchNum';
+        const options = rows
+          .map((b) => b[lotField])
+          .filter((v) => v && v.trim() !== '');
+
+        const fileMap = {};
+        if (coaSource === 'LOCAL') {
+          rows.forEach((b) => {
+            if (b.BatchNum) fileMap[b.BatchNum] = b.LocalCOAFilename;
+          });
+        }
+
+        setBatchNums((prev) => ({
+          ...prev,
+          [cardTitle]: options.map((v) => ({ batchNum: v })),
+        }));
+        setCoaFileLookup((prev) => ({ ...prev, [cardTitle]: fileMap }));
+      } else {
+        // 3A Label / Density Label / QR — unchanged vendor-batch-number lookup
+        const res = await fetch(
+          `/api/density-labels/batchnums/${encodeURIComponent(selectedObj.Cat_size_main)}`
+        );
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        setBatchNums((prev) => ({ ...prev, [cardTitle]: data.batchNums || [] }));
+      }
+    } catch (err) {
+      console.error('BatchNum fetch error:', err);
+      setBatchNums((prev) => ({ ...prev, [cardTitle]: [] }));
     }
   };
 
@@ -122,7 +207,8 @@ const VerticalCards = () => {
       case 'Density Label': return printDensityLabel(cardInputs);
       case 'QR': return printQRCode(cardInputs);
       case 'Invoice': return printInvoice(cardInputs);
-      case '3A MSDS': return printMSDS(cardInputs);
+      case '3A COA': return print3ACOA(cardInputs);
+      case 'Density COA': return printDensityCOA(cardInputs);
       default: throw new Error('Unknown card type');
     }
   };
@@ -134,7 +220,8 @@ const VerticalCards = () => {
       case 'Density Label': return downloadDensityLabel(cardInputs);
       case 'QR': return downloadQRCode(cardInputs);
       case 'Invoice': return downloadInvoice(cardInputs);
-      case '3A MSDS': return downloadMSDS(cardInputs);
+      case '3A COA': return download3ACOA(cardInputs);
+      case 'Density COA': return downloadDensityCOA(cardInputs);
       default: throw new Error('Unknown card type');
     }
   };
@@ -142,6 +229,34 @@ const VerticalCards = () => {
   const buildCodeWithPacksize = (itemcode, packsize) => {
     if (!itemcode) return '';
     return packsize ? `${itemcode}-${packsize}` : itemcode;
+  };
+
+  // ── COA fetch helpers (shared by download/print) ──────────────────────────
+  const fetch3ACOABlob = async ({ itemcode, packsize, batchnum }) => {
+    const combinedCode = buildCodeWithPacksize(itemcode, packsize);
+    if (!batchnum) throw new Error('Lot number is required for 3A COA');
+
+    const res = await fetch(
+      `/api/coa/download-energy/${encodeURIComponent(combinedCode)}/${encodeURIComponent(batchnum)}`
+    );
+    if (!res.ok) throw new Error('3A COA not found for this item/lot');
+    return { blob: await res.blob(), combinedCode };
+  };
+
+  const fetchDensityCOABlob = async ({ itemcode, packsize, batchnum }) => {
+    const combinedCode = buildCodeWithPacksize(itemcode, packsize);
+    if (!batchnum) throw new Error('Lot number is required for Density COA');
+
+    const filename = coaFileLookup['Density COA']?.[batchnum];
+    if (!filename) throw new Error('COA file not found for this lot number');
+
+    let cleanName = filename;
+    if (cleanName.includes('\\')) cleanName = cleanName.split('\\').pop();
+    if (cleanName.includes('/')) cleanName = cleanName.split('/').pop();
+
+    const res = await fetch(`/api/coa/download/${encodeURIComponent(cleanName)}`);
+    if (!res.ok) throw new Error('Density COA not available');
+    return { blob: await res.blob(), combinedCode };
   };
 
   const download3ALabel = async ({ itemcode, packsize, batchnum }) => {
@@ -217,16 +332,14 @@ const VerticalCards = () => {
     triggerDownload(blob, `Invoice_${invoiceno}.pdf`);
   };
 
-  const downloadMSDS = async ({ itemcode, packsize }) => {
-    const combinedCode = buildCodeWithPacksize(itemcode, packsize);
-    const msdsUrl = msdsMap[combinedCode];
-    if (!msdsUrl) throw new Error("MSDS not found");
+  const download3ACOA = async (cardInputs) => {
+    const { blob, combinedCode } = await fetch3ACOABlob(cardInputs);
+    triggerDownload(blob, `3A_COA_${combinedCode}_${cardInputs.batchnum}.pdf`);
+  };
 
-    const fileRes = await fetch(msdsUrl);
-    if (!fileRes.ok) throw new Error("MSDS not available");
-
-    const blob = await fileRes.blob();
-    triggerDownload(blob, `${combinedCode}_MSDS.pdf`);
+  const downloadDensityCOA = async (cardInputs) => {
+    const { blob, combinedCode } = await fetchDensityCOABlob(cardInputs);
+    triggerDownload(blob, `Density_COA_${combinedCode}_${cardInputs.batchnum}.pdf`);
   };
 
   // 🔹 Print functions
@@ -303,16 +416,14 @@ const VerticalCards = () => {
     openPrintWindow(blob, `Invoice_${invoiceno}`);
   };
 
-  const printMSDS = async ({ itemcode, packsize }) => {
-    const combinedCode = buildCodeWithPacksize(itemcode, packsize);
-    const msdsUrl = msdsMap[combinedCode];
-    if (!msdsUrl) throw new Error("MSDS not found");
+  const print3ACOA = async (cardInputs) => {
+    const { blob, combinedCode } = await fetch3ACOABlob(cardInputs);
+    openPrintWindow(blob, `3A_COA_${combinedCode}_${cardInputs.batchnum}`);
+  };
 
-    const fileRes = await fetch(msdsUrl);
-    if (!fileRes.ok) throw new Error("MSDS not available");
-
-    const blob = await fileRes.blob();
-    openPrintWindow(blob, `${combinedCode}_MSDS`);
+  const printDensityCOA = async (cardInputs) => {
+    const { blob, combinedCode } = await fetchDensityCOABlob(cardInputs);
+    openPrintWindow(blob, `Density_COA_${combinedCode}_${cardInputs.batchnum}`);
   };
 
   // 🔹 Helper functions
@@ -330,27 +441,45 @@ const VerticalCards = () => {
   const openPrintWindow = (blob, title) => {
     const url = URL.createObjectURL(blob);
     const printWindow = window.open('', '_blank');
-    
+
     if (!printWindow) {
       throw new Error('Popup blocked. Please allow popups for printing.');
     }
 
     const isPDF = blob.type === 'application/pdf';
-    
+
     if (isPDF) {
-      // For PDFs, embed in iframe and print
+      // Printing via the outer window prints the HTML page the iframe sits in
+      // (scaled to the iframe's CSS size), which is what fragments a
+      // single-page PDF across multiple sheets. Calling print() on the
+      // iframe's own contentWindow hands off to the PDF viewer's native print
+      // path instead — the same one its own toolbar print button uses.
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
             <title>Print - ${title}</title>
             <style>
-              body { margin: 0; padding: 0; }
-              iframe { width: 100vw; height: 100vh; border: none; }
+              @page { margin: 0; }
+              html, body { margin: 0; padding: 0; height: 100%; }
+              iframe { width: 100vw; height: 100vh; border: none; display: block; }
             </style>
           </head>
           <body>
-            <iframe src="${url}" onload="setTimeout(() => window.print(), 500);"></iframe>
+            <iframe id="pdfFrame" src="${url}"></iframe>
+            <script>
+              var frame = document.getElementById('pdfFrame');
+              frame.addEventListener('load', function () {
+                setTimeout(function () {
+                  try {
+                    frame.contentWindow.focus();
+                    frame.contentWindow.print();
+                  } catch (e) {
+                    window.print();
+                  }
+                }, 500);
+              });
+            </script>
           </body>
         </html>
       `);
@@ -362,18 +491,18 @@ const VerticalCards = () => {
           <head>
             <title>Print - ${title}</title>
             <style>
-              body { 
-                margin: 0; 
-                padding: 20px; 
-                display: flex; 
-                justify-content: center; 
-                align-items: center; 
+              body {
+                margin: 0;
+                padding: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
                 min-height: 100vh;
                 background: white;
               }
-              img { 
-                max-width: 100%; 
-                max-height: 100%; 
+              img {
+                max-width: 100%;
+                max-height: 100%;
                 object-fit: contain;
               }
               @media print {
@@ -388,9 +517,9 @@ const VerticalCards = () => {
         </html>
       `);
     }
-    
+
     printWindow.document.close();
-    
+
     // Clean up URL after a delay
     setTimeout(() => {
       URL.revokeObjectURL(url);
@@ -401,7 +530,7 @@ const VerticalCards = () => {
     switch (inputType) {
       case 'itemcode': return 'Item Code';
       case 'packsize': return 'Pack Size';
-      case 'batchnum': return 'Batch Number';
+      case 'batchnum': return 'Lot No.';
       case 'invoiceno': return 'Invoice No';
       default: return inputType;
     }
@@ -409,7 +538,7 @@ const VerticalCards = () => {
 
   const getPlaceholder = (cardTitle, inputType) => {
     if (inputType === 'itemcode') return 'Type ItemCode...';
-    if (inputType === 'batchnum') return 'Enter Batch Number';
+    if (inputType === 'batchnum') return 'Enter Lot Number';
     if (inputType === 'invoiceno') return 'Enter Invoice Number';
     return `Enter ${getInputLabel(inputType).toLowerCase()}`;
   };
@@ -446,16 +575,16 @@ const VerticalCards = () => {
                           <button
                             onClick={() => handlePrint(card.title)}
                             disabled={isLoading}
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '8px', 
-                              padding: '12px 20px', 
-                              backgroundColor: '#059669', 
-                              color: 'white', 
-                              fontWeight: '600', 
-                              borderRadius: '8px', 
-                              border: 'none', 
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '12px 20px',
+                              backgroundColor: '#059669',
+                              color: 'white',
+                              fontWeight: '600',
+                              borderRadius: '8px',
+                              border: 'none',
                               cursor: isLoading ? 'not-allowed' : 'pointer',
                               opacity: isLoading ? 0.6 : 1
                             }}
@@ -520,56 +649,12 @@ const VerticalCards = () => {
                             {inputType === 'packsize' && packSizes[card.title]?.length > 0 && (
                               <select
                                 value={inputs[card.title].packsize || ''}
-                                onChange={async (e) => {
+                                onChange={(e) => {
                                   const selectedPackSize = e.target.value; // "1g"
                                   const selectedObj = packSizes[card.title].find(
                                     (p) => p.displayValue === selectedPackSize
                                   );
-
-                                  setInputs((prev) => ({
-                                    ...prev,
-                                    [card.title]: {
-                                      ...prev[card.title],
-                                      packsize: selectedPackSize,   // keep "1g"
-                                      catSizeMain: selectedObj?.Cat_size_main || '', // keep "A01001179-1g" internally
-                                      batchnum: '', // Reset batch number when packsize changes
-                                    },
-                                  }));
-
-                                  // Clear previous batch numbers first
-                                  setBatchNums(prev => ({
-                                    ...prev,
-                                    [card.title]: []
-                                  }));
-
-                                  try {
-                                    if (selectedObj?.Cat_size_main) {
-                                      console.log('Fetching batch numbers for:', selectedObj.Cat_size_main);
-                                      
-                                      const res = await fetch(
-                                        `/api/density-labels/batchnums/${encodeURIComponent(selectedObj.Cat_size_main)}`
-                                      );
-                                      
-                                      if (!res.ok) {
-                                        throw new Error(`HTTP error! status: ${res.status}`);
-                                      }
-                                      
-                                      const data = await res.json();
-                                      console.log('Batch numbers response:', data);
-                                      
-                                      setBatchNums((prev) => ({
-                                        ...prev,
-                                        [card.title]: data.batchNums || [],
-                                      }));
-                                    }
-                                  } catch (err) {
-                                    console.error('BatchNum fetch error:', err);
-                                    // Set empty array on error so user sees no options available
-                                    setBatchNums((prev) => ({
-                                      ...prev,
-                                      [card.title]: [],
-                                    }));
-                                  }
+                                  handlePackSizeSelect(card.title, selectedPackSize, selectedObj);
                                 }}
                                 style={{
                                   width: '100%',
@@ -586,14 +671,14 @@ const VerticalCards = () => {
                               </select>
                             )}
 
-                            {/* Batchnum dropdown */}
+                            {/* Batchnum / Lot No dropdown */}
                             {inputType === 'batchnum' && batchNums[card.title]?.length > 0 && (
                               <select
                                 value={inputs[card.title].batchnum || ''}
                                 onChange={(e) => setInputs(prev => ({ ...prev, [card.title]: { ...prev[card.title], batchnum: e.target.value } }))}
                                 style={{ width: '100%', padding: '12px', border: '1px solid #86efac', borderRadius: '8px', fontSize: '14px' }}
                               >
-                                <option value="">Select Batch Number</option>
+                                <option value="">Select Lot Number</option>
                                 {batchNums[card.title].map((b, idx) => (
                                   <option key={idx} value={b.batchNum}>{b.batchNum}</option>
                                 ))}
@@ -627,6 +712,17 @@ const VerticalCards = () => {
             </div>
           </div>
         </div>
+
+        {/* Company address footer */}
+        <div style={{ backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 10px 25px -8px rgba(0, 0, 0, 0.15)', border: '1px solid #dbeafe', marginTop: '24px', padding: '24px 32px', textAlign: 'center' }}>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: '#15803d', marginBottom: '6px' }}>{COMPANY_ADDRESS.name}</div>
+          {COMPANY_ADDRESS.lines.map((line, i) => (
+            <div key={i} style={{ fontSize: '13.5px', color: '#4b5563' }}>{line}</div>
+          ))}
+          <div style={{ fontSize: '13.5px', color: '#1d4ed8', marginTop: '8px' }}>
+            Website: {COMPANY_ADDRESS.website} &nbsp;|&nbsp; Email: {COMPANY_ADDRESS.email}
+          </div>
+        </div>
       </div>
 
       <style jsx>{`
@@ -636,7 +732,7 @@ const VerticalCards = () => {
         }
       `}
       </style>
- 
+
     </div>
    );
  };

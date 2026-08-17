@@ -346,26 +346,6 @@ const NavbarVertical = (props) => {
               </Link>
             </li>
 
-            {/* MSME Report — password protected on the page itself */}
-            <li className="nav-item mb-3">
-              <Link
-                href="/msme-report"
-                className={`nav-link d-flex align-items-center ${router === "/msme-report" ? "active" : ""}`}
-              >
-                <FaLock className="me-2" />  MSME Report
-              </Link>
-            </li>
-
-             {/* Outstanding Payments */}
-            <li className="nav-item mb-3">
-              <Link
-                href="/target-analytics"
-                className={`nav-link d-flex align-items-center ${router === "/target-analytics" ? "active" : ""}`}
-              >
-                <FaMoneyBillWave className="me-2" />  Target Analytics
-              </Link>
-            </li>
-
             {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
                 <Link
@@ -377,44 +357,6 @@ const NavbarVertical = (props) => {
               </li>
             )}
 
-            
-            
-            {/* {(isAdmin || isSalesPerson) && (
-              <li className="nav-item mb-3">
-                <Link
-                  href="/dispatch"
-                  className={`nav-link d-flex align-items-center ${router === "/dispatch" ? "active" : ""}`}
-                >
-                  <FaBox className="me-2" /> Dispatch Details
-                </Link>
-              </li>
-            )} */}
-            
-            <li className="nav-item mb-3">
-              <Link
-                href="/quick-quote"
-                className={`nav-link d-flex align-items-center ${router === "/quick-quote" ? "active" : ""}`}
-              >
-                <FaBox className="me-2" /> Quick Quote
-              </Link>
-            </li>
-            
-            <li className="nav-item mb-3">
-              <Link
-                href="/order-lifecycle"
-                className={`nav-link d-flex align-items-center ${router === "/order-lifecycle" ? "active" : ""}`}
-              >
-                <FaBox className="me-2" /> Order lifecycle
-              </Link>
-            </li>
-            <li className="nav-item mb-3">
-              <Link
-                href="/in-bound-shipments"
-                className={`nav-link d-flex align-items-center ${router === "/in-bound-shipments" ? "active" : ""}`}
-              >
-                <FaBox className="me-2" /> In bound Shipments
-              </Link>
-            </li>
             <li className="nav-item mb-3">
               <Link
                 href="/Document-downloading"
@@ -423,6 +365,51 @@ const NavbarVertical = (props) => {
                 <FaBox className="me-2" /> Document Downloading
               </Link>
             </li>
+
+            <li className="nav-item mb-3">
+              <Link
+                href="/quick-quote"
+                className={`nav-link d-flex align-items-center ${router === "/quick-quote" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> Quick Quote
+              </Link>
+            </li>
+
+            {/* MSME Report — password protected on the page itself */}
+            <li className="nav-item mb-3">
+              <Link
+                href="/msme-report"
+                className={`nav-link d-flex align-items-center ${router === "/msme-report" ? "active" : ""}`}
+              >
+                <FaLock className="me-2" />  MSME Report
+              </Link>
+            </li>
+
+            <li className="nav-item mb-3">
+              <Link
+                href="/target-analytics"
+                className={`nav-link d-flex align-items-center ${router === "/target-analytics" ? "active" : ""}`}
+              >
+                <FaMoneyBillWave className="me-2" />  Target Analytics
+              </Link>
+            </li>
+
+            {/* <li className="nav-item mb-3">
+              <Link
+                href="/order-lifecycle"
+                className={`nav-link d-flex align-items-center ${router === "/order-lifecycle" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> Order lifecycle
+              </Link>
+            </li> */}
+            {/* <li className="nav-item mb-3">
+              <Link
+                href="/in-bound-shipments"
+                className={`nav-link d-flex align-items-center ${router === "/in-bound-shipments" ? "active" : ""}`}
+              >
+                <FaBox className="me-2" /> In bound Shipments
+              </Link>
+            </li> */}
 
             {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">
