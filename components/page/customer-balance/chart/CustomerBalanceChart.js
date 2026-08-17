@@ -2,7 +2,7 @@
 
 // export default CustomerBalanceChart;
 import React, { useMemo, useState } from "react";
-import { Card, Row, Col, Spinner } from "react-bootstrap";
+import { Card, Spinner } from "react-bootstrap";
 import { Bar } from "react-chartjs-2";
 import { formatCurrency } from "utils/formatCurrency";
 import {
@@ -32,20 +32,15 @@ function parseDateForFilter(dateString) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-const colorPalette = {
-  backgroundColor: [
-    "rgba(25, 135, 84, 0.6)",
-    "rgba(255, 193, 7, 0.6)",
-    "rgba(253, 126, 20, 0.6)",
-    "rgba(220, 53, 69, 0.6)",
-  ],
-  borderColor: [
-    "rgba(25, 135, 84, 1)",
-    "rgba(255, 193, 7, 1)",
-    "rgba(253, 126, 20, 1)",
-    "rgba(220, 53, 69, 1)",
-  ],
+// Status palette — aging severity maps naturally onto good/warning/serious/critical.
+// (validated status steps, light surface)
+const BUCKET_STATUS = {
+  "0-30 Days":  { key: "good",     color: "#0ca30c" },
+  "31-60 Days": { key: "warning",  color: "#fab219" },
+  "61-90 Days": { key: "serious",  color: "#ec835a" },
+  "91+ Days":   { key: "critical", color: "#d03b3b" },
 };
+const BUCKET_ORDER = ["0-30 Days", "31-60 Days", "61-90 Days", "91+ Days"];
 
 export default function CustomerBalanceChart({
   customerBalances,
@@ -77,19 +72,13 @@ export default function CustomerBalanceChart({
   };
 
   const { chartData, balanceSummary } = useMemo(() => {
-    // initialize buckets
-    const buckets = {
-      "0-30 Days": 0,
-      "31-60 Days": 0,
-      "61-90 Days": 0,
-      "91+ Days": 0,
-    };
-    const counts = {
-      "0-30 Days": 0,
-      "31-60 Days": 0,
-      "61-90 Days": 0,
-      "91+ Days": 0,
-    };
+    // initialize buckets in fixed severity order
+    const buckets = {};
+    const counts = {};
+    BUCKET_ORDER.forEach((b) => {
+      buckets[b] = 0;
+      counts[b] = 0;
+    });
 
     balancesArray.forEach((entry) => {
       const range = entry.OverdueRange;
@@ -113,9 +102,9 @@ export default function CustomerBalanceChart({
 
     return {
       chartData: {
-        labels: Object.keys(buckets),
-        values: Object.values(buckets),
-        customerCounts: Object.values(counts),
+        labels: BUCKET_ORDER,
+        values: BUCKET_ORDER.map((b) => buckets[b]),
+        customerCounts: BUCKET_ORDER.map((b) => counts[b]),
       },
       balanceSummary: {
         total,
@@ -133,11 +122,12 @@ export default function CustomerBalanceChart({
       {
         label: "Overdue Amount",
         data: chartData.values,
-        backgroundColor: colorPalette.backgroundColor,
-        borderColor: colorPalette.borderColor,
-        borderWidth: 1,
-        borderRadius: 6,
-        maxBarThickness: 80,
+        backgroundColor: BUCKET_ORDER.map((b) => BUCKET_STATUS[b].color),
+        borderColor: BUCKET_ORDER.map((b) => BUCKET_STATUS[b].color),
+        borderWidth: 0,
+        borderRadius: 8,
+        borderSkipped: false,
+        maxBarThickness: 88,
       },
     ],
   };
@@ -147,7 +137,15 @@ export default function CustomerBalanceChart({
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
+      // Globally-registered chartjs-plugin-datalabels leaks into every chart
+      // unless explicitly disabled per-instance — no numbers drawn on the bars,
+      // the figures live in the table below instead.
+      datalabels: false,
       tooltip: {
+        backgroundColor: "#1a1a19",
+        padding: 12,
+        cornerRadius: 8,
+        titleFont: { weight: "600" },
         callbacks: {
           label: (ctx) => {
             const val = ctx.parsed.y || 0;
@@ -159,10 +157,15 @@ export default function CustomerBalanceChart({
       },
     },
     scales: {
-      x: { grid: { display: false } },
+      x: {
+        grid: { display: false },
+        border: { color: "#c3c2b7" },
+        ticks: { color: "#52514e", font: { weight: "500" } },
+      },
       y: {
-        grid: { color: "rgba(0,0,0,0.05)" },
-        ticks: { callback: (v) => formatCurrency(v) },
+        grid: { color: "#e1e0d9" },
+        border: { display: false },
+        ticks: { color: "#898781", callback: (v) => formatCurrency(v) },
         beginAtZero: true,
       },
     },
@@ -199,36 +202,102 @@ export default function CustomerBalanceChart({
           <NoData />
         ) : (
           <>
-            <div style={{ height: 400 }}>
+            <div style={{ height: 340 }}>
               <Bar data={data} options={options} />
             </div>
-            <Row className="mt-4">
-              <Col md={3}>
-                <strong>Total Overdue:</strong>{" "}
-                {formatCurrency(balanceSummary.totalOverdue)}
-              </Col>
-              <Col md={3}>
-                <strong>Customers Overdue:</strong>{" "}
-                {balanceSummary.customersWithOverdue} /{" "}
-                {balanceSummary.totalCustomers}
-              </Col>
-              <Col md={6}>
-                <Row>
-                  {Object.entries(balanceSummary.customerCounts).map(
-                    ([b, c]) => (
-                      <Col key={b} xs={6} md={3}>
-                        <small>
-                          <strong>{b}:</strong> {c}
-                        </small>
-                      </Col>
-                    )
-                  )}
-                </Row>
-              </Col>
-            </Row>
+
+            {/* Beautiful summary table — the numbers live here, not on the bars */}
+            <div className="mt-4">
+              <div className="table-responsive">
+                <table className="cbc-summary-table">
+                  <thead>
+                    <tr>
+                      <th>Aging Range</th>
+                      <th className="text-end">Overdue Amount</th>
+                      <th className="text-end">Customers</th>
+                      <th className="text-end">% of Overdue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {BUCKET_ORDER.map((b, idx) => {
+                      const amount = chartData.values[idx];
+                      const count = chartData.customerCounts[idx];
+                      const pct =
+                        balanceSummary.totalOverdue > 0
+                          ? (amount / balanceSummary.totalOverdue) * 100
+                          : 0;
+                      return (
+                        <tr key={b}>
+                          <td>
+                            <span
+                              className="cbc-swatch"
+                              style={{ backgroundColor: BUCKET_STATUS[b].color }}
+                            />
+                            {b}
+                          </td>
+                          <td className="text-end">{formatCurrency(amount)}</td>
+                          <td className="text-end">{count}</td>
+                          <td className="text-end">{pct.toFixed(1)}%</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td>Total</td>
+                      <td className="text-end">
+                        {formatCurrency(balanceSummary.totalOverdue)}
+                      </td>
+                      <td className="text-end">
+                        {balanceSummary.customersWithOverdue}
+                      </td>
+                      <td className="text-end">100%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
           </>
         )}
       </Card.Body>
+
+      <style jsx>{`
+        .cbc-summary-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 13.5px;
+        }
+        .cbc-summary-table th {
+          text-align: left;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-weight: 600;
+          color: #898781;
+          padding: 8px 10px;
+          border-bottom: 2px solid #e1e0d9;
+        }
+        .cbc-summary-table td {
+          padding: 10px;
+          border-bottom: 1px solid #e1e0d9;
+          color: #0b0b0b;
+        }
+        .cbc-summary-table tbody tr:hover {
+          background: #f9f9f7;
+        }
+        .cbc-summary-table tfoot td {
+          font-weight: 700;
+          border-bottom: none;
+          border-top: 2px solid #e1e0d9;
+        }
+        .cbc-swatch {
+          display: inline-block;
+          width: 10px;
+          height: 10px;
+          border-radius: 3px;
+          margin-right: 8px;
+        }
+      `}</style>
     </Card>
   );
 }

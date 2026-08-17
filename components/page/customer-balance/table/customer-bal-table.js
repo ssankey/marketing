@@ -228,155 +228,358 @@ const handleExportExcel = () => {
     onPageChange(1);
   };
 
-  return (
-    <div className="w-full">
-      {/* Filters + Reset + Export */}
-      {/* <div className="mt-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2"> */}
-      <div
-   className="mt-3 mb-4 d-flex flex-nowrap justify-content-between align-items-center"
-   style={{ minHeight:  "64px" }}   // or h-16 / h-20 in Tailwind, or whatever matches your filter row
->
-        <button
-          className="btn btn-outline-secondary me-2"
-          onClick={handleReset}
-        >
-          Reset
-        </button>
+  // Same numbered-pager pattern as Product Master / Catalyst Pricing
+  function getPageNumbers(current, total) {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = new Set([1, 2, total - 1, total, current - 1, current, current + 1]);
+    return Array.from(pages)
+      .filter((p) => p >= 1 && p <= total)
+      .sort((a, b) => a - b);
+  }
+  const safePageCount = Math.max(1, pageCount);
 
-        <div className="flex-grow-1 me-2" style={{ minWidth: "300px" }}>
+  return (
+    <div className="cbt">
+      <style>{PAGE_STYLES}</style>
+
+      <div className="cbt-controls">
+        <div className="cbt-field" style={{ width: 320 }}>
+          <label>Search</label>
           <input
+            className="cbt-input"
             type="text"
+            style={{ width: "100%" }}
+            placeholder="Customer, sales person, invoice no, SO no, PO no, tracking no…"
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
-            placeholder="Search by customer, sales person, invoice no, SO no, PO no, tracking no"
-            className="form-control"
           />
         </div>
 
-        <div className="me-2">
-          <select
-            value={overdueFilter}
-            onChange={(e) => setOverdueFilter(e.target.value)}
-            className="form-select"
-            style={{ minWidth: "120px" }}
-          >
-            <option value="All">All</option>
-            <option value="0-30">0-30 days</option>
-            <option value="31-60">31-60 days</option>
-            <option value="61-90">61-90 days</option>
-            <option value="90+">90+ days</option>
-          </select>
+        <div className="cbt-field">
+          <label>Overdue</label>
+          <div className="cbt-mode-toggle">
+            {[
+              { value: "All", label: "All" },
+              { value: "0-30", label: "0-30" },
+              { value: "31-60", label: "31-60" },
+              { value: "61-90", label: "61-90" },
+              { value: "90+", label: "90+" },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                className={`cbt-mode-btn ${overdueFilter === opt.value ? "active" : ""}`}
+                onClick={() => setOverdueFilter(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="d-flex align-items-center me-2">
-          <label className="me-2 mb-0">From</label>
+        <div className="cbt-field">
+          <label>From</label>
           <input
+            className="cbt-input"
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="form-control"
-            style={{ maxWidth: "160px" }}
           />
         </div>
 
-        <div className="d-flex align-items-center me-2">
-          <label className="me-2 mb-0">To</label>
+        <div className="cbt-field">
+          <label>To</label>
           <input
+            className="cbt-input"
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="form-control"
-            style={{ maxWidth: "160px" }}
           />
         </div>
 
-        <button onClick={handleExportExcel} className="btn btn-success">
-          Export Excel
-        </button>
+        <div className="cbt-field">
+          <label>&nbsp;</label>
+          <button type="button" className="cbt-reset-btn" onClick={handleReset}>
+            Reset
+          </button>
+        </div>
+
+        <div className="cbt-spacer" />
+
+        <div className="cbt-total-pill">Total Records: {uniqueData.length}</div>
+
+        <div className="cbt-field">
+          <label>&nbsp;</label>
+          <button className="cbt-export-btn" onClick={handleExportExcel} disabled={!uniqueData.length}>
+            Export Excel
+          </button>
+        </div>
       </div>
 
-      {/* Table with fixed height */}
-      <div className="border rounded overflow-auto h-[60vh]">
-        <table className="w-full border-collapse">
-          <thead className="bg-gray-100 sticky top-0">
-            {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id}>
-                {hg.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    className="border px-2 py-1 text-left font-medium"
-                  >
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50">
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="border px-2 py-1 truncate text-sm"
-                    >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
+      <div className="cbt-table-card">
+        {isLoading ? null : !pageData.length ? (
+          <div className="cbt-empty">No data available.</div>
+        ) : (
+          <>
+            <div className="cbt-table-scroll">
+              <table className="cbt-table">
+                <thead>
+                  {table.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id}>
+                      {hg.headers.map((header) => (
+                        <th key={header.id} className="cbt-th-left">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={columns.length} className="p-4 text-center">
-                  No data available
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id}>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-      {/* Pagination */}
-      <div className="mt-4 flex items-center justify-center space-x-4">
-        <button
-          onClick={() => onPageChange(1)}
-          disabled={page === 1}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          First
-        </button>
-        <button
-          onClick={() => onPageChange(Math.max(1, page - 1))}
-          disabled={page === 1}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Prev
-        </button>
-        <span className="text-sm">
-          Page {page} of {pageCount} ({uniqueData.length} total)
-        </span>
-        <button
-          onClick={() => onPageChange(Math.min(pageCount, page + 1))}
-          disabled={page === pageCount}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-        <button
-          onClick={() => onPageChange(pageCount)}
-          disabled={page === pageCount}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Last
-        </button>
+            <div className="cbt-pagination">
+              <div className="cbt-pagination-info">
+                Page {page} of {safePageCount} ({uniqueData.length} total)
+              </div>
+              <div className="cbt-pagination-controls">
+                <button
+                  className="cbt-page-btn"
+                  disabled={page <= 1}
+                  onClick={() => onPageChange(Math.max(1, page - 1))}
+                >
+                  Prev
+                </button>
+                {getPageNumbers(page, safePageCount).map((p, idx, arr) => (
+                  <span key={p} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {idx > 0 && arr[idx - 1] !== p - 1 && <span className="cbt-page-ellipsis">…</span>}
+                    <button
+                      className={`cbt-page-btn ${p === page ? "active" : ""}`}
+                      onClick={() => onPageChange(p)}
+                    >
+                      {p}
+                    </button>
+                  </span>
+                ))}
+                <button
+                  className="cbt-page-btn"
+                  disabled={page >= safePageCount}
+                  onClick={() => onPageChange(Math.min(safePageCount, page + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
+
+// Visual language matched to components/ProductsTable.js (Product Master) — same
+// tokens/spacing/typography, scoped under .cbt so it doesn't leak into other pages.
+const PAGE_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  .cbt {
+    --page-bg: #e4ebf1;
+    --surface: #ffffff;
+    --surface2: #e0edf9;
+    --surface-green: #dcf3e8;
+    --border: #c5d2dc;
+    --text: #10151c;
+    --muted: #52606d;
+    --accent: #1f68bf;
+    --good: #21875a;
+    --bad: #c0402f;
+
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--text);
+  }
+
+  .cbt-controls {
+    position: sticky;
+    top: 12px;
+    z-index: 50;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    box-shadow: 0 6px 16px rgba(31, 41, 55, 0.12);
+  }
+
+  .cbt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+  }
+  .cbt-field label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .cbt-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  .cbt-input:focus { border-color: var(--accent); }
+
+  .cbt-mode-toggle {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .cbt-mode-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 600;
+    background: var(--surface);
+    color: var(--muted);
+    border: none;
+    padding: 7px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cbt-mode-btn.active { background: var(--accent); color: #ffffff; }
+
+  .cbt-reset-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 8px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .cbt-reset-btn:hover { background: var(--surface2); }
+
+  .cbt-spacer { flex: 1 1 auto; }
+
+  .cbt-total-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    align-self: center;
+  }
+
+  .cbt-export-btn {
+    background: var(--good);
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cbt-export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .cbt-table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .cbt-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 0;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+
+  .cbt-table-scroll { overflow-x: auto; }
+
+  .cbt-table { width: 100%; border-collapse: collapse; }
+  .cbt-table th {
+    background: var(--surface2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+  .cbt-table th:last-child { border-right: none; }
+  .cbt-th-left { text-align: left; }
+
+  .cbt-table td {
+    padding: 11px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .cbt-table td:last-child { border-right: none; }
+  .cbt-table tbody tr:last-child td { border-bottom: none; }
+  .cbt-table tbody tr:hover { background: var(--surface2); }
+
+  .cbt-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cbt-pagination-info {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .cbt-pagination-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .cbt-page-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .cbt-page-btn.active { background: var(--accent); color: #ffffff; border-color: var(--accent); font-weight: 700; }
+  .cbt-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .cbt-page-ellipsis { color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+`;

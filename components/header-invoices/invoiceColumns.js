@@ -4,13 +4,127 @@
 import React, { useState } from "react";  
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
-import { FlaskConical, FileText, Download, QrCode } from "lucide-react";
+import { FlaskConical, FileText, Download, QrCode, MapPin } from "lucide-react";
 import { Spinner, Badge } from "react-bootstrap";
 import msdsMap from "public/data/msds-map.json";
 import { useAuth } from 'contexts/AuthContext';
-import { Tags } from "lucide-react"; 
+import { Tags } from "lucide-react";
 import { formatTime  } from "utils/formatTime";
 import LabelPrintModal from '../LabelPrintModal';
+import { mergePdfBlobs, imagesToPdfBlob, openPrintWindow } from 'utils/printBlob';
+
+// Always the same — Density Pharmachem's own shipping address
+const SHIP_FROM = {
+  company: 'DENSITY PHARMACHEM PRIVATE LIMITED',
+  addressLines: [
+    'Sy No 615/A & 624/2/1, Pudur Village,Medchal-Malkajgiri District,',
+    'Hyderabad - 501401, Telangana, India',
+  ],
+  contactName: 'Saroj Kumar Purohit',
+  contactPhone: '+91 998 999 1194',
+};
+
+const ADDRESS_FONT = "'Times New Roman', Times, serif";
+
+function wrapText(ctx, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  words.forEach((word) => {
+    const test = current ? `${current} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  });
+  if (current) lines.push(current);
+  return lines;
+}
+
+function generateAddressImage(shipTo) {
+  return new Promise((resolve) => {
+    const width = 640;
+    const padding = 32;
+    const lineHeight = 24;
+    const contentWidth = width - padding * 2;
+
+    const measureCanvas = document.createElement('canvas');
+    const mctx = measureCanvas.getContext('2d');
+    mctx.font = `14px ${ADDRESS_FONT}`;
+
+    const shipToAddrLines = (shipTo.address || 'N/A')
+      .split(/\r?\n/)
+      .filter(Boolean)
+      .flatMap((line) => wrapText(mctx, line, contentWidth));
+
+    const shipFromAddrLines = SHIP_FROM.addressLines;
+
+    const blockLines = (addrLines) => 2 /* label + company */ + addrLines.length + 2; /* contact name/phone */
+    const totalLines = blockLines(shipToAddrLines) + blockLines(shipFromAddrLines);
+    const height = padding * 2 + totalLines * lineHeight + 40;
+
+    // Render at 3x pixel density so the exported PNG stays crisp when zoomed —
+    // a canvas sized to plain CSS pixels only has that many real pixels to zoom into.
+    const scale = 3;
+    const canvas = document.createElement('canvas');
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = '#cccccc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8, 8, width - 16, height - 16);
+
+    ctx.textBaseline = 'top';
+    let cursorY = padding;
+
+    const drawLabel = (text) => {
+      ctx.font = `bold 12px ${ADDRESS_FONT}`;
+      ctx.fillStyle = '#555555';
+      ctx.fillText(text.toUpperCase(), padding, cursorY);
+      cursorY += lineHeight - 4;
+    };
+    const drawBold = (text) => {
+      ctx.font = `bold 16px ${ADDRESS_FONT}`;
+      ctx.fillStyle = '#000000';
+      ctx.fillText(text, padding, cursorY);
+      cursorY += lineHeight;
+    };
+    const drawNormal = (text) => {
+      ctx.font = `14px ${ADDRESS_FONT}`;
+      ctx.fillStyle = '#222222';
+      ctx.fillText(text, padding, cursorY);
+      cursorY += lineHeight;
+    };
+
+    drawLabel('Ship To');
+    drawBold(shipTo.company);
+    shipToAddrLines.forEach(drawNormal);
+    drawNormal(`Contact Name : ${shipTo.contactName}`);
+    drawNormal(`Contact Phone : ${shipTo.contactPhone}`);
+
+    cursorY += 12;
+    ctx.strokeStyle = '#dddddd';
+    ctx.beginPath();
+    ctx.moveTo(padding, cursorY);
+    ctx.lineTo(width - padding, cursorY);
+    ctx.stroke();
+    cursorY += 20;
+
+    drawLabel('Ship From');
+    drawBold(SHIP_FROM.company);
+    shipFromAddrLines.forEach(drawNormal);
+    drawNormal(`Contact Name : ${SHIP_FROM.contactName}`);
+    drawNormal(`Contact Phone : ${SHIP_FROM.contactPhone}`);
+
+    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  });
+}
 
 export const tableColumns = (handlers) => [
   {
@@ -115,7 +229,8 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
   const [loadingPDF, setLoadingPDF] = useState(false);
   const [loadingQR, setLoadingQR] = useState(false);
   const [loadingLabel, setLoadingLabel] = useState(false);
-  
+  const [loadingAddress, setLoadingAddress] = useState(false);
+
   // State for Label Modal
   const [showLabelModal, setShowLabelModal] = useState(false);
 
@@ -277,6 +392,31 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     setShowLabelModal(true);
   };
 
+  const handleAddressClick = async (e) => {
+    e.stopPropagation();
+    setLoadingAddress(true);
+    try {
+      const res = await fetch(`/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`);
+      if (!res.ok) throw new Error(`Failed to fetch invoice details: ${res.status}`);
+      const invoice = await res.json();
+
+      const shipTo = {
+        company: invoice.CardName || 'N/A',
+        address: invoice.ShipToAddress || invoice.BillToAddress || 'N/A',
+        contactName: invoice.ContactPerson || 'N/A',
+        contactPhone: invoice.ContactPersonPhone || 'N/A',
+      };
+
+      const blob = await generateAddressImage(shipTo);
+      openPrintWindow(blob, `Address_${docNum}`);
+    } catch (err) {
+      console.error('Error printing address:', err);
+      alert('Failed to load address for printing.');
+    } finally {
+      setLoadingAddress(false);
+    }
+  };
+
   // Updated generateQRCodeWithLabels function
   const generateQRCodeWithLabels = async (url, itemCode, batch) => {
     try {
@@ -324,178 +464,74 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     }
   };
 
-  // Updated handleQRDownload function
-  const handleQRDownload = async (docEntry, docNum) => {
+  // Generates one labelled QR per line item, merges them into a single PDF
+  // (one QR per page), and opens it in a print window — no files saved to disk.
+  const handleQRPrint = async (docEntry, docNum) => {
     setLoadingQR(true);
     try {
-      console.log("Starting QR download for docEntry:", docEntry, "docNum:", docNum);
-      
       const res = await fetch(
         `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
       );
-      
       if (!res.ok) {
         throw new Error(`Failed to fetch invoice details: ${res.status}`);
       }
-      
-      const invoice = await res.json();
-      console.log("Invoice data received:", invoice);
 
+      const invoice = await res.json();
       if (!invoice?.LineItems?.length) {
-        console.log("No line items found in invoice");
         alert("No line items found for this invoice.");
         return;
       }
 
-      console.log("Line items found:", invoice.LineItems.length);
-      const qrCodes = [];
+      const qrBlobs = [];
 
-      for (let i = 0; i < invoice.LineItems.length; i++) {
-        const item = invoice.LineItems[i];
-        console.log(`Processing item ${i + 1}:`, {
-          ItemCode: item.ItemCode,
-          VendorBatchNum: item.VendorBatchNum,
-          allProperties: Object.keys(item)
-        });
-
+      for (const item of invoice.LineItems) {
         const itemCode = item.ItemCode?.toString()?.trim() || "";
         const batch = item.VendorBatchNum?.toString()?.trim() || "";
+        if (!itemCode || !batch) continue;
 
-        console.log(`Item ${i + 1} processed values:`, {
-          itemCode: `"${itemCode}"`,
-          batch: `"${batch}"`,
-          itemCodeLength: itemCode.length,
-          batchLength: batch.length
-        });
+        const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
+        const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
 
-        if (!batch || batch.length === 0) {
-          console.log(`Item ${i + 1} skipped - no batch number available`);
-          continue;
-        }
-
-        if (itemCode && itemCode.length > 0) {
-          console.log(`Valid item found: ${itemCode} - ${batch}`);
-          
-          const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
-          const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
-          
-          console.log("Generated Energy URL:", energyUrl);
-          
-          try {
-            const testResponse = await fetch(energyUrl, { method: 'HEAD' });
-            console.log(`URL test for ${energyUrl}: ${testResponse.status}`);
-            
-            const qrDataURL = await generateQRCodeWithLabels(energyUrl, code, batch);
-            if (qrDataURL) {
-              qrCodes.push({
-                dataURL: qrDataURL,
-                filename: `QR_${itemCode}_${batch}.png`,
-                url: energyUrl,
-                itemCode: itemCode,
-                batch: batch
-              });
-              console.log(`QR code with labels generated for: ${itemCode}_${batch}`);
-            } else {
-              console.error(`Failed to generate QR code with labels for: ${itemCode}_${batch}`);
-            }
-          } catch (urlError) {
-            console.warn(`URL not accessible: ${energyUrl}`, urlError);
-            const qrDataURL = await generateQRCodeWithLabels(energyUrl, itemCode, batch);
-            if (qrDataURL) {
-              qrCodes.push({
-                dataURL: qrDataURL,
-                filename: `QR_${itemCode}_${batch}.png`,
-                url: energyUrl,
-                itemCode: itemCode,
-                batch: batch
-              });
-              console.log(`QR code with labels generated for inaccessible URL: ${itemCode}_${batch}`);
-            }
-          }
+        const qrDataURL = await generateQRCodeWithLabels(energyUrl, itemCode, batch);
+        if (qrDataURL) {
+          qrBlobs.push(dataURLToBlob(qrDataURL));
         } else {
-          console.log(`Item ${i + 1} skipped - missing item code`);
+          console.error(`Failed to generate QR code with labels for: ${itemCode}_${batch}`);
         }
       }
 
-      console.log(`Total QR codes to download: ${qrCodes.length}`);
-
-      if (!qrCodes.length) {
-        console.log("No valid QR codes generated");
+      if (!qrBlobs.length) {
         alert("No valid items found to generate QR codes. Items must have both item code and batch number (batch cannot be empty or 'NA').");
         return;
       }
 
-      let successCount = 0;
-      for (let i = 0; i < qrCodes.length; i++) {
-        const qr = qrCodes[i];
-        try {
-          console.log(`Downloading QR ${i + 1}/${qrCodes.length}: ${qr.filename}`);
-          
-          const blob = dataURLToBlob(qr.dataURL);
-          const blobUrl = URL.createObjectURL(blob);
-
-          const a = document.createElement("a");
-          a.href = blobUrl;
-          a.download = qr.filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(blobUrl);
-
-          successCount++;
-          console.log(`Successfully downloaded: ${qr.filename}`);
-
-          if (i < qrCodes.length - 1) {
-            await new Promise((r) => setTimeout(r, 300));
-          }
-        } catch (e) {
-          console.error("Failed to download QR code", qr.filename, e);
-        }
-      }
-
-      console.log(`Downloaded ${successCount}/${qrCodes.length} QR code(s)`);
-      if (successCount > 0) {
-        alert(`Successfully downloaded ${successCount} QR code(s) with labels`);
-      }
+      const mergedPdf = await imagesToPdfBlob(qrBlobs);
+      openPrintWindow(mergedPdf, `QR_${docNum}`);
     } catch (err) {
-      console.error("Error in QR download:", err);
+      console.error("Error in QR print:", err);
       alert("Failed to generate QR codes. Check console for details.");
     } finally {
       setLoadingQR(false);
     }
   };
 
-  const handleInvoicePDFDownload = async (docNum) => {
+  const handleInvoicePDFPrint = async (docNum) => {
     try {
-      const response = await fetch(`/api/invoices/download-pdf/${docNum}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
+      const response = await fetch(`/api/invoices/download-pdf/${docNum}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Invoice_${docNum}(Signed).pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
+      openPrintWindow(blob, `Invoice_${docNum}`);
     } catch (error) {
-      console.error('Error downloading invoice PDF:', error);
-      alert('Failed to download invoice PDF. Please try again.');
+      console.error('Error printing invoice PDF:', error);
+      alert('Failed to load invoice PDF for printing. Please try again.');
     }
   };
 
-  const handleCOADownload = async (docEntry, docNum) => {
+  // Fetches every line item's COA (local or energy source), merges them into
+  // a single PDF, and opens one print window — instead of N separate downloads.
+  const handleCOAPrint = async (docEntry, docNum) => {
     try {
       const res = await fetch(
         `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
@@ -511,37 +547,29 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
       const baseUrl = window.location.origin;
 
       for (const item of invoice.LineItems) {
-        console.log("ItemCode:", item.ItemCode, "U_COA:", item.COAUrl);
-
         const itemCode = item.ItemCode?.trim() || "";
         const coaUrl = item.COAUrl?.trim();
         const batch = item.VendorBatchNum?.trim();
 
         if (coaUrl && coaUrl !== '') {
           let filename = coaUrl;
-          
+
           if (filename.includes('\\')) {
             const pathParts = filename.split('\\');
             filename = pathParts[pathParts.length - 1];
           }
-          
+
           if (filename.includes('/')) {
             const pathParts = filename.split('/');
             filename = pathParts[pathParts.length - 1];
           }
 
           const encodedFilename = encodeURIComponent(filename);
-          const localCoaUrl = `${baseUrl}/api/coa/download/${encodedFilename}`;
-          coaUrls.add(localCoaUrl);
-          
-          console.log("Using LOCAL COA URL:", localCoaUrl);
-        } 
+          coaUrls.add(`${baseUrl}/api/coa/download/${encodedFilename}`);
+        }
         else if (itemCode && batch) {
           const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
-          const energyUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
-          coaUrls.add(energyUrl);
-          
-          console.log("Using ENERGY COA URL:", energyUrl);
+          coaUrls.add(`https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`);
         }
       }
 
@@ -550,7 +578,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
         return;
       }
 
-      let downloadedAny = false;
+      const coaBlobs = [];
       for (const url of coaUrls) {
         try {
           const fileRes = await fetch(url);
@@ -558,38 +586,28 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
             console.warn("COA not found at", url);
             continue;
           }
-          const blob = await fileRes.blob();
-          const blobUrl = URL.createObjectURL(blob);
-
-          const a = document.createElement("a");
-          const filename = url.includes('/api/coa/download/') 
-            ? decodeURIComponent(url.split('/').pop()) 
-            : url.split("/").pop();
-            
-          a.href = blobUrl;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(blobUrl);
-
-          downloadedAny = true;
-          await new Promise((r) => setTimeout(r, 300));
+          coaBlobs.push(await fileRes.blob());
         } catch (e) {
-          console.error("Failed to download COA from", url, e);
+          console.error("Failed to fetch COA from", url, e);
         }
       }
 
-      if (!downloadedAny) {
+      if (!coaBlobs.length) {
         alert("None of the COA files were available.");
+        return;
       }
+
+      const mergedPdf = await mergePdfBlobs(coaBlobs);
+      openPrintWindow(mergedPdf, `COA_${docNum}`);
     } catch (err) {
-      console.error("Error in COA download:", err);
-      alert("Failed to download COA files.");
+      console.error("Error in COA print:", err);
+      alert("Failed to load COA files for printing.");
     }
   };
 
-  const handleMSDSDownload = async (docEntry, docNum) => {
+  // Same merge-then-print treatment as COA — a multi-line invoice can pull in
+  // several distinct MSDS PDFs, so they're combined into one print job.
+  const handleMSDSPrint = async (docEntry, docNum) => {
     try {
       const res = await fetch(
         `/api/invoices/detail?docEntry=${docEntry}&docNum=${docNum}`
@@ -601,40 +619,38 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
         return;
       }
 
-      const downloaded = new Set();
+      const seenUrls = new Set();
+      const msdsBlobs = [];
 
       for (const item of invoice.LineItems) {
         const key = item.ItemCode?.trim();
         const msdsUrl = msdsMap[key];
 
-        if (msdsUrl && !downloaded.has(msdsUrl)) {
+        if (msdsUrl && !seenUrls.has(msdsUrl)) {
+          seenUrls.add(msdsUrl);
           try {
             const fileRes = await fetch(msdsUrl);
-            const blob = await fileRes.blob();
-            const blobUrl = URL.createObjectURL(blob);
-
-            const a = document.createElement("a");
-            a.href = blobUrl;
-            a.download = `${key}_MSDS.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(blobUrl);
-
-            downloaded.add(msdsUrl);
-            await new Promise((resolve) => setTimeout(resolve, 300));
+            if (!fileRes.ok) {
+              console.warn("MSDS not found at", msdsUrl);
+              continue;
+            }
+            msdsBlobs.push(await fileRes.blob());
           } catch (err) {
-            console.error(`Failed to download ${key}:`, err);
+            console.error(`Failed to fetch MSDS for ${key}:`, err);
           }
         }
       }
 
-      if (downloaded.size === 0) {
+      if (!msdsBlobs.length) {
         alert("No MSDS files matched this invoice.");
+        return;
       }
+
+      const mergedPdf = await mergePdfBlobs(msdsBlobs);
+      openPrintWindow(mergedPdf, `MSDS_${docNum}`);
     } catch (err) {
-      console.error("Error in MSDS download:", err);
-      alert("Failed to download MSDS files.");
+      console.error("Error in MSDS print:", err);
+      alert("Failed to load MSDS files for printing.");
     }
   };
 
@@ -642,7 +658,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     e.stopPropagation();
     setLoadingCOA(true);
     try {
-      await handleCOADownload(docEntry, docNum);
+      await handleCOAPrint(docEntry, docNum);
     } finally {
       setLoadingCOA(false);
     }
@@ -652,7 +668,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     e.stopPropagation();
     setLoadingMSDS(true);
     try {
-      await handleMSDSDownload(docEntry, docNum);
+      await handleMSDSPrint(docEntry, docNum);
     } finally {
       setLoadingMSDS(false);
     }
@@ -662,7 +678,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     e.stopPropagation();
     setLoadingPDF(true);
     try {
-      await handleInvoicePDFDownload(docNum);
+      await handleInvoicePDFPrint(docNum);
     } finally {
       setLoadingPDF(false);
     }
@@ -672,7 +688,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
     e.stopPropagation();
     setLoadingQR(true);
     try {
-      await handleQRDownload(docEntry, docNum);
+      await handleQRPrint(docEntry, docNum);
     } finally {
       setLoadingQR(false);
     }
@@ -697,26 +713,26 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
             e.stopPropagation();
             onDetailsClick(docNum, docEntry);
           }}
-          className="text-blue-600 hover:text-blue-800"
+          className="text-blue-600 hover:text-blue-800 me-2"
           style={{ textDecoration: "none", fontWeight: 500 }}
         >
           {docNum}
         </a>
 
-        {/* Conditionally render MSDS button */}
+        {/* Invoice PDF Print button */}
         {isAdminOrSales && (
           <button
-            onClick={handleMSDSClick}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-200 text-blue-900 hover:bg-blue-300 rounded-md border border-blue-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
-            title="Download MSDS"
-            disabled={loadingMSDS}
+            onClick={handlePDFClick}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-orange-200 text-orange-900 hover:bg-orange-300 rounded-md border border-orange-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
+            title="Print Invoice PDF"
+            disabled={loadingPDF}
           >
-            {loadingMSDS ? (
+            {loadingPDF ? (
               <Spinner animation="border" size="sm" />
             ) : (
-              <FlaskConical size={12} />
+              <Download size={12} />
             )}
-            <span className="hidden sm:inline font-medium">MSDS</span>
+            <span className="hidden sm:inline font-medium">INV Copy</span>
           </button>
         )}
 
@@ -725,7 +741,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
           <button
             onClick={handleCOAClick}
             className="flex items-center gap-2 px-3 py-1.5 text-xs bg-green-200 text-green-900 hover:bg-green-300 rounded-md border border-green-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
-            title="Download COA"
+            title="Print COA (merged into one PDF)"
             disabled={loadingCOA}
           >
             {loadingCOA ? (
@@ -737,12 +753,29 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
           </button>
         )}
 
+        {/* Address button — prints a Times New Roman address image directly */}
+        {isAdminOrSales && (
+          <button
+            onClick={handleAddressClick}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-pink-200 text-pink-900 hover:bg-pink-300 rounded-md border border-pink-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
+            title="Print Shipping Address"
+            disabled={loadingAddress}
+          >
+            {loadingAddress ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              <MapPin size={12} />
+            )}
+            <span className="hidden sm:inline font-medium">Address</span>
+          </button>
+        )}
+
         {/* QR Code button for Energy COA links */}
         {isAdminOrSales && (
           <button
             onClick={handleQRClick}
             className="flex items-center gap-2 px-3 py-1.5 text-xs bg-purple-200 text-purple-900 hover:bg-purple-300 rounded-md border border-purple-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
-            title="Download QR Codes for Energy COA Links"
+            title="Print QR Codes for Energy COA Links"
             disabled={loadingQR}
           >
             {loadingQR ? (
@@ -751,6 +784,23 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
               <QrCode size={12} />
             )}
             <span className="hidden sm:inline font-medium">QR</span>
+          </button>
+        )}
+
+        {/* Conditionally render MSDS button */}
+        {isAdminOrSales && (
+          <button
+            onClick={handleMSDSClick}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-blue-200 text-blue-900 hover:bg-blue-300 rounded-md border border-blue-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
+            title="Print MSDS (merged into one PDF)"
+            disabled={loadingMSDS}
+          >
+            {loadingMSDS ? (
+              <Spinner animation="border" size="sm" />
+            ) : (
+              <FlaskConical size={12} />
+            )}
+            <span className="hidden sm:inline font-medium">MSDS</span>
           </button>
         )}
 
@@ -768,23 +818,6 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
               <Tags size={12} />
             )}
             <span className="hidden sm:inline font-medium">Label</span>
-          </button>
-        )}
-
-        {/* Invoice PDF Download button */}
-        {isAdminOrSales && (
-          <button
-            onClick={handlePDFClick}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-orange-200 text-orange-900 hover:bg-orange-300 rounded-md border border-orange-400 shadow-sm hover:shadow-md transition-all duration-150 disabled:opacity-60"
-            title="Download Invoice PDF"
-            disabled={loadingPDF}
-          >
-            {loadingPDF ? (
-              <Spinner animation="border" size="sm" />
-            ) : (
-              <Download size={12} />
-            )}
-            <span className="hidden sm:inline font-medium">INV Copy</span>
           </button>
         )}
       </div>
