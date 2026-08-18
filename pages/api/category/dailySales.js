@@ -21,25 +21,6 @@ const lastDay = new Date(year, month, 0)
   .toLocaleDateString('en-CA');
 
 
-  let query = `
-    WITH DateRange AS (
-      SELECT CAST(@firstDay AS DATE) AS date
-      UNION ALL
-      SELECT DATEADD(DAY, 1, date)
-      FROM DateRange
-      WHERE date < @lastDay
-    ),
-    SalesData AS (
-      SELECT 
-        CONVERT(VARCHAR, o.DocDate, 23) AS [Date],
-        ROUND(SUM(i.LineTotal), 0) AS [DailySales],
-        COUNT(i.LineNum) AS [LineItems]
-      FROM 
-        OINV o
-      INNER JOIN 
-        INV1 i ON o.DocEntry = i.DocEntry
-  `;
-
   const params = [
     { name: 'firstDay', type: sql.Date, value: firstDay },
     { name: 'lastDay', type: sql.Date, value: lastDay }
@@ -51,9 +32,14 @@ const lastDay = new Date(year, month, 0)
     'o.DocDate <= @lastDay'
   ];
 
-  // Add joins and conditions based on filters
+  // Extra joins shared by both the invoice branch (OINV/INV1) and the credit
+  // note branch (ORIN/RIN1) below — column names (ItemCode/CardCode/SlpCode)
+  // are identical across both table pairs, so the same join/where text works
+  // for either aliasing.
+  let extraJoins = '';
+
   if (category) {
-    query += `
+    extraJoins += `
       INNER JOIN OITM m ON i.ItemCode = m.ItemCode
       INNER JOIN OITB g ON m.ItmsGrpCod = g.ItmsGrpCod
     `;
@@ -62,7 +48,7 @@ const lastDay = new Date(year, month, 0)
   }
 
   if (customer) {
-    query += `
+    extraJoins += `
       INNER JOIN OCRD c ON o.CardCode = c.CardCode
     `;
     whereConditions.push('c.CardName = @customerName');
@@ -70,19 +56,54 @@ const lastDay = new Date(year, month, 0)
   }
 
   if (salesperson) {
-    query += `
+    extraJoins += `
       INNER JOIN OSLP s ON o.SlpCode = s.SlpCode
     `;
     whereConditions.push('s.SlpName = @salespersonName');
     params.push({ name: 'salespersonName', type: sql.NVarChar, value: salesperson });
   }
 
-  // Complete the query
-  query += `
-      WHERE ${whereConditions.join(' AND ')}
-      GROUP BY CONVERT(VARCHAR, o.DocDate, 23)
+  const whereSQL = whereConditions.join(' AND ');
+
+  // Credit notes are shown on whichever day THEY were dated, net against
+  // that day's invoice sales — same netting pattern as sales-cogs.js.
+  const query = `
+    WITH DateRange AS (
+      SELECT CAST(@firstDay AS DATE) AS date
+      UNION ALL
+      SELECT DATEADD(DAY, 1, date)
+      FROM DateRange
+      WHERE date < @lastDay
+    ),
+    SalesData AS (
+      SELECT
+        [Date],
+        ROUND(SUM(LineTotal), 0) AS [DailySales],
+        SUM(LineItemCount) AS [LineItems]
+      FROM (
+        SELECT
+          CONVERT(VARCHAR, o.DocDate, 23) AS [Date],
+          i.LineTotal AS LineTotal,
+          1 AS LineItemCount
+        FROM OINV o
+        INNER JOIN INV1 i ON o.DocEntry = i.DocEntry
+        ${extraJoins}
+        WHERE ${whereSQL}
+
+        UNION ALL
+
+        SELECT
+          CONVERT(VARCHAR, o.DocDate, 23) AS [Date],
+          -i.LineTotal AS LineTotal,
+          -1 AS LineItemCount
+        FROM ORIN o
+        INNER JOIN RIN1 i ON o.DocEntry = i.DocEntry
+        ${extraJoins}
+        WHERE ${whereSQL}
+      ) AS Combined
+      GROUP BY [Date]
     )
-    SELECT 
+    SELECT
       CONVERT(VARCHAR, dr.date, 23) AS date,
       COALESCE(sd.DailySales, 0) AS totalSales,
       COALESCE(sd.LineItems, 0) AS lineItems
