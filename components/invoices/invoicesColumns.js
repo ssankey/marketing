@@ -177,14 +177,26 @@ const CoaCell = ({ row }) => {
 export const tableColumns = [
   {
     accessorKey: "DocNum",
-    header: "Inv#",
-    cell: ({ getValue, row }) => (
-      <Link
-        href={`/invoicedetails?d=${getValue()}&e=${row.original.DocEntry}`}
-        className="text-blue-600 hover:text-blue-800"
-      >
-        {getValue() || 'N/A'}
-      </Link>
+    header: "DocNum",
+    cell: ({ getValue, row }) =>
+      row.original.Type === 'CN' ? (
+        <span>{getValue() || 'N/A'}</span>
+      ) : (
+        <Link
+          href={`/invoicedetails?d=${getValue()}&e=${row.original.DocEntry}`}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          {getValue() || 'N/A'}
+        </Link>
+      ),
+  },
+  {
+    id: "Type",
+    header: "Type",
+    cell: ({ row }) => (
+      <Badge bg={row.original.Type === 'CN' ? 'danger' : 'primary'}>
+        {row.original.Type || 'IN'}
+      </Badge>
     ),
   },
   {

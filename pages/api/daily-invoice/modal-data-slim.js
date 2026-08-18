@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const cardCodes    = decoded.cardCodes    || [];
 
     // WHERE clauses
-    const whereClauses = ["H.CANCELED = 'N'", "H.[IssReason] <> '4'"];
+    const whereClauses = ["H.CANCELED <> 'Y'", "H.CANCELED <> 'C'"];
     const params = [];
 
     if (!isAdmin) {

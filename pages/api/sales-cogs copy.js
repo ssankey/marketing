@@ -71,7 +71,7 @@ export default async function handler(req, res) {
     if (cached) return res.status(200).json(cached);
 
     // ── WHERE clauses ───────────────────────────────────────
-    const whereClauses = ["T0.CANCELED = 'N'"];
+    const whereClauses = ["T0.CANCELED <> 'Y'", "T0.CANCELED <> 'C'"];
     const params = [];
 
     // Disabled — was hardcoding specific DocNums out of the report.
@@ -132,15 +132,11 @@ export default async function handler(req, res) {
       whereClauses.push(`T0.CardCode IN (${escaped})`);
     }
 
-    // IssReason only for OINV
-    whereClauses.push(`T0.[IssReason] <> '4'`);
-
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
     console.log("DEBUG whereSQL:", whereSQL);
 
-
-    // Order WHERE — same minus IssReason
-    const orderWhereClauses = whereClauses.filter(c => !c.includes("IssReason"));
+    // Order WHERE — same as invoice
+    const orderWhereClauses = [...whereClauses];
     const orderWhereSQL = orderWhereClauses.length ? `WHERE ${orderWhereClauses.join(" AND ")}` : "";
 
     // ── Query 1: Sales + COGS + GM% ─────────────────────────
@@ -271,7 +267,7 @@ export default async function handler(req, res) {
     let availableYears = await getCache(yearsCacheKey);
     if (!availableYears) {
       const yr = await queryDatabase(`
-        SELECT DISTINCT YEAR(DocDate) AS year FROM OINV WHERE CANCELED = 'N' ORDER BY year DESC;
+        SELECT DISTINCT YEAR(DocDate) AS year FROM OINV WHERE CANCELED <> 'Y' AND CANCELED <> 'C' ORDER BY year DESC;
       `);
       availableYears = yr.map(r => r.year);
       await setCache(yearsCacheKey, availableYears, 86400);

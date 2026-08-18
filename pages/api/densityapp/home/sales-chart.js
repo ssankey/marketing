@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     // ── WHERE clauses ──
     // Base filters shared between the invoice branch (OINV/INV1) and the
     // credit note branch (ORIN/RIN1) netted together in salesQuery below.
-    const baseWhereClauses = ["T0.CANCELED = 'N'"];
+    const baseWhereClauses = ["T0.CANCELED <> 'Y'", "T0.CANCELED <> 'C'"];
     const params = [];
 
     // Role-based scoping
@@ -76,21 +76,19 @@ export default async function handler(req, res) {
       baseWhereClauses.push(`T0.CardCode IN (${escaped})`);
     }
 
-    // ── Invoice WHERE (OINV/INV1) — base filters + invoice-only exclusions ──
+    // ── Invoice WHERE (OINV/INV1) — base filters (invoice-only exclusions disabled) ──
     const whereClauses = [
       ...baseWhereClauses,
-      "T0.[IssReason] <> '4'",
       // Disabled — used to hide a hardcoded list of DocNums (EXCLUDED_INVOICE_DOCNUMS).
       // `T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(',')})`,
     ];
     const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
-    // ── Credit note WHERE (ORIN/RIN1) — same base filters, minus the
-    // invoice-only IssReason condition. ──
+    // ── Credit note WHERE (ORIN/RIN1) — same base filters. ──
     const creditNoteWhereClauses = [...baseWhereClauses];
     const creditNoteWhereSQL = `WHERE ${creditNoteWhereClauses.join(' AND ')}`;
 
-    const orderWhereClauses = whereClauses.filter(c => !c.includes('IssReason'));
+    const orderWhereClauses = [...whereClauses];
     const orderWhereSQL = `WHERE ${orderWhereClauses.join(' AND ')}`;
 
     // ── Query 1: Sales + COGS + GM% (invoices net of credit notes) ──
@@ -184,7 +182,7 @@ export default async function handler(req, res) {
     // ── Query 4: Available years ──
     const yearsQuery = `
       SELECT DISTINCT YEAR(DocDate) AS year 
-      FROM OINV WHERE CANCELED = 'N' 
+      FROM OINV WHERE CANCELED <> 'Y' AND CANCELED <> 'C'
       ORDER BY year DESC;
     `;
 

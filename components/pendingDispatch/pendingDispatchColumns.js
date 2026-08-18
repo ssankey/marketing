@@ -1,21 +1,34 @@
 // components/pendingDispatch/pendingDispatchColumns.js
 import Link from "next/link";
+import { Badge } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 
 export const tableColumns = [
   {
     accessorKey: "DocNum",
-    header: "Invoice#",
-    cell: ({ getValue, row }) => (
-      <Link
-        href={`/invoicedetails?d=${getValue()}&e=${row.original.DocEntry}`}
-        className="text-blue-600 hover:text-blue-800"
-      >
-        {getValue()}
-      </Link>
-    ),
+    header: "DocNum",
+    cell: ({ getValue, row }) =>
+      row.original.Type === 'CN' ? (
+        <span>{getValue()}</span>
+      ) : (
+        <Link
+          href={`/invoicedetails?d=${getValue()}&e=${row.original.DocEntry}`}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          {getValue()}
+        </Link>
+      ),
     sortable: true,
+  },
+  {
+    id: "Type",
+    header: "Type",
+    cell: ({ row }) => (
+      <Badge bg={row.original.Type === 'CN' ? 'danger' : 'primary'}>
+        {row.original.Type || 'IN'}
+      </Badge>
+    ),
   },
   {
     accessorKey: "DocStatusDisplay",

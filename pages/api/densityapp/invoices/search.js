@@ -61,8 +61,7 @@ export default async function handler(req, res) {
       LEFT JOIN RDR1 R1  ON D1.BaseEntry = R1.DocEntry AND D1.BaseLine = R1.LineNum AND D1.BaseType = 17
       LEFT JOIN ORDR T13 ON R1.DocEntry  = T13.DocEntry
       WHERE
-        T0.CANCELED = 'N'
-        AND T0.IssReason <> '4'
+        T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
         AND (
           CAST(T0.DocNum AS VARCHAR)    LIKE '%${escaped}%'
           OR CAST(T13.DocNum AS VARCHAR) LIKE '%${escaped}%'

@@ -110,7 +110,7 @@ export default async function handler(req, res) {
       WITH FirstOrders AS (
         -- All-time first order date per customer (across entire history)
         SELECT CardCode, MIN(DocDate) AS FirstOrderDate
-        FROM ORDR WHERE CANCELED = 'N'
+        FROM ORDR WHERE CANCELED <> 'Y' AND CANCELED <> 'C'
         GROUP BY CardCode
       ),
       PeriodOrders AS (
@@ -127,7 +127,7 @@ export default async function handler(req, res) {
         FROM ORDR T0
         ${categoryJoinORDR}
         ${geoJoin}
-        WHERE T0.CANCELED = 'N'
+        WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
           AND T0.DocDate >= ${SD}
           AND T0.DocDate <= ${ED}
           ${extraSQL}
@@ -166,7 +166,7 @@ export default async function handler(req, res) {
     const kpiQuery = `
       WITH FirstOrders AS (
         SELECT CardCode, MIN(DocDate) AS FirstOrderDate
-        FROM ORDR WHERE CANCELED = 'N'
+        FROM ORDR WHERE CANCELED <> 'Y' AND CANCELED <> 'C'
         GROUP BY CardCode
       ),
       -- Step 1: customers who had orders in this period matching all filters
@@ -175,7 +175,7 @@ export default async function handler(req, res) {
         FROM ORDR T0
         ${categoryJoinORDR}
         ${geoJoin}
-        WHERE T0.CANCELED = 'N'
+        WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
           AND T0.DocDate >= ${SD}
           AND T0.DocDate <= ${ED}
           ${extraSQL}
@@ -202,7 +202,7 @@ export default async function handler(req, res) {
         INNER JOIN RDR1 RL ON T0.DocEntry   = RL.DocEntry
         INNER JOIN OITM IM ON RL.ItemCode   = IM.ItemCode
         INNER JOIN OITB IB ON IM.ItmsGrpCod = IB.ItmsGrpCod
-        WHERE T0.CANCELED = 'N'
+        WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
           AND T0.DocDate >= ${SD}
           AND T0.DocDate <= ${ED}
           AND IB.ItmsGrpNam = @itmsGrpCod
@@ -216,7 +216,7 @@ export default async function handler(req, res) {
         FROM ORDR T0
         INNER JOIN RDR1 RL ON T0.DocEntry = RL.DocEntry
         ${geoJoin}
-        WHERE T0.CANCELED = 'N'
+        WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
           AND T0.DocDate >= ${SD}
           AND T0.DocDate <= ${ED}
           ${extraSQL}
@@ -237,8 +237,7 @@ export default async function handler(req, res) {
           INNER JOIN INV1 IL ON T0.DocEntry   = IL.DocEntry
           INNER JOIN OITM IM ON IL.ItemCode   = IM.ItemCode
           INNER JOIN OITB IB ON IM.ItmsGrpCod = IB.ItmsGrpCod
-          WHERE T0.CANCELED = 'N'
-            AND T0.[IssReason] <> '4'
+          WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
             AND T0.DocDate >= ${SD}
             AND T0.DocDate <= ${ED}
             AND IB.ItmsGrpNam = @itmsGrpCod
@@ -254,7 +253,7 @@ export default async function handler(req, res) {
           INNER JOIN RIN1 IL ON T0.DocEntry   = IL.DocEntry
           INNER JOIN OITM IM ON IL.ItemCode   = IM.ItemCode
           INNER JOIN OITB IB ON IM.ItmsGrpCod = IB.ItmsGrpCod
-          WHERE T0.CANCELED = 'N'
+          WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
             AND T0.DocDate >= ${SD}
             AND T0.DocDate <= ${ED}
             AND IB.ItmsGrpNam = @itmsGrpCod
@@ -269,8 +268,7 @@ export default async function handler(req, res) {
           FROM OINV T0
           INNER JOIN INV1 IL ON T0.DocEntry = IL.DocEntry
           ${geoJoin}
-          WHERE T0.CANCELED = 'N'
-            AND T0.[IssReason] <> '4'
+          WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
             AND T0.DocDate >= ${SD}
             AND T0.DocDate <= ${ED}
             ${extraSQL}
@@ -281,7 +279,7 @@ export default async function handler(req, res) {
           FROM ORIN T0
           INNER JOIN RIN1 IL ON T0.DocEntry = IL.DocEntry
           ${geoJoin}
-          WHERE T0.CANCELED = 'N'
+          WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
             AND T0.DocDate >= ${SD}
             AND T0.DocDate <= ${ED}
             ${extraSQL}
