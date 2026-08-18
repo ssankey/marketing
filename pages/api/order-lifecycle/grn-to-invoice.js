@@ -74,8 +74,8 @@ export default async function handler(req, res) {
         LEFT JOIN OSLP T5 ON OPDN.SlpCode = T5.SlpCode
         LEFT JOIN OITM ITM ON D1.ItemCode = ITM.ItemCode
         LEFT JOIN OITB ITB ON ITM.ItmsGrpCod = ITB.ItmsGrpCod
-        WHERE OPDN.CANCELED = 'N' 
-          AND OINV.CANCELED = 'N'${filterSQL}
+        WHERE OPDN.CANCELED = 'N'
+          AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'${filterSQL}
       )
       SELECT 
         'GRN to Invoice' AS [Type],

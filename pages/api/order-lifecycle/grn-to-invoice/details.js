@@ -37,7 +37,8 @@ export default async function handler(req, res) {
     // ✅ Filter by GRN date month
     const whereParts = [
       "OPDN.CANCELED = 'N'",
-      "OINV.CANCELED = 'N'",
+      "OINV.CANCELED <> 'Y'",
+      "OINV.CANCELED <> 'C'",
       "FORMAT(OPDN.DocDate, 'yyyy-MM') = @month"
     ];
     

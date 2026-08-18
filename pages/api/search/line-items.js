@@ -188,7 +188,7 @@ export default async function handler(req, res) {
           LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry 
                         AND DLN1.LineNum = INV1.BaseLine 
                         AND INV1.BaseType = 15
-          LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED = 'N'
+          LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
           WHERE T1.DocEntry = (SELECT DocEntry FROM ORDR WHERE DocNum = @docNum)
           ORDER BY T1.LineNum;
         `;

@@ -95,7 +95,7 @@ export default async function handler(req, res) {
       const caseStmt = buildCaseStatement("OPDN.DocDate", "OINV.DocDate");
 
       // Build WHERE clause for filters
-      const filterConditions = ["OINV.CANCELED = 'N'"];
+      const filterConditions = ["OINV.CANCELED <> 'Y'", "OINV.CANCELED <> 'C'"];
       
       if (slpCode) {
         filterConditions.push("OINV.SlpCode = @slpCode");
@@ -154,7 +154,8 @@ export default async function handler(req, res) {
       const caseStmt = buildCaseStatement("OINV.DocDate", "OINV.U_DispatchDate");
 
       const filterConditions = [
-        "OINV.CANCELED = 'N'",
+        "OINV.CANCELED <> 'Y'",
+        "OINV.CANCELED <> 'C'",
         "OINV.U_DispatchDate IS NOT NULL"
       ];
       

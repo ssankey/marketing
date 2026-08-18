@@ -40,7 +40,11 @@ export default async function handler(req, res) {
   const cardCodes = decoded.cardCodes || [];
 
   // Build role-based filtering
-  const baseWhereClause = "T0.CANCELED = 'N'";
+  // Separate base clauses — T0 is OINV in invoiceQuery but ORDR in orderQuery,
+  // and only the invoice (OINV) filter should switch off IssReason-adjacent
+  // CANCELED semantics; the ORDR filter stays as-is.
+  const invoiceBaseWhereClause = "T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'";
+  const orderBaseWhereClause = "T0.CANCELED = 'N'";
   let roleWhereClause = "";
 
   if (!isAdmin) {
@@ -108,7 +112,7 @@ export default async function handler(req, res) {
           T1.SlpName AS 'Sales Employee'
       FROM OINV T0
       LEFT JOIN OSLP T1 ON T0.SlpCode = T1.SlpCode
-      WHERE ${baseWhereClause}
+      WHERE ${invoiceBaseWhereClause}
       ${roleWhereClause}
       AND (
           CAST(T0.DocNum AS VARCHAR(50)) LIKE @search
@@ -136,7 +140,7 @@ export default async function handler(req, res) {
                                      AND DLN1.LineNum = INV1.BaseLine
                                      AND INV1.BaseType = 15
                       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry
-                                     AND OINV.CANCELED = 'N'
+                                     AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
                       WHERE T1.DocEntry = T0.DocEntry
                         AND OINV.DocNum IS NOT NULL
                         AND CAST(OINV.DocNum AS VARCHAR(50)) <> 'N/A'
@@ -151,7 +155,7 @@ export default async function handler(req, res) {
                                      AND DLN1.LineNum = INV1.BaseLine
                                      AND INV1.BaseType = 15
                       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry
-                                     AND OINV.CANCELED = 'N'
+                                     AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
                       WHERE T1.DocEntry = T0.DocEntry
                         AND (
                           OINV.DocNum IS NULL
@@ -170,7 +174,7 @@ export default async function handler(req, res) {
           T1.SlpName AS 'Sales Employee'
       FROM ORDR T0
       LEFT JOIN OSLP T1 ON T0.SlpCode = T1.SlpCode
-      WHERE ${baseWhereClause}
+      WHERE ${orderBaseWhereClause}
       ${roleWhereClause}
       AND (
           CAST(T0.DocNum AS VARCHAR(50)) LIKE @search

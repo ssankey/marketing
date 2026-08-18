@@ -51,14 +51,14 @@ export default async function handler(req, res) {
                 SELECT 1 FROM RDR1 T1
                 LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
                 LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-                LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
+                LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED <> 'Y' AND V.CANCELED <> 'C'
                 WHERE T1.DocEntry = T0.DocEntry AND V.DocEntry IS NOT NULL
               )
               AND EXISTS (
                 SELECT 1 FROM RDR1 T1
                 LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
                 LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-                LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
+                LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED <> 'Y' AND V.CANCELED <> 'C'
                 WHERE T1.DocEntry = T0.DocEntry AND V.DocEntry IS NULL
               )
             ) THEN 'Partial'
@@ -133,7 +133,7 @@ export default async function handler(req, res) {
         INNER JOIN RDR1 T1 ON C.DocEntry = T1.DocEntry
         LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
         LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-        LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED = 'N'
+        LEFT JOIN OINV V ON V.DocEntry = I.DocEntry AND V.CANCELED <> 'Y' AND V.CANCELED <> 'C'
         WHERE V.DocEntry IS NULL  -- only include uninvoiced line items
         GROUP BY C.DocEntry
       ),

@@ -311,7 +311,7 @@ export default async function handler(req, res) {
         JOIN PDN1 ON OPDN.DocEntry=PDN1.DocEntry
         JOIN INV1 ON PDN1.DocEntry=INV1.BaseEntry AND PDN1.LineNum=INV1.BaseLine
         JOIN OINV ON INV1.DocEntry=OINV.DocEntry
-        WHERE OINV.CANCELED='N'
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
       ),
       INV_DISP AS (
         SELECT 'Invoice to Dispatch' AS Type, FORMAT(OINV.DocDate,'yyyy-MM') AS Month,
@@ -321,7 +321,7 @@ export default async function handler(req, res) {
                WHEN DATEDIFF(DAY,OINV.DocDate,OINV.U_DispatchDate) BETWEEN 9 AND 10 THEN '9-10 days'
                ELSE '10+ days' END AS Bucket,
           YEAR(OINV.DocDate) AS Year, MONTH(OINV.DocDate) AS MonthNumber
-        FROM OINV WHERE OINV.CANCELED='N' AND OINV.U_DispatchDate IS NOT NULL
+        FROM OINV WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND OINV.U_DispatchDate IS NOT NULL
       ),
       ORD_INV AS (
         SELECT 'Order to Invoice' AS Type, FORMAT(T0.DocDate,'yyyy-MM') AS Month,
@@ -360,7 +360,7 @@ export default async function handler(req, res) {
       WITH AllDates AS (
         SELECT YEAR(DocDate) as year FROM OPOR WHERE CANCELED='N'
         UNION SELECT YEAR(DocDate) as year FROM OPDN WHERE CANCELED='N'
-        UNION SELECT YEAR(DocDate) as year FROM OINV WHERE CANCELED='N'
+        UNION SELECT YEAR(DocDate) as year FROM OINV WHERE CANCELED <> 'Y' AND CANCELED <> 'C'
         UNION SELECT YEAR(DocDate) as year FROM ORDR WHERE CANCELED='N'
       )
       SELECT DISTINCT year FROM AllDates ORDER BY year DESC

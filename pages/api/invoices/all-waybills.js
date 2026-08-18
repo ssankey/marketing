@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   const offset = (parseInt(page) - 1) * parseInt(pageSize);
 
-  let whereClause = `T0.CANCELED = 'N' AND T0.TrackNo IS NOT NULL AND T0.TrackNo != ''`;
+  let whereClause = `T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C' AND T0.TrackNo IS NOT NULL AND T0.TrackNo != ''`;
 
   if (search.trim()) {
     const s = search.trim().replace(/'/g, "''");

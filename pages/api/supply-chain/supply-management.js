@@ -119,7 +119,7 @@ export default async function handler(req, res) {
                      AND DLN1.LineNum = INV1.BaseLine 
                      AND INV1.BaseType = 15
       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry 
-                     AND OINV.CANCELED = 'N'
+                     AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
 
       ${whereSQL}
       ORDER BY T0.DocDate DESC, T0.DocNum DESC

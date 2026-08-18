@@ -73,7 +73,7 @@ export default async function handler(req, res) {
         FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear,
         MIN(OINV.DocDate) AS MinDate
       FROM OINV
-      WHERE OINV.CANCELED = 'N'
+      WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
       AND OINV.CardCode = @cardCode
       ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
       ${contactPerson ? 'AND OINV.CntctCode = @contactPersonCode' : ''}
@@ -133,7 +133,7 @@ export default async function handler(req, res) {
               INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
               INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
               INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-              WHERE OINV.CANCELED = 'N'
+              WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
               AND OINV.CardCode = @cardCode
               ${salesPerson ? 'AND OINV.SlpCode = @salesPersonCode' : ''}
               ${category ? 'AND T4.ItmsGrpNam = @categoryName' : ''}

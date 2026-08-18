@@ -256,7 +256,7 @@ export default async function handler(req, res) {
       LEFT JOIN DLN1 D1  ON I1.BaseEntry = D1.DocEntry AND I1.BaseLine = D1.LineNum AND I1.BaseType = 15
       LEFT JOIN RDR1 R1  ON D1.BaseEntry = R1.DocEntry AND D1.BaseLine = R1.LineNum AND D1.BaseType = 17
       LEFT JOIN ORDR T4  ON R1.DocEntry  = T4.DocEntry
-      WHERE T0.DocNum = @docNum AND T0.CANCELED = 'N';
+      WHERE T0.DocNum = @docNum AND T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C';
     `;
 
     // ── Line items ──
@@ -303,7 +303,7 @@ export default async function handler(req, res) {
       LEFT JOIN OIBT T15 ON T4.ItemCode  = T15.ItemCode AND T4.BatchNum = T15.BatchNum
       LEFT JOIN OITM ITM ON T1.ItemCode  = ITM.ItemCode
       LEFT JOIN OITB ITMGRP ON ITM.ItmsGrpCod = ITMGRP.ItmsGrpCod
-      WHERE T1.DocEntry = (SELECT DocEntry FROM OINV WHERE DocNum = @docNum AND CANCELED = 'N')
+      WHERE T1.DocEntry = (SELECT DocEntry FROM OINV WHERE DocNum = @docNum AND CANCELED <> 'Y' AND CANCELED <> 'C')
       ORDER BY T1.LineNum;
     `;
 

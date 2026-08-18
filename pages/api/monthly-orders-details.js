@@ -103,7 +103,7 @@ export default async function handler(req, res) {
         ${itemCode ? `AND T1.ItemCode = @itemCode` : ''}
         LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
         LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-        LEFT JOIN OINV V ON I.DocEntry = V.DocEntry AND V.CANCELED = 'N'
+        LEFT JOIN OINV V ON I.DocEntry = V.DocEntry AND V.CANCELED <> 'Y' AND V.CANCELED <> 'C'
       ),
       -- Determine order status more efficiently
       OrderStatusCTE AS (
@@ -155,7 +155,7 @@ export default async function handler(req, res) {
         INNER JOIN OCRD ON CTE.CardCode = OCRD.CardCode
         LEFT JOIN DLN1 D ON T1.DocEntry = D.BaseEntry AND T1.LineNum = D.BaseLine AND D.BaseType = 17
         LEFT JOIN INV1 I ON D.DocEntry = I.BaseEntry AND D.LineNum = I.BaseLine AND I.BaseType = 15
-        LEFT JOIN OINV V ON I.DocEntry = V.DocEntry AND V.CANCELED = 'N'
+        LEFT JOIN OINV V ON I.DocEntry = V.DocEntry AND V.CANCELED <> 'Y' AND V.CANCELED <> 'C'
         LEFT JOIN IBT1 T4 ON T4.BaseEntry = D.DocEntry
                         AND T4.BaseType = 15
                         AND T4.BaseLinNum = D.LineNum

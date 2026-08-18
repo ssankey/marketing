@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
       LEFT JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry AND T1.LineNum = DLN1.BaseLine AND DLN1.BaseType = 17
       LEFT JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry AND DLN1.LineNum = INV1.BaseLine AND INV1.BaseType = 15
-      LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED = 'N'
+      LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
       LEFT JOIN OITM T2 ON T1.ItemCode = T2.ItemCode
       LEFT JOIN OITB IB ON T2.ItmsGrpCod = IB.ItmsGrpCod
       LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode

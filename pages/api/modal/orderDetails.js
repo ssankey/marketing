@@ -59,7 +59,7 @@ export default async function handler(req, res) {
                         AND T1.BaseType = 15 
                         AND T1.BaseLine = T2.LineNum
                         AND T1.ItemCode = T2.ItemCode
-      LEFT JOIN OINV T0 ON T0.DocEntry = T1.DocEntry AND T0.CANCELED = 'N'
+      LEFT JOIN OINV T0 ON T0.DocEntry = T1.DocEntry AND T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
       LEFT JOIN IBT1 T4 ON T4.BaseEntry = T2.DocEntry
                       AND T4.BaseType = 15
                       AND T4.BaseLinNum = T2.LineNum

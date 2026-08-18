@@ -32,7 +32,8 @@ export default async function handler(req, res) {
 
     // Filters on PO table - tracking PO Date to Invoice Date
     const whereParts = [
-      "OINV.CANCELED = 'N'",
+      "OINV.CANCELED <> 'Y'",
+      "OINV.CANCELED <> 'C'",
       "FORMAT(PO.DocDate, 'yyyy-MM') = @month",
       `DATEDIFF(DAY, PO.DocDate, OINV.DocDate) BETWEEN @minDays AND @maxDays`
     ];

@@ -26,7 +26,10 @@ export default async function handler(req, res) {
         T1.U_CasNo                       AS [Cas No],
         T1.VendorNum                     AS [Vendor Catalog No.],
         T1.U_Packsize                    AS [PKZ],
-        T4.Quantity                      AS [Qty],
+        CASE
+          WHEN T4.Quantity IS NOT NULL THEN T4.Quantity
+          ELSE T1.Quantity
+        END                               AS [Qty],
         T15.U_COA                       AS [COA Filename],
          CASE 
                 WHEN T0.DocStatus = 'C' AND T0.CANCELED = 'Y' THEN 'Cancelled'
@@ -50,17 +53,17 @@ export default async function handler(req, res) {
       FROM OINV T0
       INNER JOIN INV1 T1      ON T0.DocEntry = T1.DocEntry
       INNER JOIN INV12 B      ON T0.DocEntry = B.DocEntry
-      INNER JOIN DLN1 T2      ON T2.ItemCode = T1.ItemCode
+      LEFT JOIN DLN1 T2       ON T2.ItemCode = T1.ItemCode
                             AND T2.DocEntry = T1.BaseEntry
                             AND T1.BaseType = 15
                             AND T1.BaseLine = T2.LineNum
-      INNER JOIN ODLN T3      ON T3.DocEntry = T2.DocEntry
-      INNER JOIN RDR1 T12     ON T12.ItemCode = T2.ItemCode
+      LEFT JOIN ODLN T3       ON T3.DocEntry = T2.DocEntry
+      LEFT JOIN RDR1 T12      ON T12.ItemCode = T2.ItemCode
                             AND T12.DocEntry = T2.BaseEntry
                             AND T2.BaseType = 17
                             AND T2.BaseLine = T12.LineNum
-      INNER JOIN ORDR T13     ON T13.DocEntry = T12.DocEntry
-      INNER JOIN OCPR CP      ON T13.CntctCode = CP.CntctCode
+      LEFT JOIN ORDR T13      ON T13.DocEntry = T12.DocEntry
+      LEFT JOIN OCPR CP       ON T13.CntctCode = CP.CntctCode
       LEFT JOIN IBT1 T4       ON T4.CardCode = T3.CardCode
                             AND T4.ItemCode = T2.ItemCode
                             AND T4.BaseNum = T3.DocNum
@@ -68,9 +71,9 @@ export default async function handler(req, res) {
                             AND T4.BaseType = 15
                             AND T4.BaseLinNum = T2.LineNum
                             AND T4.Direction = 1
-      INNER JOIN OIBT T15     ON T4.ItemCode = T15.ItemCode
+      LEFT JOIN OIBT T15      ON T4.ItemCode = T15.ItemCode
                             AND T4.BatchNum = T15.BatchNum
-      WHERE T0.CANCELED = 'N'
+      WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
       AND T0.DocNum = ${invoiceNo}
     `;
 
