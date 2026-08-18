@@ -46,7 +46,7 @@ const lastDay = new Date(year, month, 0)
   ];
 
   const whereConditions = [
-    'o.CANCELED = \'N\'',
+    'o.CANCELED <> \'Y\' AND o.CANCELED <> \'C\'',
     'o.DocDate >= @firstDay',
     'o.DocDate <= @lastDay'
   ];

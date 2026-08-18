@@ -169,7 +169,7 @@ export default async function handler(req, res) {
                     AND DLN1.LineNum = INV1.BaseLine 
                     AND INV1.BaseType = 15
       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry 
-                    AND OINV.CANCELED = 'N'
+                    AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
       LEFT JOIN IBT1 T4_batch ON T4_batch.BaseEntry = DLN1.DocEntry 
                              AND T4_batch.BaseType = 15 
                              AND T4_batch.BaseLinNum = DLN1.LineNum 

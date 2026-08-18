@@ -144,7 +144,8 @@ export default async function handler(req, res) {
     }
 
     const whereParts = [
-      "OINV.CANCELED = 'N'",
+      "OINV.CANCELED <> 'Y'",
+      "OINV.CANCELED <> 'C'",
       "OINV.U_DispatchDate IS NOT NULL",
       "FORMAT(OINV.DocDate, 'yyyy-MM') = @month"
     ];

@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     };
 
     // Filters on PO (OPOR) table
-    const whereParts = ["OINV.CANCELED = 'N'"];
+    const whereParts = ["OINV.CANCELED <> 'Y'", "OINV.CANCELED <> 'C'"];
     const params = [];
 
     if (salesPerson) {

@@ -45,7 +45,7 @@ export default async function handler(req, res) {
         JOIN PDN1 ON OPDN.DocEntry = PDN1.DocEntry
         JOIN INV1 ON PDN1.DocEntry = INV1.BaseEntry AND PDN1.LineNum = INV1.BaseLine
         JOIN OINV ON INV1.DocEntry = OINV.DocEntry
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
       ),
       INV_DISP AS (
         SELECT 
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
                 ELSE '10+ days'
             END AS Bucket
         FROM OINV
-        WHERE OINV.CANCELED = 'N' 
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
           AND OINV.U_DispatchDate IS NOT NULL
       ),
       Combined AS (

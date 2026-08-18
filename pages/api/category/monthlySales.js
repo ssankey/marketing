@@ -19,7 +19,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -28,7 +28,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -54,7 +54,7 @@ const queries = {
         `
             : ""
         }
-        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
         UNION ALL
@@ -148,7 +148,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -157,7 +157,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -183,7 +183,7 @@ const queries = {
         `
             : ""
         }
-        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
         UNION ALL
@@ -275,7 +275,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -284,7 +284,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -311,7 +311,7 @@ const queries = {
         `
             : ""
         }
-        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
         UNION ALL
@@ -405,7 +405,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -414,7 +414,7 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -433,7 +433,7 @@ const queries = {
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
+        WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
 
         UNION ALL
 

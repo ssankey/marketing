@@ -75,7 +75,7 @@ export default async function handler(req, res) {
        AND T3.AdresType = 'S'
        AND T3.Address   = T0.ShipToCode
     WHERE T0.DocNum IN (${inClause})
-      AND T0.CANCELED = 'N'
+      AND T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
     ORDER BY T0.DocNum ASC, T1.LineNum ASC
   `;
 

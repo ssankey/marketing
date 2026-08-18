@@ -221,7 +221,7 @@ export default async function handler(req, res) {
                              AND DL.LineNum  = IV.BaseLine
                              AND IV.BaseType = 15
           INNER JOIN OINV    ON IV.DocEntry  = OINV.DocEntry
-                             AND OINV.CANCELED = 'N'
+                             AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
           WHERE DL.BaseEntry = T1.DocEntry
             AND DL.BaseLine  = T1.LineNum
             AND DL.BaseType  = 17

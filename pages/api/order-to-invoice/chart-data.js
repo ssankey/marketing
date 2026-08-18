@@ -143,7 +143,7 @@ export default async function handler(req, res) {
                     AND DLN1.LineNum = INV1.BaseLine 
                     AND INV1.BaseType = 15
       LEFT JOIN OINV ON INV1.DocEntry = OINV.DocEntry 
-                    AND OINV.CANCELED = 'N'
+                    AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
       ${whereSQL}
       GROUP BY YEAR(T0.DocDate), MONTH(T0.DocDate), DATENAME(MONTH, T0.DocDate)
       ORDER BY YEAR(T0.DocDate) ASC, MONTH(T0.DocDate) ASC;
