@@ -137,24 +137,21 @@ export default async function handler(req, res) {
     //   whereClauses.push(`T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(",")})`);
     // }
 
-    // IssReason only for OINV
-    whereClauses.push(`T0.[IssReason] <> '4'`);
-
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
     console.log("DEBUG whereSQL:", whereSQL);
 
     // ── Credit note WHERE (ORIN/RIN1) — same base filters as the invoice
-    // branch, minus the invoice-only IssReason condition (ORIN has no such
-    // column/logic) and EXCLUDED_INVOICE_DOCNUMS (an OINV DocNum exclusion
-    // list, not applicable to ORIN docnums). No BaseType/BaseEntry matching —
-    // ORIN rows are netted against the same date range and role/customer/
-    // category filters as OINV, not tied to a specific source invoice. ──
+    // branch (ORIN has no IssReason column/logic) and no EXCLUDED_INVOICE_DOCNUMS
+    // (an OINV DocNum exclusion list, not applicable to ORIN docnums). No
+    // BaseType/BaseEntry matching — ORIN rows are netted against the same date
+    // range and role/customer/category filters as OINV, not tied to a specific
+    // source invoice. ──
     const creditNoteWhereClauses = [...baseWhereClauses];
     const creditNoteWhereSQL = `WHERE ${creditNoteWhereClauses.join(" AND ")}`;
     console.log("DEBUG creditNoteWhereSQL:", creditNoteWhereSQL);
 
-    // Order WHERE — same as invoice minus IssReason
-    const orderWhereClauses = whereClauses.filter(c => !c.includes("IssReason"));
+    // Order WHERE — same as invoice
+    const orderWhereClauses = [...whereClauses];
     const orderWhereSQL = orderWhereClauses.length ? `WHERE ${orderWhereClauses.join(" AND ")}` : "";
 
     // ── Query 1: Sales + COGS + GM% (invoices net of credit notes) ─────
@@ -302,7 +299,7 @@ export default async function handler(req, res) {
     let availableYears = await getCache(yearsCacheKey);
     if (!availableYears) {
       const yr = await queryDatabase(`
-        SELECT DISTINCT YEAR(DocDate) AS year FROM OINV WHERE CANCELED = 'N' ORDER BY year DESC;
+        SELECT DISTINCT YEAR(DocDate) AS year FROM OINV WHERE CANCELED <> 'Y' AND CANCELED <> 'C' ORDER BY year DESC;
       `);
       availableYears = yr.map(r => r.year);
       await setCache(yearsCacheKey, availableYears, 86400);

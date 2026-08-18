@@ -12,7 +12,7 @@ export default async function handler(req, res) {
     // Build WHERE clauses
     // Base filters shared between the invoice branch (OINV/INV1) and the
     // credit note branch (ORIN/RIN1) netted together in the query below.
-    const baseWhereClauses = ["T0.CANCELED = 'N'"];
+    const baseWhereClauses = ["T0.CANCELED <> 'Y'", "T0.CANCELED <> 'C'"];
 
     // Filter by year if provided and not "Complete" or empty
     if (year && year !== "Complete" && year !== "") {
@@ -109,11 +109,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── Invoice WHERE (OINV/INV1) — base + invoice-only IssReason ──
-    const whereClauses = [...baseWhereClauses, "T0.[IssReason] <> '4'"];
+    // ── Invoice WHERE (OINV/INV1) — base filters ──
+    const whereClauses = [...baseWhereClauses];
     const whereSQL = whereClauses.join(" AND ");
 
-    // ── Credit note WHERE (ORIN/RIN1) — same base filters, no IssReason ──
+    // ── Credit note WHERE (ORIN/RIN1) — same base filters ──
     const creditNoteWhereClauses = [...baseWhereClauses];
     const creditNoteWhereSQL = creditNoteWhereClauses.join(" AND ");
 

@@ -32,7 +32,7 @@ export default async function handler(req, res) {
 
     // Base filters shared between the invoice branch (OINV/INV1) and the
     // credit note branch (ORIN/RIN1) netted together in salesQuery below.
-    const baseWhereClauses = ["T0.CANCELED = 'N'"];
+    const baseWhereClauses = ["T0.CANCELED <> 'Y'", "T0.CANCELED <> 'C'"];
     const params = [];
 
     if (!isAdmin) {
@@ -59,11 +59,11 @@ export default async function handler(req, res) {
     if (cardCode)   { baseWhereClauses.push(`T0.CardCode = @cardCode`);      params.push({ name: "cardCode",   type: sql.VarChar, value: cardCode             }); }
     if (itemCode)   { baseWhereClauses.push(`T1.ItemCode = @itemCode`);      params.push({ name: "itemCode",   type: sql.VarChar, value: itemCode             }); }
 
-    // ── Invoice WHERE (OINV/INV1) — base + invoice-only IssReason ──
-    const whereClauses = [...baseWhereClauses, "T0.[IssReason] <> '4'"];
+    // ── Invoice WHERE (OINV/INV1) — base filters ──
+    const whereClauses = [...baseWhereClauses];
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
 
-    // ── Credit note WHERE (ORIN/RIN1) — same base filters, no IssReason ──
+    // ── Credit note WHERE (ORIN/RIN1) — same base filters ──
     const creditNoteWhereClauses = [...baseWhereClauses];
     const creditNoteWhereSQL = `WHERE ${creditNoteWhereClauses.join(" AND ")}`;
 

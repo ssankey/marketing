@@ -129,15 +129,27 @@ function generateAddressImage(shipTo) {
 export const tableColumns = (handlers) => [
   {
     accessorKey: "DocNum",
-    header: "Invoice#",
-    cell: ({ row, getValue }) => (
-      <InvoiceActions 
-        docEntry={row.original.DocEntry}
-        docNum={getValue()}
-        onDetailsClick={() => handlers.onInvoiceClick(getValue(), row.original.DocEntry)}
-      />
-    ),
+    header: "DocNum",
+    cell: ({ row, getValue }) =>
+      row.original.Type === 'CN' ? (
+        <span className="text-gray-700">{getValue()}</span>
+      ) : (
+        <InvoiceActions
+          docEntry={row.original.DocEntry}
+          docNum={getValue()}
+          onDetailsClick={() => handlers.onInvoiceClick(getValue(), row.original.DocEntry)}
+        />
+      ),
     sortable: true,
+  },
+  {
+    id: "Type",
+    header: "Type",
+    cell: ({ row }) => (
+      <Badge bg={row.original.Type === 'CN' ? 'danger' : 'primary'}>
+        {row.original.Type || 'IN'}
+      </Badge>
+    ),
   },
   {
     accessorKey: "DocDate",

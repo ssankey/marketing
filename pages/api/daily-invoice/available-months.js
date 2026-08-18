@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     const cached = await getCache(cacheKey);
     if (cached) return res.status(200).json(cached);
 
-    const whereClauses = ["T0.CANCELED = 'N'", "T0.[IssReason] <> '4'"];
+    const whereClauses = ["T0.CANCELED <> 'Y'", "T0.CANCELED <> 'C'"];
 
     if (!isAdmin) {
       if (contactCodes.length > 0)

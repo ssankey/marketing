@@ -53,7 +53,7 @@ export default async function handler(req, res) {
       FROM ORDR T0
       LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
       WHERE
-        T0.CANCELED = 'N'
+        T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
         AND T0.DocDate >= CAST(DATEADD(DAY, -7, GETDATE()) AS DATE)
         ${slpFilter}
       ORDER BY T0.DocDate DESC, T0.CreateTS DESC;
@@ -71,8 +71,7 @@ export default async function handler(req, res) {
       FROM OINV T0
       LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
       WHERE
-        T0.CANCELED = 'N'
-        AND T0.IssReason <> '4'
+        T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
         AND T0.DocDate >= CAST(DATEADD(DAY, -7, GETDATE()) AS DATE)
         ${slpFilter}
       ORDER BY T0.DocDate DESC, T0.CreateTS DESC;
@@ -91,7 +90,7 @@ export default async function handler(req, res) {
       FROM OINV T0
       LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode
       WHERE
-        T0.CANCELED = 'N'
+        T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
         AND T0.TrackNo IS NOT NULL
         AND T0.U_TrackingNoUpdateDT IS NOT NULL
         AND CAST(T0.U_TrackingNoUpdateDT AS DATE) >= CAST(DATEADD(DAY, -7, GETDATE()) AS DATE)

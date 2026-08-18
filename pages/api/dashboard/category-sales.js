@@ -103,7 +103,7 @@ export default async function handler(req, res) {
     // Build WHERE conditions and parameters
     // Base conditions shared between the invoice branch (OINV/INV1) and the
     // credit note branch (ORIN/RIN1) netted together in salesQuery below.
-    const baseWhereConditions = ["OINV.CANCELED = 'N'"];
+    const baseWhereConditions = ["OINV.CANCELED <> 'Y'", "OINV.CANCELED <> 'C'"];
     const params = [];
 
     // Date range filter (Financial Year)
@@ -184,17 +184,15 @@ export default async function handler(req, res) {
       });
     }
 
-    // ── Invoice WHERE (OINV/INV1) — base + invoice-only exclusions ──
+    // ── Invoice WHERE (OINV/INV1) — base filters (invoice-only exclusions disabled) ──
     const whereConditions = [
       ...baseWhereConditions,
-      "OINV.IssReason <> '4'",
       // Disabled — was hardcoding specific DocNums out of category sales.
       // `OINV.DocNum NOT IN (26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574, 26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894, 26212898, 26212899)`,
     ];
     const whereClause = whereConditions.join(" AND ");
 
-    // ── Credit note WHERE (ORIN/RIN1) — same base conditions, minus the
-    // invoice-only IssReason condition. ──
+    // ── Credit note WHERE (ORIN/RIN1) — same base conditions. ──
     const creditNoteWhereClause = baseWhereConditions.join(" AND ");
 
     // Always use parameterised path (params always has at least fromDate/toDate)

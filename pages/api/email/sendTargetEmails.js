@@ -191,9 +191,8 @@ export default async function handler(req, res) {
       JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
       JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
       JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-      WHERE T0.CANCELED = 'N' 
-        AND T0.[IssReason] <> '4'
-        AND ((YEAR(T0.DocDate) = 2025 AND MONTH(T0.DocDate) >= 4) 
+      WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
+        AND ((YEAR(T0.DocDate) = 2025 AND MONTH(T0.DocDate) >= 4)
              OR (YEAR(T0.DocDate) = 2026 AND MONTH(T0.DocDate) <= 3))
       GROUP BY YEAR(T0.DocDate), MONTH(T0.DocDate), T6.ItmsGrpNam
       ORDER BY Year, MonthNumber

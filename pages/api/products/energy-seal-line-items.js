@@ -48,8 +48,7 @@ export default async function handler(req, res) {
       FROM OINV T0
       JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
       ${joinSQL}
-      WHERE T0.CANCELED = 'N'
-        AND T0.[IssReason] <> '4'
+      WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
         AND T1.ItemCode IN (${itemList})
         AND YEAR(T0.DocDate) = @year
         AND MONTH(T0.DocDate) = @month
