@@ -1,11 +1,23 @@
 
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Container, Card, Form, Spinner } from "react-bootstrap";
+import { BarChart3 } from "lucide-react";
 import MonthlyPivotTable from "components/Category/MonthlyPivotTable";
 import { useAuth } from "contexts/AuthContext"; // Import auth context
 
 const TABLE_TYPES = ["customer", "salesperson", "state", "category"];
+
+// Indian financial year: April of startYear through March of startYear+1.
+function currentFyStartYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month >= 4 ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+function fyLabel(startYear) {
+  return `FY ${startYear}-${String(startYear + 1).slice(-2)}`;
+}
 
 export default function MonthlyReportPage() {
   const { user } = useAuth(); // Get user from auth context
@@ -30,6 +42,16 @@ export default function MonthlyReportPage() {
   });
   const [initialLoad, setInitialLoad] = useState(true);
 
+  // Financial-year filter — defaults to the current FY, changeable via the
+  // dropdown at the top right. Applies to every table on this page.
+  const [selectedFy, setSelectedFy] = useState(() => currentFyStartYear());
+  const fyOptions = useMemo(() => {
+    const start = currentFyStartYear();
+    const opts = [];
+    for (let y = start; y >= 2024; y--) opts.push(y);
+    return opts;
+  }, []);
+
   // ✅ Check if user is 3ASenrise
   const is3ASenrise = user?.role === '3ASenrise';
   const forcedCategory = is3ASenrise ? '3A Chemicals' : null;
@@ -45,49 +67,78 @@ export default function MonthlyReportPage() {
         console.error("Error fetching categories:", error);
       }
     };
-    
+
     if (!is3ASenrise) {
       fetchCategories();
     }
   }, [is3ASenrise]);
 
-  // Initial data fetch
+  const buildUrl = (type, category, fy) => {
+    const params = new URLSearchParams({ type, fy: String(fy) });
+    if (category) params.set("category", category);
+    return `/api/category/monthlySales?${params.toString()}`;
+  };
+
+  // Fetches every visible table type in parallel for the given financial year,
+  // respecting each table's own category filter (or the forced 3A filter).
+  const fetchAllTypes = async (fy, { showSkeleton = false } = {}) => {
+    if (showSkeleton) setInitialLoad(true);
+    try {
+      const typesToFetch = is3ASenrise ? ["customer"] : TABLE_TYPES;
+      typesToFetch.forEach((type) =>
+        setLoading((prev) => ({ ...prev, [type]: true }))
+      );
+
+      const results = await Promise.all(
+        typesToFetch.map(async (type) => {
+          const category =
+            type === "category" ? "" : forcedCategory || categoryFilters[type] || "";
+          const res = await fetch(buildUrl(type, category, fy));
+          const json = await res.json();
+          return [type, json];
+        })
+      );
+
+      setData((prev) => {
+        const next = { ...prev };
+        results.forEach(([type, json]) => {
+          next[type] = json;
+        });
+        return next;
+      });
+    } catch (error) {
+      console.error("Error fetching sales data:", error);
+    } finally {
+      if (showSkeleton) setInitialLoad(false);
+      setLoading({
+        customer: false,
+        salesperson: false,
+        state: false,
+        category: false,
+      });
+    }
+  };
+
+  // Initial data fetch (full-page skeleton)
   useEffect(() => {
     if (!user) return;
-
-    const fetchInitialData = async () => {
-      setInitialLoad(true);
-      try {
-        // ✅ For 3ASenrise, only fetch customer data
-        const typesToFetch = is3ASenrise ? ['customer'] : TABLE_TYPES;
-        
-        for (const type of typesToFetch) {
-          setLoading((prev) => ({ ...prev, [type]: true }));
-          
-          // ✅ Add category filter for 3ASenrise
-          const url = forcedCategory 
-            ? `/api/category/monthlySales?type=${type}&category=${encodeURIComponent(forcedCategory)}`
-            : `/api/category/monthlySales?type=${type}`;
-            
-          const res = await fetch(url);
-          const json = await res.json();
-          setData((prev) => ({ ...prev, [type]: json }));
-        }
-      } catch (error) {
-        console.error("Error fetching initial data:", error);
-      } finally {
-        setInitialLoad(false);
-        setLoading({
-          customer: false,
-          salesperson: false,
-          state: false,
-          category: false,
-        });
-      }
-    };
-    
-    fetchInitialData();
+    fetchAllTypes(selectedFy, { showSkeleton: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, is3ASenrise, forcedCategory]);
+
+  // Re-fetch every table (per-card spinners, not the full skeleton) whenever
+  // the financial year changes — skip the very first run, since the effect
+  // above already covers the initial load.
+  const didMountFy = useRef(false);
+  useEffect(() => {
+    if (!user) return;
+    if (!didMountFy.current) {
+      didMountFy.current = true;
+      return;
+    }
+    fetchAllTypes(selectedFy, { showSkeleton: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFy]);
 
   // Fetch filtered data when category filter changes
   const fetchFilteredData = async (type, category) => {
@@ -95,12 +146,7 @@ export default function MonthlyReportPage() {
     try {
       // ✅ For 3ASenrise, always use forced category
       const finalCategory = forcedCategory || category;
-      
-      const url = finalCategory
-        ? `/api/category/monthlySales?type=${type}&category=${encodeURIComponent(finalCategory)}`
-        : `/api/category/monthlySales?type=${type}`;
-
-      const res = await fetch(url);
+      const res = await fetch(buildUrl(type, finalCategory, selectedFy));
       const json = await res.json();
       setData((prev) => ({ ...prev, [type]: json }));
     } catch (error) {
@@ -134,10 +180,10 @@ export default function MonthlyReportPage() {
         </div>
       );
     }
-    
+
     return (
       <div className="mb-2 d-flex align-items-center gap-2">
-        <Form.Label className="mb-0 small">Filter by Category:</Form.Label>
+        <Form.Label className="mb-0 small text-muted fw-semibold">Category</Form.Label>
         <Form.Select
           value={categoryFilters[type]}
           onChange={(e) => handleCategoryChange(type, e.target.value)}
@@ -164,13 +210,34 @@ export default function MonthlyReportPage() {
     </div>
   );
 
+  const fySelector = (
+    <div className="d-flex align-items-center gap-2">
+      <Form.Label className="mb-0 small text-muted fw-semibold text-uppercase" style={{ letterSpacing: 0.5 }}>
+        Financial Year
+      </Form.Label>
+      <Form.Select
+        value={selectedFy}
+        onChange={(e) => setSelectedFy(parseInt(e.target.value, 10))}
+        size="sm"
+        style={{ width: 150, fontWeight: 600 }}
+      >
+        {fyOptions.map((y) => (
+          <option key={y} value={y}>
+            {fyLabel(y)}
+          </option>
+        ))}
+      </Form.Select>
+    </div>
+  );
+
   // Skeleton loader for when initial data is loading
   if (initialLoad) {
     return (
       <Container className="mt-4" fluid>
-        <Card className="mb-3 shadow-sm">
-          <Card.Header className="bg-white py-3">
+        <Card className="mb-3 shadow-sm border-0">
+          <Card.Header className="bg-white py-3 d-flex justify-content-between align-items-center">
             <h5 className="mb-0">Loading Sales Reports...</h5>
+            {fySelector}
           </Card.Header>
           <Card.Body>
             {renderLoader()}
@@ -181,14 +248,23 @@ export default function MonthlyReportPage() {
   }
 
   return (
-    <Container className="mt-2" fluid>
+    <Container className="mt-3" fluid>
+      {/* Page-level toolbar: title + financial year selector */}
+      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 px-1">
+        <div className="d-flex align-items-center gap-2">
+          <BarChart3 size={22} className="text-success" />
+          <h4 className="mb-0 fw-bold">Category Analytics</h4>
+        </div>
+        {fySelector}
+      </div>
+
       {/* ✅ Only show Category table if NOT 3ASenrise */}
       {!is3ASenrise && (
-        <Card className="mb-2 shadow-sm">
-          <Card.Header className="bg-white py-2 px-3">
-            <h5 className="mb-0">Category-wise Monthly Sales</h5>
+        <Card className="mb-3 shadow-sm border-0">
+          <Card.Header className="bg-white py-3 px-3 border-bottom">
+            <h5 className="mb-0 fw-semibold">Category-wise Monthly Sales</h5>
           </Card.Header>
-          <Card.Body className="p-2">
+          <Card.Body className="p-3">
             {loading.category ? (
               renderLoader()
             ) : (
@@ -197,6 +273,7 @@ export default function MonthlyReportPage() {
                 columns={buildColumns(data.category[0])}
                 type="category"
                 categoryFilter=""
+                fyLabel={fyLabel(selectedFy)}
               />
             )}
           </Card.Body>
@@ -204,14 +281,14 @@ export default function MonthlyReportPage() {
       )}
 
       {/* CUSTOMER TABLE CARD - Always show */}
-      <Card className="mb-2 shadow-sm">
-        <Card.Header className="bg-white py-2 px-3">
-          <h5 className="mb-0">
+      <Card className="mb-3 shadow-sm border-0">
+        <Card.Header className="bg-white py-3 px-3 border-bottom">
+          <h5 className="mb-0 fw-semibold">
             Customer-wise Monthly Sales
             {is3ASenrise && <span className="ms-2 badge bg-success">3A Chemicals</span>}
           </h5>
         </Card.Header>
-        <Card.Body className="p-2">
+        <Card.Body className="p-3">
           {renderCategoryDropdown("customer")}
           {loading.customer ? (
             renderLoader()
@@ -221,6 +298,7 @@ export default function MonthlyReportPage() {
               columns={buildColumns(data.customer[0])}
               type="customer"
               categoryFilter={forcedCategory || categoryFilters.customer}
+              fyLabel={fyLabel(selectedFy)}
             />
           )}
         </Card.Body>
@@ -228,11 +306,11 @@ export default function MonthlyReportPage() {
 
       {/* ✅ Only show Salesperson table if NOT 3ASenrise */}
       {!is3ASenrise && (
-        <Card className="mb-2 shadow-sm">
-          <Card.Header className="bg-white py-2 px-3">
-            <h5 className="mb-0">Salesperson-wise Monthly Sales</h5>
+        <Card className="mb-3 shadow-sm border-0">
+          <Card.Header className="bg-white py-3 px-3 border-bottom">
+            <h5 className="mb-0 fw-semibold">Salesperson-wise Monthly Sales</h5>
           </Card.Header>
-          <Card.Body className="p-2">
+          <Card.Body className="p-3">
             {renderCategoryDropdown("salesperson")}
             {loading.salesperson ? (
               renderLoader()
@@ -242,6 +320,7 @@ export default function MonthlyReportPage() {
                 columns={buildColumns(data.salesperson[0])}
                 type="salesperson"
                 categoryFilter={categoryFilters.salesperson}
+                fyLabel={fyLabel(selectedFy)}
               />
             )}
           </Card.Body>

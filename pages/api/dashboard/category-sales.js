@@ -188,12 +188,13 @@ export default async function handler(req, res) {
     const whereConditions = [
       ...baseWhereConditions,
       "OINV.IssReason <> '4'",
-      `OINV.DocNum NOT IN (26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574, 26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894, 26212898, 26212899)`,
+      // Disabled — was hardcoding specific DocNums out of category sales.
+      // `OINV.DocNum NOT IN (26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574, 26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894, 26212898, 26212899)`,
     ];
     const whereClause = whereConditions.join(" AND ");
 
     // ── Credit note WHERE (ORIN/RIN1) — same base conditions, minus the
-    // invoice-only IssReason condition and DocNum exclusion list. ──
+    // invoice-only IssReason condition. ──
     const creditNoteWhereClause = baseWhereConditions.join(" AND ");
 
     // Always use parameterised path (params always has at least fromDate/toDate)

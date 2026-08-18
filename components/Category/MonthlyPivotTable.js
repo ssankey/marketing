@@ -6,19 +6,30 @@ import {
   getFilteredRowModel,
   flexRender,
 } from "@tanstack/react-table";
+import { Search, Download } from "lucide-react";
 import downloadExcel from "utils/exporttoexcel";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 import DailySalesModal from "./DailySalesModal";
 
-export default function MonthlyLineItemsTable({ 
-  data = [], 
+const PAGE_SIZE = 8;
+
+function getPageNumbers(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, 2, total - 1, total, current - 1, current, current + 1]);
+  return Array.from(pages)
+    .filter((p) => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
+}
+
+export default function MonthlyLineItemsTable({
+  data = [],
   columns: initialColumns,
   type,
-  categoryFilter
+  categoryFilter,
+  fyLabel,
 }) {
   const [globalFilter, setGlobalFilter] = useState("");
   const [page, setPage] = useState(1);
-  const pageSize = 5;
   const [showModal, setShowModal] = useState(false);
   const [selectedCell, setSelectedCell] = useState(null);
 
@@ -33,12 +44,52 @@ export default function MonthlyLineItemsTable({
     );
   }, [safeData, globalFilter]);
 
-  const pageCount = Math.ceil((filteredData.length || 0) / pageSize);
+  const pageCount = Math.max(1, Math.ceil((filteredData.length || 0) / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
 
   const pagedData = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredData.slice(start, start + pageSize);
-  }, [filteredData, page]);
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredData.slice(start, start + PAGE_SIZE);
+  }, [filteredData, safePage]);
+
+  const handleCellClick = (monthHeader, rowData, value) => {
+    if (typeof value === "number" && value > 0) {
+      try {
+        const monthName = String(monthHeader).split(" ")[0];
+        const year = parseInt(String(monthHeader).split(" ")[1]);
+
+        if (!monthName || !year) return;
+
+        const monthNumber = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
+
+        let filterValue = "";
+
+        if (type === "category" && rowData.Category) {
+          filterValue = rowData.Category;
+        } else if (type === "customer" && rowData["Customer Name"]) {
+          filterValue = rowData["Customer Name"];
+        } else if (type === "salesperson" && rowData["Sales Person Name"]) {
+          filterValue = rowData["Sales Person Name"];
+        } else if (type === "state" && rowData["State"]) {
+          filterValue = rowData["State"];
+        }
+
+        setSelectedCell({
+          month: monthNumber,
+          year,
+          monthName,
+          type,
+          filterValue,
+          rowData,
+          categoryFilter,
+        });
+
+        setShowModal(true);
+      } catch (error) {
+        console.error("Error handling cell click:", error);
+      }
+    }
+  };
 
   const transformedColumns = useMemo(() => {
     if (!initialColumns || initialColumns.length === 0) return [];
@@ -46,79 +97,62 @@ export default function MonthlyLineItemsTable({
     const nameColumn = {
       ...initialColumns[0],
       cell: ({ row }) => (
-        <div className="font-medium text-gray-900 px-3 py-4 whitespace-nowrap">
+        <span className="mpt-rowname" title={row.original[initialColumns[0].accessorKey]}>
           {row.original[initialColumns[0].accessorKey]}
-        </div>
-      )
+        </span>
+      ),
     };
     const transformedCols = [nameColumn];
 
     // Get all month columns and sort them in reverse chronological order
     const allMonthColumns = [];
     const allKeys = new Set();
-    safeData.forEach(row => {
-      Object.keys(row).forEach(key => allKeys.add(key));
+    safeData.forEach((row) => {
+      Object.keys(row).forEach((key) => allKeys.add(key));
     });
-    
-    Array.from(allKeys).forEach(key => {
-      if (key.match(/^[A-Za-z]{3} \d{4}$/) && !key.includes('_')) {
+
+    Array.from(allKeys).forEach((key) => {
+      if (key.match(/^[A-Za-z]{3} \d{4}$/) && !key.includes("_")) {
         allMonthColumns.push(key);
       }
     });
 
     // Sort months in descending order (newest first)
     allMonthColumns.sort((a, b) => {
-      const [monthA, yearA] = a.split(' ');
-      const [monthB, yearB] = b.split(' ');
+      const [monthA, yearA] = a.split(" ");
+      const [monthB, yearB] = b.split(" ");
       const dateA = new Date(`${monthA} 1, ${yearA}`);
       const dateB = new Date(`${monthB} 1, ${yearB}`);
-      return dateB - dateA; // Reverse order for descending
+      return dateB - dateA;
     });
 
-    // Add Total column (will appear after the name column)
+    // Total column
     transformedCols.push({
-      id: 'total',
-      header: 'Total',
+      id: "total",
+      header: fyLabel ? `Total (${fyLabel})` : "Total",
       cell: ({ row }) => {
-        const sales = row.original['Total Sales'] || 0;
-        const cogs = row.original['Total COGS'] || 0;
-        const lines = row.original['Total Line Items'] || 0;
-        const gm = row.original['GM%'] || 0;
+        const sales = row.original["Total Sales"] || 0;
+        const cogs = row.original["Total COGS"] || 0;
+        const lines = row.original["Total Line Items"] || 0;
+        const gm = row.original["GM%"] || 0;
 
         return (
-          <div className="w-full h-full flex flex-col border-l border-black">
-            <div 
-              className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
-              style={{ backgroundColor: '#e3f2fd', color: '#1976d2' }}
-            >
+          <div className="mpt-cell" title={`COGS: ₹${formatNumberWithIndianCommas(cogs)}`}>
+            <div className="mpt-cell-primary mpt-cell-primary-total">
               ₹{formatNumberWithIndianCommas(sales)}
             </div>
-            <div 
-              className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
-              style={{ backgroundColor: '#e8f5e8', color: '#2e7d32' }}
-            >
-              {formatNumberWithIndianCommas(lines)} Lines
-            </div>
-            <div 
-              className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
-              style={{ backgroundColor: '#f3e5f5', color: '#7b1fa2' }}
-            >
-              {gm}% GM
-            </div>
-            <div 
-              className="flex-1 px-3 py-2 text-center text-xs font-medium"
-              style={{ backgroundColor: '#ffebee', color: '#d32f2f' }}
-            >
-              ₹{formatNumberWithIndianCommas(cogs)}
+            <div className="mpt-cell-secondary">
+              <span>{formatNumberWithIndianCommas(lines)} lines</span>
+              <span className={`mpt-badge ${gm >= 0 ? "good" : "bad"}`}>{gm}% GM</span>
             </div>
           </div>
         );
       },
-      isTotal: true
+      isTotal: true,
     });
 
-    // Add monthly columns (newest first)
-    allMonthColumns.forEach(monthKey => {
+    // Monthly columns (newest first)
+    allMonthColumns.forEach((monthKey) => {
       transformedCols.push({
         id: `month_${monthKey}`,
         header: monthKey,
@@ -129,45 +163,27 @@ export default function MonthlyLineItemsTable({
           const gm = sales > 0 ? ((sales - cogs) * 100 / sales).toFixed(2) : 0;
 
           return (
-            <div 
-              className="w-full h-full flex flex-col border-l border-black cursor-pointer hover:opacity-80"
+            <div
+              className="mpt-cell mpt-cell-clickable"
               onClick={() => handleCellClick(monthKey, row.original, sales)}
-              title="Click to view daily breakdown"
+              title={`COGS: ₹${formatNumberWithIndianCommas(cogs)} — click to view daily breakdown`}
             >
-              <div 
-                className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
-                style={{ backgroundColor: '#e3f2fd', color: '#1976d2' }}
-              >
-                ₹{formatNumberWithIndianCommas(sales)}
-              </div>
-              <div 
-                className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
-                style={{ backgroundColor: '#e8f5e8', color: '#2e7d32' }}
-              >
-                {formatNumberWithIndianCommas(lines)}
-              </div>
-              <div 
-                className="flex-1 px-3 py-2 text-center text-xs font-medium border-b border-black"
-                style={{ backgroundColor: '#f3e5f5', color: '#7b1fa2' }}
-              >
-                {gm}%
-              </div>
-              <div 
-                className="flex-1 px-3 py-2 text-center text-xs font-medium"
-                style={{ backgroundColor: '#ffebee', color: '#d32f2f' }}
-              >
-                ₹{formatNumberWithIndianCommas(cogs)}
+              <div className="mpt-cell-primary">₹{formatNumberWithIndianCommas(sales)}</div>
+              <div className="mpt-cell-secondary">
+                <span>{formatNumberWithIndianCommas(lines)} lines</span>
+                <span className={`mpt-badge ${gm >= 0 ? "good" : "bad"}`}>{gm}% GM</span>
               </div>
             </div>
           );
         },
         monthKey: monthKey,
-        isMonthly: true
+        isMonthly: true,
       });
     });
 
     return transformedCols;
-  }, [initialColumns, safeData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialColumns, safeData, fyLabel, type, categoryFilter]);
 
   const table = useReactTable({
     data: pagedData,
@@ -178,63 +194,24 @@ export default function MonthlyLineItemsTable({
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const handleCellClick = (monthHeader, rowData, value) => {
-    if (typeof value === 'number' && value > 0) {
-      try {
-        const monthName = String(monthHeader).split(' ')[0];
-        const year = parseInt(String(monthHeader).split(' ')[1]);
-        
-        if (!monthName || !year) return;
-        
-        const monthNumber = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
-        
-        let filterValue = '';
-        
-        if (type === 'category' && rowData.Category) {
-          filterValue = rowData.Category;
-        } else if (type === 'customer' && rowData['Customer Name']) {
-          filterValue = rowData['Customer Name'];
-        } else if (type === 'salesperson' && rowData['Sales Person Name']) {
-          filterValue = rowData['Sales Person Name'];
-        } else if (type === 'state' && rowData['State']) {
-          filterValue = rowData['State'];
-        }
-        
-        setSelectedCell({
-          month: monthNumber,
-          year,
-          monthName,
-          type,
-          filterValue,
-          rowData,
-          categoryFilter
-        });
-        
-        setShowModal(true);
-      } catch (error) {
-        console.error('Error handling cell click:', error);
-      }
-    }
-  };
-
   const handleExportExcel = () => {
     const exportData = filteredData.map((row) => {
       const formatted = {};
-      
-      const nameKey = Object.keys(row).find(key => 
-        ['Category', 'Customer Name', 'Sales Person Name', 'State'].includes(key)
+
+      const nameKey = Object.keys(row).find((key) =>
+        ["Category", "Customer Name", "Sales Person Name", "State"].includes(key)
       );
       if (nameKey) {
         formatted[nameKey] = row[nameKey];
       }
-      
-      formatted['Total Sales'] = row['Total Sales'] || 0;
-      formatted['Total COGS'] = row['Total COGS'] || 0;
-      formatted['Total Line Items'] = row['Total Line Items'] || 0;
-      formatted['GM%'] = row['GM%'] || 0;
-      
-      Object.keys(row).forEach(key => {
-        if (key.match(/^[A-Za-z]{3} \d{4}$/) && !key.includes('_')) {
+
+      formatted["Total Sales"] = row["Total Sales"] || 0;
+      formatted["Total COGS"] = row["Total COGS"] || 0;
+      formatted["Total Line Items"] = row["Total Line Items"] || 0;
+      formatted["GM%"] = row["GM%"] || 0;
+
+      Object.keys(row).forEach((key) => {
+        if (key.match(/^[A-Za-z]{3} \d{4}$/) && !key.includes("_")) {
           formatted[`${key} Sales`] = row[key] || 0;
           formatted[`${key} COGS`] = row[`${key}_COGS`] || 0;
           formatted[`${key} Lines`] = row[`${key}_Lines`] || 0;
@@ -244,148 +221,129 @@ export default function MonthlyLineItemsTable({
           formatted[`${key} GM%`] = gm;
         }
       });
-      
+
       return formatted;
     });
-    
+
     downloadExcel(exportData, "Monthly_Sales_Report_Detailed");
   };
 
+  const searchLabel = {
+    category: "Search by category…",
+    customer: "Search by customer…",
+    salesperson: "Search by salesperson…",
+    state: "Search by state…",
+  }[type] || "Search…";
+
+  const totalRows = filteredData.length;
+  const rangeStart = totalRows === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(safePage * PAGE_SIZE, totalRows);
+
   return (
-    <div className="w-full mb-6">
-      <div className="mb-4 flex justify-between items-center gap-4">
-        <input
-          type="text"
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          placeholder="Search..."
-          className="px-3 py-2 border border-black rounded shadow-sm focus:outline-none focus:ring-1 focus:ring-black flex-grow"
-          style={{ maxWidth: "300px" }}
-        />
-        <button 
-          onClick={handleExportExcel} 
-          className="bg-green-800 hover:bg-green-900 text-white font-medium py-2 px-4 rounded shadow-sm transition-colors duration-200"
-        >
-          Excel
-        </button>
+    <div className="mpt">
+      <style>{PAGE_STYLES}</style>
+
+      <div className="mpt-controls">
+        <div className="mpt-field" style={{ width: 300 }}>
+          <label>Search</label>
+          <div className="mpt-search-wrap">
+            <Search size={16} className="mpt-search-icon" />
+            <input
+              className="mpt-input mpt-search-input"
+              type="text"
+              value={globalFilter}
+              onChange={(e) => {
+                setGlobalFilter(e.target.value);
+                setPage(1);
+              }}
+              placeholder={searchLabel}
+            />
+          </div>
+        </div>
+
+        <div className="mpt-spacer" />
+
+        <div className="mpt-field">
+          <label>&nbsp;</label>
+          <button className="mpt-export-btn" onClick={handleExportExcel} disabled={!filteredData.length}>
+            <Download size={15} />
+            Export Excel
+          </button>
+        </div>
       </div>
 
-      
-
-      {/* Container with fixed header and first column */}
-      <div className="relative w-full max-w-[calc(100vw-32px)] mx-auto">
-        {/* Horizontal scroll container */}
-        <div className="overflow-x-auto">
-          {/* Vertical scroll container */}
-          <div 
-            className="border border-black rounded-lg bg-white shadow-sm"
-            style={{ 
-              height: '70vh',
-              overflowY: 'auto',
-              position: 'relative'
-            }}
-          >
-            <table className="w-full border-collapse">
-              {/* Fixed header */}
-              <thead>
-                {table.getHeaderGroups().map((hg) => (
-                  <tr key={hg.id}>
-                    {hg.headers.map((header, headerIndex) => (
-                      <th
-                        key={header.id}
-                        className="px-4 py-3 text-center font-semibold text-sm text-white border border-black"
-                        style={{
-                          backgroundColor: '#4caf50',
-                          minWidth: header.column.columnDef.isTotal || header.column.columnDef.isMonthly ? "140px" : "auto",
-                          whiteSpace: 'nowrap',
-                          position: 'sticky',
-                          top: 0,
-                          zIndex: headerIndex === 0 ? 30 : 20, // First column header gets highest z-index
-                          left: headerIndex === 0 ? 0 : 'auto', // Only first column is sticky horizontally
-                        }}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="bg-white">
-                {table.getRowModel().rows.length > 0 ? (
-                  table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="border border-black">
+      <div className="mpt-table-card">
+        {!pagedData.length ? (
+          <div className="mpt-empty">No data found.</div>
+        ) : (
+          <>
+            <div className="mpt-table-scroll">
+              <table className="mpt-table">
+                <thead>
+                  {table.getHeaderGroups().map((hg) => (
+                    <tr key={hg.id}>
+                      {hg.headers.map((header, headerIndex) => (
+                        <th
+                          key={header.id}
+                          className={headerIndex === 0 ? "mpt-th-left mpt-th-sticky" : "mpt-th-right"}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id}>
                       {row.getVisibleCells().map((cell, cellIndex) => (
                         <td
                           key={cell.id}
-                          className={`
-                            ${cellIndex === 0 ? 
-                              "text-left px-4 py-3 bg-white border border-black" : 
-                              "text-center p-0 bg-white border border-black"}
-                          `}
-                          style={{
-                            minWidth: cell.column.columnDef.isTotal || cell.column.columnDef.isMonthly ? "140px" : "auto",
-                            verticalAlign: "top",
-                            height: cell.column.columnDef.isTotal || cell.column.columnDef.isMonthly ? "120px" : "auto",
-                            whiteSpace: 'nowrap',
-                            position: cellIndex === 0 ? 'sticky' : 'static',
-                            left: cellIndex === 0 ? 0 : 'auto',
-                            zIndex: cellIndex === 0 ? 10 : 'auto',
-                            backgroundColor: cellIndex === 0 ? 'white' : 'transparent'
-                          }}
+                          className={cellIndex === 0 ? "mpt-td-sticky" : "mpt-num"}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={transformedColumns.length} className="p-8 text-center text-gray-500 bg-white border border-black">
-                      No data found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-      <div className="mt-4 flex justify-center items-center gap-2">
-        <button
-          onClick={() => setPage(1)}
-          disabled={page === 1}
-          className="px-3 py-1 text-sm border border-black rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          First
-        </button>
-        <button
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-          disabled={page === 1}
-          className="px-3 py-1 text-sm border border-black rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Prev
-        </button>
-        <span className="px-4 py-1 text-sm text-gray-700">
-          Page {page} of {pageCount} ({filteredData.length} total)
-        </span>
-        <button
-          onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-          disabled={page === pageCount}
-          className="px-3 py-1 text-sm border border-black rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-        <button
-          onClick={() => setPage(pageCount)}
-          disabled={page === pageCount}
-          className="px-3 py-1 text-sm border border-black rounded hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Last
-        </button>
+            <div className="mpt-pagination">
+              <div className="mpt-pagination-info">
+                {totalRows === 0 ? "Showing 0 of 0" : `Showing ${rangeStart}–${rangeEnd} of ${totalRows}`}
+              </div>
+              <div className="mpt-pagination-controls">
+                <button
+                  className="mpt-page-btn"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Prev
+                </button>
+                {getPageNumbers(safePage, pageCount).map((p, idx, arr) => (
+                  <span key={p} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {idx > 0 && arr[idx - 1] !== p - 1 && <span className="mpt-page-ellipsis">…</span>}
+                    <button
+                      className={`mpt-page-btn ${p === safePage ? "active" : ""}`}
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </button>
+                  </span>
+                ))}
+                <button
+                  className="mpt-page-btn"
+                  disabled={safePage >= pageCount}
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {selectedCell && (
@@ -404,3 +362,234 @@ export default function MonthlyLineItemsTable({
     </div>
   );
 }
+
+const PAGE_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  .mpt {
+    --page-bg: #e4ebf1;
+    --surface: #ffffff;
+    --surface2: #e0edf9;
+    --surface-green: #dcf3e8;
+    --border: #c5d2dc;
+    --text: #10151c;
+    --muted: #52606d;
+    --accent: #1f68bf;
+    --good: #21875a;
+    --bad: #c0402f;
+
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+
+  .mpt-controls {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+
+  .mpt-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .mpt-field label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .mpt-search-wrap { position: relative; }
+  .mpt-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .mpt-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s ease;
+    width: 100%;
+  }
+  .mpt-input:focus { border-color: var(--accent); }
+  .mpt-search-input { padding-left: 34px; }
+
+  .mpt-spacer { flex: 1 1 auto; }
+
+  .mpt-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--good);
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .mpt-export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .mpt-table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .mpt-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 50px 0;
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .mpt-table-scroll { overflow-x: auto; }
+
+  .mpt-table { width: 100%; border-collapse: collapse; }
+  .mpt-table th {
+    background: var(--surface2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+  .mpt-table th:last-child { border-right: none; }
+  .mpt-th-left { text-align: left; }
+  .mpt-th-right { text-align: right; min-width: 130px; }
+  .mpt-th-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface2);
+  }
+
+  .mpt-table td {
+    padding: 0;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .mpt-table td:last-child { border-right: none; }
+  .mpt-table tbody tr:last-child td { border-bottom: none; }
+  .mpt-table tbody tr:hover { background: var(--surface2); }
+
+  .mpt-td-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface);
+    padding: 11px 14px !important;
+  }
+  .mpt-table tbody tr:hover .mpt-td-sticky { background: var(--surface2); }
+
+  .mpt-rowname {
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 280px;
+    vertical-align: middle;
+  }
+
+  .mpt-num { text-align: right; }
+
+  .mpt-cell {
+    padding: 9px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+  }
+  .mpt-cell-clickable { cursor: pointer; }
+  .mpt-cell-clickable:hover { background: var(--surface-green); }
+
+  .mpt-cell-primary {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .mpt-cell-primary-total { color: var(--accent); font-weight: 700; }
+
+  .mpt-cell-secondary {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+
+  .mpt-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .mpt-badge.good { color: var(--good); background: var(--surface-green); }
+  .mpt-badge.bad { color: var(--bad); background: #fdecea; }
+
+  .mpt-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .mpt-pagination-info {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .mpt-pagination-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .mpt-page-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .mpt-page-btn.active { background: var(--accent); color: #ffffff; border-color: var(--accent); font-weight: 700; }
+  .mpt-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .mpt-page-ellipsis { color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+`;
