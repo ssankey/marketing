@@ -175,26 +175,47 @@ export default async function handler(req, res) {
   try {
     // Fetch sales data for all categories for FY 2025-26
     const query = `
-      SELECT 
-        YEAR(T0.DocDate) AS Year,
-        MONTH(T0.DocDate) AS MonthNumber,
-        T6.ItmsGrpNam AS Category,
-        SUM(T1.LineTotal) AS Sales,
-        CASE 
-          WHEN SUM(T1.LineTotal) = 0 THEN 0
+      SELECT Year, MonthNumber, Category,
+        SUM(LineTotalAmt) AS Sales,
+        CASE
+          WHEN SUM(LineTotalAmt) = 0 THEN 0
           ELSE ROUND(
-            ((SUM(T1.LineTotal) - SUM(T1.GrossBuyPr * T1.Quantity)) * 100.0) / SUM(T1.LineTotal),
+            ((SUM(LineTotalAmt) - SUM(CogsAmt)) * 100.0) / SUM(LineTotalAmt),
             2
           )
         END AS Margin
-      FROM OINV T0
-      JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-      JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-      JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-      WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
-        AND ((YEAR(T0.DocDate) = 2025 AND MONTH(T0.DocDate) >= 4)
-             OR (YEAR(T0.DocDate) = 2026 AND MONTH(T0.DocDate) <= 3))
-      GROUP BY YEAR(T0.DocDate), MONTH(T0.DocDate), T6.ItmsGrpNam
+      FROM (
+        SELECT
+          YEAR(T0.DocDate) AS Year,
+          MONTH(T0.DocDate) AS MonthNumber,
+          T6.ItmsGrpNam AS Category,
+          T1.LineTotal AS LineTotalAmt,
+          T1.GrossBuyPr * T1.Quantity AS CogsAmt
+        FROM OINV T0
+        JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+        JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+        JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
+          AND ((YEAR(T0.DocDate) = 2025 AND MONTH(T0.DocDate) >= 4)
+               OR (YEAR(T0.DocDate) = 2026 AND MONTH(T0.DocDate) <= 3))
+
+        UNION ALL
+
+        SELECT
+          YEAR(T0.DocDate) AS Year,
+          MONTH(T0.DocDate) AS MonthNumber,
+          T6.ItmsGrpNam AS Category,
+          -T1.LineTotal AS LineTotalAmt,
+          -(T1.GrossBuyPr * T1.Quantity) AS CogsAmt
+        FROM ORIN T0
+        JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+        JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+        JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
+          AND ((YEAR(T0.DocDate) = 2025 AND MONTH(T0.DocDate) >= 4)
+               OR (YEAR(T0.DocDate) = 2026 AND MONTH(T0.DocDate) <= 3))
+      ) AS Combined
+      GROUP BY Year, MonthNumber, Category
       ORDER BY Year, MonthNumber
     `;
 

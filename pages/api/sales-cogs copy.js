@@ -135,31 +135,53 @@ export default async function handler(req, res) {
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;
     console.log("DEBUG whereSQL:", whereSQL);
 
+    // Credit note WHERE (ORIN/RIN1) — every condition above is alias-relative
+    // (T0.SlpCode/CardCode/CntctCode, T5/T6 category/item), so the same text
+    // is valid once ORIN/RIN1 are aliased as T0/T5/T6 in the UNION ALL below.
+    const creditNoteWhereSQL = whereSQL;
+
     // Order WHERE — same as invoice
     const orderWhereClauses = [...whereClauses];
     const orderWhereSQL = orderWhereClauses.length ? `WHERE ${orderWhereClauses.join(" AND ")}` : "";
 
     // ── Query 1: Sales + COGS + GM% ─────────────────────────
     const salesQuery = `
-      SELECT
-        DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
-        YEAR(T0.DocDate)  AS year,
-        MONTH(T0.DocDate) AS monthNumber,
-        SUM(T1.LineTotal) AS TotalSales,
-        SUM(T1.GrossBuyPr * T1.Quantity) AS TotalCOGS,
+      SELECT [Month-Year], year, monthNumber,
+        SUM(LineTotalAmt) AS TotalSales,
+        SUM(CogsAmt) AS TotalCOGS,
         CASE
-          WHEN SUM(T1.LineTotal) = 0 THEN 0
-          ELSE ROUND(((SUM(T1.LineTotal) - SUM(T1.GrossBuyPr * T1.Quantity)) * 100.0) / SUM(T1.LineTotal), 2)
+          WHEN SUM(LineTotalAmt) = 0 THEN 0
+          ELSE ROUND(((SUM(LineTotalAmt) - SUM(CogsAmt)) * 100.0) / SUM(LineTotalAmt), 2)
         END AS GrossMarginPct
-      FROM OINV T0
-      JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
-      LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
-      LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-      ${whereSQL}
-      GROUP BY
-        DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2),
-        YEAR(T0.DocDate), MONTH(T0.DocDate)
-      ORDER BY YEAR(T0.DocDate), MONTH(T0.DocDate);
+      FROM (
+        SELECT
+          DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
+          YEAR(T0.DocDate)  AS year,
+          MONTH(T0.DocDate) AS monthNumber,
+          T1.LineTotal AS LineTotalAmt,
+          T1.GrossBuyPr * T1.Quantity AS CogsAmt
+        FROM OINV T0
+        JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
+        LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+        LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        ${whereSQL}
+
+        UNION ALL
+
+        SELECT
+          DATENAME(MONTH, T0.DocDate) + '-' + RIGHT(CONVERT(VARCHAR(4), YEAR(T0.DocDate)), 2) AS [Month-Year],
+          YEAR(T0.DocDate)  AS year,
+          MONTH(T0.DocDate) AS monthNumber,
+          -T1.LineTotal AS LineTotalAmt,
+          -(T1.GrossBuyPr * T1.Quantity) AS CogsAmt
+        FROM ORIN T0
+        JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
+        LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
+        LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        ${creditNoteWhereSQL}
+      ) AS Combined
+      GROUP BY [Month-Year], year, monthNumber
+      ORDER BY year, monthNumber;
     `;
 
     // ── Query 2: Invoice line count ──────────────────────────
