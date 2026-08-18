@@ -41,11 +41,12 @@ export default async function handler(req, res) {
     const cardCodes   = getMulti(req.query, 'cardCode');
     const adminSlpCodes = isAdmin ? getMulti(req.query, 'slpCode') : []; // only admin can filter by slpCode
 
-     const EXCLUDED_INVOICE_DOCNUMS = [
-      26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574,
-      26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894,
-      26212898, 26212899,
-    ];
+     // Disabled — was hardcoding specific DocNums out of the sales chart.
+     // const EXCLUDED_INVOICE_DOCNUMS = [
+     //  26212562, 26212563, 26212564, 26212565, 26212566, 26212567, 26212574,
+     //  26212201, 26212885, 26212886, 26212890, 26212892, 26212893, 26212894,
+     //  26212898, 26212899,
+     // ];
 
     // ── WHERE clauses ──
     // Base filters shared between the invoice branch (OINV/INV1) and the
@@ -79,12 +80,13 @@ export default async function handler(req, res) {
     const whereClauses = [
       ...baseWhereClauses,
       "T0.[IssReason] <> '4'",
-      `T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(',')})`,
+      // Disabled — used to hide a hardcoded list of DocNums (EXCLUDED_INVOICE_DOCNUMS).
+      // `T0.DocNum NOT IN (${EXCLUDED_INVOICE_DOCNUMS.join(',')})`,
     ];
     const whereSQL = `WHERE ${whereClauses.join(' AND ')}`;
 
     // ── Credit note WHERE (ORIN/RIN1) — same base filters, minus the
-    // invoice-only IssReason condition and EXCLUDED_INVOICE_DOCNUMS. ──
+    // invoice-only IssReason condition. ──
     const creditNoteWhereClauses = [...baseWhereClauses];
     const creditNoteWhereSQL = `WHERE ${creditNoteWhereClauses.join(' AND ')}`;
 

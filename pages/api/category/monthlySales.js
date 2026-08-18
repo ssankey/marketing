@@ -3,18 +3,23 @@
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
 
+// Indian financial year: April of fyStartYear through March of fyStartYear+1.
+function buildFyCondition(dateExpr, fyStartYear) {
+  return `((YEAR(${dateExpr}) = ${fyStartYear} AND MONTH(${dateExpr}) >= 4) OR (YEAR(${dateExpr}) = ${fyStartYear + 1} AND MONTH(${dateExpr}) <= 3))`;
+}
+
 const queries = {
-  customer: (categoryFilter) => {
+  customer: (categoryFilter, fyStartYear) => {
     const baseQuery = `
     DECLARE @cols NVARCHAR(MAX);
     DECLARE @cogs_cols NVARCHAR(MAX);
     DECLARE @lines_cols NVARCHAR(MAX);
-    
+
     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -23,12 +28,16 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
     DECLARE @sql NVARCHAR(MAX) = '
-    WITH BaseData AS (
+    IF OBJECT_ID(''tempdb..#BaseData'') IS NOT NULL DROP TABLE #BaseData;
+
+    SELECT [Customer Name], MonthYear, LineTotal, COGS, LineCount
+    INTO #BaseData
+    FROM (
         SELECT OCRD.CardName AS [Customer Name],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
@@ -45,7 +54,7 @@ const queries = {
         `
             : ""
         }
-        WHERE OINV.CANCELED = ''N''
+        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
         UNION ALL
@@ -66,24 +75,27 @@ const queries = {
         `
             : ""
         }
-        WHERE ORIN.CANCELED = ''N''
+        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
-    ),
-    Aggregated AS (
+    ) AS BD;
+
+    CREATE NONCLUSTERED INDEX IX_BaseData_Key ON #BaseData ([Customer Name], MonthYear);
+
+    ;WITH Aggregated AS (
         SELECT [Customer Name],
-               ROUND(SUM(LineTotal), 0) AS [Total Sales], 
+               ROUND(SUM(LineTotal), 0) AS [Total Sales],
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
-               CASE 
+               CASE
                    WHEN SUM(LineTotal) = 0 THEN 0
                    ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2)
                END AS [GM%]
-        FROM BaseData
+        FROM #BaseData
         GROUP BY [Customer Name]
     ),
     SalesPivoted AS (
         SELECT * FROM (
-            SELECT [Customer Name], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM BaseData
+            SELECT [Customer Name], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineTotal) FOR MonthYear IN (' + @cols + ')
@@ -91,7 +103,7 @@ const queries = {
     ),
     COGSPivoted AS (
         SELECT * FROM (
-            SELECT [Customer Name], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM BaseData
+            SELECT [Customer Name], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM #BaseData
         ) AS src
         PIVOT (
             SUM(COGS) FOR MonthYear IN (' + @cogs_cols + ')
@@ -99,22 +111,24 @@ const queries = {
     ),
     LinesPivoted AS (
         SELECT * FROM (
-            SELECT [Customer Name], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM BaseData
+            SELECT [Customer Name], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineCount) FOR MonthYear IN (' + @lines_cols + ')
         ) AS pvt
     )
-    SELECT s.[Customer Name], 
-           a.[Total Sales], 
+    SELECT s.[Customer Name],
+           a.[Total Sales],
            a.[Total COGS],
-           a.[Total Line Items], 
+           a.[Total Line Items],
            a.[GM%],' + ISNULL(@cols, '') + ',' + ISNULL(@cogs_cols, '') + ',' + ISNULL(@lines_cols, '') + '
     FROM SalesPivoted s
     JOIN Aggregated a ON s.[Customer Name] = a.[Customer Name]
     LEFT JOIN COGSPivoted c ON s.[Customer Name] = c.[Customer Name]
     LEFT JOIN LinesPivoted l ON s.[Customer Name] = l.[Customer Name]
-    ORDER BY a.[Total Sales] DESC';
+    ORDER BY a.[Total Sales] DESC;
+
+    DROP TABLE #BaseData;';
     `;
 
     const execQuery = categoryFilter
@@ -124,17 +138,17 @@ const queries = {
     return execQuery;
   },
 
-  salesperson: (categoryFilter) => {
+  salesperson: (categoryFilter, fyStartYear) => {
     const baseQuery = `
     DECLARE @cols NVARCHAR(MAX);
     DECLARE @cogs_cols NVARCHAR(MAX);
     DECLARE @lines_cols NVARCHAR(MAX);
-    
+
     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -143,12 +157,16 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
     DECLARE @sql NVARCHAR(MAX) = '
-    WITH BaseData AS (
+    IF OBJECT_ID(''tempdb..#BaseData'') IS NOT NULL DROP TABLE #BaseData;
+
+    SELECT [Sales Person Name], MonthYear, LineTotal, COGS, LineCount
+    INTO #BaseData
+    FROM (
         SELECT OSLP.SlpName AS [Sales Person Name],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
@@ -165,7 +183,7 @@ const queries = {
         `
             : ""
         }
-        WHERE OINV.CANCELED = ''N''
+        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
         UNION ALL
@@ -186,24 +204,27 @@ const queries = {
         `
             : ""
         }
-        WHERE ORIN.CANCELED = ''N''
+        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
-    ),
-    Aggregated AS (
+    ) AS BD;
+
+    CREATE NONCLUSTERED INDEX IX_BaseData_Key ON #BaseData ([Sales Person Name], MonthYear);
+
+    ;WITH Aggregated AS (
         SELECT [Sales Person Name],
-               ROUND(SUM(LineTotal), 0) AS [Total Sales], 
+               ROUND(SUM(LineTotal), 0) AS [Total Sales],
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
-               CASE 
+               CASE
                    WHEN SUM(LineTotal) = 0 THEN 0
                    ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2)
                END AS [GM%]
-        FROM BaseData
+        FROM #BaseData
         GROUP BY [Sales Person Name]
     ),
     SalesPivoted AS (
         SELECT * FROM (
-            SELECT [Sales Person Name], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM BaseData
+            SELECT [Sales Person Name], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineTotal) FOR MonthYear IN (' + @cols + ')
@@ -211,7 +232,7 @@ const queries = {
     ),
     COGSPivoted AS (
         SELECT * FROM (
-            SELECT [Sales Person Name], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM BaseData
+            SELECT [Sales Person Name], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM #BaseData
         ) AS src
         PIVOT (
             SUM(COGS) FOR MonthYear IN (' + @cogs_cols + ')
@@ -219,22 +240,24 @@ const queries = {
     ),
     LinesPivoted AS (
         SELECT * FROM (
-            SELECT [Sales Person Name], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM BaseData
+            SELECT [Sales Person Name], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineCount) FOR MonthYear IN (' + @lines_cols + ')
         ) AS pvt
     )
-    SELECT s.[Sales Person Name], 
-           a.[Total Sales], 
+    SELECT s.[Sales Person Name],
+           a.[Total Sales],
            a.[Total COGS],
-           a.[Total Line Items], 
+           a.[Total Line Items],
            a.[GM%],' + ISNULL(@cols, '') + ',' + ISNULL(@cogs_cols, '') + ',' + ISNULL(@lines_cols, '') + '
     FROM SalesPivoted s
     JOIN Aggregated a ON s.[Sales Person Name] = a.[Sales Person Name]
     LEFT JOIN COGSPivoted c ON s.[Sales Person Name] = c.[Sales Person Name]
     LEFT JOIN LinesPivoted l ON s.[Sales Person Name] = l.[Sales Person Name]
-    ORDER BY a.[Total Sales] DESC';
+    ORDER BY a.[Total Sales] DESC;
+
+    DROP TABLE #BaseData;';
     `;
 
     return categoryFilter
@@ -242,17 +265,17 @@ const queries = {
       : `${baseQuery}\nEXEC sp_executesql @sql;`;
   },
 
-  state: (categoryFilter) => {
+  state: (categoryFilter, fyStartYear) => {
     const baseQuery = `
     DECLARE @cols NVARCHAR(MAX);
     DECLARE @cogs_cols NVARCHAR(MAX);
     DECLARE @lines_cols NVARCHAR(MAX);
-    
+
     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -261,12 +284,16 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
     DECLARE @sql NVARCHAR(MAX) = '
-    WITH BaseData AS (
+    IF OBJECT_ID(''tempdb..#BaseData'') IS NOT NULL DROP TABLE #BaseData;
+
+    SELECT [State], MonthYear, LineTotal, COGS, LineCount
+    INTO #BaseData
+    FROM (
         SELECT COALESCE(CRD1.State, ''Unknown'') AS [State],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
@@ -284,7 +311,7 @@ const queries = {
         `
             : ""
         }
-        WHERE OINV.CANCELED = ''N''
+        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
         UNION ALL
@@ -306,24 +333,27 @@ const queries = {
         `
             : ""
         }
-        WHERE ORIN.CANCELED = ''N''
+        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
-    ),
-    Aggregated AS (
+    ) AS BD;
+
+    CREATE NONCLUSTERED INDEX IX_BaseData_Key ON #BaseData ([State], MonthYear);
+
+    ;WITH Aggregated AS (
         SELECT [State],
-               ROUND(SUM(LineTotal), 0) AS [Total Sales], 
+               ROUND(SUM(LineTotal), 0) AS [Total Sales],
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
-               CASE 
+               CASE
                    WHEN SUM(LineTotal) = 0 THEN 0
                    ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2)
                END AS [GM%]
-        FROM BaseData
+        FROM #BaseData
         GROUP BY [State]
     ),
     SalesPivoted AS (
         SELECT * FROM (
-            SELECT [State], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM BaseData
+            SELECT [State], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineTotal) FOR MonthYear IN (' + @cols + ')
@@ -331,7 +361,7 @@ const queries = {
     ),
     COGSPivoted AS (
         SELECT * FROM (
-            SELECT [State], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM BaseData
+            SELECT [State], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM #BaseData
         ) AS src
         PIVOT (
             SUM(COGS) FOR MonthYear IN (' + @cogs_cols + ')
@@ -339,22 +369,24 @@ const queries = {
     ),
     LinesPivoted AS (
         SELECT * FROM (
-            SELECT [State], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM BaseData
+            SELECT [State], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineCount) FOR MonthYear IN (' + @lines_cols + ')
         ) AS pvt
     )
-    SELECT s.[State], 
-           a.[Total Sales], 
+    SELECT s.[State],
+           a.[Total Sales],
            a.[Total COGS],
-           a.[Total Line Items], 
+           a.[Total Line Items],
            a.[GM%],' + ISNULL(@cols, '') + ',' + ISNULL(@cogs_cols, '') + ',' + ISNULL(@lines_cols, '') + '
     FROM SalesPivoted s
     JOIN Aggregated a ON s.[State] = a.[State]
     LEFT JOIN COGSPivoted c ON s.[State] = c.[State]
     LEFT JOIN LinesPivoted l ON s.[State] = l.[State]
-    ORDER BY a.[Total Sales] DESC';
+    ORDER BY a.[Total Sales] DESC;
+
+    DROP TABLE #BaseData;';
     `;
 
     const execQuery = categoryFilter
@@ -364,16 +396,16 @@ const queries = {
     return execQuery;
   },
 
-  category: () => `
+  category: (fyStartYear) => `
     DECLARE @cols NVARCHAR(MAX);
     DECLARE @cogs_cols NVARCHAR(MAX);
     DECLARE @lines_cols NVARCHAR(MAX);
-    
+
     SELECT @cols = STRING_AGG(QUOTENAME(MonthYear), ',') WITHIN GROUP (ORDER BY MonthDate DESC)
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
@@ -382,12 +414,16 @@ const queries = {
     FROM (
         SELECT DISTINCT FORMAT(OINV.DocDate, 'MMM yyyy') AS MonthYear, MAX(OINV.DocDate) AS MonthDate
         FROM OINV
-        WHERE OINV.CANCELED = 'N'
+        WHERE OINV.CANCELED = 'N' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         GROUP BY FORMAT(OINV.DocDate, 'MMM yyyy')
     ) AS MonthList;
 
     DECLARE @sql NVARCHAR(MAX) = '
-    WITH BaseData AS (
+    IF OBJECT_ID(''tempdb..#BaseData'') IS NOT NULL DROP TABLE #BaseData;
+
+    SELECT [Category], MonthYear, LineTotal, COGS, LineCount
+    INTO #BaseData
+    FROM (
         SELECT T4.ItmsGrpNam AS [Category],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
@@ -397,7 +433,7 @@ const queries = {
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        WHERE OINV.CANCELED = ''N''
+        WHERE OINV.CANCELED = ''N'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
 
         UNION ALL
 
@@ -410,23 +446,26 @@ const queries = {
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        WHERE ORIN.CANCELED = ''N''
-    ),
-    Aggregated AS (
+        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
+    ) AS BD;
+
+    CREATE NONCLUSTERED INDEX IX_BaseData_Key ON #BaseData ([Category], MonthYear);
+
+    ;WITH Aggregated AS (
         SELECT [Category],
-               ROUND(SUM(LineTotal), 0) AS [Total Sales], 
+               ROUND(SUM(LineTotal), 0) AS [Total Sales],
                ROUND(SUM(COGS), 0) AS [Total COGS],
                SUM(LineCount) AS [Total Line Items],
-               CASE 
+               CASE
                    WHEN SUM(LineTotal) = 0 THEN 0
                    ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2)
                END AS [GM%]
-        FROM BaseData
+        FROM #BaseData
         GROUP BY [Category]
     ),
     SalesPivoted AS (
         SELECT * FROM (
-            SELECT [Category], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM BaseData
+            SELECT [Category], MonthYear, ROUND(LineTotal, 0) AS LineTotal FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineTotal) FOR MonthYear IN (' + @cols + ')
@@ -434,7 +473,7 @@ const queries = {
     ),
     COGSPivoted AS (
         SELECT * FROM (
-            SELECT [Category], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM BaseData
+            SELECT [Category], MonthYear + ''_COGS'' AS MonthYear, ROUND(COGS, 0) AS COGS FROM #BaseData
         ) AS src
         PIVOT (
             SUM(COGS) FOR MonthYear IN (' + @cogs_cols + ')
@@ -442,30 +481,49 @@ const queries = {
     ),
     LinesPivoted AS (
         SELECT * FROM (
-            SELECT [Category], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM BaseData
+            SELECT [Category], MonthYear + ''_Lines'' AS MonthYear, LineCount FROM #BaseData
         ) AS src
         PIVOT (
             SUM(LineCount) FOR MonthYear IN (' + @lines_cols + ')
         ) AS pvt
     )
-    SELECT s.[Category], 
-           a.[Total Sales], 
+    SELECT s.[Category],
+           a.[Total Sales],
            a.[Total COGS],
-           a.[Total Line Items], 
+           a.[Total Line Items],
            a.[GM%],' + ISNULL(@cols, '') + ',' + ISNULL(@lines_cols, '') + ',' + ISNULL(@cogs_cols, '') + '
     FROM SalesPivoted s
     JOIN Aggregated a ON s.[Category] = a.[Category]
     LEFT JOIN COGSPivoted c ON s.[Category] = c.[Category]
     LEFT JOIN LinesPivoted l ON s.[Category] = l.[Category]
-    ORDER BY a.[Total Sales] DESC';
+    ORDER BY a.[Total Sales] DESC;
+
+    DROP TABLE #BaseData;';
 
     EXEC sp_executesql @sql;
   `,
 };
 
+// Same FY convention as the frontend: April→March, "current" FY starts in
+// whichever calendar year we're in if we're past March.
+function currentFyStartYear() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  return month >= 4 ? year : year - 1;
+}
+
+function resolveFyStartYear(fyParam) {
+  const parsed = parseInt(fyParam, 10);
+  if (!Number.isFinite(parsed) || parsed < 2000 || parsed > 2100) {
+    return currentFyStartYear();
+  }
+  return parsed;
+}
+
 export default async function handler(req, res) {
   try {
-    const { type = "customer", category } = req.query;
+    const { type = "customer", category, fy } = req.query;
 
     if (!queries[type]) {
       return res.status(400).json({
@@ -474,9 +532,13 @@ export default async function handler(req, res) {
       });
     }
 
+    const fyStartYear = resolveFyStartYear(fy);
+
     // For category table, ignore category filter
     const sqlQuery =
-      type === "category" ? queries[type]() : queries[type](category);
+      type === "category"
+        ? queries[type](fyStartYear)
+        : queries[type](category, fyStartYear);
 
     // Prepare parameters for category filtering
     const params = [];
