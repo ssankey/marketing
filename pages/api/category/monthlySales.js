@@ -41,7 +41,7 @@ const queries = {
         SELECT OCRD.CardName AS [Customer Name],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
@@ -54,6 +54,7 @@ const queries = {
         `
             : ""
         }
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
@@ -62,7 +63,7 @@ const queries = {
         SELECT OCRD.CardName AS [Customer Name],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
@@ -75,7 +76,8 @@ const queries = {
         `
             : ""
         }
-        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
+        WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS BD;
 
@@ -170,7 +172,7 @@ const queries = {
         SELECT OSLP.SlpName AS [Sales Person Name],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
@@ -183,6 +185,7 @@ const queries = {
         `
             : ""
         }
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
@@ -191,7 +194,7 @@ const queries = {
         SELECT OSLP.SlpName AS [Sales Person Name],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
@@ -204,7 +207,8 @@ const queries = {
         `
             : ""
         }
-        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
+        WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS BD;
 
@@ -297,7 +301,7 @@ const queries = {
         SELECT COALESCE(CRD1.State, ''Unknown'') AS [State],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
@@ -311,6 +315,7 @@ const queries = {
         `
             : ""
         }
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
 
@@ -319,7 +324,7 @@ const queries = {
         SELECT COALESCE(CRD1.State, ''Unknown'') AS [State],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
@@ -333,7 +338,8 @@ const queries = {
         `
             : ""
         }
-        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
+        WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS BD;
 
@@ -427,12 +433,13 @@ const queries = {
         SELECT T4.ItmsGrpNam AS [Category],
                FORMAT(OINV.DocDate, ''MMM yyyy'') AS MonthYear,
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE OINV.CANCELED <> ''Y'' AND OINV.CANCELED <> ''C'' AND ${buildFyCondition('OINV.DocDate', fyStartYear)}
 
         UNION ALL
@@ -440,13 +447,14 @@ const queries = {
         SELECT T4.ItmsGrpNam AS [Category],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        WHERE ORIN.CANCELED = ''N'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
+        WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
     ) AS BD;
 
     CREATE NONCLUSTERED INDEX IX_BaseData_Key ON #BaseData ([Category], MonthYear);
@@ -518,11 +526,12 @@ const allTimeQueries = {
     FROM (
         SELECT OCRD.CardName AS [Customer Name],
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
         INNER JOIN OCRD ON OINV.CardCode = OCRD.CardCode
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
@@ -534,16 +543,17 @@ const allTimeQueries = {
 
         SELECT OCRD.CardName AS [Customer Name],
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
         ` : ""}
-        WHERE ORIN.CANCELED = 'N'
+        WHERE ORIN.CANCELED <> 'Y' AND ORIN.CANCELED <> 'C'
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS ATD
     GROUP BY [Customer Name];
@@ -558,11 +568,12 @@ const allTimeQueries = {
     FROM (
         SELECT OSLP.SlpName AS [Sales Person Name],
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
         INNER JOIN OSLP ON OINV.SlpCode = OSLP.SlpCode
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
@@ -574,16 +585,17 @@ const allTimeQueries = {
 
         SELECT OSLP.SlpName AS [Sales Person Name],
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OSLP ON ORIN.SlpCode = OSLP.SlpCode
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
         ` : ""}
-        WHERE ORIN.CANCELED = 'N'
+        WHERE ORIN.CANCELED <> 'Y' AND ORIN.CANCELED <> 'C'
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS ATD
     GROUP BY [Sales Person Name];
@@ -598,12 +610,13 @@ const allTimeQueries = {
     FROM (
         SELECT COALESCE(CRD1.State, 'Unknown') AS [State],
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
         INNER JOIN OCRD ON OINV.CardCode = OCRD.CardCode
         LEFT JOIN CRD1 ON OCRD.CardCode = CRD1.CardCode AND CRD1.AdresType = 'B'
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
@@ -615,17 +628,18 @@ const allTimeQueries = {
 
         SELECT COALESCE(CRD1.State, 'Unknown') AS [State],
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
         LEFT JOIN CRD1 ON OCRD.CardCode = CRD1.CardCode AND CRD1.AdresType = 'B'
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
         ` : ""}
-        WHERE ORIN.CANCELED = 'N'
+        WHERE ORIN.CANCELED <> 'Y' AND ORIN.CANCELED <> 'C'
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS ATD
     GROUP BY [State];
@@ -640,25 +654,27 @@ const allTimeQueries = {
     FROM (
         SELECT T4.ItmsGrpNam AS [Category],
                INV1.LineTotal,
-               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE INV1.GrossBuyPr END) * INV1.Quantity AS COGS,
                1 AS LineCount
         FROM OINV
         INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
         INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(INV1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
 
         UNION ALL
 
         SELECT T4.ItmsGrpNam AS [Category],
                -RIN1.LineTotal AS LineTotal,
-               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
                -1 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        WHERE ORIN.CANCELED = 'N'
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
+        WHERE ORIN.CANCELED <> 'Y' AND ORIN.CANCELED <> 'C'
     ) AS ATD
     GROUP BY [Category];
   `,
