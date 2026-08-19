@@ -370,10 +370,15 @@ export default function ProductsTable({
     );
   };
 
+  // Quantity-style columns read better sorted highest-first on the very first
+  // click (e.g. "who are the top customers by units sold"), unlike text/code
+  // columns which default to A→Z.
+  const DESC_FIRST_FIELDS = ["OnHand", "UnitsSold", "NumberOfCustomers"];
+
   const handleSortInternal = (field) => {
-    let direction = "asc";
-    if (sortField === field && sortDirection === "asc") {
-      direction = "desc";
+    let direction = DESC_FIRST_FIELDS.includes(field) ? "desc" : "asc";
+    if (sortField === field) {
+      direction = sortDirection === "asc" ? "desc" : "asc";
     }
     setSortField(field);
     setSortDirection(direction);
@@ -730,8 +735,8 @@ export default function ProductsTable({
                       <SortHeader label="CAT No." field="ItemCode" className="pt-th-left" />
                       <SortHeader label="CAS No." field="U_CasNo" className="pt-th-left" />
                       <th className="pt-th-left">Documents</th>
-                      <th className="pt-th-right">Units Sold</th>
-                      <th className="pt-th-right">No. of Customers</th>
+                      <SortHeader label="Units Sold" field="UnitsSold" className="pt-th-right" />
+                      <SortHeader label="No. of Customers" field="NumberOfCustomers" className="pt-th-right" />
                       <SortHeader label="Stock" field="OnHand" className="pt-th-right" />
                       <SortHeader label="Stock Status" field="stockStatus" className="pt-th-left" />
                       <SortHeader label="Item Name" field="ItemName" className="pt-th-left" />

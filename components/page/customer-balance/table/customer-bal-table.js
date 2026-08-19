@@ -317,7 +317,7 @@ const handleExportExcel = () => {
       </div>
 
       <div className="cbt-table-card">
-        {isLoading ? null : !pageData.length ? (
+        {!pageData.length ? (
           <div className="cbt-empty">No data available.</div>
         ) : (
           <>
