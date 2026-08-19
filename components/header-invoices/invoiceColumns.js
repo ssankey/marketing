@@ -12,6 +12,7 @@ import { Tags } from "lucide-react";
 import { formatTime  } from "utils/formatTime";
 import LabelPrintModal from '../LabelPrintModal';
 import { mergePdfBlobs, imagesToPdfBlob, openPrintWindow } from 'utils/printBlob';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 // Always the same — Density Pharmachem's own shipping address
 const SHIP_FROM = {
@@ -24,15 +25,35 @@ const SHIP_FROM = {
   contactPhone: '+91 998 999 1194',
 };
 
-const ADDRESS_FONT = "'Times New Roman', Times, serif";
+// pdf-lib's standard fonts only support WinAnsi encoding — real address/
+// company text pulled from SAP can contain characters outside that (₹, smart
+// quotes, em-dashes, etc.) which would otherwise throw at drawText() time.
+// Normalize common punctuation to ASCII equivalents, then strip anything
+// still outside the WinAnsi-safe range instead of crashing the whole print.
+function sanitizeForPdf(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/₹/g, 'Rs.')
+    .replace(/[^\x00-\xFF]/g, '')
+    // Strip control characters (stray \r/\n/\t etc. that survived line-
+    // splitting elsewhere, plus anything else WinAnsi has no glyph for) —
+    // these are within \x00-\xFF so the filter above doesn't already catch them.
+    .replace(/[\x00-\x1F\x7F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-function wrapText(ctx, text, maxWidth) {
-  const words = text.split(' ');
+function wrapText(font, size, text, maxWidth) {
+  const words = sanitizeForPdf(text).split(' ');
   const lines = [];
   let current = '';
   words.forEach((word) => {
     const test = current ? `${current} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && current) {
+    if (font.widthOfTextAtSize(test, size) > maxWidth && current) {
       lines.push(current);
       current = word;
     } else {
@@ -43,87 +64,92 @@ function wrapText(ctx, text, maxWidth) {
   return lines;
 }
 
-function generateAddressImage(shipTo) {
-  return new Promise((resolve) => {
-    const width = 640;
-    const padding = 32;
-    const lineHeight = 24;
-    const contentWidth = width - padding * 2;
+// Real vector PDF (not a rasterized canvas image) — stays crisp at any zoom
+// level or when pasted elsewhere, and printing it goes through the same
+// iframe/PDF-viewer path as COA/MSDS/etc., so it doesn't pick up the
+// browser's own page-print header/footer (title, URL, date, page count) the
+// way printing a plain HTML page with an <img> in it does.
+async function generateAddressPdf(shipTo) {
+  const pdfDoc = await PDFDocument.create();
+  const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
-    const measureCanvas = document.createElement('canvas');
-    const mctx = measureCanvas.getContext('2d');
-    mctx.font = `14px ${ADDRESS_FONT}`;
+  const width = 480;
+  const padding = 26;
+  const lineHeight = 27;
+  const contentWidth = width - padding * 2;
 
-    const shipToAddrLines = (shipTo.address || 'N/A')
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .flatMap((line) => wrapText(mctx, line, contentWidth));
+  const labelSize = 12;
+  const bodySize = 15;
+  const boldSize = 18;
 
-    const shipFromAddrLines = SHIP_FROM.addressLines;
+  // Everything that gets drawn — including the bold company name and the
+  // static Density Pharmachem address — has to be wrapped to contentWidth,
+  // not just the customer's address, or long text runs off the page edge.
+  const shipToCompanyLines = wrapText(timesBold, boldSize, shipTo.company || 'N/A', contentWidth);
+  const shipToAddrLines = (shipTo.address || 'N/A')
+    .split(/\r\n|\r|\n/) // SAP addresses use bare \r as the line separator, not \r\n
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .flatMap((line) => wrapText(timesRoman, bodySize, line, contentWidth));
 
-    const blockLines = (addrLines) => 2 /* label + company */ + addrLines.length + 2; /* contact name/phone */
-    const totalLines = blockLines(shipToAddrLines) + blockLines(shipFromAddrLines);
-    const height = padding * 2 + totalLines * lineHeight + 40;
+  const shipFromCompanyLines = wrapText(timesBold, boldSize, SHIP_FROM.company, contentWidth);
+  const shipFromAddrLines = SHIP_FROM.addressLines
+    .flatMap((line) => wrapText(timesRoman, bodySize, line, contentWidth));
 
-    // Render at 3x pixel density so the exported PNG stays crisp when zoomed —
-    // a canvas sized to plain CSS pixels only has that many real pixels to zoom into.
-    const scale = 3;
-    const canvas = document.createElement('canvas');
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(scale, scale);
+  const blockLines = (companyLines, addrLines) =>
+    1 /* label */ + companyLines.length + addrLines.length + 2; /* contact name/phone */
+  const totalLines =
+    blockLines(shipToCompanyLines, shipToAddrLines) + blockLines(shipFromCompanyLines, shipFromAddrLines);
+  const height = padding * 2 + totalLines * lineHeight + 55;
 
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, width, height);
-    ctx.strokeStyle = '#cccccc';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(8, 8, width - 16, height - 16);
+  const page = pdfDoc.addPage([width, height]);
 
-    ctx.textBaseline = 'top';
-    let cursorY = padding;
-
-    const drawLabel = (text) => {
-      ctx.font = `bold 12px ${ADDRESS_FONT}`;
-      ctx.fillStyle = '#555555';
-      ctx.fillText(text.toUpperCase(), padding, cursorY);
-      cursorY += lineHeight - 4;
-    };
-    const drawBold = (text) => {
-      ctx.font = `bold 16px ${ADDRESS_FONT}`;
-      ctx.fillStyle = '#000000';
-      ctx.fillText(text, padding, cursorY);
-      cursorY += lineHeight;
-    };
-    const drawNormal = (text) => {
-      ctx.font = `14px ${ADDRESS_FONT}`;
-      ctx.fillStyle = '#222222';
-      ctx.fillText(text, padding, cursorY);
-      cursorY += lineHeight;
-    };
-
-    drawLabel('Ship To');
-    drawBold(shipTo.company);
-    shipToAddrLines.forEach(drawNormal);
-    drawNormal(`Contact Name : ${shipTo.contactName}`);
-    drawNormal(`Contact Phone : ${shipTo.contactPhone}`);
-
-    cursorY += 12;
-    ctx.strokeStyle = '#dddddd';
-    ctx.beginPath();
-    ctx.moveTo(padding, cursorY);
-    ctx.lineTo(width - padding, cursorY);
-    ctx.stroke();
-    cursorY += 20;
-
-    drawLabel('Ship From');
-    drawBold(SHIP_FROM.company);
-    shipFromAddrLines.forEach(drawNormal);
-    drawNormal(`Contact Name : ${SHIP_FROM.contactName}`);
-    drawNormal(`Contact Phone : ${SHIP_FROM.contactPhone}`);
-
-    canvas.toBlob((blob) => resolve(blob), 'image/png');
+  page.drawRectangle({
+    x: 6, y: 6, width: width - 12, height: height - 12,
+    borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 1,
   });
+
+  // pdf-lib's origin is bottom-left with y increasing upward, so start near
+  // the top and step downward for each line.
+  let cursorY = height - padding;
+
+  const drawLabel = (text) => {
+    page.drawText(sanitizeForPdf(text).toUpperCase(), { x: padding, y: cursorY - labelSize, size: labelSize, font: timesBold, color: rgb(0.33, 0.33, 0.33) });
+    cursorY -= lineHeight - 6;
+  };
+  const drawBoldLines = (lines) => {
+    lines.forEach((line) => {
+      page.drawText(sanitizeForPdf(line), { x: padding, y: cursorY - boldSize, size: boldSize, font: timesBold, color: rgb(0, 0, 0) });
+      cursorY -= lineHeight;
+    });
+  };
+  const drawNormal = (text) => {
+    page.drawText(sanitizeForPdf(text), { x: padding, y: cursorY - bodySize, size: bodySize, font: timesRoman, color: rgb(0.13, 0.13, 0.13) });
+    cursorY -= lineHeight;
+  };
+
+  drawLabel('Ship To');
+  drawBoldLines(shipToCompanyLines);
+  shipToAddrLines.forEach(drawNormal);
+  drawNormal(`Contact Name : ${shipTo.contactName}`);
+  drawNormal(`Contact Phone : ${shipTo.contactPhone}`);
+
+  cursorY -= 10;
+  page.drawLine({
+    start: { x: padding, y: cursorY }, end: { x: width - padding, y: cursorY },
+    thickness: 1, color: rgb(0.87, 0.87, 0.87),
+  });
+  cursorY -= 22;
+
+  drawLabel('Ship From');
+  drawBoldLines(shipFromCompanyLines);
+  shipFromAddrLines.forEach(drawNormal);
+  drawNormal(`Contact Name : ${SHIP_FROM.contactName}`);
+  drawNormal(`Contact Phone : ${SHIP_FROM.contactPhone}`);
+
+  const bytes = await pdfDoc.save();
+  return new Blob([bytes], { type: 'application/pdf' });
 }
 
 export const tableColumns = (handlers) => [
@@ -419,7 +445,7 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
         contactPhone: invoice.ContactPersonPhone || 'N/A',
       };
 
-      const blob = await generateAddressImage(shipTo);
+      const blob = await generateAddressPdf(shipTo);
       openPrintWindow(blob, `Address_${docNum}`);
     } catch (err) {
       console.error('Error printing address:', err);
