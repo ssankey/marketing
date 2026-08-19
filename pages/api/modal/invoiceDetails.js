@@ -62,7 +62,10 @@ export default async function handler(req, res) {
                             AND T12.DocEntry = T2.BaseEntry
                             AND T2.BaseType = 17
                             AND T2.BaseLine = T12.LineNum
-      LEFT JOIN ORDR T13      ON T13.DocEntry = T12.DocEntry
+      -- SO No/Date/Ref are header-level (ORDR) fields — join off the delivery
+      -- line's own BaseEntry directly instead of through T12 (RDR1), since a
+      -- real order can be missing that exact LineNum in its own line table.
+      LEFT JOIN ORDR T13      ON T13.DocEntry = T2.BaseEntry AND T2.BaseType = 17
       LEFT JOIN OCPR CP       ON T13.CntctCode = CP.CntctCode
       LEFT JOIN IBT1 T4       ON T4.CardCode = T3.CardCode
                             AND T4.ItemCode = T2.ItemCode
