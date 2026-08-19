@@ -249,20 +249,35 @@ export default function MonthlyReportPage() {
 
   return (
     <Container className="mt-3" fluid>
-      {/* Page-level toolbar: title + financial year selector */}
-      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 px-1">
-        <div className="d-flex align-items-center gap-2">
-          <BarChart3 size={22} className="text-success" />
-          <h4 className="mb-0 fw-bold">Category Analytics</h4>
-        </div>
-        {fySelector}
+      <style jsx global>{`
+        .cat-section-header {
+          padding-top: 18px !important;
+          padding-bottom: 18px !important;
+          border-bottom: 2px solid #1f68bf22 !important;
+        }
+        .cat-section-header h4 {
+          font-size: 1.35rem;
+          letter-spacing: 0.2px;
+          color: #10151c;
+        }
+        .cat-page-title {
+          font-size: 1.6rem;
+          letter-spacing: 0.2px;
+        }
+      `}</style>
+
+      {/* Page-level toolbar: title (financial year selector lives on each table below) */}
+      <div className="d-flex align-items-center gap-2 mb-3 px-1">
+        <BarChart3 size={26} className="text-success" />
+        <h4 className="cat-page-title mb-0 fw-bold">Category Analytics</h4>
       </div>
 
       {/* ✅ Only show Category table if NOT 3ASenrise */}
       {!is3ASenrise && (
         <Card className="mb-3 shadow-sm border-0">
-          <Card.Header className="bg-white py-3 px-3 border-bottom">
-            <h5 className="mb-0 fw-semibold">Category-wise Monthly Sales</h5>
+          <Card.Header className="cat-section-header bg-white py-3 px-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 className="mb-0 fw-bold">Category-wise Monthly Sales</h4>
+            {fySelector}
           </Card.Header>
           <Card.Body className="p-3">
             {loading.category ? (
@@ -282,11 +297,12 @@ export default function MonthlyReportPage() {
 
       {/* CUSTOMER TABLE CARD - Always show */}
       <Card className="mb-3 shadow-sm border-0">
-        <Card.Header className="bg-white py-3 px-3 border-bottom">
-          <h5 className="mb-0 fw-semibold">
+        <Card.Header className="cat-section-header bg-white py-3 px-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h4 className="mb-0 fw-bold">
             Customer-wise Monthly Sales
             {is3ASenrise && <span className="ms-2 badge bg-success">3A Chemicals</span>}
-          </h5>
+          </h4>
+          {fySelector}
         </Card.Header>
         <Card.Body className="p-3">
           {renderCategoryDropdown("customer")}
@@ -307,8 +323,9 @@ export default function MonthlyReportPage() {
       {/* ✅ Only show Salesperson table if NOT 3ASenrise */}
       {!is3ASenrise && (
         <Card className="mb-3 shadow-sm border-0">
-          <Card.Header className="bg-white py-3 px-3 border-bottom">
-            <h5 className="mb-0 fw-semibold">Salesperson-wise Monthly Sales</h5>
+          <Card.Header className="cat-section-header bg-white py-3 px-3 border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 className="mb-0 fw-bold">Salesperson-wise Monthly Sales</h4>
+            {fySelector}
           </Card.Header>
           <Card.Body className="p-3">
             {renderCategoryDropdown("salesperson")}

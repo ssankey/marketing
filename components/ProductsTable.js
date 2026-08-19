@@ -732,7 +732,7 @@ export default function ProductsTable({
                 <table className="pt-table">
                   <thead>
                     <tr>
-                      <SortHeader label="CAT No." field="ItemCode" className="pt-th-left" />
+                      <SortHeader label="CAT No." field="ItemCode" className="pt-th-left pt-th-sticky" />
                       <SortHeader label="CAS No." field="U_CasNo" className="pt-th-left" />
                       <th className="pt-th-left">Documents</th>
                       <SortHeader label="Units Sold" field="UnitsSold" className="pt-th-right" />
@@ -750,7 +750,7 @@ export default function ProductsTable({
                   <tbody>
                     {products.map((product) => (
                       <tr key={product.ItemCode}>
-                        <td>
+                        <td className="pt-td-sticky">
                           <Link href={`/products/${product.ItemCode}`} className="pt-catno">
                             {product.ItemCode}
                           </Link>
@@ -1109,6 +1109,12 @@ const PAGE_STYLES = `
   .pt-table th:hover { color: var(--text); }
   .pt-th-left { text-align: left; }
   .pt-th-right { text-align: right; }
+  .pt-th-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--surface2);
+  }
 
   .pt-table td {
     padding: 11px 14px;
@@ -1120,6 +1126,13 @@ const PAGE_STYLES = `
   .pt-table td:last-child { border-right: none; }
   .pt-table tbody tr:last-child td { border-bottom: none; }
   .pt-table tbody tr:hover { background: var(--surface2); }
+  .pt-td-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface);
+  }
+  .pt-table tbody tr:hover .pt-td-sticky { background: var(--surface2); }
   .pt-num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
   .pt-desc {
     white-space: nowrap;
