@@ -111,6 +111,11 @@ export default function CustomerBalTable({
       { accessorKey: "Contact Person", header: "Contact Person" },
       { accessorKey: "CustomerPONo", header: "Cust Ref no" },
       {
+        accessorKey: "Invoice Total",
+        header: "Invoice Total",
+        cell: ({ getValue }) => formatCurrency(getValue()),
+      },
+      {
         accessorKey: "BalanceDue",
         header: "Balance Due",
         cell: ({ getValue }) => formatCurrency(getValue()),

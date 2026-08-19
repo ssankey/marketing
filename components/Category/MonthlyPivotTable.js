@@ -6,7 +6,7 @@ import {
   getFilteredRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { Search, Download } from "lucide-react";
+import { Search, Download, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import downloadExcel from "utils/exporttoexcel";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 import DailySalesModal from "./DailySalesModal";
@@ -32,6 +32,7 @@ export default function MonthlyLineItemsTable({
   const [page, setPage] = useState(1);
   const [showModal, setShowModal] = useState(false);
   const [selectedCell, setSelectedCell] = useState(null);
+  const [sortState, setSortState] = useState({ field: "allTimeTotal", direction: "desc" });
 
   const safeData = Array.isArray(data) ? data : [];
 
@@ -44,13 +45,39 @@ export default function MonthlyLineItemsTable({
     );
   }, [safeData, globalFilter]);
 
-  const pageCount = Math.max(1, Math.ceil((filteredData.length || 0) / PAGE_SIZE));
+  const getSortValue = (row, field) => {
+    if (field === "allTimeTotal") return row["All Time Sales"] || 0;
+    if (field === "fyTotal") return row["Total Sales"] || 0;
+    return row[field] || 0;
+  };
+
+  const sortedData = useMemo(() => {
+    const arr = [...filteredData];
+    arr.sort((a, b) => {
+      const av = getSortValue(a, sortState.field);
+      const bv = getSortValue(b, sortState.field);
+      return sortState.direction === "desc" ? bv - av : av - bv;
+    });
+    return arr;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredData, sortState]);
+
+  const handleSort = (field) => {
+    setSortState((prev) =>
+      prev.field === field
+        ? { field, direction: prev.direction === "desc" ? "asc" : "desc" }
+        : { field, direction: "desc" }
+    );
+    setPage(1);
+  };
+
+  const pageCount = Math.max(1, Math.ceil((sortedData.length || 0) / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
 
   const pagedData = useMemo(() => {
     const start = (safePage - 1) * PAGE_SIZE;
-    return filteredData.slice(start, start + PAGE_SIZE);
-  }, [filteredData, safePage]);
+    return sortedData.slice(start, start + PAGE_SIZE);
+  }, [sortedData, safePage]);
 
   const handleCellClick = (monthHeader, rowData, value) => {
     if (typeof value === "number" && value > 0) {
@@ -126,19 +153,20 @@ export default function MonthlyLineItemsTable({
       return dateB - dateA;
     });
 
-    // Total column
+    // All-time Total column (every financial year, not just the selected one)
     transformedCols.push({
-      id: "total",
-      header: fyLabel ? `Total (${fyLabel})` : "Total",
+      id: "allTimeTotal",
+      header: "Total",
+      sortKey: "allTimeTotal",
       cell: ({ row }) => {
-        const sales = row.original["Total Sales"] || 0;
-        const cogs = row.original["Total COGS"] || 0;
-        const lines = row.original["Total Line Items"] || 0;
-        const gm = row.original["GM%"] || 0;
+        const sales = row.original["All Time Sales"] || 0;
+        const cogs = row.original["All Time COGS"] || 0;
+        const lines = row.original["All Time Lines"] || 0;
+        const gm = row.original["All Time GM%"] || 0;
 
         return (
           <div className="mpt-cell" title={`COGS: ₹${formatNumberWithIndianCommas(cogs)}`}>
-            <div className="mpt-cell-primary mpt-cell-primary-total">
+            <div className="mpt-cell-primary mpt-cell-primary-alltime">
               ₹{formatNumberWithIndianCommas(sales)}
             </div>
             <div className="mpt-cell-secondary">
@@ -148,7 +176,33 @@ export default function MonthlyLineItemsTable({
           </div>
         );
       },
-      isTotal: true,
+      isAllTimeTotal: true,
+    });
+
+    // Total column (selected financial year)
+    transformedCols.push({
+      id: "total",
+      header: fyLabel ? `Total (${fyLabel})` : "Total",
+      sortKey: "fyTotal",
+      cell: ({ row }) => {
+        const sales = row.original["Total Sales"] || 0;
+        const cogs = row.original["Total COGS"] || 0;
+        const lines = row.original["Total Line Items"] || 0;
+        const gm = row.original["GM%"] || 0;
+
+        return (
+          <div className="mpt-cell" title={`COGS: ₹${formatNumberWithIndianCommas(cogs)}`}>
+            <div className="mpt-cell-primary mpt-cell-primary-fytotal">
+              ₹{formatNumberWithIndianCommas(sales)}
+            </div>
+            <div className="mpt-cell-secondary">
+              <span>{formatNumberWithIndianCommas(lines)} lines</span>
+              <span className={`mpt-badge ${gm >= 0 ? "good" : "bad"}`}>{gm}% GM</span>
+            </div>
+          </div>
+        );
+      },
+      isFyTotal: true,
     });
 
     // Monthly columns (newest first)
@@ -156,6 +210,7 @@ export default function MonthlyLineItemsTable({
       transformedCols.push({
         id: `month_${monthKey}`,
         header: monthKey,
+        sortKey: monthKey,
         cell: ({ row }) => {
           const sales = row.original[monthKey] || 0;
           const cogs = row.original[`${monthKey}_COGS`] || 0;
@@ -195,7 +250,7 @@ export default function MonthlyLineItemsTable({
   });
 
   const handleExportExcel = () => {
-    const exportData = filteredData.map((row) => {
+    const exportData = sortedData.map((row) => {
       const formatted = {};
 
       const nameKey = Object.keys(row).find((key) =>
@@ -204,6 +259,11 @@ export default function MonthlyLineItemsTable({
       if (nameKey) {
         formatted[nameKey] = row[nameKey];
       }
+
+      formatted["All Time Sales"] = row["All Time Sales"] || 0;
+      formatted["All Time COGS"] = row["All Time COGS"] || 0;
+      formatted["All Time Lines"] = row["All Time Lines"] || 0;
+      formatted["All Time GM%"] = row["All Time GM%"] || 0;
 
       formatted["Total Sales"] = row["Total Sales"] || 0;
       formatted["Total COGS"] = row["Total COGS"] || 0;
@@ -282,28 +342,62 @@ export default function MonthlyLineItemsTable({
                 <thead>
                   {table.getHeaderGroups().map((hg) => (
                     <tr key={hg.id}>
-                      {hg.headers.map((header, headerIndex) => (
-                        <th
-                          key={header.id}
-                          className={headerIndex === 0 ? "mpt-th-left mpt-th-sticky" : "mpt-th-right"}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
+                      {hg.headers.map((header, headerIndex) => {
+                        const def = header.column.columnDef;
+                        const sortKey = def.sortKey;
+                        const isSorted = sortKey && sortState.field === sortKey;
+                        const SortIcon = isSorted
+                          ? sortState.direction === "desc"
+                            ? ArrowDown
+                            : ArrowUp
+                          : ArrowUpDown;
+                        const typeClass = def.isAllTimeTotal
+                          ? "mpt-th-alltime"
+                          : def.isFyTotal
+                          ? "mpt-th-fytotal"
+                          : "";
+
+                        return (
+                          <th
+                            key={header.id}
+                            className={`${headerIndex === 0 ? "mpt-th-left mpt-th-sticky" : "mpt-th-right"} ${
+                              sortKey ? "mpt-th-sortable" : ""
+                            } ${typeClass}`}
+                            onClick={sortKey ? () => handleSort(sortKey) : undefined}
+                          >
+                            {sortKey ? (
+                              <span className="mpt-th-sort-wrap">
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                <SortIcon size={11} className={`mpt-sort-icon ${isSorted ? "active" : ""}`} />
+                              </span>
+                            ) : (
+                              flexRender(header.column.columnDef.header, header.getContext())
+                            )}
+                          </th>
+                        );
+                      })}
                     </tr>
                   ))}
                 </thead>
                 <tbody>
                   {table.getRowModel().rows.map((row) => (
                     <tr key={row.id}>
-                      {row.getVisibleCells().map((cell, cellIndex) => (
-                        <td
-                          key={cell.id}
-                          className={cellIndex === 0 ? "mpt-td-sticky" : "mpt-num"}
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
+                      {row.getVisibleCells().map((cell, cellIndex) => {
+                        const def = cell.column.columnDef;
+                        const typeClass = def.isAllTimeTotal
+                          ? "mpt-col-alltime"
+                          : def.isFyTotal
+                          ? "mpt-col-fytotal"
+                          : "";
+                        return (
+                          <td
+                            key={cell.id}
+                            className={`${cellIndex === 0 ? "mpt-td-sticky" : "mpt-num"} ${typeClass}`}
+                          >
+                            {flexRender(def.cell, cell.getContext())}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -480,12 +574,12 @@ const PAGE_STYLES = `
     color: var(--muted);
     border-bottom: 1px solid var(--border);
     border-right: 1px solid var(--border);
-    padding: 10px 12px;
+    padding: 14px 16px;
     white-space: nowrap;
   }
   .mpt-table th:last-child { border-right: none; }
   .mpt-th-left { text-align: left; }
-  .mpt-th-right { text-align: right; min-width: 130px; }
+  .mpt-th-right { text-align: right; min-width: 145px; }
   .mpt-th-sticky {
     position: sticky;
     left: 0;
@@ -493,28 +587,46 @@ const PAGE_STYLES = `
     background: var(--surface2);
   }
 
+  .mpt-th-sortable { cursor: pointer; user-select: none; }
+  .mpt-th-sortable:hover { background: var(--surface-green); }
+  .mpt-th-sort-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    width: 100%;
+  }
+  .mpt-sort-icon { color: var(--muted); flex-shrink: 0; }
+  .mpt-sort-icon.active { color: var(--accent); }
+
+  .mpt-th-alltime { background: #d3e7fb !important; color: #14539e; }
+  .mpt-th-fytotal { background: #cdf0dc !important; color: #1a6b45; }
+
   .mpt-table td {
     padding: 0;
-    font-size: 13px;
+    font-size: 13.5px;
     border-bottom: 1px solid var(--border);
     border-right: 1px solid var(--border);
     white-space: nowrap;
   }
   .mpt-table td:last-child { border-right: none; }
   .mpt-table tbody tr:last-child td { border-bottom: none; }
-  .mpt-table tbody tr:hover { background: var(--surface2); }
+  .mpt-table tbody tr:nth-child(even) td { background: #f4f8fc; }
+  .mpt-table tbody tr:hover td { background: var(--surface2); }
 
   .mpt-td-sticky {
     position: sticky;
     left: 0;
     z-index: 1;
     background: var(--surface);
-    padding: 11px 14px !important;
+    padding: 15px 18px !important;
   }
+  .mpt-table tbody tr:nth-child(even) .mpt-td-sticky { background: #f4f8fc; }
   .mpt-table tbody tr:hover .mpt-td-sticky { background: var(--surface2); }
 
   .mpt-rowname {
-    font-weight: 600;
+    font-weight: 700;
+    font-size: 14px;
     color: var(--text);
     white-space: nowrap;
     overflow: hidden;
@@ -527,42 +639,55 @@ const PAGE_STYLES = `
   .mpt-num { text-align: right; }
 
   .mpt-cell {
-    padding: 9px 14px;
+    padding: 14px 18px;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 3px;
+    gap: 5px;
   }
   .mpt-cell-clickable { cursor: pointer; }
-  .mpt-cell-clickable:hover { background: var(--surface-green); }
+  .mpt-cell-clickable:hover { background: var(--surface-green) !important; }
 
   .mpt-cell-primary {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 600;
     color: var(--text);
   }
-  .mpt-cell-primary-total { color: var(--accent); font-weight: 700; }
+  .mpt-cell-primary-alltime { color: #14539e; font-weight: 700; }
+  .mpt-cell-primary-fytotal { color: #1a6b45; font-weight: 700; }
 
   .mpt-cell-secondary {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 10.5px;
+    font-size: 11px;
     color: var(--muted);
   }
 
   .mpt-badge {
     display: inline-block;
-    padding: 1px 7px;
+    padding: 2px 8px;
     border-radius: 20px;
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
+    font-size: 10.5px;
     font-weight: 700;
   }
   .mpt-badge.good { color: var(--good); background: var(--surface-green); }
   .mpt-badge.bad { color: var(--bad); background: #fdecea; }
+
+  /* Total columns get their own tint so they stand out from the monthly data */
+  .mpt-col-alltime {
+    background: #eaf3fd !important;
+    border-left: 3px solid #1f68bf;
+  }
+  .mpt-col-fytotal {
+    background: #e7f7ee !important;
+    border-left: 3px solid #21875a;
+  }
+  .mpt-table tbody tr:hover .mpt-col-alltime { background: #daebfc !important; }
+  .mpt-table tbody tr:hover .mpt-col-fytotal { background: #d4f0e0 !important; }
 
   .mpt-pagination {
     display: flex;

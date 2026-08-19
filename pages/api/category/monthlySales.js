@@ -504,6 +504,173 @@ const queries = {
   `,
 };
 
+// Plain (non-pivoted, non-dynamic-SQL) all-time totals, run as a separate
+// query and merged in by key. Kept deliberately simple/static — folding this
+// into the dynamic PIVOT string above made the batch long enough to trip a
+// tedious/mssql driver quirk that silently mangled the sp_executesql text.
+const allTimeQueries = {
+  customer: (categoryFilter) => `
+    SELECT [Customer Name],
+           SUM(LineTotal) AS [All Time Sales],
+           SUM(COGS) AS [All Time COGS],
+           SUM(LineCount) AS [All Time Lines],
+           CASE WHEN SUM(LineTotal) = 0 THEN 0 ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2) END AS [All Time GM%]
+    FROM (
+        SELECT OCRD.CardName AS [Customer Name],
+               INV1.LineTotal,
+               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               1 AS LineCount
+        FROM OINV
+        INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+        INNER JOIN OCRD ON OINV.CardCode = OCRD.CardCode
+        ${categoryFilter ? `
+        INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ` : ""}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+
+        UNION ALL
+
+        SELECT OCRD.CardName AS [Customer Name],
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
+        ${categoryFilter ? `
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ` : ""}
+        WHERE ORIN.CANCELED = 'N'
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+    ) AS ATD
+    GROUP BY [Customer Name];
+  `,
+
+  salesperson: (categoryFilter) => `
+    SELECT [Sales Person Name],
+           SUM(LineTotal) AS [All Time Sales],
+           SUM(COGS) AS [All Time COGS],
+           SUM(LineCount) AS [All Time Lines],
+           CASE WHEN SUM(LineTotal) = 0 THEN 0 ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2) END AS [All Time GM%]
+    FROM (
+        SELECT OSLP.SlpName AS [Sales Person Name],
+               INV1.LineTotal,
+               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               1 AS LineCount
+        FROM OINV
+        INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+        INNER JOIN OSLP ON OINV.SlpCode = OSLP.SlpCode
+        ${categoryFilter ? `
+        INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ` : ""}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+
+        UNION ALL
+
+        SELECT OSLP.SlpName AS [Sales Person Name],
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OSLP ON ORIN.SlpCode = OSLP.SlpCode
+        ${categoryFilter ? `
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ` : ""}
+        WHERE ORIN.CANCELED = 'N'
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+    ) AS ATD
+    GROUP BY [Sales Person Name];
+  `,
+
+  state: (categoryFilter) => `
+    SELECT [State],
+           SUM(LineTotal) AS [All Time Sales],
+           SUM(COGS) AS [All Time COGS],
+           SUM(LineCount) AS [All Time Lines],
+           CASE WHEN SUM(LineTotal) = 0 THEN 0 ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2) END AS [All Time GM%]
+    FROM (
+        SELECT COALESCE(CRD1.State, 'Unknown') AS [State],
+               INV1.LineTotal,
+               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               1 AS LineCount
+        FROM OINV
+        INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+        INNER JOIN OCRD ON OINV.CardCode = OCRD.CardCode
+        LEFT JOIN CRD1 ON OCRD.CardCode = CRD1.CardCode AND CRD1.AdresType = 'B'
+        ${categoryFilter ? `
+        INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ` : ""}
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+
+        UNION ALL
+
+        SELECT COALESCE(CRD1.State, 'Unknown') AS [State],
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
+        LEFT JOIN CRD1 ON OCRD.CardCode = CRD1.CardCode AND CRD1.AdresType = 'B'
+        ${categoryFilter ? `
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        ` : ""}
+        WHERE ORIN.CANCELED = 'N'
+        ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
+    ) AS ATD
+    GROUP BY [State];
+  `,
+
+  category: () => `
+    SELECT [Category],
+           SUM(LineTotal) AS [All Time Sales],
+           SUM(COGS) AS [All Time COGS],
+           SUM(LineCount) AS [All Time Lines],
+           CASE WHEN SUM(LineTotal) = 0 THEN 0 ELSE ROUND(((SUM(LineTotal) - SUM(COGS)) * 100.0) / SUM(LineTotal), 2) END AS [All Time GM%]
+    FROM (
+        SELECT T4.ItmsGrpNam AS [Category],
+               INV1.LineTotal,
+               INV1.GrossBuyPr * INV1.Quantity AS COGS,
+               1 AS LineCount
+        FROM OINV
+        INNER JOIN INV1 ON OINV.DocEntry = INV1.DocEntry
+        INNER JOIN OITM T3 ON INV1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        WHERE OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
+
+        UNION ALL
+
+        SELECT T4.ItmsGrpNam AS [Category],
+               -RIN1.LineTotal AS LineTotal,
+               -(RIN1.GrossBuyPr * RIN1.Quantity) AS COGS,
+               -1 AS LineCount
+        FROM ORIN
+        INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
+        INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
+        INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
+        WHERE ORIN.CANCELED = 'N'
+    ) AS ATD
+    GROUP BY [Category];
+  `,
+};
+
+const KEY_FIELD_BY_TYPE = {
+  customer: "Customer Name",
+  salesperson: "Sales Person Name",
+  state: "State",
+  category: "Category",
+};
+
 // Same FY convention as the frontend: April→March, "current" FY starts in
 // whichever calendar year we're in if we're past March.
 function currentFyStartYear() {
@@ -550,8 +717,34 @@ export default async function handler(req, res) {
       });
     }
 
-    const result = await queryDatabase(sqlQuery, params);
-    res.status(200).json(result);
+    const allTimeQuery =
+      type === "category"
+        ? allTimeQueries[type]()
+        : allTimeQueries[type](category);
+
+    const [result, allTimeResult] = await Promise.all([
+      queryDatabase(sqlQuery, params),
+      queryDatabase(allTimeQuery, params),
+    ]);
+
+    const keyField = KEY_FIELD_BY_TYPE[type];
+    const allTimeMap = new Map(allTimeResult.map((r) => [r[keyField], r]));
+
+    const merged = result.map((row) => {
+      const at = allTimeMap.get(row[keyField]);
+      return {
+        [keyField]: row[keyField],
+        "All Time Sales": at?.["All Time Sales"] || 0,
+        "All Time COGS": at?.["All Time COGS"] || 0,
+        "All Time Lines": at?.["All Time Lines"] || 0,
+        "All Time GM%": at?.["All Time GM%"] || 0,
+        ...row,
+      };
+    });
+
+    merged.sort((a, b) => (b["All Time Sales"] || 0) - (a["All Time Sales"] || 0));
+
+    res.status(200).json(merged);
   } catch (err) {
     console.error("Error in monthlyLineItems API:", err);
     res.status(500).json({ error: "Internal Server Error" });
