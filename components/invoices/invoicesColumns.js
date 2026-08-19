@@ -177,7 +177,7 @@ const CoaCell = ({ row }) => {
 export const tableColumns = [
   {
     accessorKey: "DocNum",
-    header: "DocNum",
+    header: "INV#",
     cell: ({ getValue, row }) =>
       row.original.Type === 'CN' ? (
         <span>{getValue() || 'N/A'}</span>
@@ -198,6 +198,16 @@ export const tableColumns = [
         {row.original.Type || 'IN'}
       </Badge>
     ),
+  },
+  {
+    id: "Credit Note No",
+    header: "Credit note",
+    cell: ({ row }) =>
+      row.original.Type === 'CN' ? (
+        <span>{row.original["Credit Note No"] || 'N/A'}</span>
+      ) : (
+        ""
+      ),
   },
   {
     id: "Invoice Posting Dt.",

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { Spinner } from "react-bootstrap";
+import { Spinner, Modal } from "react-bootstrap";
 import downloadExcel from "utils/exporttoexcel";
 import msdsMap from "public/data/msds-map.json";
 import { useAuth } from 'contexts/AuthContext';
@@ -165,6 +165,36 @@ export default function ProductsTable({
   const [totalItems, setTotalItems] = useState(initialTotalItems);
   const [isExporting, setIsExporting] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+
+  // "No. of Customers" drill-down modal
+  const [customersModal, setCustomersModal] = useState({
+    show: false,
+    itemCode: null,
+    itemName: null,
+    loading: false,
+    customers: [],
+    error: null,
+  });
+
+  const openCustomersModal = async (itemCode, itemName) => {
+    setCustomersModal({ show: true, itemCode, itemName, loading: true, customers: [], error: null });
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/products/customers/${encodeURIComponent(itemCode)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Failed to fetch customers");
+      const data = await res.json();
+      setCustomersModal((prev) => ({ ...prev, loading: false, customers: data.customers || [] }));
+    } catch (err) {
+      console.error("Error fetching product customers:", err);
+      setCustomersModal((prev) => ({ ...prev, loading: false, error: "Failed to load customers." }));
+    }
+  };
+
+  const closeCustomersModal = () => {
+    setCustomersModal({ show: false, itemCode: null, itemName: null, loading: false, customers: [], error: null });
+  };
 
   const fetchParams = useMemo(() => ({
     page: currentPage,
@@ -698,16 +728,16 @@ export default function ProductsTable({
                   <thead>
                     <tr>
                       <SortHeader label="CAT No." field="ItemCode" className="pt-th-left" />
-                      <th className="pt-th-left">Documents</th>
                       <SortHeader label="CAS No." field="U_CasNo" className="pt-th-left" />
+                      <th className="pt-th-left">Documents</th>
+                      <th className="pt-th-right">Units Sold</th>
+                      <th className="pt-th-right">No. of Customers</th>
+                      <SortHeader label="Stock" field="OnHand" className="pt-th-right" />
                       <SortHeader label="Stock Status" field="stockStatus" className="pt-th-left" />
                       <SortHeader label="Item Name" field="ItemName" className="pt-th-left" />
                       <SortHeader label="Category" field="Category" className="pt-th-left" />
                       <th className="pt-th-left">Web Display</th>
                       <th className="pt-th-left">Price Set</th>
-                      <SortHeader label="Stock" field="OnHand" className="pt-th-right" />
-                      <th className="pt-th-right">Units Sold</th>
-                      <th className="pt-th-right">No. of Customers</th>
                       <SortHeader label="Created Date" field="CreateDate" className="pt-th-left" />
                       <SortHeader label="Updated Date" field="UpdateDate" className="pt-th-left" />
                     </tr>
@@ -720,10 +750,26 @@ export default function ProductsTable({
                             {product.ItemCode}
                           </Link>
                         </td>
+                        <td>{product.U_CasNo || <span className="pt-dash">N/A</span>}</td>
                         <td>
                           <ProductActions itemCode={product.ItemCode} vendorBatchNum={product.vendorbatchnum || ''} />
                         </td>
-                        <td>{product.U_CasNo || <span className="pt-dash">N/A</span>}</td>
+                        <td className="pt-num">{product.UnitsSold}</td>
+                        <td className="pt-num">
+                          {product.NumberOfCustomers > 0 ? (
+                            <button
+                              type="button"
+                              className="pt-customer-count-btn"
+                              onClick={() => openCustomersModal(product.ItemCode, product.ItemName)}
+                              title="View customers who bought this item"
+                            >
+                              {product.NumberOfCustomers}
+                            </button>
+                          ) : (
+                            product.NumberOfCustomers
+                          )}
+                        </td>
+                        <td className="pt-num">{product.OnHand}</td>
                         <td>
                           <span className={`pt-badge ${product.stockStatus === "In Stock" ? "good" : "bad"}`}>
                             {product.stockStatus}
@@ -741,9 +787,6 @@ export default function ProductsTable({
                             {product.PriceSet === "YES" ? "Yes" : "No"}
                           </span>
                         </td>
-                        <td className="pt-num">{product.OnHand}</td>
-                        <td className="pt-num">{product.UnitsSold}</td>
-                        <td className="pt-num">{product.NumberOfCustomers}</td>
                         <td>{product.CreateDate ? product.CreateDate.split("T")[0] : <span className="pt-dash">N/A</span>}</td>
                         <td>{product.UpdateDate ? product.UpdateDate.split("T")[0] : <span className="pt-dash">N/A</span>}</td>
                       </tr>
@@ -789,6 +832,41 @@ export default function ProductsTable({
           )}
         </div>
       </div>
+
+      <Modal show={customersModal.show} onHide={closeCustomersModal} centered scrollable>
+        <div className="pt-cust-modal">
+          <Modal.Header closeButton>
+            <Modal.Title as="div">
+              <div className="pt-cust-modal-title">Customers</div>
+              <div className="pt-cust-modal-subtitle">
+                {customersModal.itemCode}
+                {customersModal.itemName ? ` — ${customersModal.itemName}` : ""}
+              </div>
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {customersModal.loading ? (
+              <div className="pt-cust-modal-loading">
+                <Spinner animation="border" size="sm" />
+                <span>Loading customers…</span>
+              </div>
+            ) : customersModal.error ? (
+              <div className="pt-cust-modal-error">{customersModal.error}</div>
+            ) : customersModal.customers.length === 0 ? (
+              <div className="pt-cust-modal-empty">No customers found.</div>
+            ) : (
+              <ul className="pt-cust-modal-list">
+                {customersModal.customers.map((c) => (
+                  <li key={c.CardCode}>
+                    <span className="pt-cust-modal-name">{c.CardName}</span>
+                    <span className="pt-cust-modal-code">{c.CardCode}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Modal.Body>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -1092,6 +1170,68 @@ const PAGE_STYLES = `
   }
   .pt-badge.good { color: var(--good); background: var(--surface-green); }
   .pt-badge.bad { color: var(--bad); background: #fdecea; }
+
+  .pt-customer-count-btn {
+    background: var(--surface2);
+    color: var(--accent);
+    border: 1px solid var(--accent-dim, var(--border));
+    border-radius: 5px;
+    padding: 3px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pt-customer-count-btn:hover { background: var(--surface); text-decoration: underline; }
+
+  .pt-cust-modal { font-family: 'IBM Plex Sans', sans-serif; color: var(--text); }
+  .pt-cust-modal-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .pt-cust-modal-subtitle {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .pt-cust-modal-loading, .pt-cust-modal-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 30px 0;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .pt-cust-modal-error {
+    color: var(--bad);
+    font-size: 13px;
+    padding: 12px 0;
+  }
+  .pt-cust-modal-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .pt-cust-modal-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  .pt-cust-modal-list li:last-child { border-bottom: none; }
+  .pt-cust-modal-name { color: var(--text); }
+  .pt-cust-modal-code {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
 
   .pt-pagination {
     display: flex;
