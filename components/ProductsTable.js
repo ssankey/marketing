@@ -733,13 +733,13 @@ export default function ProductsTable({
                   <thead>
                     <tr>
                       <SortHeader label="CAT No." field="ItemCode" className="pt-th-left pt-th-sticky" />
-                      <SortHeader label="CAS No." field="U_CasNo" className="pt-th-left" />
-                      <th className="pt-th-left">Documents</th>
                       <SortHeader label="Units Sold" field="UnitsSold" className="pt-th-right" />
                       <SortHeader label="No. of Customers" field="NumberOfCustomers" className="pt-th-right" />
                       <SortHeader label="Stock" field="OnHand" className="pt-th-right" />
-                      <SortHeader label="Stock Status" field="stockStatus" className="pt-th-left" />
                       <SortHeader label="Item Name" field="ItemName" className="pt-th-left" />
+                      <SortHeader label="CAS No." field="U_CasNo" className="pt-th-left" />
+                      <th className="pt-th-left">Documents</th>
+                      <SortHeader label="Stock Status" field="stockStatus" className="pt-th-left" />
                       <SortHeader label="Category" field="Category" className="pt-th-left" />
                       <th className="pt-th-left">Web Display</th>
                       <th className="pt-th-left">Price Set</th>
@@ -754,10 +754,6 @@ export default function ProductsTable({
                           <Link href={`/products/${product.ItemCode}`} className="pt-catno">
                             {product.ItemCode}
                           </Link>
-                        </td>
-                        <td>{product.U_CasNo || <span className="pt-dash">N/A</span>}</td>
-                        <td>
-                          <ProductActions itemCode={product.ItemCode} vendorBatchNum={product.vendorbatchnum || ''} />
                         </td>
                         <td className="pt-num">{product.UnitsSold}</td>
                         <td className="pt-num">
@@ -775,12 +771,16 @@ export default function ProductsTable({
                           )}
                         </td>
                         <td className="pt-num">{product.OnHand}</td>
+                        <td className="pt-desc" title={product.ItemName}>{product.ItemName}</td>
+                        <td>{product.U_CasNo || <span className="pt-dash">N/A</span>}</td>
+                        <td>
+                          <ProductActions itemCode={product.ItemCode} vendorBatchNum={product.vendorbatchnum || ''} />
+                        </td>
                         <td>
                           <span className={`pt-badge ${product.stockStatus === "In Stock" ? "good" : "bad"}`}>
                             {product.stockStatus}
                           </span>
                         </td>
-                        <td className="pt-desc" title={product.ItemName}>{product.ItemName}</td>
                         <td>{product.Category}</td>
                         <td>
                           <span className={`pt-badge ${product.WebsiteDisplay === "YES" ? "good" : "bad"}`}>
