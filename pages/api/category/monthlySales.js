@@ -64,7 +64,7 @@ const queries = {
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
@@ -195,7 +195,7 @@ const queries = {
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OSLP ON ORIN.SlpCode = OSLP.SlpCode
@@ -325,7 +325,7 @@ const queries = {
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
@@ -448,7 +448,7 @@ const queries = {
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
@@ -544,7 +544,7 @@ const allTimeQueries = {
         SELECT OCRD.CardName AS [Customer Name],
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
@@ -586,7 +586,7 @@ const allTimeQueries = {
         SELECT OSLP.SlpName AS [Sales Person Name],
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OSLP ON ORIN.SlpCode = OSLP.SlpCode
@@ -629,7 +629,7 @@ const allTimeQueries = {
         SELECT COALESCE(CRD1.State, 'Unknown') AS [State],
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
@@ -668,7 +668,7 @@ const allTimeQueries = {
         SELECT T4.ItmsGrpNam AS [Category],
                -RIN1.LineTotal AS LineTotal,
                -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
-               -1 AS LineCount
+               0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode

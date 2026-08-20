@@ -35,7 +35,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ data: [], availableYears: [] });
     }
 
-    // ── Query filters ──
+    // ── Query filters ── (mirrors sales-cogs.js's filter set exactly, so the
+    // same query params produce identical totals on web and app)
+    const { year } = req.query;
+    const cntctCodes  = getMulti(req.query, 'cntctCode');
     const itmsGrpNams = getMulti(req.query, 'itmsGrpNam');
     const itemCodes   = getMulti(req.query, 'itemCode');
     const cardCodes   = getMulti(req.query, 'cardCode');
@@ -59,6 +62,16 @@ export default async function handler(req, res) {
       baseWhereClauses.push(`T0.SlpCode IN (${slpCodes.map(c => `'${c}'`).join(',')})`);
     } else if (adminSlpCodes.length > 0) {
       baseWhereClauses.push(`T0.SlpCode IN (${adminSlpCodes.map(c => `'${c}'`).join(',')})`);
+    }
+
+    // Year filter — same as sales-cogs.js's ?year= param
+    if (year) {
+      baseWhereClauses.push(`YEAR(T0.DocDate) = @year`);
+      params.push({ name: 'year', type: sql.Int, value: parseInt(year) });
+    }
+
+    if (cntctCodes.length > 0) {
+      baseWhereClauses.push(`T0.CntctCode IN (${cntctCodes.map(c => `'${c}'`).join(',')})`);
     }
 
     if (itmsGrpNams.length > 0) {
@@ -106,11 +119,17 @@ export default async function handler(req, res) {
           YEAR(T0.DocDate)  AS year,
           MONTH(T0.DocDate) AS monthNumber,
           T1.LineTotal AS LineTotalAmt,
-          T1.GrossBuyPr * T1.Quantity AS CogsAmt
+          -- U_ItemCost is a manual correction of GrossBuyPr — use it when it
+          -- actually holds a usable non-zero value, else fall back to
+          -- GrossBuyPr. Same rule as sales-cogs.js.
+          (CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0
+                THEN IC.ParsedItemCost
+                ELSE T1.GrossBuyPr END) * T1.Quantity AS CogsAmt
         FROM OINV T0
         JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
         LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
         LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(T1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${whereSQL}
 
         UNION ALL
@@ -120,11 +139,14 @@ export default async function handler(req, res) {
           YEAR(T0.DocDate)  AS year,
           MONTH(T0.DocDate) AS monthNumber,
           -T1.LineTotal AS LineTotalAmt,
-          -(T1.GrossBuyPr * T1.Quantity) AS CogsAmt
+          -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0
+                  THEN IC.ParsedItemCost
+                  ELSE T1.GrossBuyPr END) * T1.Quantity) AS CogsAmt
         FROM ORIN T0
         JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
         LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
         LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
+        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(T1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${creditNoteWhereSQL}
       ) AS Combined
       GROUP BY [Month-Year], year, monthNumber

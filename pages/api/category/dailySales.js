@@ -95,7 +95,7 @@ const lastDay = new Date(year, month, 0)
         SELECT
           CONVERT(VARCHAR, o.DocDate, 23) AS [Date],
           -i.LineTotal AS LineTotal,
-          -1 AS LineItemCount
+          0 AS LineItemCount
         FROM ORIN o
         INNER JOIN RIN1 i ON o.DocEntry = i.DocEntry
         ${extraJoins}
