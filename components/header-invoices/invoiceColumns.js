@@ -74,14 +74,18 @@ async function generateAddressPdf(shipTo) {
   const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
 
-  const width = 480;
-  const padding = 26;
-  const lineHeight = 27;
+  // Fixed 100mm width to match the physical label stock — height stays
+  // auto-fit to content below (standard for label printers: fixed width,
+  // variable/auto-cut length).
+  const MM_TO_PT = 72 / 25.4;
+  const width = 100 * MM_TO_PT;
+  const padding = 16;
+  const lineHeight = 20;
   const contentWidth = width - padding * 2;
 
-  const labelSize = 12;
-  const bodySize = 15;
-  const boldSize = 18;
+  const labelSize = 9;
+  const bodySize = 11;
+  const boldSize = 13;
 
   // Everything that gets drawn — including the bold company name and the
   // static Density Pharmachem address — has to be wrapped to contentWidth,

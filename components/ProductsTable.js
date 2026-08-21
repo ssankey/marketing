@@ -9,50 +9,11 @@ import { useAuth } from 'contexts/AuthContext';
 
 const PAGE_SIZE = 20;
 
-const ProductActions = ({ itemCode, vendorBatchNum }) => {
+const ProductActions = ({ itemCode }) => {
   const { user } = useAuth();
-  const [loadingCOA, setLoadingCOA] = useState(false);
   const [loadingMSDS, setLoadingMSDS] = useState(false);
 
   const isAdminOrSales = ['admin', 'sales_person'].includes(user?.role);
-
-  const handleCOADownload = async () => {
-    try {
-      setLoadingCOA(true);
-
-      if (!itemCode || !vendorBatchNum) {
-        alert("Item code or batch number is missing");
-        return;
-      }
-
-      const code = itemCode.includes("-") ? itemCode.split("-")[0] : itemCode;
-      const batch = vendorBatchNum.trim();
-
-      const coaUrl = `https://energy01.oss-cn-shanghai.aliyuncs.com/upload/COA_FOREIGN/${code}_${batch}.pdf`;
-
-      const fileRes = await fetch(coaUrl);
-      if (!fileRes.ok) {
-        throw new Error("COA not found");
-      }
-
-      const blob = await fileRes.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-      const filename = `${code}_${batch}_COA.pdf`;
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error("Error in COA download:", err);
-      alert("Failed to download COA file. It may not be available.");
-    } finally {
-      setLoadingCOA(false);
-    }
-  };
 
   const handleMSDSDownload = async () => {
     try {
@@ -101,22 +62,59 @@ const ProductActions = ({ itemCode, vendorBatchNum }) => {
       >
         {loadingMSDS ? <Spinner animation="border" size="sm" /> : "MSDS"}
       </button>
-
-      {vendorBatchNum && (
-        <button
-          className="pt-doc-btn pt-doc-btn-coa"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleCOADownload();
-          }}
-          title="Download COA"
-          disabled={loadingCOA}
-        >
-          {loadingCOA ? <Spinner animation="border" size="sm" /> : "COA"}
-        </button>
-      )}
     </div>
+  );
+};
+
+// A product can have many lots, each with its own COA — not all of them
+// actually resolve to a real file. This hits /api/products/sample-coa, which
+// tries every lot server-side (same order/logic as the product detail page)
+// and streams back the first one that actually works.
+const SampleCoaButton = ({ itemCode }) => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+
+  const isAdminOrSales = ['admin', 'sales_person'].includes(user?.role);
+  if (!isAdminOrSales) return <span className="pt-dash">—</span>;
+
+  const handleDownload = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/products/sample-coa/${encodeURIComponent(itemCode)}`);
+      if (!res.ok) {
+        alert("No COA available for this product across any lot.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${itemCode}_Sample_COA.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading sample COA:", err);
+      alert("Failed to download COA.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      className="pt-doc-btn pt-doc-btn-coa"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleDownload();
+      }}
+      title="Download a sample COA (first lot that has one available)"
+      disabled={loading}
+    >
+      {loading ? <Spinner animation="border" size="sm" /> : "COA"}
+    </button>
   );
 };
 
@@ -736,9 +734,10 @@ export default function ProductsTable({
                       <SortHeader label="Units Sold" field="UnitsSold" className="pt-th-right" />
                       <SortHeader label="No. of Customers" field="NumberOfCustomers" className="pt-th-right" />
                       <SortHeader label="Stock" field="OnHand" className="pt-th-right" />
+                      <th className="pt-th-left">Sample COA</th>
                       <SortHeader label="Item Name" field="ItemName" className="pt-th-left" />
                       <SortHeader label="CAS No." field="U_CasNo" className="pt-th-left" />
-                      <th className="pt-th-left">Documents</th>
+                      <th className="pt-th-left">MSDS</th>
                       <SortHeader label="Stock Status" field="stockStatus" className="pt-th-left" />
                       <SortHeader label="Category" field="Category" className="pt-th-left" />
                       <th className="pt-th-left">Web Display</th>
@@ -771,10 +770,13 @@ export default function ProductsTable({
                           )}
                         </td>
                         <td className="pt-num">{product.OnHand}</td>
+                        <td>
+                          <SampleCoaButton itemCode={product.ItemCode} />
+                        </td>
                         <td className="pt-desc" title={product.ItemName}>{product.ItemName}</td>
                         <td>{product.U_CasNo || <span className="pt-dash">N/A</span>}</td>
                         <td>
-                          <ProductActions itemCode={product.ItemCode} vendorBatchNum={product.vendorbatchnum || ''} />
+                          <ProductActions itemCode={product.ItemCode} />
                         </td>
                         <td>
                           <span className={`pt-badge ${product.stockStatus === "In Stock" ? "good" : "bad"}`}>
