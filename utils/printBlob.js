@@ -29,55 +29,49 @@ export async function imagesToPdfBlob(imageBlobs) {
 }
 
 // Opens a blob in a new window and triggers the browser print dialog once it
-// has loaded — PDFs go into an iframe, images are shown directly.
+// has loaded — PDFs are navigated to directly (their whole window IS the PDF,
+// handled by the browser's native PDF viewer), images are shown in a small
+// wrapper page.
 export function openPrintWindow(blob, title) {
   const url = URL.createObjectURL(blob);
-  const printWindow = window.open("", "_blank");
-
-  if (!printWindow) {
-    URL.revokeObjectURL(url);
-    throw new Error("Popup blocked. Please allow popups for printing.");
-  }
-
   const isPDF = blob.type === "application/pdf";
 
   if (isPDF) {
-    // Printing via the outer window prints the HTML page the iframe sits in
-    // (scaled to whatever CSS size the iframe has), which is what fragments
-    // a single-page PDF across multiple sheets. Calling print() on the
-    // iframe's own contentWindow hands off to the PDF viewer's native print
-    // path instead — the same one its own toolbar print button uses — which
-    // knows the PDF's real page size.
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Print - ${title}</title>
-          <style>
-            @page { margin: 0; }
-            html, body { margin: 0; padding: 0; height: 100%; }
-            iframe { width: 100vw; height: 100vh; border: none; display: block; }
-          </style>
-        </head>
-        <body>
-          <iframe id="pdfFrame" src="${url}"></iframe>
-          <script>
-            var frame = document.getElementById('pdfFrame');
-            frame.addEventListener('load', function () {
-              setTimeout(function () {
-                try {
-                  frame.contentWindow.focus();
-                  frame.contentWindow.print();
-                } catch (e) {
-                  window.print();
-                }
-              }, 500);
-            });
-          </script>
-        </body>
-      </html>
-    `);
+    // Navigating the new window straight to the PDF blob (instead of
+    // wrapping it in an HTML page with an <iframe>) means the window's whole
+    // document IS the PDF, rendered by the browser's native PDF viewer.
+    // window.print() on that window then goes through the PDF viewer's own
+    // print path — the same one its toolbar print button uses — which never
+    // adds the browser's page-print header/footer (title/URL/date/page
+    // count), because that's an HTML-page print feature, not something the
+    // native PDF viewer does. The previous iframe-based approach tried to
+    // reach this same path via frame.contentWindow.print(), but that call
+    // was unreliable and silently fell back to printing the wrapper page
+    // itself — which is exactly the title/about:blank header/footer that
+    // was showing up.
+    const printWindow = window.open(url, "_blank");
+    if (!printWindow) {
+      URL.revokeObjectURL(url);
+      throw new Error("Popup blocked. Please allow popups for printing.");
+    }
+    const triggerPrint = () => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (e) {
+        // ignore — best-effort, user can still print manually from the tab
+      }
+    };
+    // 'load' fires once the PDF viewer has rendered; a fallback timer covers
+    // cases where it doesn't fire reliably for a PDF document.
+    printWindow.addEventListener("load", () => setTimeout(triggerPrint, 400));
+    setTimeout(triggerPrint, 1500);
   } else {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      URL.revokeObjectURL(url);
+      throw new Error("Popup blocked. Please allow popups for printing.");
+    }
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
@@ -105,9 +99,8 @@ export function openPrintWindow(blob, title) {
         </body>
       </html>
     `);
+    printWindow.document.close();
   }
-
-  printWindow.document.close();
 
   setTimeout(() => {
     URL.revokeObjectURL(url);
