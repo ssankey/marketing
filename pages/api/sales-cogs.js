@@ -189,14 +189,13 @@ export default async function handler(req, res) {
           YEAR(T0.DocDate)  AS year,
           MONTH(T0.DocDate) AS monthNumber,
           -T1.LineTotal AS LineTotalAmt,
-          -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0
-                  THEN IC.ParsedItemCost
-                  ELSE T1.GrossBuyPr END) * T1.Quantity) AS CogsAmt
+          -- Credit notes net against Sales only, not COGS — they don't
+          -- represent goods returned to inventory in this workflow.
+          0 AS CogsAmt
         FROM ORIN T0
         JOIN RIN1 T1 ON T0.DocEntry = T1.DocEntry
         LEFT JOIN OITM T5 ON T1.ItemCode = T5.ItemCode
         LEFT JOIN OITB T6 ON T5.ItmsGrpCod = T6.ItmsGrpCod
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(T1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${creditNoteWhereSQL}
       ) AS Combined
       GROUP BY [Month-Year], year, monthNumber
