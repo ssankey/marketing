@@ -2,6 +2,7 @@
   // pages/api/email/sendOrderConfirmation.js
 
   import { getOrderDetails } from "../../../lib/models/orders";
+  import { getManagerEmailForSlpCode } from "../../../lib/models/salesHierarchy";
   import { queryDatabase } from "../../../lib/db";
   import sql from "mssql";
   import nodemailer from "nodemailer";
@@ -162,6 +163,14 @@
 
           // Build CC list - start with sales person email
           const ccList = [SalesPerson_Email];
+
+          // If this order's salesperson is mapped as someone's subordinate
+          // in OHEM.salesPrson, CC that senior person too.
+          const manager = await getManagerEmailForSlpCode(details.SlpCode);
+          if (manager && !ccList.includes(manager.email)) {
+            ccList.push(manager.email);
+            console.log(`📌 Added manager ${manager.slpName} (SlpCode ${manager.slpCode}) to CC for Order ${details.DocNum}`);
+          }
 
           // Add Jubilant Biosys email if CardCode is C000072
           if (order.CardCode === 'C000072') {

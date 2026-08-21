@@ -6,6 +6,7 @@ import sql from "mssql";
 import { getInvoiceDetails } from "./invoiceService";
 import { generateEmailContent } from "./emailTemplate";
 import { sendDispatchEmail } from "./emailSender";
+import { getManagerEmailForSlpCode } from "../../../../lib/models/salesHierarchy";
 
 // CardCodes that require prashant@densitypharmachem.com in BCC
 const SPECIAL_CARDCODES = [
@@ -109,14 +110,22 @@ export default async function handler(req, res) {
                     baseUrl
                 );
 
+                // If this invoice's salesperson is mapped as someone's
+                // subordinate in OHEM.salesPrson, CC that senior person too.
+                const manager = await getManagerEmailForSlpCode(invoiceDetails.SalesPersonID);
+                if (manager) {
+                    console.log(`📌 Manager ${manager.slpName} (SlpCode ${manager.slpCode}) will be CC'd for Invoice ${InvoiceNo}`);
+                }
+
                 // Send email with contact person, sales person email IDs, and CardCode for BCC logic
                 await sendDispatchEmail(
-                    emailContent, 
+                    emailContent,
                     invoiceDetails.ContactPersonEmail,
                     invoiceDetails.SalesPersonEmail,
                     CardCode, // Pass CardCode to emailSender
                     SPECIAL_CARDCODES, // Pass special CardCodes list
-                    baseUrl
+                    baseUrl,
+                    manager?.email || null
                 );
 
                 const now = new Date();
