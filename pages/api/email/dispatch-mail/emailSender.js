@@ -2,12 +2,13 @@
 // pages/api/email/dispatch-mail/emailSender.js
 // Function to send dispatch email with conditional BCC and CC
 export const sendDispatchEmail = async (
-    emailContent, 
-    contactPersonEmail, 
-    salesPersonEmail, 
+    emailContent,
+    contactPersonEmail,
+    salesPersonEmail,
     cardCode,
     specialCardCodes,
-    baseUrl
+    baseUrl,
+    managerEmail = null
 ) => {
     const { subject, html } = emailContent;
 
@@ -29,7 +30,14 @@ export const sendDispatchEmail = async (
     
     // Build CC list - start with sales person email
     const ccList = [salesPersonEmail];
-    
+
+    // If this invoice's salesperson is mapped as someone's subordinate in
+    // OHEM.salesPrson, CC that senior person too.
+    if (managerEmail && !ccList.includes(managerEmail)) {
+        ccList.push(managerEmail);
+        console.log(`📌 Added manager email to CC: ${managerEmail}`);
+    }
+
     // Add Mankind Pharma emails if CardCode is C000224
     if (cardCode === 'C000224') {
         ccList.push("Invoices@mankindpharma.com", "aman.bhatt@mankindpharma.com");

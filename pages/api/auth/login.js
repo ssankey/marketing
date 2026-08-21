@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { queryDatabase } from "lib/db";
 import sql from "mssql";
 import { serialize } from "cookie";
+import { getEnrichedContactCodes } from "lib/models/salesHierarchy";
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -123,6 +124,12 @@ export default async function handler(req, res) {
       const name = user.SlpName;
       const isAdmin = user.isAdmin?.trim() === "Yes";
 
+      // A senior person can be mapped to a subordinate salesperson via
+      // OHEM.salesPrson (matched to this OSLP row by name) — if so, their
+      // token carries both SlpCodes so every SlpCode-filtered query returns
+      // both people's data. See lib/models/salesHierarchy.js.
+      const contactCodes = await getEnrichedContactCodes(contactCode, name);
+
       // Check if password is set (not null, not equal to email, not empty)
       const passwordIsSet =
         user.U_Password &&
@@ -136,7 +143,7 @@ export default async function handler(req, res) {
             email,
             role: isAdmin ? "admin" : "sales_person",
             name,
-            contactCodes: [contactCode],
+            contactCodes,
           },
           process.env.JWT_SECRET,
           { expiresIn: "6h" }
@@ -147,7 +154,7 @@ export default async function handler(req, res) {
 
         console.log("[SALES_LOGIN_PASSWORD_NOT_SET]", {
           email,
-          contactCodes: [contactCode],
+          contactCodes,
           role: isAdmin ? "admin" : "sales_person",
         });
 
@@ -158,7 +165,7 @@ export default async function handler(req, res) {
             email,
             role: isAdmin ? "admin" : "sales_person",
             name,
-            contactCodes: [contactCode],
+            contactCodes,
           },
           showPassword: false,
         });
@@ -202,7 +209,7 @@ export default async function handler(req, res) {
           email,
           role: isAdmin ? "admin" : "sales_person",
           name,
-          contactCodes: [contactCode],
+          contactCodes,
         },
         process.env.JWT_SECRET,
         { expiresIn: "6h" }
@@ -213,7 +220,7 @@ export default async function handler(req, res) {
 
       console.log("[SALES_LOGIN_SUCCESS]", {
         email,
-        contactCodes: [contactCode],
+        contactCodes,
         role: isAdmin ? "admin" : "sales_person",
       });
 
@@ -224,7 +231,7 @@ export default async function handler(req, res) {
           email,
           role: isAdmin ? "admin" : "sales_person",
           name,
-          contactCodes: [contactCode],
+          contactCodes,
         },
         showPassword: true,
       });
