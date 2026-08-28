@@ -5,6 +5,7 @@ import { Spinner, Dropdown, Button,Table } from "react-bootstrap";
 import Select from "react-select";
 import debounce from "lodash/debounce";
 import { formatCurrency } from "utils/formatCurrency";
+import { fyStartYear, fyLabel } from "utils/financialYear";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
 import {
@@ -55,6 +56,12 @@ const PurchasesAmountChart = ({ customerId }) => {
     salesPerson: null,
     category: null,
   });
+
+  // Financial Year filter (same fyStartYear/fyLabel convention as pages/products/[id].js)
+  const currentFyStart = fyStartYear(new Date().getFullYear(), new Date().getMonth() + 1);
+  const [selectedFy, setSelectedFy] = useState(currentFyStart);
+  const fyOptions = [];
+  for (let y = 2024; y <= currentFyStart; y++) fyOptions.push(y);
 
   const fetchCustomerData = async () => {
     try {
@@ -215,8 +222,11 @@ const PurchasesAmountChart = ({ customerId }) => {
     "Dec",
   ];
 
+  // Financial-year scoped data (Year/Month already come back per row from the API)
+  const fyData = data.filter((item) => fyStartYear(item.Year, item.Month) === selectedFy);
+
   // Filter out months with no data
-  const filteredData = data.filter(
+  const filteredData = fyData.filter(
     (item) =>
       item.InvoiceAmount > 0 ||
       item.OrderAmount > 0 ||
@@ -231,7 +241,7 @@ const PurchasesAmountChart = ({ customerId }) => {
 
   // Calculate totals
   const calculateTotals = () => {
-    return data.reduce(
+    return fyData.reduce(
       (acc, item) => {
         return {
           totalOrderAmount: acc.totalOrderAmount + (item.OrderAmount || 0),
@@ -417,6 +427,18 @@ const PurchasesAmountChart = ({ customerId }) => {
 
            {/* Filter Controls */}
            <div className="d-flex gap-2 align-items-center">
+             <Dropdown onSelect={(val) => setSelectedFy(parseInt(val, 10))}>
+               <Dropdown.Toggle variant="outline-dark" id="fy-filter-purchases" size="sm">
+                 {fyLabel(selectedFy)}
+               </Dropdown.Toggle>
+               <Dropdown.Menu>
+                 {[...fyOptions].reverse().map((y) => (
+                   <Dropdown.Item key={y} eventKey={y} active={y === selectedFy}>
+                     {fyLabel(y)}
+                   </Dropdown.Item>
+                 ))}
+               </Dropdown.Menu>
+             </Dropdown>
              <Dropdown onSelect={handleSearchTypeSelect}>
                <Dropdown.Toggle
                  variant="outline-secondary"
@@ -494,7 +516,11 @@ const PurchasesAmountChart = ({ customerId }) => {
            </div>
          ) : (
            <>
-             {data.length > 0 && <TotalsDisplay totals={totals} />}
+             {fyData.length === 0 ? (
+               <p className="text-center m-0">No purchase data in {fyLabel(selectedFy)}.</p>
+             ) : (
+               <>
+             {fyData.length > 0 && <TotalsDisplay totals={totals} />}
              <div style={{ height: "400px" }}>
                <Bar data={chartData} options={chartOptions} />
              </div>
@@ -551,6 +577,8 @@ const PurchasesAmountChart = ({ customerId }) => {
                    </Table>
                  </div>
                </div>
+             )}
+               </>
              )}
            </>
          )}

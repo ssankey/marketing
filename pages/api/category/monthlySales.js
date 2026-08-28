@@ -63,7 +63,7 @@ const queries = {
         SELECT OCRD.CardName AS [Customer Name],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
@@ -76,7 +76,6 @@ const queries = {
         `
             : ""
         }
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS BD;
@@ -194,7 +193,7 @@ const queries = {
         SELECT OSLP.SlpName AS [Sales Person Name],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
@@ -207,7 +206,6 @@ const queries = {
         `
             : ""
         }
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS BD;
@@ -324,7 +322,7 @@ const queries = {
         SELECT COALESCE(CRD1.State, ''Unknown'') AS [State],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
@@ -338,7 +336,6 @@ const queries = {
         `
             : ""
         }
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
         ${categoryFilter ? `AND T4.ItmsGrpNam = @category` : ""}
     ) AS BD;
@@ -447,13 +444,12 @@ const queries = {
         SELECT T4.ItmsGrpNam AS [Category],
                FORMAT(ORIN.DocDate, ''MMM yyyy'') AS MonthYear,
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '''') AS FLOAT) AS ParsedItemCost) IC
         WHERE ORIN.CANCELED <> ''Y'' AND ORIN.CANCELED <> ''C'' AND ${buildFyCondition('ORIN.DocDate', fyStartYear)}
     ) AS BD;
 
@@ -543,12 +539,11 @@ const allTimeQueries = {
 
         SELECT OCRD.CardName AS [Customer Name],
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
@@ -585,12 +580,11 @@ const allTimeQueries = {
 
         SELECT OSLP.SlpName AS [Sales Person Name],
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OSLP ON ORIN.SlpCode = OSLP.SlpCode
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
@@ -628,13 +622,12 @@ const allTimeQueries = {
 
         SELECT COALESCE(CRD1.State, 'Unknown') AS [State],
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OCRD ON ORIN.CardCode = OCRD.CardCode
         LEFT JOIN CRD1 ON OCRD.CardCode = CRD1.CardCode AND CRD1.AdresType = 'B'
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         ${categoryFilter ? `
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
@@ -667,13 +660,12 @@ const allTimeQueries = {
 
         SELECT T4.ItmsGrpNam AS [Category],
                -RIN1.LineTotal AS LineTotal,
-               -((CASE WHEN IC.ParsedItemCost IS NOT NULL AND IC.ParsedItemCost <> 0 THEN IC.ParsedItemCost ELSE RIN1.GrossBuyPr END) * RIN1.Quantity) AS COGS,
+               0 AS COGS, -- Credit notes net against Sales only, not COGS — same rule as sales-cogs.js
                0 AS LineCount
         FROM ORIN
         INNER JOIN RIN1 ON ORIN.DocEntry = RIN1.DocEntry
         INNER JOIN OITM T3 ON RIN1.ItemCode = T3.ItemCode
         INNER JOIN OITB T4 ON T3.ItmsGrpCod = T4.ItmsGrpCod
-        CROSS APPLY (SELECT TRY_CAST(NULLIF(LTRIM(RTRIM(RIN1.U_ItemCost)), '') AS FLOAT) AS ParsedItemCost) IC
         WHERE ORIN.CANCELED <> 'Y' AND ORIN.CANCELED <> 'C'
     ) AS ATD
     GROUP BY [Category];
