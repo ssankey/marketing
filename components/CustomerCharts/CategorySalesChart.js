@@ -7,7 +7,7 @@ import Select from "react-select";
 import debounce from "lodash/debounce";
 import { useAuth } from "contexts/AuthContext";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
-import { getFinancialYears, getCurrentFY } from "utils/financialYear";
+import { fyStartYear, fyLabel, parseMonthAbbrLabel } from "utils/financialYear";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -42,9 +42,11 @@ export default function CategorySalesChart({ cardCode }) {
 
   const isCustomer = user?.role === "contact_person";
 
-  // Financial Year
-  const fyOptions = getFinancialYears(2024);
-  const [selectedFY, setSelectedFY] = useState(getCurrentFY());
+  // Financial Year filter (client-side; same fyStartYear/fyLabel convention as pages/products/[id].js)
+  const currentFyStart = fyStartYear(new Date().getFullYear(), new Date().getMonth() + 1);
+  const [selectedFy, setSelectedFy] = useState(currentFyStart);
+  const fyOptions = [];
+  for (let y = 2024; y <= currentFyStart; y++) fyOptions.push(y);
 
   // For customer view
   const [suggestions, setSuggestions] = useState([]);
@@ -74,7 +76,7 @@ export default function CategorySalesChart({ cardCode }) {
     }
   }, [searchType, allowedTypes, isCustomer]);
 
-  const fetchData = async (activeFilters, fy = selectedFY) => {
+  const fetchData = async (activeFilters) => {
     if (!user) return;
 
     const token = localStorage.getItem("token");
@@ -87,13 +89,6 @@ export default function CategorySalesChart({ cardCode }) {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-
-      // Add FY date range
-      const fyData = fyOptions.find((f) => f.value === fy);
-      if (fyData) {
-        params.append("fromDate", fyData.startDate);
-        params.append("toDate", fyData.endDate);
-      }
 
       if (isCustomer) {
         if (activeFilters.contactPerson) {
@@ -141,8 +136,27 @@ export default function CategorySalesChart({ cardCode }) {
   };
 
   useEffect(() => {
-    fetchData(filters, selectedFY);
-  }, [cardCode, filters, user, selectedFY]);
+    fetchData(filters);
+  }, [cardCode, filters, user]);
+
+  // Client-side FY filter over the full fetched history — labels come back as
+  // "MMM yyyy" from the category-sales pivot query.
+  const fyIndices = chartData
+    ? chartData.labels
+        .map((label, idx) => ({ idx, parsed: parseMonthAbbrLabel(label, " ") }))
+        .filter(({ parsed }) => parsed && fyStartYear(parsed.year, parsed.month) === selectedFy)
+        .map(({ idx }) => idx)
+    : [];
+
+  const displayChartData = chartData
+    ? {
+        labels: fyIndices.map((i) => chartData.labels[i]),
+        datasets: chartData.datasets.map((ds) => ({
+          ...ds,
+          data: fyIndices.map((i) => ds.data[i]),
+        })),
+      }
+    : null;
 
   const getSuggestions = async (q = "", initial = false) => {
     if (!q && !initial) return;
@@ -351,23 +365,14 @@ export default function CategorySalesChart({ cardCode }) {
 
           <div className="ms-auto d-flex gap-2 align-items-center flex-wrap">
             {/* Financial Year Dropdown */}
-            <Dropdown onSelect={(val) => setSelectedFY(val)}>
-              <Dropdown.Toggle
-                variant="outline-dark"
-                id="fy-filter"
-                size="sm"
-                style={{ minWidth: "110px" }}
-              >
-                FY {fyOptions.find((f) => f.value === selectedFY)?.label ?? selectedFY}
+            <Dropdown onSelect={(val) => setSelectedFy(parseInt(val, 10))}>
+              <Dropdown.Toggle variant="outline-dark" id="fy-filter-category" size="sm">
+                {fyLabel(selectedFy)}
               </Dropdown.Toggle>
               <Dropdown.Menu>
-                {[...fyOptions].reverse().map((fy) => (
-                  <Dropdown.Item
-                    key={fy.value}
-                    eventKey={fy.value}
-                    active={fy.value === selectedFY}
-                  >
-                    {fy.label}
+                {[...fyOptions].reverse().map((y) => (
+                  <Dropdown.Item key={y} eventKey={y} active={y === selectedFy}>
+                    {fyLabel(y)}
                   </Dropdown.Item>
                 ))}
               </Dropdown.Menu>
@@ -472,12 +477,12 @@ export default function CategorySalesChart({ cardCode }) {
             <Spinner animation="border" role="status" className="me-2" />
             <span>Loading chart data...</span>
           </div>
-        ) : chartData && chartData.datasets.length > 0 ? (
+        ) : displayChartData && displayChartData.labels.length > 0 ? (
           <div className="chart-container" style={{ height: 500 }}>
-            <Bar data={chartData} options={options} />
+            <Bar data={displayChartData} options={options} />
           </div>
         ) : (
-          <p className="text-center m-0">No category sales data available</p>
+          <p className="text-center m-0">No category sales data in {fyLabel(selectedFy)}.</p>
         )}
       </Card.Body>
     </Card>

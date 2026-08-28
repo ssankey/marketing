@@ -1,14 +1,13 @@
 //page/customers/[id].js
 import { useAuth } from "hooks/useAuth";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Container,
   Row,
   Col,
   Card,
   Spinner,
-  Table,
   Dropdown,
 } from "react-bootstrap";
 import { formatCurrency } from "utils/formatCurrency";
@@ -75,7 +74,81 @@ export default function CustomerDetails({
     toDate: "",
   });
 
+  // Jump-to-another-customer search (mirrors pages/products/[id].js's search box)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const [jumpSuggestions, setJumpSuggestions] = useState([]);
+  const [showJumpSuggestions, setShowJumpSuggestions] = useState(false);
+  const jumpSearchBoxRef = useRef(null);
+  const jumpSuggestionTimeoutRef = useRef(null);
 
+  useEffect(() => {
+    if (customer) setSearchQuery(customer.CustomerCode);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (jumpSearchBoxRef.current && !jumpSearchBoxRef.current.contains(event.target)) {
+        setShowJumpSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (jumpSuggestionTimeoutRef.current) clearTimeout(jumpSuggestionTimeoutRef.current);
+
+    const term = searchQuery.trim();
+    if (!term) {
+      setJumpSuggestions([]);
+      return;
+    }
+
+    jumpSuggestionTimeoutRef.current = setTimeout(async () => {
+      try {
+        const query = new URLSearchParams({ page: 1, itemsPerPage: 8, search: term, sortField: "CustomerName", sortDir: "asc" });
+        const res = await fetch(`/api/customers?${query.toString()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setJumpSuggestions((data.customers || []).slice(0, 8));
+      } catch (err) {
+        console.error("Error fetching customer suggestions:", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(jumpSuggestionTimeoutRef.current);
+  }, [searchQuery]);
+
+  const handleJumpSearch = async (code) => {
+    const trimmed = (code || "").trim();
+    if (!trimmed) {
+      setSearchError("Please enter a customer code or name");
+      return;
+    }
+    setIsSearching(true);
+    setSearchError("");
+    setShowJumpSuggestions(false);
+    try {
+      await router.push(`/customers/${encodeURIComponent(trimmed)}`);
+    } catch (err) {
+      console.error("Jump-to-customer navigation failed:", err);
+      setSearchError("Customer not found. Please check the code and try again.");
+      setIsSearching(false);
+    }
+  };
+
+  const handleJumpSearchSubmit = (e) => {
+    e.preventDefault();
+    handleJumpSearch(searchQuery);
+  };
+
+  const handleJumpSuggestionClick = (code) => {
+    setShowJumpSuggestions(false);
+    setSearchQuery(code);
+    handleJumpSearch(code);
+  };
 
     const handleSelectAll = async () => {
       if (!isAllSelected) {
@@ -542,169 +615,160 @@ export default function CustomerDetails({
   }
 
   return (
-    <div id="content-to-print">
-      <Container className="mt-4">
-        {/* <div className="mt-3 mb-4">
-          <button className="btn btn-secondary" onClick={() => router.back()}>
-            Back to Customers
-          </button>
-          <button className="btn btn-primary" onClick={handlePrintPDF}>
-            <i className="bi bi-printer-fill me-2"></i> Print Report
-          </button>
-        </div> */}
-        <div className="mt-3 mb-4 d-flex justify-content-between align-items-center">
-          <button
-            className="btn btn-secondary me-2 me-md-0"
-            onClick={() => router.back()}
-          >
-            Back to Customers
-          </button>
-          {/* <button
-            id="print-pdf-btn"
-            className="btn btn-primary"
-            onClick={handlePrintPDF}
-          >
-            <i className="bi bi-file-earmark-pdf me-2"></i> Print PDF
-          </button> */}
-        </div>
-        {/* First Card - Customer Details */}
-        <div className="pdf-section">
-          <Card className="mb-4">
-            <Card.Header>
-              <h2 className="mb-0">
-                Customer Details - {customer?.CustomerName || "N/A"}
-              </h2>
-            </Card.Header>
-            <Card.Body>
-              <Row className="mb-4">
-                <Col md={6}>
-                  <Row className="mb-2">
-                    <Col sm={4} className="fw-bold">
-                      Customer Code:
-                    </Col>
-                    <Col sm={8}>{customer?.CustomerCode || "N/A"}</Col>
-                  </Row>
-                  {/* Add more customer details as needed */}
-                </Col>
-                <Col md={6}>
-                  <Row className="mb-2">
-                    <Col sm={4} className="fw-bold">
-                      Billing Address:
-                    </Col>
-                    <Col sm={8}>{customer?.BillingAddress || "N/A"}</Col>
-                  </Row>
-                  {/* Add more address details as needed */}
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
+    <div id="content-to-print" className="cd">
+      <style>{PAGE_STYLES}</style>
+      <div className="cd-card">
+        <button className="cd-back-btn" onClick={() => router.back()}>
+          ← Back to Customers
+        </button>
+
+        <div className="cd-header">
+          <h1>{customer?.CustomerName || "N/A"}</h1>
+          <p className="cd-header-desc">{customer?.CustomerCode}</p>
         </div>
 
-        <div className="pdf-section">
-          <Card className="mb-4">
-            <Card.Header>
-              <div className="d-flex justify-content-between align-items-center">
-                <h3 className="mb-0">Orders & Invoices - Monthly</h3>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              {/* <PurchasesAmountChart data={purchaseData} /> */}
-              <PurchasesAmountChart customerId={customer?.CustomerCode} />
-            </Card.Body>
-          </Card>
-        </div>
-        {/*Purchase Analytics Card */}
-
-        <div className="pdf-section">
-          <Card className="mb-4">
-            <Card.Header>
-              <div className="d-flex justify-content-between align-items-center">
-                <h3 className="mb-0">Order to Invoice - Monthly</h3>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
-            </Card.Body>
-          </Card>
-        </div>
-
-        <div className="pdf-section">
-          <Card className="mb-4">
-            <Card.Header>
-              <div className="d-flex justify-content-between align-items-center">
-                <h3 className="mb-0">Customer Balance Report</h3>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row>
-                <CustomerAgingChart cardCode={customer?.CustomerCode} />
-              </Row>
-            </Card.Body>
-          </Card>
-        </div>
-
-        <Card className="mb-4">
-          <Card.Header>
-            <div className="d-flex justify-content-between align-items-center">
-              <h3 className="mb-0">Customer Outstanding</h3>
-
-              <div className="d-flex align-items-center ms-auto gap-2">
-                <Dropdown onSelect={handleFilterSelect}>
-                  <Dropdown.Toggle
-                    variant="outline-secondary"
-                    id="outstanding-filter-dropdown"
-                  >
-                    {outstandingFilter}
-                  </Dropdown.Toggle>
-                  <Dropdown.Menu>
-                    <Dropdown.Item eventKey="Payment Pending">
-                      Payment Pending
-                    </Dropdown.Item>
-                    <Dropdown.Item eventKey="Payment Done">
-                      Payment Done
-                    </Dropdown.Item>
-                  </Dropdown.Menu>
-                </Dropdown>
-
-                <button
-                  className="btn btn-primary"
-                  onClick={handleMailSend}
-                  disabled={isMailSending}
-                >
-                  {isMailSending ? (
-                    <>
-                      <Spinner
-                        as="span"
-                        animation="border"
-                        size="sm"
-                        role="status"
-                        aria-hidden="true"
-                        className="me-2"
-                      />
-                      Sending...
-                    </>
-                  ) : (
-                    "Mail"
-                  )}
-                </button>
-
-                <button
-                  className="btn btn-success"
-                  onClick={handleExcelDownload}
-                  disabled={isExcelLoading}
-                >
-                  Excel
-                </button>
-              </div>
+        {/* Jump to another customer */}
+        <div className="cd-search-card">
+          <form onSubmit={handleJumpSearchSubmit} className="cd-search-form">
+            <div className="cd-field" style={{ flex: 1, minWidth: 260 }} ref={jumpSearchBoxRef}>
+              <label>Jump to another customer</label>
+              <input
+                className="cd-input"
+                style={{ width: "100%" }}
+                type="text"
+                placeholder="Enter Customer Code or Name…"
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setShowJumpSuggestions(true); }}
+                onFocus={() => setShowJumpSuggestions(true)}
+                disabled={isSearching}
+              />
+              {showJumpSuggestions && searchQuery.trim() && jumpSuggestions.length > 0 && (
+                <div className="cd-suggestions">
+                  {jumpSuggestions.map((c) => (
+                    <div key={c.CustomerCode} className="cd-suggestion-item" onClick={() => handleJumpSuggestionClick(c.CustomerCode)}>
+                      <span className="cd-suggestion-cat">{c.CustomerCode}</span>
+                      <span className="cd-suggestion-desc">{c.CustomerName}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </Card.Header>
+            <button type="submit" className="cd-export-btn" disabled={isSearching || !searchQuery.trim()}>
+              {isSearching ? "Searching…" : "Search"}
+            </button>
+          </form>
+          {searchError && <div className="cd-error">{searchError}</div>}
+        </div>
 
-          <Card.Body
-            style={{
-              overflowY: "auto",
-              overflowX: "auto",
-            }}
-          >
+        {/* Basic Information + Balance Summary */}
+        <div className="pdf-section">
+          <div className="cd-grid-2">
+            <div className="cd-panel">
+              <div className="cd-panel-title">Basic Information</div>
+              <table className="cd-kv-table">
+                <tbody>
+                  <tr><th>Customer Code</th><td>{customer?.CustomerCode || "N/A"}</td></tr>
+                  <tr><th>Customer Name</th><td>{customer?.CustomerName || "N/A"}</td></tr>
+                  <tr><th>Billing Address</th><td>{customer?.BillingAddress || "N/A"}</td></tr>
+                  <tr><th>City</th><td>{customer?.City || "N/A"}</td></tr>
+                  <tr><th>State</th><td>{customer?.State || "N/A"}</td></tr>
+                  <tr><th>Country</th><td>{customer?.Country || "N/A"}</td></tr>
+                  <tr><th>Sales Employee</th><td>{customer?.SalesEmployeeName || "N/A"}</td></tr>
+                  <tr><th>Status</th><td>{customer?.IsActive === "Y" ? "Active" : "Inactive"}</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="cd-panel">
+              <div className="cd-panel-title">Balance Summary</div>
+              <table className="cd-kv-table">
+                <tbody>
+                  <tr><th>Current Balance</th><td>{formatCurrency(customer?.Balance || 0)}</td></tr>
+                  <tr><th>Credit Line</th><td>{formatCurrency(customer?.CreditLine || 0)}</td></tr>
+                  <tr><th>Currency</th><td>{customer?.Currency || "N/A"}</td></tr>
+                  <tr><th>Total Outstanding</th><td>{formatCurrency(totalOutstandings || 0)}</td></tr>
+                  <tr><th>Phone</th><td>{customer?.Phone || "N/A"}</td></tr>
+                  <tr><th>Email</th><td>{customer?.Email || "N/A"}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div className="pdf-section">
+          <div className="cd-section">
+            <div className="cd-section-title">Orders & Invoices - Monthly</div>
+            <PurchasesAmountChart customerId={customer?.CustomerCode} />
+          </div>
+        </div>
+
+        <div className="pdf-section">
+          <div className="cd-section">
+            <div className="cd-section-title">Order to Invoice - Monthly</div>
+            <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
+          </div>
+        </div>
+
+        <div className="pdf-section">
+          <div className="cd-section">
+            <div className="cd-section-title">Customer Balance Report</div>
+            <CustomerAgingChart cardCode={customer?.CustomerCode} />
+          </div>
+        </div>
+
+        <div className="pdf-section cd-section">
+          <div className="cd-section-header">
+            <div className="cd-section-title">Customer Outstanding</div>
+            <div className="cd-section-controls">
+              <Dropdown onSelect={handleFilterSelect}>
+                <Dropdown.Toggle
+                  variant="outline-secondary"
+                  id="outstanding-filter-dropdown"
+                >
+                  {outstandingFilter}
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item eventKey="Payment Pending">
+                    Payment Pending
+                  </Dropdown.Item>
+                  <Dropdown.Item eventKey="Payment Done">
+                    Payment Done
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+
+              <button
+                className="btn btn-primary"
+                onClick={handleMailSend}
+                disabled={isMailSending}
+              >
+                {isMailSending ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    Sending...
+                  </>
+                ) : (
+                  "Mail"
+                )}
+              </button>
+
+              <button
+                className="btn btn-success"
+                onClick={handleExcelDownload}
+                disabled={isExcelLoading}
+              >
+                Excel
+              </button>
+            </div>
+          </div>
+
+          <div style={{ overflowY: "auto", overflowX: "auto" }}>
             <CustomerOutstandingTable
               customerOutstandings={outstandings}
               totalItems={totalOutstandings}
@@ -722,8 +786,8 @@ export default function CustomerDetails({
               isAllSelected={isAllSelected}
               onSelectAll={handleSelectAll}
             />
-          </Card.Body>
-        </Card>
+          </div>
+        </div>
 
         {/* <div className="pdf-section">
           <Card className="mb-4">
@@ -795,76 +859,66 @@ export default function CustomerDetails({
           </Card>
         </div> */}
         <div className="pdf-section">
-          <Card className="mb-4">
-            <Card.Header>
-              <div className="d-flex justify-content-between align-items-center">
-                <h3 className="mb-0">Sales by Category-Monthly</h3>
-              </div>
-            </Card.Header>
-            <Card.Body>
-              <Row>
-                {/* <Col lg={6}>
-                <SalesTable data={salesByCategoryData} />
-              </Col>
-              <Col lg={6}>
-                <SalesPieChart data={salesByCategoryData} />
-              </Col> */}
-                <CategorySalesChart cardCode={customer?.CustomerCode} />
-              </Row>
-            </Card.Body>
-          </Card>
+          <div className="cd-section">
+            <div className="cd-section-title">Sales by Category-Monthly</div>
+            <CategorySalesChart cardCode={customer?.CustomerCode} />
+          </div>
         </div>
 
         <div className="pdf-section">
-          <Card className="mb-4">
-            <Card.Header>
-              <h3 className="mb-0">Addresses</h3>
-            </Card.Header>
-            <Card.Body>
+          <div className="cd-section">
+            <div className="cd-section-title">Addresses</div>
               {customer?.Addresses && customer.Addresses.length > 0 ? (
-                <Table responsive striped bordered hover>
-                  <thead>
-                    <tr>
-                      <th>Type</th>
-                      <th>Address Name</th>
-                      <th>Street</th>
-                      <th>Block</th>
-                      <th>City</th>
-                      <th>State</th>
-                      <th>Zip Code</th>
-                      <th>Country</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customer.Addresses.map((address, index) => (
-                      <tr key={index}>
-                        <td>
-                          {address.AddressType === "B" ? "Billing" : "Shipping"}
-                        </td>
-                        <td>{address.AddressName || "N/A"}</td>
-                        <td>{address.Street || "N/A"}</td>
-                        <td>{address.Block || "N/A"}</td>
-                        <td>{address.City || "N/A"}</td>
-                        <td>{address.State || "N/A"}</td>
-                        <td>{address.ZipCode || "N/A"}</td>
-                        <td>{address.Country || "N/A"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
+                <div className="cd-table-card">
+                  <div className="cd-table-scroll">
+                    <table className="cd-table">
+                      <thead>
+                        <tr>
+                          <th className="cd-th-left">Type</th>
+                          <th className="cd-th-left">Address Name</th>
+                          <th className="cd-th-left">Street</th>
+                          <th className="cd-th-left">Block</th>
+                          <th className="cd-th-left">City</th>
+                          <th className="cd-th-left">State</th>
+                          <th className="cd-th-left">Zip Code</th>
+                          <th className="cd-th-left">Country</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customer.Addresses.map((address, index) => (
+                          <tr key={index}>
+                            <td>
+                              {address.AddressType === "B" ? "Billing" : "Shipping"}
+                            </td>
+                            <td>{address.AddressName || "N/A"}</td>
+                            <td>{address.Street || "N/A"}</td>
+                            <td>{address.Block || "N/A"}</td>
+                            <td>{address.City || "N/A"}</td>
+                            <td>{address.State || "N/A"}</td>
+                            <td>{address.ZipCode || "N/A"}</td>
+                            <td>{address.Country || "N/A"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               ) : (
-                <p className="mb-0">No addresses available.</p>
+                <p className="mb-0 cd-dash">No addresses available.</p>
               )}
-            </Card.Body>
-          </Card>
+          </div>
         </div>
+
+        <button className="cd-back-btn" onClick={() => router.back()} style={{ marginTop: 8 }}>
+          ← Back to Customers
+        </button>
 
         {/* <div className="mt-3 mb-4">
         <button className="btn btn-secondary" onClick={() => router.back()}>
           Back to Customers
         </button>
       </div> */}
-      </Container>
+      </div>
     </div>
   );
 }
@@ -1015,3 +1069,296 @@ export async function getServerSideProps(context) {
     };
   }
 }
+
+// Same design tokens/typography as the product detail page (pages/products/[id].js's
+// .pd-* system, namespaced .cd- here) — applied mostly via generic Bootstrap-class
+// overrides (.cd .card, .cd .btn, etc.) so every Card/button on this page — including
+// the ones rendered by the imported chart/table sub-components — picks up the same
+// look without editing those files directly.
+const PAGE_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  .cd {
+    --page-bg: #e4ebf1;
+    --surface: #ffffff;
+    --surface2: #e0edf9;
+    --surface-green: #dcf3e8;
+    --border: #c5d2dc;
+    --text: #10151c;
+    --muted: #52606d;
+    --accent: #1f68bf;
+    --good: #21875a;
+    --bad: #c0402f;
+
+    background: var(--page-bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding-bottom: 28px;
+  }
+
+  .cd-card {
+    width: 100%;
+    max-width: 1400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 14px 34px rgba(31, 41, 55, 0.10), 0 2px 8px rgba(31, 41, 55, 0.06);
+    padding: 24px 32px 32px;
+    margin: 24px auto;
+  }
+
+  .cd-back-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 7px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    margin-bottom: 16px;
+  }
+  .cd-back-btn:hover { background: var(--border); }
+
+  .cd-header { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 18px; }
+  .cd-header h1 { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+  .cd-header-desc { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--muted); margin: 0; }
+
+  .cd-search-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
+  }
+  .cd-search-form { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+
+  .cd-field { display: flex; flex-direction: column; gap: 6px; position: relative; }
+  .cd-field label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .cd-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 20px rgba(31, 41, 55, 0.15);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 60;
+  }
+  .cd-suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cd-suggestion-item:hover { background: var(--surface2); }
+  .cd-suggestion-cat {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .cd-suggestion-desc {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cd-input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    color: var(--text);
+    outline: none;
+  }
+  .cd-input:focus { border-color: var(--accent); }
+
+  .cd-export-btn {
+    background: var(--good);
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cd-export-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .cd-error {
+    margin-top: 10px;
+    background: #fdecea;
+    border: 1px solid var(--bad);
+    color: var(--bad);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .cd-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 26px;
+  }
+  @media (max-width: 900px) {
+    .cd-grid-2 { grid-template-columns: 1fr; }
+  }
+
+  .cd-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .cd-panel-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+
+  .cd-kv-table { width: 100%; border-collapse: collapse; }
+  .cd-kv-table th {
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 7px 10px 7px 0;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .cd-kv-table td {
+    text-align: right;
+    font-size: 13px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cd-kv-table tr:last-child th, .cd-kv-table tr:last-child td { border-bottom: none; }
+
+  .cd-section { margin-bottom: 28px; }
+  .cd-section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .cd-section-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .cd-section-header .cd-section-title { margin-bottom: 0; }
+  .cd-section-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  .cd-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 0;
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .cd .card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 20px rgba(31, 41, 55, 0.08), 0 2px 6px rgba(31, 41, 55, 0.05);
+  }
+  .cd .card-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .cd .card-header h2,
+  .cd .card-header h3 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .cd .btn-secondary {
+    background: var(--surface2);
+    border-color: var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .cd .btn-secondary:hover { background: var(--border); border-color: var(--border); }
+  .cd .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .cd .btn-success {
+    background: var(--good);
+    border-color: var(--good);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .cd-table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .cd-table-scroll { overflow-x: auto; }
+  .cd-table { width: 100%; border-collapse: collapse; margin: 0; }
+  .cd-table th {
+    background: var(--surface2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 10px 12px;
+    white-space: nowrap;
+  }
+  .cd-table th:last-child { border-right: none; }
+  .cd-th-left { text-align: left; }
+  .cd-table td {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .cd-table td:last-child { border-right: none; }
+  .cd-table tbody tr:last-child td { border-bottom: none; }
+  .cd-table tbody tr:hover { background: var(--surface2); }
+  .cd-dash { color: var(--muted); font-size: 13.5px; }
+`;

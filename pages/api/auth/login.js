@@ -245,6 +245,12 @@ export default async function handler(req, res) {
   }
 
   // -------------------- Employee (OHEM) Login --------------------
+  // Employees log in with their own OHEM password as normal — this list only
+  // overrides which ROLE gets sent back for specific known emails, so a
+  // person can be granted admin without creating any SAP OSLP master data or
+  // a separate hardcoded password.
+  const OHEM_ADMIN_OVERRIDE_EMAILS = ["raju@densitypharmachem.com"];
+
   try {
     const employeeResults = await queryDatabase(
       `SELECT firstName, lastName, email, U_Password FROM OHEM WHERE email = @email`,
@@ -255,6 +261,9 @@ export default async function handler(req, res) {
       const user = employeeResults[0];
       const name = `${user.firstName} ${user.lastName}`;
       const slpCode = "19"; // Default SLP code for employees
+      const role = OHEM_ADMIN_OVERRIDE_EMAILS.includes(email.toLowerCase())
+        ? "admin"
+        : "sales_person";
 
       // Check if password is set
       const passwordIsSet =
@@ -267,7 +276,7 @@ export default async function handler(req, res) {
         const token = jwt.sign(
           {
             email,
-            role: "sales_person",
+            role,
             name,
             contactCodes: [slpCode],
           },
@@ -281,7 +290,7 @@ export default async function handler(req, res) {
         console.log("[EMPLOYEE_LOGIN_PASSWORD_NOT_SET]", {
           email,
           contactCodes: [slpCode],
-          role: "sales_person",
+          role,
         });
 
         return res.status(200).json({
@@ -289,7 +298,7 @@ export default async function handler(req, res) {
           token,
           user: {
             email,
-            role: "sales_person",
+            role,
             name,
             contactCodes: [slpCode],
           },
@@ -328,7 +337,7 @@ export default async function handler(req, res) {
       const token = jwt.sign(
         {
           email,
-          role: "sales_person",
+          role,
           name,
           contactCodes: [slpCode],
         },
@@ -342,7 +351,7 @@ export default async function handler(req, res) {
       console.log("[EMPLOYEE_LOGIN_SUCCESS]", {
         email,
         contactCodes: [slpCode],
-        role: "sales_person",
+        role,
       });
 
       return res.status(200).json({
@@ -350,7 +359,7 @@ export default async function handler(req, res) {
         token,
         user: {
           email,
-          role: "sales_person",
+          role,
           name,
           contactCodes: [slpCode],
         },

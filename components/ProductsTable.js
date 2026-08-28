@@ -503,6 +503,8 @@ export default function ProductsTable({
         status,
         search: searchTerm,
         category: selectedCategory,
+        webDisplay: webDisplayFilter === "all" ? "" : webDisplayFilter,
+        priceSet: priceSetFilter === "all" ? "" : priceSetFilter,
         sortField,
         sortDir: sortDirection,
         getAll: 'true'

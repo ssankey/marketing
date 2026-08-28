@@ -5,6 +5,7 @@ import { Card, Spinner, Table, Button, Dropdown } from "react-bootstrap";
 import Select from "react-select";
 import debounce from "lodash/debounce";
 import { useAuth } from 'contexts/AuthContext';
+import { fyStartYear, fyLabel, parseMonthAbbrLabel } from "utils/financialYear";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -51,6 +52,17 @@ export default function DeliveryPerformanceChart({ customerId }) {
   const allowedTypes = customerId
     ? ["salesPerson", "category", "contactPerson"]
     : ["salesPerson", "category", "customer", "contactPerson"];
+
+  // Financial Year filter (same fyStartYear/fyLabel convention as pages/products/[id].js)
+  const currentFyStart = fyStartYear(new Date().getFullYear(), new Date().getMonth() + 1);
+  const [selectedFy, setSelectedFy] = useState(currentFyStart);
+  const fyOptions = [];
+  for (let y = 2024; y <= currentFyStart; y++) fyOptions.push(y);
+
+  const fyData = data.filter((d) => {
+    const parsed = parseMonthAbbrLabel(d.month, "-");
+    return parsed && fyStartYear(parsed.year, parsed.month) === selectedFy;
+  });
 
   useEffect(() => {
     if (!isCustomer && searchType && !allowedTypes.includes(searchType)) {
@@ -236,13 +248,13 @@ export default function DeliveryPerformanceChart({ customerId }) {
   };
 
   const chartData = {
-    labels: data.map((d) => d.month),
+    labels: fyData.map((d) => d.month),
     datasets: [
-      { label: "0–3 days", backgroundColor: "#4CAF50", data: data.map((d) => d.green) },
-      { label: "4–5 days", backgroundColor: "#FF9800", data: data.map((d) => d.orange) },
-      { label: "6–8 days", backgroundColor: "#2196F3", data: data.map((d) => d.blue) },
-      { label: "9–10 days", backgroundColor: "#9C27B0", data: data.map((d) => d.purple) },
-      { label: ">10 days", backgroundColor: "#F44336", data: data.map((d) => d.red) },
+      { label: "0–3 days", backgroundColor: "#4CAF50", data: fyData.map((d) => d.green) },
+      { label: "4–5 days", backgroundColor: "#FF9800", data: fyData.map((d) => d.orange) },
+      { label: "6–8 days", backgroundColor: "#2196F3", data: fyData.map((d) => d.blue) },
+      { label: "9–10 days", backgroundColor: "#9C27B0", data: fyData.map((d) => d.purple) },
+      { label: ">10 days", backgroundColor: "#F44336", data: fyData.map((d) => d.red) },
     ],
   };
 
@@ -305,6 +317,18 @@ export default function DeliveryPerformanceChart({ customerId }) {
           </h4>
           
           <div className="ms-auto d-flex gap-2 align-items-center">
+            <Dropdown onSelect={(val) => setSelectedFy(parseInt(val, 10))}>
+              <Dropdown.Toggle variant="outline-dark" id="fy-filter-delivery" size="sm">
+                {fyLabel(selectedFy)}
+              </Dropdown.Toggle>
+              <Dropdown.Menu>
+                {[...fyOptions].reverse().map((y) => (
+                  <Dropdown.Item key={y} eventKey={y} active={y === selectedFy}>
+                    {fyLabel(y)}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Menu>
+            </Dropdown>
             {isCustomer ? (
               <>
                 <Button variant="outline-secondary" disabled style={{ color: "#000", fontWeight: 500 }}>
@@ -385,7 +409,7 @@ export default function DeliveryPerformanceChart({ customerId }) {
             <Spinner animation="border" role="status" className="me-2" />
             <span>Loading chart data...</span>
           </div>
-        ) : data.length > 0 ? (
+        ) : fyData.length > 0 ? (
           <>
             <div className="chart-container" style={{ height: 500 }}>
               <Bar data={chartData} options={chartOptions} />
@@ -397,7 +421,7 @@ export default function DeliveryPerformanceChart({ customerId }) {
                 <thead>
                   <tr>
                     <th>Range / Month</th>
-                    {data.map((d, i) => (
+                    {fyData.map((d, i) => (
                       <th key={i}>{d.month}</th>
                     ))}
                   </tr>
@@ -412,7 +436,7 @@ export default function DeliveryPerformanceChart({ customerId }) {
                   ].map(([lbl, key]) => (
                     <tr key={key}>
                       <td>{lbl}</td>
-                      {data.map((d, i) => (
+                      {fyData.map((d, i) => (
                         <td key={i}>{d[key]}</td>
                       ))}
                     </tr>
@@ -422,7 +446,7 @@ export default function DeliveryPerformanceChart({ customerId }) {
             </div>
           </>
         ) : (
-          <p className="text-center m-0">No delivery performance data available</p>
+          <p className="text-center m-0">No delivery performance data in {fyLabel(selectedFy)}.</p>
         )}
       </Card.Body>
     </Card>
