@@ -336,15 +336,43 @@ const NavbarVertical = (props) => {
               </li>
             )}
 
-            {/* Outstanding Payments */}
-            <li className="nav-item mb-3">
-              <Link
-                href="/customer-balance"
-                className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}
-              >
-                <FaMoneyBillWave className="me-2" />  Payment Outstanding
-              </Link>
-            </li>
+            {/* Payment Outstanding Accordion */}
+            <CustomToggle
+              eventKey="payment-outstanding"
+              icon={<FaMoneyBillWave className="me-2" />}
+              href="/customer-balance"
+            >
+              Payment Outstanding
+            </CustomToggle>
+            <Accordion.Collapse eventKey="payment-outstanding">
+              <ul className="nav flex-column ms-3">
+                <li className="nav-item mb-3">
+                  <Link
+                    href="/customer-balance"
+                    className={`nav-link d-flex align-items-center ${router === "/customer-balance" ? "active" : ""}`}
+                  >
+                    <FaMoneyBillWave className="me-2" /> Customer Balance
+                  </Link>
+                </li>
+                {/* Password protected on the page itself, same as MSME Report */}
+                <li className="nav-item mb-3">
+                  <Link
+                    href="/top-outstanding-customer"
+                    className={`nav-link d-flex align-items-center ${router === "/top-outstanding-customer" ? "active" : ""}`}
+                  >
+                    <FaLock className="me-2" /> Outstanding Customer
+                  </Link>
+                </li>
+                <li className="nav-item mb-3">
+                  <Link
+                    href="/top-outstanding-vendor"
+                    className={`nav-link d-flex align-items-center ${router === "/top-outstanding-vendor" ? "active" : ""}`}
+                  >
+                    <FaLock className="me-2" /> Outstanding Vendor
+                  </Link>
+                </li>
+              </ul>
+            </Accordion.Collapse>
 
             {(isAdmin || isSalesPerson) && (
               <li className="nav-item mb-3">

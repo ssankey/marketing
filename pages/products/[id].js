@@ -408,7 +408,7 @@ export default function ProductDetails({ initialProduct, initialKpiData, initial
           label: function (context) {
             const index = context.dataIndex;
             const sales = salesTrendRevenue[index].toLocaleString('en-IN', {
-              style: 'currency', currency: 'INR', maximumFractionDigits: 0
+              style: 'currency', currency: 'INR', minimumFractionDigits: 0, maximumFractionDigits: 0
             });
             const units = salesTrendUnits[index].toLocaleString();
             return [`Sales: ${sales}`, `Units Sold: ${units}`];

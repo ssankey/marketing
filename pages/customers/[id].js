@@ -286,6 +286,7 @@ export default function CustomerDetails({
         return new Intl.NumberFormat("en-IN", {
           style: "currency",
           currency: "INR",
+          minimumFractionDigits: 0,
           maximumFractionDigits: 0, // no decimals
         }).format(Math.round(amount));
       }
