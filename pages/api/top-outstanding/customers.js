@@ -111,8 +111,18 @@ export default async function handler(req, res) {
           ${REGION_SALES_PERSON_CASE} AS RegionSalesPerson
         FROM OCRD T0
         JOIN OCRD T14  ON T0.CardCode = T14.CardCode
-        JOIN CRD1 T17  ON T14.CardCode = T17.CardCode
         JOIN CustomerTotals CT ON T0.CardCode = CT.CardCode
+        -- CRD1 has one row per address (billing, shipping, possibly several of
+        -- each) — a plain join on CardCode fans out into duplicate customer
+        -- rows. Pick exactly one: prefer the billing address, else whatever's
+        -- there, so a customer with no 'B' row still shows up (State/Region
+        -- fall through to 'Unknown' via the CASE below) instead of being lost.
+        OUTER APPLY (
+          SELECT TOP 1 State
+          FROM CRD1
+          WHERE CardCode = T14.CardCode
+          ORDER BY CASE WHEN AdresType = 'B' THEN 0 ELSE 1 END, Address
+        ) T17
         WHERE T0.CardType = 'C'
       )
       SELECT
