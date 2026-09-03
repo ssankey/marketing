@@ -25,6 +25,9 @@ import MonthlyCategorySalesChart from "components/CustomerCharts/SalesByCategory
 import CustomerAgingChart from "../../components/CustomerCharts/customeragingreport";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 import CategorySalesChart from "../../components/CustomerCharts/CategorySalesChart";
+import CollapsibleSection from "components/page/CollapsibleSection";
+import CustomerOrdersLineTable from "../../components/CustomerCharts/CustomerOrdersLineTable";
+import CustomerInvoicesTable from "../../components/CustomerCharts/CustomerInvoicesTable";
 
 // Utility function to format date
 function formatDate(dateString) {
@@ -662,7 +665,7 @@ export default function CustomerDetails({
         </div>
 
         {/* Basic Information + Balance Summary */}
-        <div className="pdf-section">
+        <CollapsibleSection title="Customer Details">
           <div className="cd-grid-2">
             <div className="cd-panel">
               <div className="cd-panel-title">Basic Information</div>
@@ -693,33 +696,35 @@ export default function CustomerDetails({
               </table>
             </div>
           </div>
-        </div>
+        </CollapsibleSection>
 
-        <div className="pdf-section">
-          <div className="cd-section">
-            <div className="cd-section-title">Orders & Invoices - Monthly</div>
-            <PurchasesAmountChart customerId={customer?.CustomerCode} />
-          </div>
-        </div>
+        <CollapsibleSection title="Orders & Invoices - Monthly">
+          <PurchasesAmountChart customerId={customer?.CustomerCode} />
+        </CollapsibleSection>
 
-        <div className="pdf-section">
-          <div className="cd-section">
-            <div className="cd-section-title">Order to Invoice - Monthly</div>
-            <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
-          </div>
-        </div>
+        <CollapsibleSection title="Order to Invoice - Monthly">
+          <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
+        </CollapsibleSection>
 
-        <div className="pdf-section">
-          <div className="cd-section">
-            <div className="cd-section-title">Customer Balance Report</div>
-            <CustomerAgingChart cardCode={customer?.CustomerCode} />
-          </div>
-        </div>
+        <CollapsibleSection title="Customer Balance Report">
+          <CustomerAgingChart cardCode={customer?.CustomerCode} />
+        </CollapsibleSection>
 
-        <div className="pdf-section cd-section">
-          <div className="cd-section-header">
-            <div className="cd-section-title">Customer Outstanding</div>
-            <div className="cd-section-controls">
+        {/* Orders placed by this customer — line level */}
+        <CollapsibleSection title="Orders" sectionClassName="pdf-section cd-section">
+          <CustomerOrdersLineTable customerCode={customer?.CustomerCode} />
+        </CollapsibleSection>
+
+        {/* Invoices for this customer — line level */}
+        <CollapsibleSection title="Invoices" sectionClassName="pdf-section cd-section">
+          <CustomerInvoicesTable customerCode={customer?.CustomerCode} />
+        </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Customer Outstanding"
+          sectionClassName="pdf-section cd-section"
+          controls={
+            <>
               <Dropdown onSelect={handleFilterSelect}>
                 <Dropdown.Toggle
                   variant="outline-secondary"
@@ -766,9 +771,9 @@ export default function CustomerDetails({
               >
                 Excel
               </button>
-            </div>
-          </div>
-
+            </>
+          }
+        >
           <div style={{ overflowY: "auto", overflowX: "auto" }}>
             <CustomerOutstandingTable
               customerOutstandings={outstandings}
@@ -788,7 +793,7 @@ export default function CustomerDetails({
               onSelectAll={handleSelectAll}
             />
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* <div className="pdf-section">
           <Card className="mb-4">
@@ -859,16 +864,11 @@ export default function CustomerDetails({
             </Card.Body>
           </Card>
         </div> */}
-        <div className="pdf-section">
-          <div className="cd-section">
-            <div className="cd-section-title">Sales by Category-Monthly</div>
-            <CategorySalesChart cardCode={customer?.CustomerCode} />
-          </div>
-        </div>
+        <CollapsibleSection title="Sales by Category-Monthly">
+          <CategorySalesChart cardCode={customer?.CustomerCode} />
+        </CollapsibleSection>
 
-        <div className="pdf-section">
-          <div className="cd-section">
-            <div className="cd-section-title">Addresses</div>
+        <CollapsibleSection title="Addresses">
               {customer?.Addresses && customer.Addresses.length > 0 ? (
                 <div className="cd-table-card">
                   <div className="cd-table-scroll">
@@ -907,8 +907,7 @@ export default function CustomerDetails({
               ) : (
                 <p className="mb-0 cd-dash">No addresses available.</p>
               )}
-          </div>
-        </div>
+        </CollapsibleSection>
 
         <button className="cd-back-btn" onClick={() => router.back()} style={{ marginTop: 8 }}>
           ← Back to Customers
@@ -1278,6 +1277,22 @@ const PAGE_STYLES = `
   }
   .cd-section-header .cd-section-title { margin-bottom: 0; }
   .cd-section-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  .cd-collapsible-header {
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 0;
+  }
+  .cd-collapsible-header:hover .cd-section-title { color: var(--accent, #1f68bf); }
+  .cd-chevron {
+    display: inline-block;
+    font-size: 13px;
+    color: var(--muted, #6c757d);
+    transition: transform 0.2s ease;
+    margin-left: 8px;
+  }
+  .cd-chevron.open { transform: rotate(90deg); }
+  .cd-section-body { margin-top: 4px; }
 
   .cd-empty {
     text-align: center;
