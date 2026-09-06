@@ -9,32 +9,41 @@
 import Link from "next/link";
 import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
-import { Badge, Button } from "react-bootstrap";
+import { Badge } from "react-bootstrap";
 import { useState } from "react";
-import { openPrintWindow } from "utils/printBlob";
 
-const InvoicePdfButton = ({ docNum }) => {
+// Saves the PDF straight to disk (same blob -> object URL -> <a download>
+// pattern as triggerDownload() on pages/Document-downloading/index.js),
+// rather than opening a print dialog like the app-wide invoices table does.
+const DownloadPdfButton = ({ docNum }) => {
   const [loading, setLoading] = useState(false);
 
-  const handlePrint = async () => {
+  const handleDownload = async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/invoices/download-pdf/${docNum}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const blob = await response.blob();
-      openPrintWindow(blob, `Invoice_${docNum}`);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice_${docNum}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error printing invoice PDF:", error);
-      alert("Failed to load invoice PDF for printing. Please try again.");
+      console.error("Error downloading invoice PDF:", error);
+      alert("Failed to download invoice PDF. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Button variant="outline-primary" size="sm" onClick={handlePrint} disabled={loading}>
-      {loading ? "…" : "Invoice PDF"}
-    </Button>
+    <button type="button" className="cd-page-btn" onClick={handleDownload} disabled={loading}>
+      {loading ? "…" : "Download PDF"}
+    </button>
   );
 };
 
@@ -50,6 +59,11 @@ export const tableColumns = [
           {getValue() || "N/A"}
         </Link>
       ),
+  },
+  {
+    id: "Download PDF",
+    header: "Download PDF",
+    cell: ({ row }) => (row.original.Type === "CN" ? <span className="cd-dash">N/A</span> : <DownloadPdfButton docNum={row.original.DocNum} />),
   },
   {
     id: "Type",
@@ -124,6 +138,7 @@ export const tableColumns = [
     header: "Qty",
     accessorFn: (row) => row["Qty."],
     cell: ({ getValue }) => (getValue() != null ? getValue() : "N/A"),
+    align: "right",
   },
   {
     accessorKey: "Document Status",
@@ -153,11 +168,13 @@ export const tableColumns = [
     accessorKey: "Unit Sales Price",
     header: "Unit Sales Price",
     cell: ({ getValue }) => formatCurrency(getValue()),
+    align: "right",
   },
   {
     accessorKey: "Total Sales Price",
     header: "Total Sales Price/Open Value",
     cell: ({ getValue }) => formatCurrency(getValue()),
+    align: "right",
   },
   {
     accessorKey: "BatchNum",
@@ -168,10 +185,5 @@ export const tableColumns = [
     accessorKey: "Mkt_Feedback",
     header: "Mkt_Feedback",
     cell: ({ getValue }) => getValue() || "N/A",
-  },
-  {
-    id: "Invoice PDF",
-    header: "Invoice PDF",
-    cell: ({ row }) => (row.original.Type === "CN" ? <span className="text-muted">—</span> : <InvoicePdfButton docNum={row.original.DocNum} />),
   },
 ];

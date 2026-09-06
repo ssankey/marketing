@@ -191,6 +191,14 @@ const NavbarVertical = (props) => {
                     <Clipboard className="me-2" /> Open Orders
                   </Link>
                 </li>
+                <li className="nav-item mb-3">
+                  <Link
+                    href="/open-do"
+                    className={`nav-link d-flex align-items-center ${router === "/open-do" ? "active" : ""}`}
+                  >
+                    <Clipboard className="me-2" /> Open DO
+                  </Link>
+                </li>
               </ul>
             </Accordion.Collapse>
 
