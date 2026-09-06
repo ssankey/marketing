@@ -711,12 +711,12 @@ export default function CustomerDetails({
         </CollapsibleSection>
 
         {/* Orders placed by this customer — line level */}
-        <CollapsibleSection title="Orders" sectionClassName="pdf-section cd-section">
+        <CollapsibleSection title="Order Line Items" sectionClassName="pdf-section cd-section">
           <CustomerOrdersLineTable customerCode={customer?.CustomerCode} />
         </CollapsibleSection>
 
         {/* Invoices for this customer — line level */}
-        <CollapsibleSection title="Invoices" sectionClassName="pdf-section cd-section">
+        <CollapsibleSection title="Invoice Line Items" sectionClassName="pdf-section cd-section">
           <CustomerInvoicesTable customerCode={customer?.CustomerCode} />
         </CollapsibleSection>
 
@@ -1281,18 +1281,33 @@ const PAGE_STYLES = `
   .cd-collapsible-header {
     cursor: pointer;
     user-select: none;
-    padding: 4px 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 0;
+    transition: background 0.15s ease, border-color 0.15s ease;
   }
-  .cd-collapsible-header:hover .cd-section-title { color: var(--accent, #1f68bf); }
+  .cd-collapsible-header:hover { background: var(--border); }
+  .cd-collapsible-header .cd-section-title { font-size: 15.5px; }
   .cd-chevron {
-    display: inline-block;
-    font-size: 13px;
-    color: var(--muted, #6c757d);
-    transition: transform 0.2s ease;
-    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    transition: transform 0.2s ease, background 0.15s ease;
   }
+  .cd-collapsible-header:hover .cd-chevron { background: var(--surface2); }
   .cd-chevron.open { transform: rotate(90deg); }
-  .cd-section-body { margin-top: 4px; }
+  .cd-section-body { margin-top: 16px; }
 
   .cd-empty {
     text-align: center;
@@ -1366,6 +1381,7 @@ const PAGE_STYLES = `
   }
   .cd-table th:last-child { border-right: none; }
   .cd-th-left { text-align: left; }
+  .cd-th-right { text-align: right; }
   .cd-table td {
     padding: 10px 14px;
     font-size: 13px;
@@ -1376,5 +1392,54 @@ const PAGE_STYLES = `
   .cd-table td:last-child { border-right: none; }
   .cd-table tbody tr:last-child td { border-bottom: none; }
   .cd-table tbody tr:hover { background: var(--surface2); }
+  .cd-num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
   .cd-dash { color: var(--muted); font-size: 13.5px; }
+
+  .cd-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .cd-pagination-info { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--muted); }
+  .cd-pagination-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .cd-page-btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cd-page-btn:hover:not(:disabled) { background: var(--border); }
+  .cd-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .cd-mode-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .cd-mode-btn {
+    background: var(--surface);
+    border: none;
+    border-right: 1px solid var(--border);
+    padding: 8px 14px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cd-mode-btn:last-child { border-right: none; }
+  .cd-mode-btn:hover { background: var(--surface2); }
+  .cd-mode-btn.active { background: var(--accent); color: #ffffff; }
 `;

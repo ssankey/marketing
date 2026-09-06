@@ -235,8 +235,9 @@ export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSi
         
         columns.forEach((column) => {
           const key = column.accessorKey;
+          if (!key) return; // skip the Pick Slip action column, which has no accessorKey
           const value = row[key];
-          
+
           if (currencyFields.has(key)) {
             const cleanNumber = Math.round((Number(value) || 0) * 100) / 100;
             formattedRow[column.header] = +cleanNumber;

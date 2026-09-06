@@ -145,6 +145,7 @@ import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 import { truncateText } from "utils/truncateText";
 import { Badge } from "react-bootstrap";
+import PickSlipButton from "components/shared/PickSlipButton";
 
 export const tableColumns = () => [
   {
@@ -174,6 +175,11 @@ export const tableColumns = () => [
     accessorKey: "PostingDate",
     header: "Posting Date",
     cell: ({ getValue }) => formatDate(getValue()),
+  },
+  {
+    id: "PickSlip",
+    header: "Pick Slip",
+    cell: ({ row }) => <PickSlipButton deliveryNo={row.original.PickSlipDeliveryNo} />,
   },
   {
     accessorKey: "CustomerPONo",

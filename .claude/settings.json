@@ -26,7 +26,8 @@
       "Bash(curl -s -o /dev/null -w \"page HTTP %{http_code} \\(%{time_total}s\\)\\\\n\" --max-time 90 \"http://localhost:3001/catalyst-reagents\")",
       "Bash(curl -s 'http://localhost:3001/api/catalyst-reagents/aging?itmsGrpNam=Catalyst&itmsGrpNam=Fine%20Chemicals&itmsGrpNam=Reagent' -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -w '\\\\nHTTP %{http_code}\\\\n' --max-time 60)",
       "Bash(node .tmp-verify-aging.mjs)",
-      "Bash(node .tmp-verify-today.mjs)"
+      "Bash(node .tmp-verify-today.mjs)",
+      "Bash(node .tmp-verify-orders2.mjs)"
     ]
   }
 }
