@@ -6,13 +6,14 @@
 // that table on the same page. Reuses OpenOrdersPagination as-is (a plain,
 // domain-agnostic pagination footer).
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Container, Spinner, Alert, Card } from "react-bootstrap";
 import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table";
 import OpenDOFilters from "./OpenDOFilters";
 import OpenOrdersPagination from "../openOrders/openOrdersPagination";
 import { tableColumns } from "./openDOColumns";
 import { useOpenDOData } from "./openDOFunctions";
+import { mergePdfBlobs, openPrintWindow } from "utils/printBlob";
 
 const OpenDOTable = ({ initialStatus = "open", initialPage = 1, pageSize = 20 }) => {
   const {
@@ -33,7 +34,84 @@ const OpenDOTable = ({ initialStatus = "open", initialPage = 1, pageSize = 20 })
     setError,
   } = useOpenDOData(initialStatus, initialPage, pageSize);
 
-  const columns = useMemo(() => tableColumns(), []);
+  // Pick Slip bulk-select/print — Open tab only. Keyed by DeliveryNo (not
+  // row id) since one delivery can span several line-item rows, and they
+  // all need to select/deselect together.
+  const [selectedDeliveryNos, setSelectedDeliveryNos] = useState(new Set());
+  const [printing, setPrinting] = useState(false);
+
+  useEffect(() => {
+    setSelectedDeliveryNos(new Set());
+  }, [statusFilter]);
+
+  const pageDeliveryNos = useMemo(
+    () => Array.from(new Set(deliveryOrdersLine.map((r) => r.DeliveryNo).filter(Boolean))),
+    [deliveryOrdersLine]
+  );
+  const allPageSelected = pageDeliveryNos.length > 0 && pageDeliveryNos.every((d) => selectedDeliveryNos.has(d));
+  const somePageSelected = pageDeliveryNos.some((d) => selectedDeliveryNos.has(d));
+
+  const onToggleDelivery = useCallback((deliveryNo) => {
+    setSelectedDeliveryNos((prev) => {
+      const next = new Set(prev);
+      if (next.has(deliveryNo)) next.delete(deliveryNo);
+      else next.add(deliveryNo);
+      return next;
+    });
+  }, []);
+
+  const onToggleSelectAllPage = useCallback(() => {
+    setSelectedDeliveryNos((prev) => {
+      const next = new Set(prev);
+      const shouldSelect = !(pageDeliveryNos.length > 0 && pageDeliveryNos.every((d) => next.has(d)));
+      pageDeliveryNos.forEach((d) => (shouldSelect ? next.add(d) : next.delete(d)));
+      return next;
+    });
+  }, [pageDeliveryNos]);
+
+  const onPrintSelected = useCallback(async () => {
+    const deliveryNos = Array.from(selectedDeliveryNos);
+    if (deliveryNos.length === 0) return;
+    try {
+      setPrinting(true);
+      const blobs = [];
+      const missing = [];
+      for (const deliveryNo of deliveryNos) {
+        const res = await fetch(`/api/delivery-orders/download-pickslip/${deliveryNo}`);
+        if (!res.ok) { missing.push(deliveryNo); continue; }
+        blobs.push(await res.blob());
+      }
+      if (blobs.length === 0) {
+        alert("No pick slip PDFs were found for the selected deliveries.");
+        return;
+      }
+      const merged = await mergePdfBlobs(blobs);
+      openPrintWindow(merged, `Pick_Slips_${deliveryNos.join("_")}`);
+      if (missing.length > 0) {
+        alert(`Pick slip not found for ${missing.length} deliver${missing.length === 1 ? "y" : "ies"}: ${missing.join(", ")}`);
+      }
+    } catch (e) {
+      console.error("Error printing pick slips:", e);
+      alert("Failed to print pick slips. Please try again.");
+    } finally {
+      setPrinting(false);
+    }
+  }, [selectedDeliveryNos]);
+
+  const columns = useMemo(
+    () => tableColumns({
+      statusFilter,
+      selectedDeliveryNos,
+      allPageSelected,
+      somePageSelected,
+      selectedCount: selectedDeliveryNos.size,
+      printing,
+      onToggleSelectAllPage,
+      onToggleDelivery,
+      onPrintSelected,
+    }),
+    [statusFilter, selectedDeliveryNos, allPageSelected, somePageSelected, printing, onToggleSelectAllPage, onToggleDelivery, onPrintSelected]
+  );
 
   const table = useReactTable({
     data: deliveryOrdersLine,

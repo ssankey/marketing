@@ -28,6 +28,19 @@ const TABLE_PAGE_STYLES = `
     padding: 28px;
   }
 
+  /* .cr is a full-page wrapper (tinted background + min-height:100vh + its
+     own padding) — reused here to carry this stylesheet inside Bootstrap
+     modals too (AgingItemsModal.js, DrillDownModal.js), which forced every
+     such modal to be at least a full viewport tall regardless of how much
+     content it actually had, leaving a large block of empty tinted space
+     below short tables. Reset those full-page-only properties whenever .cr
+     ends up nested inside a modal. */
+  .modal-content .cr {
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+  }
+
   .cr-card {
     /* No max-width cap — fills the page at any zoom level instead of
        leaving empty side margins once the effective viewport (in CSS px)
@@ -177,7 +190,7 @@ const TABLE_PAGE_STYLES = `
      expand/collapse, independent of the surrounding Bootstrap modal's own
      scroll-region sizing (which is calculated once at open time and can
      otherwise leave newly-expanded content unreachable). */
-  .cr-table-scroll { overflow-x: auto; overflow-y: auto; max-height: 60vh; }
+  .cr-table-scroll { overflow-x: auto; overflow-y: auto; max-height: 75vh; }
   .cr-table { width: 100%; border-collapse: collapse; }
   .cr-table th {
     position: sticky;
@@ -274,6 +287,8 @@ const TABLE_PAGE_STYLES = `
 
   .cr-cell-clickable { cursor: pointer; }
   .cr-cell-clickable:hover { background: var(--surface2); }
+
+  .cr-sort-arrow { color: var(--accent); font-size: 9px; }
 `;
 
 export default TABLE_PAGE_STYLES;

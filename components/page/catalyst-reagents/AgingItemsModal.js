@@ -17,11 +17,25 @@ const formatDate = (d) => {
   return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
+const SORTABLE_COLUMNS = [
+  { key: 'itemCode', label: 'CAT No.', align: 'left' },
+  { key: 'itemName', label: 'Item Name', align: 'left' },
+  { key: 'casNo', label: 'CAS No.', align: 'left' },
+  { key: 'category', label: 'Category', align: 'left' },
+  { key: 'stock', label: 'Stock', align: 'right' },
+  { key: 'price', label: 'Price', align: 'right' },
+  { key: 'value', label: 'Value', align: 'right' },
+  { key: 'batchNum', label: 'Batch No.', align: 'left' },
+  { key: 'grnDate', label: 'GRN Date', align: 'left' },
+];
+
 export default function AgingItemsModal({ show, onHide, categories, asOfDate, category, bucket, title }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
 
   useEffect(() => {
     if (!show) return;
@@ -45,8 +59,42 @@ export default function AgingItemsModal({ show, onHide, categories, asOfDate, ca
     })();
   }, [show, categories, asOfDate, category, bucket]);
 
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
-  const pageItems = useMemo(() => items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [items, page]);
+  const sortedItems = useMemo(() => {
+    if (!sortField) return items;
+    const dateFields = new Set(['grnDate']);
+    const numericFields = new Set(['stock', 'price', 'value']);
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => {
+      let av = a[sortField];
+      let bv = b[sortField];
+      if (dateFields.has(sortField)) {
+        av = av ? new Date(av).getTime() : 0;
+        bv = bv ? new Date(bv).getTime() : 0;
+      } else if (numericFields.has(sortField)) {
+        av = Number(av) || 0;
+        bv = Number(bv) || 0;
+      } else {
+        av = (av || '').toString().toLowerCase();
+        bv = (bv || '').toString().toLowerCase();
+      }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [items, sortField, sortDir]);
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+    setPage(1);
+  };
+
+  const totalPages = Math.max(1, Math.ceil(sortedItems.length / PAGE_SIZE));
+  const pageItems = useMemo(() => sortedItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [sortedItems, page]);
 
   const handleExport = () => {
     if (items.length === 0) { alert('No data to export'); return; }
@@ -96,15 +144,16 @@ export default function AgingItemsModal({ show, onHide, categories, asOfDate, ca
                   <table className="cr-table">
                     <thead>
                       <tr>
-                        <th className="cr-th-left">CAT No.</th>
-                        <th className="cr-th-left">Item Name</th>
-                        <th className="cr-th-left">CAS No.</th>
-                        <th className="cr-th-left">Category</th>
-                        <th className="cr-th-right">Stock</th>
-                        <th className="cr-th-right">Price</th>
-                        <th className="cr-th-right">Value</th>
-                        <th className="cr-th-left">Batch No.</th>
-                        <th className="cr-th-left">GRN Date</th>
+                        {SORTABLE_COLUMNS.map((col) => (
+                          <th
+                            key={col.key}
+                            className={col.align === 'right' ? 'cr-th-right' : 'cr-th-left'}
+                            onClick={() => handleSort(col.key)}
+                          >
+                            {col.label}
+                            {sortField === col.key && <span className="cr-sort-arrow">{sortDir === 'asc' ? ' ▲' : ' ▼'}</span>}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
