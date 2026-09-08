@@ -11,39 +11,43 @@
 // several line-item rows and they all need to move together: checking/
 // unchecking one row's box checks/unchecks every row that shares its
 // DeliveryNo. OpenDOTable.js owns the actual selection state and passes it
-// in here as `handlers`.
+// in here as `handlers`. Invoice Number / Invoice PDF are the mirror image —
+// only meaningful once a delivery has actually been invoiced, so they're
+// only included (right after Delivery Date) in the Closed/Canceled tabs.
 
 import { useRef, useEffect } from "react";
 import { formatDate } from "utils/formatDate";
 import { Badge } from "react-bootstrap";
 import PickSlipButton from "components/shared/PickSlipButton";
+import InvoiceDownloadButton from "components/shared/InvoiceDownloadButton";
 
 const CHECKBOX_STYLE = { width: 18, height: 18, cursor: "pointer" };
 
-const SelectAllCheckbox = ({ checked, indeterminate, onChange, title }) => {
+const SelectAllCheckbox = ({ checked, indeterminate, onChange, title, disabled }) => {
   const ref = useRef(null);
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = indeterminate;
   }, [indeterminate]);
-  return <input ref={ref} type="checkbox" checked={checked} onChange={onChange} title={title} style={CHECKBOX_STYLE} />;
+  return <input ref={ref} type="checkbox" checked={checked} onChange={onChange} title={title} style={CHECKBOX_STYLE} disabled={disabled} />;
 };
 
 export const tableColumns = (handlers = {}) => {
   const {
     statusFilter,
     selectedDeliveryNos = new Set(),
-    allPageSelected = false,
-    somePageSelected = false,
+    allSelected = false,
+    selectingAll = false,
     selectedCount = 0,
     printing = false,
-    onToggleSelectAllPage,
+    onToggleSelectAll,
     onToggleDelivery,
     onPrintSelected,
   } = handlers;
 
   const selectionMode = statusFilter === "open";
+  const showInvoiceColumns = statusFilter === "closed" || statusFilter === "canceled";
 
-  return [
+  const columns = [
     {
       accessorKey: "SONo",
       header: "SO No",
@@ -73,6 +77,18 @@ export const tableColumns = (handlers = {}) => {
       header: "Delivery Date",
       cell: ({ getValue }) => formatDate(getValue()),
     },
+    ...(showInvoiceColumns ? [
+      {
+        accessorKey: "InvoiceNo",
+        header: "Invoice Number",
+        cell: ({ getValue }) => getValue() || "N/A",
+      },
+      {
+        id: "InvoicePDF",
+        header: "Invoice PDF",
+        cell: ({ row }) => <InvoiceDownloadButton docNum={row.original.InvoiceNo} />,
+      },
+    ] : []),
     {
       id: "PickSlip",
       header: () => {
@@ -80,10 +96,11 @@ export const tableColumns = (handlers = {}) => {
         return (
           <div className="d-flex align-items-center gap-2" style={{ textTransform: "none" }} onClick={(e) => e.stopPropagation()}>
             <SelectAllCheckbox
-              checked={allPageSelected}
-              indeterminate={!allPageSelected && somePageSelected}
-              onChange={onToggleSelectAllPage}
-              title="Select all pick slips on this page"
+              checked={allSelected}
+              indeterminate={!allSelected && selectedCount > 0}
+              onChange={onToggleSelectAll}
+              disabled={selectingAll}
+              title="Select all pick slips matching the current filters (every page)"
             />
             <span>Pick Slip</span>
             <button
@@ -155,4 +172,6 @@ export const tableColumns = (handlers = {}) => {
       cell: ({ getValue }) => getValue() || "N/A",
     },
   ];
+
+  return columns;
 };
