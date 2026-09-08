@@ -120,6 +120,30 @@ export const useOpenDOData = (initialStatus = "open", initialPage = 1, pageSize 
     setCurrentPage((prev) => (newPage !== prev ? newPage : prev));
   }, []);
 
+  // Used by the Pick Slip column's "select all" checkbox, which needs every
+  // DeliveryNo matching the current filters — not just the current page —
+  // so it's a standalone fetch (own try/catch, doesn't touch the shared
+  // `loading` flag) rather than reusing fetchDeliveryOrders/getAll, which
+  // would otherwise flash the whole table into its loading state just to
+  // compute a selection.
+  const fetchAllMatchingDeliveryNos = useCallback(async () => {
+    const token = localStorage.getItem("token");
+    const queryParams = new URLSearchParams({
+      page: 1,
+      pageSize,
+      search: debouncedGlobalFilter || "",
+      status: statusFilter || "open",
+      getAll: "true",
+      ...(selectedMonth && { month: selectedMonth }),
+    });
+    const response = await fetch(`/api/open-do?${queryParams}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error(`Failed to fetch delivery orders: ${response.status}`);
+    const data = await response.json();
+    return Array.from(new Set((data.deliveryOrdersLine || []).map((r) => r.DeliveryNo).filter(Boolean)));
+  }, [debouncedGlobalFilter, statusFilter, selectedMonth, pageSize]);
+
   const handleExportExcel = useCallback(async (columns) => {
     try {
       setLoading(true);
@@ -177,6 +201,7 @@ export const useOpenDOData = (initialStatus = "open", initialPage = 1, pageSize 
     setSelectedMonth: setSelectedMonthWrapper,
     handlePageChange,
     handleExportExcel,
+    fetchAllMatchingDeliveryNos,
     setError,
   };
 };

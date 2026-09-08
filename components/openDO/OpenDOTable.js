@@ -31,27 +31,30 @@ const OpenDOTable = ({ initialStatus = "open", initialPage = 1, pageSize = 20 })
     setSelectedMonth,
     handlePageChange,
     handleExportExcel,
+    fetchAllMatchingDeliveryNos,
     setError,
   } = useOpenDOData(initialStatus, initialPage, pageSize);
 
   // Pick Slip bulk-select/print — Open tab only. Keyed by DeliveryNo (not
   // row id) since one delivery can span several line-item rows, and they
-  // all need to select/deselect together.
+  // all need to select/deselect together. "Select all" spans every page
+  // matching the current filters (fetched on demand), not just the page
+  // currently on screen — `allSelected` tracks whether that full-set state
+  // is active; it's a separate flag rather than being derived from
+  // selectedDeliveryNos.size, since we don't keep the full matching count
+  // loaded client-side at all times.
   const [selectedDeliveryNos, setSelectedDeliveryNos] = useState(new Set());
+  const [allSelected, setAllSelected] = useState(false);
+  const [selectingAll, setSelectingAll] = useState(false);
   const [printing, setPrinting] = useState(false);
 
   useEffect(() => {
     setSelectedDeliveryNos(new Set());
-  }, [statusFilter]);
-
-  const pageDeliveryNos = useMemo(
-    () => Array.from(new Set(deliveryOrdersLine.map((r) => r.DeliveryNo).filter(Boolean))),
-    [deliveryOrdersLine]
-  );
-  const allPageSelected = pageDeliveryNos.length > 0 && pageDeliveryNos.every((d) => selectedDeliveryNos.has(d));
-  const somePageSelected = pageDeliveryNos.some((d) => selectedDeliveryNos.has(d));
+    setAllSelected(false);
+  }, [statusFilter, globalFilter, selectedMonth]);
 
   const onToggleDelivery = useCallback((deliveryNo) => {
+    setAllSelected(false);
     setSelectedDeliveryNos((prev) => {
       const next = new Set(prev);
       if (next.has(deliveryNo)) next.delete(deliveryNo);
@@ -60,18 +63,33 @@ const OpenDOTable = ({ initialStatus = "open", initialPage = 1, pageSize = 20 })
     });
   }, []);
 
-  const onToggleSelectAllPage = useCallback(() => {
-    setSelectedDeliveryNos((prev) => {
-      const next = new Set(prev);
-      const shouldSelect = !(pageDeliveryNos.length > 0 && pageDeliveryNos.every((d) => next.has(d)));
-      pageDeliveryNos.forEach((d) => (shouldSelect ? next.add(d) : next.delete(d)));
-      return next;
-    });
-  }, [pageDeliveryNos]);
+  const onToggleSelectAll = useCallback(async () => {
+    if (allSelected) {
+      setSelectedDeliveryNos(new Set());
+      setAllSelected(false);
+      return;
+    }
+    try {
+      setSelectingAll(true);
+      const allDeliveryNos = await fetchAllMatchingDeliveryNos();
+      setSelectedDeliveryNos(new Set(allDeliveryNos));
+      setAllSelected(true);
+    } catch (e) {
+      console.error("Error selecting all pick slips:", e);
+      alert("Failed to select all pick slips. Please try again.");
+    } finally {
+      setSelectingAll(false);
+    }
+  }, [allSelected, fetchAllMatchingDeliveryNos]);
 
   const onPrintSelected = useCallback(async () => {
     const deliveryNos = Array.from(selectedDeliveryNos);
     if (deliveryNos.length === 0) return;
+    if (deliveryNos.length > 30 && !window.confirm(
+      `You're about to merge and print ${deliveryNos.length} pick slips into one PDF — this can take a while and produce a very large file. Continue?`
+    )) {
+      return;
+    }
     try {
       setPrinting(true);
       const blobs = [];
@@ -102,15 +120,15 @@ const OpenDOTable = ({ initialStatus = "open", initialPage = 1, pageSize = 20 })
     () => tableColumns({
       statusFilter,
       selectedDeliveryNos,
-      allPageSelected,
-      somePageSelected,
+      allSelected,
+      selectingAll,
       selectedCount: selectedDeliveryNos.size,
       printing,
-      onToggleSelectAllPage,
+      onToggleSelectAll,
       onToggleDelivery,
       onPrintSelected,
     }),
-    [statusFilter, selectedDeliveryNos, allPageSelected, somePageSelected, printing, onToggleSelectAllPage, onToggleDelivery, onPrintSelected]
+    [statusFilter, selectedDeliveryNos, allSelected, selectingAll, printing, onToggleSelectAll, onToggleDelivery, onPrintSelected]
   );
 
   const table = useReactTable({
