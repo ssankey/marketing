@@ -2,6 +2,7 @@
 // pages/api/invoices/public-detail.js
 import { queryDatabase } from "../../../lib/db";
 import sql from "mssql";
+import { attachMsdsUrls } from "../../../lib/models/msds";
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -56,6 +57,7 @@ export default async function handler(req, res) {
     T1.Price                   AS UnitSalesPrice,
     T1.Quantity                AS Qty,
     T1.LineTotal               AS TotalSalesPrice,
+    T17.ItmsGrpNam             AS Category,
     ISNULL(T15.U_vendorbatchno, '') AS VendorBatchNum,
     T15.U_COA                  AS LocalCOAFilename,
     
@@ -95,9 +97,11 @@ export default async function handler(req, res) {
     AND T10.BaseType = 15 
     AND T10.BaseLinNum = T2.LineNum 
     AND T10.Direction = 1
-  LEFT JOIN OIBT T15 ON T10.ItemCode = T15.ItemCode 
+  LEFT JOIN OIBT T15 ON T10.ItemCode = T15.ItemCode
     AND T10.BatchNum = T15.BatchNum
-  WHERE 
+  LEFT JOIN OITM T16 ON T16.ItemCode = T1.ItemCode
+  LEFT JOIN OITB T17 ON T16.ItmsGrpCod = T17.ItmsGrpCod
+  WHERE
     T0.DocEntry = @docEntry 
     AND T0.DocNum = @docNum
     ${systemRefNo && systemRefNo.trim() !== '' ? 'AND T0.NumAtCard = @refNo' : ''}
@@ -117,6 +121,10 @@ export default async function handler(req, res) {
     if (results.length === 0) {
       return res.status(404).json({ message: 'No matching line items found' });
     }
+
+    // Only 3A-chemical lines get a cross-server (test_density) lookup —
+    // everything else is skipped without the round trip.
+    await attachMsdsUrls(results, (r) => r.Item_No, (r) => r.Category);
 
     const header = {
       InvoiceNo: results[0].InvoiceNo,
@@ -140,7 +148,8 @@ export default async function handler(req, res) {
       VendorBatchNum: row.VendorBatchNum,
       LocalCOAFilename: row.LocalCOAFilename,
       EnergyCoaUrl: row.EnergyCoaUrl,
-      CoaSource: row.CoaSource
+      CoaSource: row.CoaSource,
+      MsdsUrl: row.MsdsUrl
     }));
 
     res.status(200).json({
@@ -151,8 +160,7 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Error in COA invoice detail API:', error);
     res.status(500).json({
-      message: 'Internal server error',
-      error: error.message
+      message: 'Something went wrong while retrieving this invoice. Please contact customerservice@densitypharmachem.com for assistance.'
     });
   }
 }

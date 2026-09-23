@@ -158,7 +158,11 @@ export default function useInvoiceData(docEntry, docNum, refNo) {
           return {
             ...item,
             COA: isCoaAvailable ? coaUrl : null, // Only set COA if it's actually available
-            isCoaChecked: true
+            isCoaChecked: true,
+            // MSDS: one per ItemCode, already resolved server-side (attachMsdsUrls
+            // in lib/models/msds.js) — its presence on the row IS the availability
+            // signal, no client-side HEAD check needed the way COA has.
+            MSDS: item.MsdsUrl ? `/api/msds/download/${encodeURIComponent(item.ItemNo)}` : null,
           };
         })
       );

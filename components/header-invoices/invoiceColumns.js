@@ -6,7 +6,6 @@ import { formatCurrency } from "utils/formatCurrency";
 import { formatDate } from "utils/formatDate";
 import { FlaskConical, FileText, Download, QrCode, MapPin } from "lucide-react";
 import { Spinner, Badge } from "react-bootstrap";
-import msdsMap from "public/data/msds-map.json";
 import { useAuth } from 'contexts/AuthContext';
 import { Tags } from "lucide-react";
 import { formatTime  } from "utils/formatTime";
@@ -649,6 +648,11 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
 
   // Same merge-then-print treatment as COA — a multi-line invoice can pull in
   // several distinct MSDS PDFs, so they're combined into one print job.
+  // MSDS is now resolved server-side from the TEST_DENSITY [3AProducts]
+  // table (lib/models/msds.js) via /api/msds/download/[itemCode], not the
+  // old public/data/msds-map.json (a stale, manually-exported Excel sheet) —
+  // deduped by ItemCode instead of by URL, since the URL isn't known until
+  // that fetch resolves.
   const handleMSDSPrint = async (docEntry, docNum) => {
     try {
       const res = await fetch(
@@ -661,25 +665,23 @@ const InvoiceActions = ({ docEntry, docNum, onDetailsClick }) => {
         return;
       }
 
-      const seenUrls = new Set();
+      const seenItemCodes = new Set();
       const msdsBlobs = [];
 
       for (const item of invoice.LineItems) {
         const key = item.ItemCode?.trim();
-        const msdsUrl = msdsMap[key];
+        if (!key || seenItemCodes.has(key)) continue;
+        seenItemCodes.add(key);
 
-        if (msdsUrl && !seenUrls.has(msdsUrl)) {
-          seenUrls.add(msdsUrl);
-          try {
-            const fileRes = await fetch(msdsUrl);
-            if (!fileRes.ok) {
-              console.warn("MSDS not found at", msdsUrl);
-              continue;
-            }
-            msdsBlobs.push(await fileRes.blob());
-          } catch (err) {
-            console.error(`Failed to fetch MSDS for ${key}:`, err);
+        try {
+          const fileRes = await fetch(`/api/msds/download/${encodeURIComponent(key)}`);
+          if (!fileRes.ok) {
+            console.warn("MSDS not found for", key);
+            continue;
           }
+          msdsBlobs.push(await fileRes.blob());
+        } catch (err) {
+          console.error(`Failed to fetch MSDS for ${key}:`, err);
         }
       }
 

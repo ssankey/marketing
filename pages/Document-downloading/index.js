@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { Download, Loader, AlertCircle, Printer } from 'lucide-react';
-import msdsMap from 'public/data/msds-map.json';
 
 const COMPANY_ADDRESS = {
   name: 'Density Pharmachem Private Limited',

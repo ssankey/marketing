@@ -107,12 +107,9 @@ export default async function handler(req, res) {
           message: err.message,
           path: filePath
         });
-        
-        return res.status(404).json({ 
-          message: 'COA file not found or not accessible',
-          path: filePath,
-          error: err.message,
-          code: err.code
+
+        return res.status(404).json({
+          message: 'This COA file is not available. Please contact customerservice@densitypharmachem.com for assistance.',
         });
       }
     } else {
@@ -151,7 +148,7 @@ export default async function handler(req, res) {
         if (isHead) {
           // Don't fall through to the smbclient download just to answer a HEAD
           // existence check — the mounted-path miss is enough to say "not found".
-          return res.status(404).json({ message: 'COA file not found or not accessible', path: filePath });
+          return res.status(404).json({ message: 'COA file not found or not accessible' });
         }
 
         console.log('Trying smbclient approach');
@@ -188,17 +185,13 @@ export default async function handler(req, res) {
           
         } catch (smbErr) {
           console.error('SMB access error:', {
-            message: smbErr.message,
+            mountedPathError: err.message,
+            smbError: smbErr.message,
             code: smbErr.code
           });
-          
-          return res.status(404).json({ 
-            message: 'COA file not found via any method',
-            paths: [filePath, `//172.50.10.9/SAP-Attachments/Attachment/${safeFilename}`],
-            errors: {
-              mountedPath: err.message,
-              smbClient: smbErr.message
-            }
+
+          return res.status(404).json({
+            message: 'This COA file is not available. Please contact customerservice@densitypharmachem.com for assistance.',
           });
         }
       }
@@ -245,11 +238,9 @@ export default async function handler(req, res) {
       stack: error.stack,
       platform: process.platform
     });
-    
-    return res.status(500).json({ 
-      message: 'Internal server error',
-      error: error.message,
-      platform: process.platform
+
+    return res.status(500).json({
+      message: 'Something went wrong while retrieving this COA. Please contact customerservice@densitypharmachem.com for assistance.',
     });
   }
 }
