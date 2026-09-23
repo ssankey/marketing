@@ -34,8 +34,8 @@ export default async function handler(req, res) {
     try {
       files = await readdir(basePath);
     } catch (err) {
-      console.error("Pick Slip folder access error:", err);
-      return res.status(404).json({ message: "Pick Slip folder not found", path: basePath, error: err.message });
+      console.error("Pick Slip folder access error:", { docNum, basePath, error: err.message });
+      return res.status(404).json({ message: "Pick Slip not found for this delivery." });
     }
 
     const prefix = `pick_slip_${docNum}_`.toLowerCase();
@@ -44,7 +44,8 @@ export default async function handler(req, res) {
     );
 
     if (!pickSlipFile) {
-      return res.status(404).json({ message: "Pick Slip PDF not found for this delivery", availableFiles: files });
+      console.error("Pick Slip PDF not found for delivery:", { docNum, fileCount: files.length });
+      return res.status(404).json({ message: "Pick Slip not found for this delivery." });
     }
 
     const filePath = path.join(basePath, pickSlipFile);
@@ -54,8 +55,8 @@ export default async function handler(req, res) {
     res.setHeader("Content-Disposition", `attachment; filename="Pick_Slip_${docNum}.pdf"`);
     return res.send(fileData);
   } catch (error) {
-    console.error("Server error:", error);
-    return res.status(500).json({ message: "Internal server error", error: error.message });
+    console.error("Server error:", { docNum, error: error.message });
+    return res.status(500).json({ message: "Something went wrong while retrieving the pick slip." });
   }
 }
 

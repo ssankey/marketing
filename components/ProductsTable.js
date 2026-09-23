@@ -4,63 +4,69 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Spinner, Modal } from "react-bootstrap";
 import downloadExcel from "utils/exporttoexcel";
-import msdsMap from "public/data/msds-map.json";
 import { useAuth } from 'contexts/AuthContext';
 
 const PAGE_SIZE = 20;
 
-const ProductActions = ({ itemCode }) => {
+// Downloads a document that's proxied server-side from the TEST_DENSITY
+// [3AProducts] table (lib/models/msds.js) — `kind` picks which proxy route
+// and which label/filename to use. Replaces the old public/data/msds-map.json
+// (a stale, manually-exported Excel sheet) as the source of truth for both
+// MSDS and Spec Sheets.
+const ThreeADocButton = ({ itemCode, kind }) => {
   const { user } = useAuth();
-  const [loadingMSDS, setLoadingMSDS] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const isAdminOrSales = ['admin', 'sales_person'].includes(user?.role);
+  if (!isAdminOrSales) return <span className="pt-dash">—</span>;
 
-  const handleMSDSDownload = async () => {
+  const { label, path, className } =
+    kind === 'specs'
+      ? { label: 'Specs', path: '/api/specs/download/', className: 'pt-doc-btn-specs' }
+      : { label: 'MSDS', path: '/api/msds/download/', className: 'pt-doc-btn-msds' };
+
+  const handleDownload = async () => {
     try {
-      setLoadingMSDS(true);
-
+      setLoading(true);
       const key = itemCode.trim();
-      const msdsUrl = msdsMap[key];
+      const fileRes = await fetch(`${path}${encodeURIComponent(key)}`);
 
-      if (!msdsUrl) {
-        alert("MSDS not found for this product");
+      if (!fileRes.ok) {
+        alert(`${label} not found for this product`);
         return;
       }
 
-      const fileRes = await fetch(msdsUrl);
       const blob = await fileRes.blob();
       const blobUrl = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = `${key}_MSDS.pdf`;
+      a.download = `${key}_${label}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
     } catch (err) {
-      console.error("Error in MSDS download:", err);
-      alert("Failed to download MSDS file.");
+      console.error(`Error in ${label} download:`, err);
+      alert(`Failed to download ${label} file.`);
     } finally {
-      setLoadingMSDS(false);
+      setLoading(false);
     }
   };
-
-  if (!isAdminOrSales) return <span className="pt-dash">—</span>;
 
   return (
     <div className="pt-doc-actions">
       <button
-        className="pt-doc-btn pt-doc-btn-msds"
+        className={`pt-doc-btn ${className}`}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          handleMSDSDownload();
+          handleDownload();
         }}
-        title="Download MSDS"
-        disabled={loadingMSDS}
+        title={`Download ${label}`}
+        disabled={loading}
       >
-        {loadingMSDS ? <Spinner animation="border" size="sm" /> : "MSDS"}
+        {loading ? <Spinner animation="border" size="sm" /> : label}
       </button>
     </div>
   );
@@ -739,6 +745,7 @@ export default function ProductsTable({
                       <th className="pt-th-left">Sample COA</th>
                       <SortHeader label="Item Name" field="ItemName" className="pt-th-left" />
                       <SortHeader label="CAS No." field="U_CasNo" className="pt-th-left" />
+                      <th className="pt-th-left">Specs</th>
                       <th className="pt-th-left">MSDS</th>
                       <SortHeader label="Stock Status" field="stockStatus" className="pt-th-left" />
                       <SortHeader label="Category" field="Category" className="pt-th-left" />
@@ -778,7 +785,10 @@ export default function ProductsTable({
                         <td className="pt-desc" title={product.ItemName}>{product.ItemName}</td>
                         <td>{product.U_CasNo || <span className="pt-dash">N/A</span>}</td>
                         <td>
-                          <ProductActions itemCode={product.ItemCode} />
+                          <ThreeADocButton itemCode={product.ItemCode} kind="specs" />
+                        </td>
+                        <td>
+                          <ThreeADocButton itemCode={product.ItemCode} kind="msds" />
                         </td>
                         <td>
                           <span className={`pt-badge ${product.stockStatus === "In Stock" ? "good" : "bad"}`}>
@@ -1181,6 +1191,8 @@ const PAGE_STYLES = `
   .pt-doc-btn-msds:hover:not(:disabled) { background: var(--surface2); }
   .pt-doc-btn-coa { color: var(--good); border-color: var(--good); }
   .pt-doc-btn-coa:hover:not(:disabled) { background: var(--surface-green); }
+  .pt-doc-btn-specs { color: #a1621e; border-color: #a1621e; }
+  .pt-doc-btn-specs:hover:not(:disabled) { background: #fdf1e3; }
 
   .pt-badge {
     display: inline-block;

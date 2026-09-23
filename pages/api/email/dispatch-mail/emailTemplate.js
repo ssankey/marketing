@@ -34,7 +34,13 @@ const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl, currency) =
 
     // NEW: Use generateAndCheckCoaUrl to both generate URL and verify availability
     coaLink = await generateAndCheckCoaUrl(row, baseUrl);
-    
+
+    // MSDS — one per ItemCode (not per-batch like COA), already resolved
+    // (or set to null) by attachMsdsUrls() in invoiceService.js. Its
+    // presence on the row IS the availability signal — no HEAD check needed.
+    const hardcodedBaseUrl = "https://marketing.densitypharmachem.com";
+    const msdsLink = row.MsdsUrl ? `${hardcodedBaseUrl}/api/msds/download/${encodeURIComponent(row.ItemNo)}` : null;
+
     if (coaLink) {
       // Determine text based on COA source
       if (row.CoaSource === 'LOCAL') {
@@ -64,10 +70,17 @@ const generateTableRows = async (rows, docEntry, invoiceNo, baseUrl, currency) =
         <td style="border:1px solid #ccc; padding:6px; text-align:center;">${row.Qty || ''}</td>
         <td style="border:1px solid #ccc; padding:6px; text-align:right;">${formatCurrency(row.TotalSalesPrice) || ''}</td>
         <td style="border:1px solid #ccc; padding:6px; text-align:center;">
-          ${coaLink ? 
+          ${coaLink ?
             `<a href="${coaLink}" target="_blank" style="color: #007bff; text-decoration: underline; font-size: 12px;">
               ${coaText}
-            </a>` 
+            </a>`
+            : '<span style="font-size: 0.75rem; color: #6c757d;"> </span>'}
+        </td>
+        <td style="border:1px solid #ccc; padding:6px; text-align:center;">
+          ${msdsLink ?
+            `<a href="${msdsLink}" target="_blank" style="color: #007bff; text-decoration: underline; font-size: 12px;">
+              MSDS
+            </a>`
             : '<span style="font-size: 0.75rem; color: #6c757d;"> </span>'}
         </td>
       </tr>
@@ -173,6 +186,7 @@ export const generateEmailContent = async (invoiceDetails, trackingData, baseUrl
                     <th style="border:1px solid #ccc; padding:6px; text-align:center;">QTY</th>
                     <th style="border:1px solid #ccc; padding:6px; text-align:right;">Total Sales Price</th>
                     <th style="border:1px solid #ccc; padding:6px; text-align:center;">COA</th>
+                    <th style="border:1px solid #ccc; padding:6px; text-align:center;">MSDS</th>
                 </tr>
             </thead>
             <tbody>

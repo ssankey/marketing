@@ -23,7 +23,7 @@ export default function InvoiceTable({
     try {
       // Create a filename based on item code and batch number
       const filename = `COA_${itemNo}_${vendorBatchNum}.pdf`;
-      
+
       // Create a temporary link and trigger download
       const a = document.createElement("a");
       a.href = coaUrl;
@@ -31,7 +31,7 @@ export default function InvoiceTable({
       a.target = "_blank"; // Open in new tab as fallback
       document.body.appendChild(a);
       a.click();
-      
+
       // Clean up
       setTimeout(() => {
         document.body.removeChild(a);
@@ -39,6 +39,23 @@ export default function InvoiceTable({
     } catch (e) {
       console.error("Failed to download COA:", e);
       alert("Failed to download COA file.");
+    }
+  };
+
+  const handleMSDSDownload = async (msdsUrl, itemNo) => {
+    try {
+      const a = document.createElement("a");
+      a.href = msdsUrl;
+      a.download = `MSDS_${itemNo}.pdf`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+      }, 100);
+    } catch (e) {
+      console.error("Failed to download MSDS:", e);
+      alert("Failed to download MSDS file.");
     }
   };
 
@@ -127,6 +144,35 @@ export default function InvoiceTable({
         }
 
         // Show N/A if COA is not available
+        return <span style={{ fontSize: '0.75rem', color: '#6c757d' }}> </span>;
+      },
+    },
+    {
+      accessorKey: "MSDS",
+      header: "MSDS",
+      cell: ({ row }) => {
+        const itemNo = row.original.ItemNo;
+        const msdsUrl = row.original.MSDS;
+
+        if (msdsUrl) {
+          return (
+            <Button
+              variant="link"
+              size="sm"
+              className="p-0 text-decoration-underline"
+              style={{
+                fontSize: '0.875rem',
+                color: '#007bff',
+                border: 'none',
+                background: 'none'
+              }}
+              onClick={() => handleMSDSDownload(msdsUrl, itemNo)}
+            >
+              MSDS
+            </Button>
+          );
+        }
+
         return <span style={{ fontSize: '0.75rem', color: '#6c757d' }}> </span>;
       },
     }

@@ -2,6 +2,7 @@
 // pages/api/email/dispatch-mail/invoiceService.js
 import { queryDatabase } from "../../../../lib/db";
 import sql from "mssql";
+import { attachMsdsUrls } from "../../../../lib/models/msds";
 
 // Function to get detailed invoice information
 export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
@@ -38,6 +39,7 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
             T1.Quantity              AS Qty,
             T1.LineTotal             AS TotalSalesPrice,
             T9.E_Mail                AS CustomerEmail,
+            T17.ItmsGrpNam           AS Category,
             ISNULL(T15.U_vendorbatchno, '') AS VendorBatchNum,
             T15.U_COA                AS LocalCOAFilename,
             
@@ -79,9 +81,11 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
                 AND T10.BaseType = 15 
                 AND T10.BaseLinNum = T2.LineNum 
                 AND T10.Direction = 1
-            LEFT JOIN OIBT T15 ON T10.ItemCode = T15.ItemCode 
+            LEFT JOIN OIBT T15 ON T10.ItemCode = T15.ItemCode
                 AND T10.BatchNum = T15.BatchNum
-          
+            LEFT JOIN OITM T16 ON T16.ItemCode = T1.ItemCode
+            LEFT JOIN OITB T17 ON T16.ItmsGrpCod = T17.ItmsGrpCod
+
             WHERE T0.DocNum = @docNum
             ORDER BY T1.LineNum;
     `;
@@ -89,7 +93,11 @@ export const getInvoiceDetails = async (invoiceNo, docEntry, baseUrl) => {
     // Set parameters for the detail query
     const params = [{ name: "docNum", type: sql.Int, value: invoiceNo }];
     const rows = await queryDatabase(detailQuery, params);
-    
+
+    // Only 3A-chemical lines get a cross-server (test_density) lookup —
+    // everything else is skipped without the round trip.
+    await attachMsdsUrls(rows, (r) => r.ItemNo, (r) => r.Category);
+
     console.log(`\n=== SQL Query Results for Invoice ${invoiceNo} ===`);
     rows.forEach((row, index) => {
         console.log(`Row ${index + 1}: ${row.ItemNo}`);
