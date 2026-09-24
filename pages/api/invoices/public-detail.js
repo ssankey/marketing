@@ -149,7 +149,10 @@ export default async function handler(req, res) {
       LocalCOAFilename: row.LocalCOAFilename,
       EnergyCoaUrl: row.EnergyCoaUrl,
       CoaSource: row.CoaSource,
-      MsdsUrl: row.MsdsUrl
+      // Only used client-side as an "MSDS exists" flag (downloads go through
+      // /api/msds/download/[itemCode]) — don't hand the raw URL / share file
+      // name to the public page.
+      MsdsUrl: row.MsdsUrl ? true : null
     }));
 
     res.status(200).json({
