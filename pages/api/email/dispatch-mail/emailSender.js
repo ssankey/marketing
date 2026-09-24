@@ -1,6 +1,8 @@
 
 // pages/api/email/dispatch-mail/emailSender.js
 // Function to send dispatch email with conditional BCC and CC
+import { buildToList } from "../../../../lib/emailOverrides";
+
 export const sendDispatchEmail = async (
     emailContent,
     contactPersonEmail,
@@ -44,12 +46,10 @@ export const sendDispatchEmail = async (
         console.log(`📌 Added Mankind Pharma emails to CC for CardCode: ${cardCode}`);
     }
 
-    // Add Jubilant Biosys email if CardCode is C000072
-    if (cardCode === 'C000072') {
-        ccList.push("Store.BiosysNoida@jubilantbiosys.com");
-        console.log(`📌 Added Jubilant Biosys email to CC for CardCode: ${cardCode}`);
-    }
-    
+    // Jubilant Biosys (CardCode C000072): Store.BiosysNoida@jubilantbiosys.com
+    // used to be added here as CC — it's now one of the addresses buildToList()
+    // adds to To instead (lib/emailOverrides.js), so it isn't duplicated in CC too.
+
     const sendRes = await fetch(
         `${baseUrl}/api/email/base_mail`,
         {
@@ -57,7 +57,7 @@ export const sendDispatchEmail = async (
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 from: "customerservice@densitypharmachem.com",
-                to: [contactPersonEmail],
+                to: buildToList([contactPersonEmail], cardCode),
                 cc: ccList, // Dynamic CC list
                 bcc: bccList, // Dynamic BCC list
                 subject: subject,
