@@ -1,20 +1,26 @@
 
-
+// pages/customer-balance/index.js
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { Breadcrumb, Card, Container } from "react-bootstrap";
+import { Row,Col,Card, Container, Spinner } from "react-bootstrap";
 import CustomerBalanceTable from "../../components/page/customer-balance/table/CustomerBalanceTable";
 import CustomerBalanceChart from "../../components/page/customer-balance/chart/CustomerBalanceChart";
-import { debounce } from "lodash";
-import downloadExcel from "utils/exporttoexcel"; 
+import CustomerBalTable from "../../components/page/customer-balance/table/customer-bal-table";
+import { formatDate } from "utils/formatDate";
+import { useAuth } from "contexts/AuthContext";
 
- 
+import TokenCustomerAgingChart from "../../components/CustomerCharts/TokenCustomerAgingChart";
 
-// ... (previous imports)
 
 export default function CustomerBalancePage() {
   const router = useRouter();
+  const { user } = useAuth();
+const userRole = user?.role;
+
+ const { token } = useAuth();
+
+  // —— State for Filters, Chart & Details Table —— //
   const [customerData, setCustomerData] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [totalItems, setTotalItems] = useState(0);
@@ -29,147 +35,168 @@ export default function CustomerBalancePage() {
     toDate: "",
     sortField: "SO Date",
     sortDirection: "desc",
-    // Add new filter state
     salesPerson: null,
     category: null,
-    product: null
+    product: null,
   });
 
-  // Combined data fetch effect
+  // —— State for Summary Table —— //
+  const [balances, setBalances] = useState([]);
+  const [summaryPage, setSummaryPage] = useState(1);
+  const [summaryTotal, setSummaryTotal] = useState(0);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(true);
+  const pageSize = 10;
+
+  // Fetch chart & details whenever filters or currentPage changes
   useEffect(() => {
     fetchCustomerData();
     fetchChartData();
   }, [currentPage, filters]);
 
-  const fetchCustomerData = async () => {
+
+  useEffect(() => {
+  const fetchAllBalances = async () => {
+    setIsBalanceLoading(true);
     try {
-      setIsLoading(true);
-      
+      const token = localStorage.getItem("token"); // ✅ Add this
+      const res = await fetch("/api/customer-balance", {
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Add this
+        },
+      });
+      const json = await res.json();
+      setBalances(json.invoices || []);
+      setSummaryTotal(json.totalItems || 0);
+    } catch (e) {
+      console.error(e);
+      setBalances([]);
+      setSummaryTotal(0);
+    } finally {
+      setIsBalanceLoading(false);
+    }
+  };
+  fetchAllBalances();
+}, []);
+
+
+  // —— API calls —— //
+  const fetchCustomerData = async () => {
+    setIsLoading(true);
+    try {
       const params = new URLSearchParams({
-        queryType: 'deliveries',
+        queryType: "deliveries",
         page: currentPage,
         search: filters.searchTerm,
         status: filters.statusFilter,
-        fromDate: filters.fromDate || "",
-        toDate: filters.toDate || "",
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
         sortField: filters.sortField,
-        sortDir: filters.sortDirection
+        sortDir: filters.sortDirection,
+        slpCode: filters.salesPerson?.value || "",
+        itmsGrpCod: filters.category?.value || "",
+        itemCode: filters.product?.value || "",
+        cardCode: filters.customer?.value || "",
       });
-
-      const response = await fetch(`/api/dashboard/customers-balances?${params}`);
-      if (!response.ok) throw new Error("Failed to fetch customer balances");
-
-      const data = await response.json();
-      const totalCount = response.headers.get('X-Total-Count');
-      
-      setCustomerData(data || []);
-      setTotalItems(totalCount ? parseInt(totalCount) : data.length);
-      setTotalPages(Math.ceil((totalCount ? parseInt(totalCount) : data.length) / 20));
-    } catch (error) {
-      console.error("Fetch error:", error);
+      const res = await fetch(`/api/dashboard/customers-balances?${params}`);
+      const data = await res.json();
+      const total = parseInt(res.headers.get("X-Total-Count") || data.length);
+      setCustomerData(data);
+      setTotalItems(total);
+      setTotalPages(Math.ceil(total / 20));
+    } catch (e) {
+      console.error("Fetch error:", e);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const handleExcelDownload = async () => {
-  try {
-    const params = new URLSearchParams({
-      queryType: 'deliveries',
-      getAll: 'true',
-      search: filters.searchTerm,
-      status: filters.statusFilter,
-      fromDate: filters.fromDate || "",
-      toDate: filters.toDate || "",
-      sortField: filters.sortField,
-      sortDir: filters.sortDirection,
-      slpCode: filters.salesPerson?.value || "",
-      itmsGrpCod: filters.category?.value || "",
-      itemCode: filters.product?.value || "",
-    });
 
-    const response = await fetch(`/api/dashboard/customers-balances?${params}`);
-    const fullData = await response.json();
-
-    const formattedData = fullData.map((item) => ({
-      "SO#": item["SO#"],
-      "Customer Code": item["Customer Code"],
-      "Customer Name": item["Customer Name"],
-      "SO Date": item["SO Date"],
-      "Delivery#": item["Delivery#"],
-      "Delivery Date": item["Delivery Date"],
-      "Invoice No.": item["Invoice No."],
-      "AR Invoice Date": item["AR Invoice Date"],
-      "Invoice Total": item["Invoice Total"],
-      "Balance Due": item["Balance Due"],
-      "BP Reference No.": item["BP Reference No."],
-      "Overdue Days": item["Overdue Days"],
-      "Payment Terms": item["Payment Terms"],
-      "Sales Rep": item["Sales Rep"],
-    }));
-
-    const { default: downloadExcel } = await import("utils/exporttoexcel");
-    downloadExcel(formattedData, "Customer_Balance_Report");
-  } catch (error) {
-    console.error("Excel export failed:", error);
-    alert("Failed to export Excel. Please try again.");
-  }
-};
-
-
-  
   const fetchChartData = async () => {
-  try {
     setIsChartLoading(true);
-    
-    // Include the same filters for chart data
-    const params = new URLSearchParams({
-      queryType: 'chart',
-      search: filters.searchTerm,
-      status: filters.statusFilter,
-      fromDate: filters.fromDate || "",
-      toDate: filters.toDate || "",
-      // Add the new filter params
-      slpCode: filters.salesPerson?.value || "",
-      itmsGrpCod: filters.category?.value || "",
-      itemCode: filters.product?.value || ""
-    });
-
-    const response = await fetch(`/api/dashboard/customers-balances?${params}`);
-    if (!response.ok) throw new Error("Failed to fetch chart data");
-    
-    const data = await response.json();
-    setChartData(data || []);
-  } catch (error) {
-    console.error("Error fetching chart data:", error);
-  } finally {
-    setIsChartLoading(false);
-  }
-};
-
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
+    try {
+      const params = new URLSearchParams({
+        queryType: "chart",
+        search: filters.searchTerm,
+        status: filters.statusFilter,
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
+        slpCode: filters.salesPerson?.value || "",
+        itmsGrpCod: filters.category?.value || "",
+        itemCode: filters.product?.value || "",
+        cardCode: filters.customer?.value || "",
+      });
+      const res = await fetch(`/api/dashboard/customers-balances?${params}`);
+      const data = await res.json();
+      setChartData(data);
+    } catch (e) {
+      console.error("Chart fetch error:", e);
+    } finally {
+      setIsChartLoading(false);
+    }
   };
 
+  // —— Export to Excel —— //
+  const handleExcelDownload = async () => {
+    try {
+      const params = new URLSearchParams({
+        queryType: "deliveries",
+        getAll: "true",
+        search: filters.searchTerm,
+        status: filters.statusFilter,
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
+        sortField: filters.sortField,
+        sortDir: filters.sortDirection,
+        slpCode: filters.salesPerson?.value || "",
+        itmsGrpCod: filters.category?.value || "",
+        itemCode: filters.product?.value || "",
+      });
+      const res = await fetch(`/api/dashboard/customers-balances?${params}`);
+      const fullData = await res.json();
+      const formatted = fullData.map((item) => ({
+        "Inv No.": item["Invoice No."],
+        "AR Invoice Date": formatDate(item["AR Invoice Date"]),
+        "SO#": item["SO#"],
+        "SO Date": formatDate(item["SO Date"]),
+        "Customer/Vendor Name": item["Customer Name"],
+        "Contact Person": item["Contact Person"],
+        "Customer Ref no": item["BP Reference No."],
+        "Invoice Total": item["Invoice Total"],
+        "Balance Due": item["Balance Due"],
+        Country: item["Country"],
+        State: item["State"],
+        "Airline Name": item["AirlineName"] || "N/A",
+        "Tracking no": item["TrackingNo"] || "N/A",
+        "Delivery Date": formatDate(item["Delivery Date"]),
+        "SO to Delivery Days": item["SOToDeliveryDays"] || "N/A",
+        "Overdue Days": item["Overdue Days"],
+        "Payment Group": item["Payment Terms"],
+      }));
+      const { default: downloadExcel } = await import("utils/exporttoexcel");
+      downloadExcel(formatted, "Customer_Balance_Report");
+    } catch (e) {
+      console.error("Excel export failed:", e);
+      alert("Failed to export Excel. Please try again.");
+    }
+  };
+
+  // —— Filter & Pagination Handlers —— //
+  const handlePageChange = (p) => setCurrentPage(p);
+  const handleSummaryPage = (p) => setSummaryPage(p);
   const handleSearch = (term) => {
-    setFilters(prev => ({ ...prev, searchTerm: term }));
+    setFilters((f) => ({ ...f, searchTerm: term }));
     setCurrentPage(1);
   };
-
   const handleStatusChange = (status) => {
-    setFilters(prev => ({ ...prev, statusFilter: status }));
+    setFilters((f) => ({ ...f, statusFilter: status }));
     setCurrentPage(1);
   };
-
   const handleDateFilterChange = ({ fromDate, toDate }) => {
-    setFilters(prev => ({ ...prev, fromDate, toDate }));
+    setFilters((f) => ({ ...f, fromDate, toDate }));
     setCurrentPage(1);
   };
-
-  const handleSort = (field, direction) => {
-    setFilters(prev => ({ ...prev, sortField: field, sortDirection: direction }));
+  const handleSort = (field, dir) => {
+    setFilters((f) => ({ ...f, sortField: field, sortDirection: dir }));
   };
-
   const handleReset = () => {
     setFilters({
       searchTerm: "",
@@ -177,73 +204,81 @@ export default function CustomerBalancePage() {
       fromDate: "",
       toDate: "",
       sortField: "SO Date",
-      sortDirection: "desc"
+      sortDirection: "desc",
+      salesPerson: null,
+      category: null,
+      product: null,
     });
     setCurrentPage(1);
   };
 
   return (
     <Container className="mt-3">
+      {/* — Chart Section — */}
+      {(userRole === "admin" || userRole === "salesperson") && (
       <Card className="mb-3 shadow-sm">
         <Card.Header className="bg-white">
           <h3 className="mb-0">Customer Balance Overview</h3>
         </Card.Header>
         <Card.Body>
-          {/* <CustomerBalanceChart
-            customerBalances={chartData} 
-            isLoading={isChartLoading} 
-          /> */}
-          {/* <CustomerBalanceChart
-              customerBalances={chartData}
-              isLoading={isChartLoading}
-              onFilterChange={(filterValues) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  salesPerson: filterValues.salesPerson || null,
-                  category: filterValues.category || null,
-                  product: filterValues.product || null,
-                }));
-                setCurrentPage(1);
-              }}
-            /> */}
-            <CustomerBalanceChart
-  customerBalances={chartData}
-  isLoading={isChartLoading}
-  onFilterChange={(filterValues) => {
-    setFilters((prev) => ({
-      ...prev,
-      salesPerson: filterValues.salesPerson || null,
-      category: filterValues.category || null,
-      product: filterValues.product || null,
-    }));
-    setCurrentPage(1);
-  }}
-/>
-
+          <CustomerBalanceChart
+            customerBalances={chartData}
+            isLoading={isChartLoading}
+            onFilterChange={(vals) => {
+              setFilters((f) => ({
+                ...f,
+                salesPerson: vals.salesPerson,
+                category: vals.category,
+                product: vals.product,
+                customer: vals.customer,
+              }));
+              setCurrentPage(1);
+            }}
+          />
         </Card.Body>
       </Card>
+    )}
 
-       <Card className="shadow-sm"> 
-        
-        <Card.Header className="bg-white d-flex justify-content-between align-items-center">
-  <h3 className="mb-0">Customer Balance Details</h3>
+     {(userRole === "contact_person") && (
+       <div className="pdf-section">
+          <Card className="mb-4">
+            <Card.Header>
+              <div className="d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Customer Balance Report</h3>
+              </div>
+            </Card.Header>
+            <Card.Body>
+              <Row>
+               
+                 <TokenCustomerAgingChart  />
+              </Row>
+            </Card.Body>
+          </Card>
+        </div>  
+    )}
+    
 
-</Card.Header>  
+
+
+      {/* — New Summary Table (TenStack) — */}
+      <Card className="mt-3 shadow-sm">
+        <Card.Header className="bg-white">
+          <h3 className="mb-0">Customer Balance Summary</h3>
+        </Card.Header>
         <Card.Body>
-          <CustomerBalanceTable
-            balances={customerData}
-            totalItems={totalItems}
-            totalPages={totalPages}
-            isLoading={isLoading}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            onSearch={handleSearch}
-            onStatusChange={handleStatusChange}
-            onDateFilterChange={handleDateFilterChange}
-            onSort={handleSort}
-            onReset={handleReset}
-            onExcelDownload={handleExcelDownload}
-          />
+          {isBalanceLoading ? (
+            <div className="text-center">
+              <Spinner animation="border" />
+              <p>Loading customer balances…</p>
+            </div>
+          ) : (
+            <CustomerBalTable
+              data={balances}
+              page={summaryPage}
+              onPageChange={handleSummaryPage}
+              pageSize={pageSize}
+            />
+          )}
         </Card.Body>
       </Card>
     </Container>

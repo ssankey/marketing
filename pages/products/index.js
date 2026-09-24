@@ -17,7 +17,9 @@ export default function ProductsPage({
   const [isLoading, setIsLoading] = useState(false);
   const [products, setProducts] = useState(initialProducts);
   const [totalItems, setTotalItems] = useState(initialTotalItems);
-  const [status, setStatus] = useState("all");
+  // Hydrate from the URL (not a hardcoded "all") so status survives back-navigation
+  // from a product detail page instead of silently resetting on remount.
+  const [status, setStatus] = useState(() => router.query.status || "all");
 
   // Handle loading state for client-side transitions
   useEffect(() => {
@@ -35,37 +37,47 @@ export default function ProductsPage({
     };
   }, [router]);
 
+
   // Fetch products whenever status changes
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      try {
-        const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc" } = router.query;
-        // Determine protocol: this example assumes HTTPS
-        const host = window.location.host;
-        const apiUrl = `https://${host}/api/products`;
+useEffect(() => {
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    try {
+      const { page = 1, search = "", sortField = "ItemCode", sortDir = "asc", category = "", webDisplay = "", priceSet = "" } = router.query;
+      // Determine protocol: this example assumes HTTPS
+      const host = window.location.host;
+      const apiUrl = `https://${host}/api/products`;
 
-        const res = await fetch(
-          `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
-        );
+      // Get token from localStorage or cookies
+      const token = localStorage.getItem('token') || document.cookie.match(/token=([^;]+)/)?.[1];
 
-        if (!res.ok) throw new Error("Failed to fetch products");
-
-        const data = await res.json();
-
-        setProducts(data.products);
-        setTotalItems(data.totalItems);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setProducts([]);
-        setTotalItems(0);
-      } finally {
-        setIsLoading(false);
+      const headers = {};
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
       }
-    };
 
-    fetchProducts();
-  }, [status, router.query]);
+      const res = await fetch(
+        `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}&category=${encodeURIComponent(category)}&webDisplay=${webDisplay}&priceSet=${priceSet}`,
+        { headers }
+      );
+
+      if (!res.ok) throw new Error("Failed to fetch products");
+
+      const data = await res.json();
+
+      setProducts(data.products);
+      setTotalItems(data.totalItems);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+      setTotalItems(0);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchProducts();
+}, [status, router.query]);
 
   // Update local state when props change
   useEffect(() => {
@@ -100,10 +112,12 @@ export default function ProductsPage({
 
 // Static SEO properties for ProductsPage
 ProductsPage.seo = {
-  title: "Products | Density",
+  title: "Product Master | Density",
   description: "View and manage all your products.",
   keywords: "products, density",
 };
+
+
 
 export async function getServerSideProps(context) {
   const {
@@ -112,6 +126,9 @@ export async function getServerSideProps(context) {
     sortField = "ItemCode",
     sortDir = "asc",
     status = "all",
+    category = "",
+    webDisplay = "",
+    priceSet = "",
   } = context.query;
 
   const protocol = context.req.headers["x-forwarded-proto"] || "http";
@@ -119,8 +136,17 @@ export async function getServerSideProps(context) {
   const apiUrl = `${protocol}://${host}/api/products`;
 
   try {
+    // Get the token from cookies
+    const token = context.req.cookies.token || context.req.headers.cookie?.match(/token=([^;]+)/)?.[1];
+
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const res = await fetch(
-      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}`
+      `${apiUrl}?page=${page}&search=${search}&sortField=${sortField}&sortDir=${sortDir}&status=${status}&category=${encodeURIComponent(category)}&webDisplay=${webDisplay}&priceSet=${priceSet}`,
+      { headers }
     );
 
     if (!res.ok) throw new Error("Failed to fetch products");

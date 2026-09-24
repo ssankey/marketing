@@ -1,31 +1,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import sql from "mssql";
 import { queryDatabase } from "../../../../lib/db";
 
@@ -62,7 +37,7 @@ export default async function handler(req, res) {
       INNER JOIN INV1 T1 ON T0.DocEntry = T1.DocEntry
       LEFT JOIN IBT1 T4 ON T4.CardCode = T0.CardCode
         AND T4.ItemCode = T1.ItemCode
-      WHERE T0.CANCELED = 'N'
+      WHERE T0.CANCELED <> 'Y' AND T0.CANCELED <> 'C'
         AND T0.CardCode = @cardCode
         ${year ? "AND YEAR(T0.DocDate) = @year" : ""}
       GROUP BY 
@@ -92,7 +67,7 @@ export default async function handler(req, res) {
     const yearsQuery = `
       SELECT DISTINCT YEAR(DocDate) as year
       FROM OINV
-      WHERE CANCELED = 'N'
+      WHERE CANCELED <> 'Y' AND CANCELED <> 'C'
       ORDER BY year DESC;
     `;
     const yearsResult = await queryDatabase(yearsQuery);

@@ -1,0 +1,296 @@
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.pageTitle {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.fyBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.pageSubtitle {
+  font-size: 13px;
+  color: #6c757d;
+  margin: 0 0 20px;
+}
+
+.card {
+  background: #fff;
+  border: 1.5px solid #e9ecef;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.cardHeader {
+  padding: 1rem 1.25rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cardHeaderTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.cardBody {
+  padding: 1.25rem;
+}
+
+.uploadGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .uploadGrid { grid-template-columns: 1fr; }
+}
+
+.formatBox {
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.formatLabel {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+
+.sampleTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.sampleTable th,
+.sampleTable td {
+  border: 1px solid #e2e8f0;
+  padding: 5px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sampleTable th {
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 700;
+}
+
+.linkBtn {
+  background: none;
+  border: none;
+  color: #0d6efd;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.linkBtn:hover { text-decoration: underline; }
+
+.uploadBox {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  background: #fff;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.uploadBoxLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.fileInput {
+  font-size: 13px;
+  padding: 8px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  width: 100%;
+}
+.fileInput:disabled { opacity: 0.6; }
+
+.statusMsg {
+  margin-top: 10px;
+  font-size: 12.5px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.statusSuccess { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.statusError   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.statusLoading { background: #eff6ff; color: #1d4ed8; }
+
+.filterRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.searchInput {
+  padding: 7px 12px;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 13px;
+  width: 250px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.searchInput:focus { border-color: #0d6efd; box-shadow: 0 0 0 3px rgba(13,110,253,0.08); }
+
+.btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+.btnPrimary { background: #0d6efd; color: #fff; }
+.btnPrimary:hover { background: #0b5ed7; }
+.btnOutline { background: #fff; color: #6c757d; border-color: #dee2e6; }
+.btnOutline:hover { background: #f8f9fa; border-color: #adb5bd; }
+.btnSuccess { background: #16a34a; color: #fff; }
+.btnSuccess:hover { background: #15803d; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tableWrap { overflow-x: auto; border-radius: 10px; border: 1px solid #f1f3f5; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 1100px; }
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #6c757d;
+  background: #f8f9fa;
+  border-bottom: 2px solid #e9ecef;
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f1f3f5;
+  color: #343a40;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:nth-child(even) { background: #fafbfc; }
+.table tbody tr:hover td { background: #f0f4ff; }
+
+.vendorName { font-weight: 600; color: #1a1a2e; }
+.msmeBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #3730a3;
+  background: #eef2ff;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.amount { font-family: "SFMono-Regular", Consolas, monospace; }
+.amountPositive { color: #b91c1c; font-weight: 600; }
+.amountZero { color: #94a3b8; }
+
+.emptyState {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6c757d;
+  font-size: 13.5px;
+}
+
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f3f5;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.paginationInfo { font-size: 12px; color: #6c757d; }
+
+.paginationBtns { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.pageBtn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1.5px solid #dee2e6;
+  background: #fff;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #495057;
+  transition: all 0.12s;
+}
+.pageBtn:hover { border-color: #0d6efd; color: #0d6efd; background: #f0f4ff; }
+.pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pageBtnActive { background: #0d6efd; border-color: #0d6efd; color: #fff; }
+.pageBtnActive:hover { background: #0b5ed7; color: #fff; }
+
+.loadingState {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  font-size: 13.5px;
+}
+
+.spinner {
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0d6efd;
+  animation: spin 0.7s linear infinite;
+  margin: 0 auto 10px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

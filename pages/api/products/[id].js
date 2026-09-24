@@ -1,4 +1,4 @@
-// pages/api/customers/[id].js
+// pages/api/products/[id].js
 import { getProductDetail } from "lib/models/products";
 
 export default async function handler(req, res) {
