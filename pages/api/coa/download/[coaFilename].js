@@ -4,10 +4,10 @@
 import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 
 const readFile = promisify(fs.readFile);
-const execPromise = promisify(exec);
+const execFilePromise = promisify(execFile);
 
 export default async function handler(req, res) {
   const { coaFilename } = req.query;
@@ -155,17 +155,31 @@ export default async function handler(req, res) {
 
         // Fallback to smbclient if available
         try {
-          const networkPath = `//172.50.10.9/SAP-Attachments/Attachment/${safeFilename}`;
-          const username = process.env.NETWORK_USERNAME || 'Densitypharma\\prakash';
-          const password = process.env.NETWORK_PASSWORD || '1y2a3d4a5v.@Q';
-          
-          // Use smbclient to download the file
+          // Credentials come from the environment only — no hardcoded defaults.
+          const username = process.env.NETWORK_USERNAME;
+          const password = process.env.NETWORK_PASSWORD;
+          if (!username || !password) {
+            throw new Error('NETWORK_USERNAME / NETWORK_PASSWORD are not configured');
+          }
+
+          // safeFilename comes from the URL, so it's attacker-controlled. It ends up
+          // inside smbclient's own -c command string, where ';' starts a new smbclient
+          // command (including "!" shell escapes) — reject those characters outright.
+          if (/[;$`"!\r\n]/.test(safeFilename)) {
+            throw new Error('Filename contains characters not allowed for the SMB fallback');
+          }
+
           const tempFilePath = `/tmp/coa_${Date.now()}_${path.basename(safeFilename)}`;
-          const smbCommand = `smbclient "//172.50.10.9/SAP-Attachments" -U "${username}%${password}" -c "cd Attachment; get \\"${safeFilename}\\" \\"${tempFilePath}\\"" 2>&1`;
-          
-          console.log('Executing SMB command (password hidden)');
-          
-          const { stdout, stderr } = await execPromise(smbCommand);
+
+          console.log('Executing smbclient (credentials hidden)');
+
+          // execFile passes arguments directly with no shell in between, so neither the
+          // filename nor the password can be interpreted as shell syntax.
+          const { stdout, stderr } = await execFilePromise('smbclient', [
+            '//172.50.10.9/SAP-Attachments',
+            '-U', `${username}%${password}`,
+            '-c', `cd Attachment; get "${safeFilename}" "${tempFilePath}"`,
+          ]);
           console.log('SMB stdout:', stdout);
           console.log('SMB stderr:', stderr);
           
