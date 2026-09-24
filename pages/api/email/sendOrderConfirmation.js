@@ -3,6 +3,7 @@
 
   import { getOrderDetails } from "../../../lib/models/orders";
   import { getManagerEmailForSlpCode } from "../../../lib/models/salesHierarchy";
+  import { buildToList } from "../../../lib/emailOverrides";
   import { queryDatabase } from "../../../lib/db";
   import sql from "mssql";
   import nodemailer from "nodemailer";
@@ -172,11 +173,9 @@
             console.log(`📌 Added manager ${manager.slpName} (SlpCode ${manager.slpCode}) to CC for Order ${details.DocNum}`);
           }
 
-          // Add Jubilant Biosys email if CardCode is C000072
-          if (order.CardCode === 'C000072') {
-            ccList.push("Store.BiosysNoida@jubilantbiosys.com");
-            console.log(`📌 Added Jubilant Biosys email to CC for CardCode: ${order.CardCode}`);
-          }
+          // Jubilant Biosys (CardCode C000072): Store.BiosysNoida@jubilantbiosys.com
+          // used to be added here as CC — it's now one of the addresses buildToList()
+          // adds to To instead (lib/emailOverrides.js), so it isn't duplicated in CC too.
 
           // ✉️ Step 6: Send mail
           const emailRes = await fetch(
@@ -186,7 +185,7 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 from: "customerservice@densitypharmachem.com",
-                to: [toEmail],
+                to: buildToList([toEmail], order.CardCode),
                 cc: ccList,
                 bcc: bccList,
                 subject: `Order confirmation- SO # ${details.DocNum}`,
