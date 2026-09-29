@@ -6,6 +6,7 @@ import AllWaybills     from "../../components/waybill/AllWaybills";
 import ImportData      from "../../components/waybill/ImportData";
 import UpdateEwaybill  from "../../components/waybill/UpdateEwaybill";
 import CancelWaybill   from "../../components/waybill/CancelWaybill";
+import UpdateDeliveryDate from "../../components/waybill/UpdateDeliveryDate";
 
 const TABS = [
   {
@@ -37,6 +38,12 @@ const TABS = [
     icon:    "❌",
     label:   "Cancel Waybill",
     desc:    "Cancel before dispatch",
+  },
+  {
+    key:     "delivery-date",
+    icon:    "📅",
+    label:   "Update Delivery Date",
+    desc:    "Bulk backfill via Excel",
   },
 ];
 
@@ -74,6 +81,7 @@ export default function WaybillPage() {
         {activeTab === "import"   && <ImportData />}
         {activeTab === "update"   && <UpdateEwaybill />}
         {activeTab === "cancel"   && <CancelWaybill />}
+        {activeTab === "delivery-date" && <UpdateDeliveryDate />}
       </div>
     </div>
   );
