@@ -27,50 +27,53 @@ function downloadTemplate() {
   XLSX.writeFile(wb, "delivery_date_update_template.xlsx");
 }
 
+// Every parsed date is normalized to a clean UTC midnight of the intended
+// calendar day — never a local-time Date — and always read back with the
+// UTC getters below. Two independent timezone bugs were found by mixing
+// local and UTC at different points (one server-side, since fixed in
+// update-delivery-date.js; one here, from the xlsx library's own serial->
+// Date conversion landing a few seconds before UTC midnight of the PREVIOUS
+// day due to floating-point rounding — confirmed directly against the real
+// library). Anchoring everything to UTC and rounding real Excel-date cells
+// to the nearest day boundary neutralizes both at once.
 const pad2 = (n) => String(n).padStart(2, "0");
-const toISODate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+// Wire format sent to the API (update-delivery-date.js expects YYYY-MM-DD) —
+// internal only, never shown to the user.
+const toISODate = (d) => `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+// Display format shown in this UI — matches the one input format accepted.
+const toDMYDate = (d) => `${pad2(d.getUTCDate())}-${pad2(d.getUTCMonth() + 1)}-${d.getUTCFullYear()}`;
+const isoToDMY = (isoStr) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoStr || "");
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : isoStr;
+};
 
-const ISO_DATE_RE    = /^(\d{4})-(\d{2})-(\d{2})$/;        // YYYY-MM-DD
-const DMY_DASH_RE     = /^(\d{2})-(\d{2})-(\d{4})$/;        // DD-MM-YYYY
+const DMY_DASH_RE = /^(\d{2})-(\d{2})-(\d{4})$/;  // DD-MM-YYYY — the only accepted text format
+const DAY_MS = 86400000;
 
 const isValidYMD = (y, m, d) => {
   if (m < 1 || m > 12 || d < 1 || d > 31) return false;
-  const dt = new Date(y, m - 1, d);
-  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 };
 
 // Excel date cells come through as JS Date objects (XLSX.read with
-// cellDates:true) — that's the recommended path and needs no format at all.
-// A plain typed-text cell is only accepted as one of two EXPLICIT formats,
-// each parsed by hand rather than handed to JS's generic Date parser:
-//   - "YYYY-MM-DD" (ISO)
-//   - "DD-MM-YYYY" (how this team naturally types dates)
-// Anything else (e.g. "28/09/2026", or mixing styles) is rejected on
-// purpose — the risk being guarded against is a format like "05-07-2026"
-// silently being read as the wrong one of "5 July" / "July 5" depending on
-// which convention is assumed. Hand-parsing each pattern as a fixed,
-// known field order removes that guess entirely instead of trying to
-// detect which convention a given string is in.
+// cellDates:true) — that's the recommended path and needs no typed format
+// at all, but the xlsx library's serial->Date conversion can land a few
+// seconds off true UTC midnight, which reading the wrong day boundary off
+// of would misread as the previous day — round to the nearest day first.
+// A plain typed-text cell is only accepted as "DD-MM-YYYY" (the one format
+// this team uses), parsed by hand rather than handed to JS's generic Date
+// parser — any other text (ISO, slashes, anything mixed) is rejected on
+// purpose, so there's exactly one format to teach and no silent guessing.
 function parseDateCell(raw) {
-  if (raw instanceof Date && !Number.isNaN(raw.getTime())) return raw;
+  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
+    return new Date(Math.round(raw.getTime() / DAY_MS) * DAY_MS);
+  }
   if (typeof raw !== "string") return null;
-  const text = raw.trim();
-
-  let m = ISO_DATE_RE.exec(text);
-  if (m) {
-    const [, y, mo, d] = m.map(Number);
-    if (isValidYMD(y, mo, d)) return new Date(y, mo - 1, d);
-    return null;
-  }
-
-  m = DMY_DASH_RE.exec(text);
-  if (m) {
-    const [, d, mo, y] = m.map(Number);
-    if (isValidYMD(y, mo, d)) return new Date(y, mo - 1, d);
-    return null;
-  }
-
-  return null;
+  const m = DMY_DASH_RE.exec(raw.trim());
+  if (!m) return null;
+  const [, d, mo, y] = m.map(Number);
+  return isValidYMD(y, mo, d) ? new Date(Date.UTC(y, mo - 1, d)) : null;
 }
 
 // Reads the sheet and validates its shape. Returns { rows, error }.
@@ -108,7 +111,7 @@ function parseWorkbook(arrayBuffer) {
         rowNum: i + 2,
         waybillNo,
         dateObj,
-        dateDisplay: dateObj ? toISODate(dateObj) : String(r[dateIdx] ?? ""),
+        dateDisplay: dateObj ? toDMYDate(dateObj) : String(r[dateIdx] ?? ""),
         valid: !!waybillNo && !!dateObj,
       };
     });
@@ -209,11 +212,11 @@ export default function UpdateDeliveryDate() {
             waybill number. Nothing is saved on the server; the file is read in your browser only.
             <br />
             <strong>Date format:</strong> format the Delivery Date column as an actual Excel date
-            (recommended — this is what the template below uses), or type it as plain text as either{" "}
-            <code>DD-MM-YYYY</code> (e.g. <code>29-07-2026</code>) or <code>YYYY-MM-DD</code> (e.g.{" "}
-            <code>2026-07-29</code>). Other formats like <code>29/07/2026</code> (slashes) are not
-            accepted — a row with an unrecognized date is skipped rather than guessed at, so check
-            the "row(s) read / invalid" count after uploading.
+            (recommended — this is what the template below uses), or type it as plain text in{" "}
+            <code>DD-MM-YYYY</code> form only, e.g. <code>29-07-2026</code>. No other text format
+            (<code>YYYY-MM-DD</code>, slashes, etc.) is accepted — a row with an unrecognized date
+            is skipped rather than guessed at, so check the "row(s) read / invalid" count after
+            uploading.
           </p>
         </div>
 
@@ -269,7 +272,7 @@ export default function UpdateDeliveryDate() {
         {invalidCount > 0 && !displayResults && (
           <div className={s.alertDanger}>
             ⚠️ {invalidCount} of {parsedRows.length} row(s) have a missing waybill number or a date
-            that didn't match <code>DD-MM-YYYY</code> / <code>YYYY-MM-DD</code> — row(s){" "}
+            that didn't match <code>DD-MM-YYYY</code> — row(s){" "}
             {parsedRows.filter((r) => !r.valid).map((r) => r.rowNum).join(", ")} will be{" "}
             <strong>skipped entirely</strong> (not sent, not updated). Fix those rows in the Excel
             and re-upload if they also need updating.
@@ -281,7 +284,7 @@ export default function UpdateDeliveryDate() {
             <p className={s.sectionLabel}>Preview — first 5 rows</p>
             <table className={s.table}>
               <thead>
-                <tr><th>Row</th><th>Waybill Number</th><th>Delivery Date (YYYY-MM-DD)</th></tr>
+                <tr><th>Row</th><th>Waybill Number</th><th>Delivery Date (DD-MM-YYYY)</th></tr>
               </thead>
               <tbody>
                 {parsedRows.slice(0, 5).map((r) => (
@@ -328,7 +331,7 @@ export default function UpdateDeliveryDate() {
                   return (
                     <tr key={i}>
                       <td>{r.waybillNo}</td>
-                      <td>{r.date}</td>
+                      <td>{isoToDMY(r.date)}</td>
                       <td><span className={`${s.badge} ${s[badge.cls]}`}>{badge.label}</span></td>
                       <td className={s.docNums}>
                         {r.docNums?.length ? r.docNums.join(", ") : r.message}
