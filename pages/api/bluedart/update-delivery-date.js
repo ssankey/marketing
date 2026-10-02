@@ -32,7 +32,7 @@ import sql from "mssql";
 import { queryDatabase } from "../../../lib/db";
 
 const MAX_ROWS = 2000;
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -72,11 +72,30 @@ export default async function handler(req, res) {
       results.push({ waybillNo: row?.waybillNo ?? "", date: dateStr, status: "error", message: "Missing waybill number" });
       continue;
     }
-    if (!ISO_DATE_RE.test(dateStr) || Number.isNaN(new Date(`${dateStr}T00:00:00`).getTime())) {
+    const dateMatch = ISO_DATE_RE.exec(dateStr);
+    if (!dateMatch) {
       results.push({ waybillNo, date: dateStr, status: "error", message: "Invalid date" });
       continue;
     }
-    const dateValue = new Date(`${dateStr}T00:00:00`);
+    // Built with Date.UTC, not `new Date(dateStr + "T00:00:00")` — that local
+    // form is parsed in whatever timezone this Node process runs in, and the
+    // mssql driver (useUTC) then serializes a Date by its UTC fields. On a
+    // server set to IST (confirmed: this one is), that silently shifted every
+    // write back by 5:30 into the previous day (e.g. 29-Jul became
+    // 2026-07-28 18:30:00.000 in the DB). Date.UTC fixes the UTC fields
+    // directly to midnight on the intended calendar date, so the stored
+    // value is correct regardless of the server's local timezone.
+    const [, y, mo, d] = dateMatch.map(Number);
+    const dateValue = new Date(Date.UTC(y, mo - 1, d));
+    // Date.UTC rolls over out-of-range fields (e.g. month 13 -> next Jan)
+    // instead of failing, so confirm it round-trips to the same y/m/d rather
+    // than just checking it's not NaN.
+    const roundTrips =
+      dateValue.getUTCFullYear() === y && dateValue.getUTCMonth() === mo - 1 && dateValue.getUTCDate() === d;
+    if (Number.isNaN(dateValue.getTime()) || !roundTrips) {
+      results.push({ waybillNo, date: dateStr, status: "error", message: "Invalid date" });
+      continue;
+    }
 
     try {
       const totalRows = await queryDatabase(

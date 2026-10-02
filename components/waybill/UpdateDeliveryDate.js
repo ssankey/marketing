@@ -30,20 +30,46 @@ function downloadTemplate() {
 const pad2 = (n) => String(n).padStart(2, "0");
 const toISODate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE_RE    = /^(\d{4})-(\d{2})-(\d{2})$/;        // YYYY-MM-DD
+const DMY_DASH_RE     = /^(\d{2})-(\d{2})-(\d{4})$/;        // DD-MM-YYYY
+
+const isValidYMD = (y, m, d) => {
+  if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+};
 
 // Excel date cells come through as JS Date objects (XLSX.read with
 // cellDates:true) — that's the recommended path and needs no format at all.
-// A plain typed-text cell is only accepted as strict ISO "YYYY-MM-DD".
-// Anything else (e.g. "28/09/2026") is rejected on purpose: JS's generic
-// Date parser guesses MM/DD vs DD/MM depending on the string, which would
-// silently write the wrong date for India-formatted text half the time.
+// A plain typed-text cell is only accepted as one of two EXPLICIT formats,
+// each parsed by hand rather than handed to JS's generic Date parser:
+//   - "YYYY-MM-DD" (ISO)
+//   - "DD-MM-YYYY" (how this team naturally types dates)
+// Anything else (e.g. "28/09/2026", or mixing styles) is rejected on
+// purpose — the risk being guarded against is a format like "05-07-2026"
+// silently being read as the wrong one of "5 July" / "July 5" depending on
+// which convention is assumed. Hand-parsing each pattern as a fixed,
+// known field order removes that guess entirely instead of trying to
+// detect which convention a given string is in.
 function parseDateCell(raw) {
   if (raw instanceof Date && !Number.isNaN(raw.getTime())) return raw;
-  if (typeof raw === "string" && ISO_DATE_RE.test(raw.trim())) {
-    const d = new Date(`${raw.trim()}T00:00:00`);
-    if (!Number.isNaN(d.getTime())) return d;
+  if (typeof raw !== "string") return null;
+  const text = raw.trim();
+
+  let m = ISO_DATE_RE.exec(text);
+  if (m) {
+    const [, y, mo, d] = m.map(Number);
+    if (isValidYMD(y, mo, d)) return new Date(y, mo - 1, d);
+    return null;
   }
+
+  m = DMY_DASH_RE.exec(text);
+  if (m) {
+    const [, d, mo, y] = m.map(Number);
+    if (isValidYMD(y, mo, d)) return new Date(y, mo - 1, d);
+    return null;
+  }
+
   return null;
 }
 
@@ -183,10 +209,11 @@ export default function UpdateDeliveryDate() {
             waybill number. Nothing is saved on the server; the file is read in your browser only.
             <br />
             <strong>Date format:</strong> format the Delivery Date column as an actual Excel date
-            (recommended — this is what the template below uses), or type it as plain text in{" "}
-            <code>YYYY-MM-DD</code> form, e.g. <code>2026-09-28</code>. Other text formats like{" "}
-            <code>28/09/2026</code> are not accepted, since they're read differently in different
-            regions and could silently set the wrong date.
+            (recommended — this is what the template below uses), or type it as plain text as either{" "}
+            <code>DD-MM-YYYY</code> (e.g. <code>29-07-2026</code>) or <code>YYYY-MM-DD</code> (e.g.{" "}
+            <code>2026-07-29</code>). Other formats like <code>29/07/2026</code> (slashes) are not
+            accepted — a row with an unrecognized date is skipped rather than guessed at, so check
+            the "row(s) read / invalid" count after uploading.
           </p>
         </div>
 
@@ -238,6 +265,16 @@ export default function UpdateDeliveryDate() {
         )}
 
         {parseError && <div className={s.alertDanger}>⚠️ {parseError}</div>}
+
+        {invalidCount > 0 && !displayResults && (
+          <div className={s.alertDanger}>
+            ⚠️ {invalidCount} of {parsedRows.length} row(s) have a missing waybill number or a date
+            that didn't match <code>DD-MM-YYYY</code> / <code>YYYY-MM-DD</code> — row(s){" "}
+            {parsedRows.filter((r) => !r.valid).map((r) => r.rowNum).join(", ")} will be{" "}
+            <strong>skipped entirely</strong> (not sent, not updated). Fix those rows in the Excel
+            and re-upload if they also need updating.
+          </div>
+        )}
 
         {parsedRows.length > 0 && !displayResults && (
           <>
