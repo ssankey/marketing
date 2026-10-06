@@ -1,0 +1,156 @@
+/* ImportData.module.css */
+
+.card {
+  background: #ffffff;
+  border: 1.5px solid #e9ecef;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 1.1rem 1.5rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.cardTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cardBody { padding: 1.5rem; }
+
+.infoBox {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  padding: 0.9rem 1rem; background: #eff6ff;
+  border: 1.5px solid #bfdbfe; border-radius: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.infoText { font-size: 0.82rem; color: #1e40af; margin: 0; line-height: 1.5; }
+
+.templateBtn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  padding: 0.55rem 1.1rem; background: white;
+  border: 1.5px solid #dee2e6; border-radius: 8px;
+  font-size: 0.85rem; font-weight: 600; color: #495057;
+  cursor: pointer; transition: all 0.15s; margin-bottom: 1.25rem;
+}
+
+.templateBtn:hover { border-color: #0d6efd; color: #0d6efd; background: #f0f4ff; }
+
+.dropZone {
+  border: 2px dashed #dee2e6;
+  border-radius: 12px;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 1.25rem;
+  background: #fafafa;
+}
+
+.dropZone:hover, .dropZoneActive {
+  border-color: #0d6efd;
+  background: #f0f4ff;
+}
+
+.dropIcon { font-size: 2.2rem; display: block; margin-bottom: 0.65rem; }
+.dropTitle { font-size: 0.9rem; font-weight: 600; color: #343a40; margin-bottom: 0.3rem; }
+.dropSubtitle { font-size: 0.78rem; color: #adb5bd; }
+
+.browseBtn {
+  display: inline-block; margin-top: 0.65rem; padding: 0.4rem 1rem;
+  background: white; border: 1.5px solid #dee2e6;
+  border-radius: 7px; font-size: 0.82rem; font-weight: 600;
+  color: #495057; cursor: pointer; transition: all 0.15s;
+}
+
+.browseBtn:hover { border-color: #0d6efd; color: #0d6efd; }
+
+.fileLoaded {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1rem; background: #f0fdf4;
+  border: 1.5px solid #bbf7d0; border-radius: 9px;
+  margin-bottom: 1.25rem;
+}
+
+.fileIcon { font-size: 1.2rem; }
+.fileName { font-weight: 600; font-size: 0.88rem; color: #065f46; }
+.fileCount { font-size: 0.78rem; color: #047857; }
+
+.previewLabel {
+  font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: #6c757d; margin-bottom: 0.6rem;
+}
+
+.previewTable {
+  width: 100%; border-collapse: collapse;
+  font-size: 0.78rem; margin-bottom: 1.25rem;
+  border: 1px solid #e9ecef; border-radius: 8px;
+  overflow: hidden;
+}
+
+.previewTable th {
+  padding: 0.5rem 0.75rem; background: #f8f9fa;
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.3px; color: #6c757d;
+  border-bottom: 1px solid #e9ecef;
+  white-space: nowrap;
+}
+
+.previewTable td {
+  padding: 0.5rem 0.75rem; border-bottom: 1px solid #f1f3f5;
+  color: #343a40; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 120px;
+}
+
+.previewTable tr:last-child td { border-bottom: none; }
+
+.footer {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding-top: 1rem; border-top: 1px solid #f1f3f5;
+}
+
+.footerNote { font-size: 0.78rem; color: #adb5bd; }
+
+.uploadBtn {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.65rem 1.75rem; background: #0d6efd;
+  color: white; border: none; border-radius: 9px;
+  font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+}
+
+.uploadBtn:hover { background: #0b5ed7; transform: translateY(-1px); }
+.uploadBtn:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+
+.resultCard {
+  padding: 1rem 1.1rem; background: #d1fae5;
+  border: 1.5px solid #6ee7b7; border-radius: 10px;
+  margin-top: 1rem;
+}
+
+.resultTitle { font-weight: 700; font-size: 0.9rem; color: #065f46; margin-bottom: 0.5rem; }
+
+.resultStats {
+  display: flex; gap: 1.5rem;
+}
+
+.statItem { text-align: center; }
+.statNum { font-size: 1.4rem; font-weight: 800; }
+.statLabel { font-size: 0.72rem; color: #047857; }
+.statSuccess { color: #065f46; }
+.statFail    { color: #dc3545; }
+
+.alertDanger {
+  padding: 0.9rem 1rem; background: #fee2e2;
+  border: 1.5px solid #fca5a5; border-radius: 10px;
+  font-size: 0.82rem; color: #991b1b; margin-top: 1rem;
+}

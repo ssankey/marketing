@@ -1,7 +1,4 @@
-
-
-
-// OrdersChart.js
+// components/OpenClosedOrdersChart.js
 import React, { useState, useEffect, useRef } from "react";
 import { Bar } from "react-chartjs-2";
 import { Card, Spinner } from "react-bootstrap";
@@ -9,6 +6,7 @@ import { formatCurrency } from "utils/formatCurrency";
 import { useRouter } from "next/router";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 import AllFilter from "components/AllFilters.js";
+import MonthlyOrdersModal from "components/modal/MonthlyOrdersModal";
 
 import {
   Chart as ChartJS,
@@ -20,7 +18,6 @@ import {
   Legend,
 } from "chart.js";
 
-// Register required Chart.js components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -31,7 +28,6 @@ ChartJS.register(
   ChartDataLabels
 );
 
-// Month mapping helper
 const monthMapping = {
   January: 0,
   February: 1,
@@ -47,7 +43,6 @@ const monthMapping = {
   December: 11,
 };
 
-// Format month-year labels
 const formatMonthYear = (year, month) => {
   const monthIndex = monthMapping[month];
   if (monthIndex === undefined) return "Invalid Date";
@@ -56,30 +51,26 @@ const formatMonthYear = (year, month) => {
 };
 
 const OrdersChart = () => {
-  // ----------------------------------
-  // State
-  // ----------------------------------
   const [ordersData, setOrdersData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // Filters and search query
-  const [searchQuery, setSearchQuery] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [modalData, setModalData] = useState({
+    year: null,
+    month: null,
+    status: null
+  });
   const [filters, setFilters] = useState({
     salesPerson: null,
+    contactPerson: null,
     category: null,
     product: null,
+    customer: null,
   });
 
-  // ----------------------------------
-  // Refs and other hooks
-  // ----------------------------------
   const chartRef = useRef(null);
   const router = useRouter();
 
-  // ----------------------------------
-  // Fetch data
-  // ----------------------------------
   const fetchOrdersData = async () => {
     try {
       setLoading(true);
@@ -91,29 +82,28 @@ const OrdersChart = () => {
       if (filters.salesPerson?.value) {
         queryParams.append("slpCode", filters.salesPerson.value);
       }
+      if (filters.contactPerson?.value) {
+        queryParams.append("contactPerson", filters.contactPerson.value);
+      }
       if (filters.category?.value) {
         queryParams.append("itmsGrpCod", filters.category.value);
       }
       if (filters.product?.value) {
         queryParams.append("itemCode", filters.product.value);
       }
+      if (filters.customer?.value) {
+        queryParams.append("cardCode", filters.customer.value);
+      }
 
       const response = await fetch(`/api/monthly-orders?${queryParams}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // if (!response.ok) {
-      //   throw new Error("Failed to fetch orders data");
-      // }
-
       if (!response.ok) {
-        const text = await response.text();
-        console.error("Failed response text:", text); // 🪵 This will show the backend error
         throw new Error("Failed to fetch orders data");
       }
 
       const { data } = await response.json();
-      // Sort data chronologically
       const sortedData = data.sort((a, b) => {
         const dateA = new Date(a.year, monthMapping[a.month]);
         const dateB = new Date(b.year, monthMapping[b.month]);
@@ -130,35 +120,25 @@ const OrdersChart = () => {
     }
   };
 
-  // Re-fetch data whenever filters change
   useEffect(() => {
     fetchOrdersData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
-  // ----------------------------------
-  // Derived values
-  // ----------------------------------
-  // This example no longer uses a "Total" bar
-  const totalOpenOrders = ordersData.reduce(
-    (sum, data) => sum + (data.openOrders || 0),
-    0
-  );
-  const totalOpenSales = ordersData.reduce(
-    (sum, data) => sum + (data.openSales || 0),
-    0
-  );
+  const handleBarClick = (year, month, status) => {
+    setModalData({ year, month, status });
+    setShowModal(true);
+  };
 
-  // ----------------------------------
-  // Labels: monthly only
-  // ----------------------------------
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setModalData({ year: null, month: null, status: null });
+  };
+
   const labels = ordersData.map((d) => formatMonthYear(d.year, d.month));
 
-  // ----------------------------------
-  // Chart config
-  // ----------------------------------
   const colorPalette = {
     primary: "#0d6efd",
+    warning: "#ffc107",
   };
 
   const ordersChartData = {
@@ -173,6 +153,15 @@ const OrdersChart = () => {
         barPercentage: 1,
         categoryPercentage: 0.7,
       },
+      {
+        label: "Partial Orders",
+        data: ordersData.map((d) => d.partialOrders || 0),
+        backgroundColor: ordersData.map(() => colorPalette.warning),
+        borderColor: ordersData.map(() => colorPalette.warning),
+        borderWidth: 1,
+        barPercentage: 1,
+        categoryPercentage: 0.7,
+      },
     ],
   };
 
@@ -180,24 +169,41 @@ const OrdersChart = () => {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      // Turn off data labels display on the bars
       datalabels: {
         display: false,
       },
       tooltip: {
         backgroundColor: "#212529",
+        bodyFont: {
+          size: 14,
+          weight: 'bold'
+        },
+        titleFont: {
+          size: 16,
+          weight: 'bold'
+        },
+        padding: 16,
         callbacks: {
           label: (context) => {
-            // We have just one dataset, so context.dataset.label is "Open Orders"
             const datasetLabel = context.dataset.label;
-            const numOrders = context.raw; // the raw bar value (openOrders)
+            const numOrders = context.raw;
             const dataIndex = context.dataIndex;
             const dataPoint = ordersData[dataIndex];
 
-            // Show openOrders and openSales in the tooltip
-            return `${datasetLabel}: ${numOrders} (Sales: ${formatCurrency(
-              dataPoint.openSales
-            )})`;
+            if (datasetLabel === "Open Orders") {
+              return [
+                `Open Orders: ${numOrders}`,
+                `Line Items: ${dataPoint.openOrderLineItems}`,
+                `Sales: ${formatCurrency(dataPoint.openOrderSales)}`
+              ];
+            } else if (datasetLabel === "Partial Orders") {
+              return [
+                `Partial Orders: ${numOrders}`,
+                `Line Items: ${dataPoint.partialOrderLineItems}`,
+                `Sales: ${formatCurrency(dataPoint.partialOrderSales)}`
+              ];
+            }
+            return `${datasetLabel}: ${numOrders}`;
           },
         },
       },
@@ -205,137 +211,110 @@ const OrdersChart = () => {
         position: "top",
       },
     },
-    hover: {
-      onHover: (event, elements) => {
-        if (elements.length > 0) {
-          event.native.target.style.cursor = "pointer";
-        } else {
-          event.native.target.style.cursor = "default";
-        }
+    scales: {
+      x: {
+        stacked: false,
+      },
+      y: {
+        stacked: false,
+        beginAtZero: true,
       },
     },
     onClick: (event, elements) => {
-      if (elements.length > 0 && elements[0].datasetIndex === 0) {
-        const dataIndex = elements[0].index;
+      if (elements.length > 0) {
+        const element = elements[0];
+        const dataIndex = element.index;
+        const datasetIndex = element.datasetIndex;
         const { year, month } = ordersData[dataIndex];
-        const status = "open";
-
-        // Convert month name to numeric index
-        const monthIndex =
-          new Date(Date.parse(`${month} 1, ${year}`)).getMonth() + 1;
-        const fromDate = `${year}-${String(monthIndex).padStart(2, "0")}-01`;
-        const toDate = new Date(year, monthIndex, 0).toISOString().split("T")[0];
-
-        router.push({
-          pathname: "/orders",
-          query: {
-            status,
-            page: 1,
-            fromDate,
-            toDate,
-          },
-        });
+        const status = datasetIndex === 0 ? "open" : "partial";
+        handleBarClick(year, month, status);
       }
     },
+    onHover: (event, chartElement, chart) => {
+  const target = event.native?.target || event.target;
+  if (target && chartElement.length) {
+    target.style.cursor = 'pointer';
+  } else if (target) {
+    target.style.cursor = 'default';
+  }
+},
+
   };
 
-  // ----------------------------------
-  // CSV Export (unchanged, optional)
-  // ----------------------------------
-  const exportToCSV = () => {
-    if (!ordersData.length) return;
-    const csvData = [
-      ["Month", ...labels],
-      ["Open Orders", ...ordersData.map((data) => data.openOrders || 0)],
-      [
-        "Open Orders (Sales)",
-        ...ordersData.map((data) => formatCurrency(data.openSales || 0)),
-      ],
-    ];
-
-    const csvContent = csvData.map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "orders_data.csv");
-    link.click();
-  };
-
-  // ----------------------------------
-  // Render
-  // ----------------------------------
   return (
-    <Card className="shadow-sm border-0 mb-4">
-      <Card.Header className="bg-white py-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-          <h4
-            className="mb-3 mb-md-0"
-            style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}
-          >
-            Monthly Open Orders
-          </h4>
-          <div className="ms-auto">
-            <AllFilter
-              searchQuery={searchQuery}
-              setSearchQuery={(value) => {
-                if (value) {
-                  setFilters((prev) => ({
-                    ...prev,
-                    [value.type === "sales-person" ? "salesPerson" : value.type]:
-                      {
-                        value: value.value,
-                        label: value.label,
-                      },
-                  }));
-                } else {
-                  // Reset all filters when cleared
-                  setFilters({
-                    salesPerson: null,
-                    category: null,
-                    product: null,
-                  });
-                }
-              }}
-            />
-          </div>
-        </div>
-      </Card.Header>
-
-      <Card.Body>
-        {/* Show error if any */}
-        {error && <p className="text-danger mb-3">Error: {error}</p>}
-
-        {/* Show loading spinner */}
-        {loading ? (
-          <div
-            className="d-flex justify-content-center align-items-center"
-            style={{ height: "500px" }}
-          >
-            <Spinner animation="border" role="status" className="me-2">
-              <span className="visually-hidden">Loading...</span>
-            </Spinner>
-            <span>Loading chart data...</span>
-          </div>
-        ) : ordersData.length ? (
-          <>
-            <div
-              className="chart-container"
-              style={{ height: "500px", width: "100%" }}
-            >
-              <Bar ref={chartRef} data={ordersChartData} options={ordersChartOptions} />
+    <>
+      <Card className="shadow-sm border-0 mb-4">
+        <Card.Header className="bg-white py-3">
+          <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+            <h4 className="mb-3 mb-md-0" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>
+              Monthly Orders (Open & Partial)
+            </h4>
+            <div className="ms-auto">
+              <AllFilter
+                allowedTypes={["sales-person", "contact-person", "product", "category", "customer"]}
+                setSearchQuery={(value) => {
+                  if (value) {
+                    setFilters((prev) => ({
+                      ...prev,
+                      [value.type === "sales-person" ? "salesPerson" : 
+                       value.type === "contact-person" ? "contactPerson" : 
+                       value.type === "customer" ? "customer" : value.type]: 
+                        value.value ? {
+                          value: value.value,
+                          label: value.label,
+                        } : null
+                    }));
+                  } else {
+                    setFilters({
+                      salesPerson: null,
+                      contactPerson: null,
+                      category: null,
+                      product: null,
+                      customer: null,
+                    });
+                  }
+                }}
+              />
             </div>
-            {/* Example button for CSV export, if desired */}
-            {/* <Button variant="outline-primary" className="mt-3" onClick={exportToCSV}>
-              Export CSV
-            </Button> */}
-          </>
-        ) : (
-          <p className="text-center mt-4">No data available.</p>
-        )}
-      </Card.Body>
-    </Card>
+          </div>
+        </Card.Header>
+
+        <Card.Body>
+          {error && <p className="text-danger mb-3">Error: {error}</p>}
+
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center" style={{ height: "500px" }}>
+              <Spinner animation="border" role="status" className="me-2">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+              <span>Loading chart data...</span>
+            </div>
+          ) : ordersData.length ? (
+            <div className="chart-container" style={{ height: "500px", width: "100%" }}>
+              <div style={{ height: 500, width: "100%" }}>
+                <Bar
+                  ref={chartRef}
+                  data={ordersChartData}
+                  options={ordersChartOptions}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="text-center mt-4">No data available.</p>
+          )}
+        </Card.Body>
+      </Card>
+
+      {showModal && (
+        <MonthlyOrdersModal
+          onClose={handleCloseModal}
+          year={modalData.year}
+          month={modalData.month}
+          status={modalData.status}
+          filters={filters}
+        />
+      )}
+    </>
   );
 };
 
