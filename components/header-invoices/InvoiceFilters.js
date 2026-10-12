@@ -10,7 +10,7 @@ const InvoiceFilters = ({
   fromDate,
   toDate,
   selectedMonth,
-  invoices = [],
+  dateRange,
   onSearch,
   onStatusChange,
   onDateChange,
@@ -40,50 +40,33 @@ const InvoiceFilters = ({
     });
   };
 
-  // Generate available months from invoice date range
+  // Generate available months from the min/max invoice date range — a
+  // single lightweight query (lib/models/invoices.js's getInvoicesDateRange,
+  // same one the Invoice Line page already uses), not the full invoice (+
+  // credit note) history. The previous version derived this from every row
+  // of a `?getAll=true` fetch of the whole dataset — ~19MB/40+s in testing
+  // — so the dropdown would sit on just "All Months" until that resolved
+  // (or never, if it timed out), which read as a broken dropdown.
   const getAvailableMonths = () => {
-    if (!invoices || invoices.length === 0) return [];
+    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
+    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
 
-    // Extract all invoice dates and find min/max
-    const invoiceDates = invoices
-      .map(invoice => {
-        if (!invoice.DocDate) return null;
-        
-        let date;
-        if (invoice.DocDate instanceof Date) {
-          date = invoice.DocDate;
-        } else if (typeof invoice.DocDate === 'string') {
-          date = new Date(invoice.DocDate);
-          if (isNaN(date.getTime())) {
-            const dateParts = invoice.DocDate.split(/[-/]/);
-            if (dateParts.length === 3) {
-              const formats = [
-                new Date(dateParts[2], dateParts[1] - 1, dateParts[0]), // DD/MM/YYYY
-                new Date(dateParts[2], dateParts[0] - 1, dateParts[1]), // MM/DD/YYYY
-                new Date(dateParts[0], dateParts[1] - 1, dateParts[2])  // YYYY/MM/DD
-              ];
-              
-              for (const format of formats) {
-                if (!isNaN(format.getTime())) {
-                  date = format;
-                  break;
-                }
-              }
-            }
-          }
-        } else if (typeof invoice.DocDate === 'number') {
-          date = new Date(invoice.DocDate);
-        }
-        
-        return date && !isNaN(date.getTime()) ? date : null;
-      })
-      .filter(date => date)
-      .sort((a, b) => a - b);
-
-    if (invoiceDates.length === 0) return [];
-
-    const minDate = invoiceDates[0];
-    const maxDate = invoiceDates[invoiceDates.length - 1];
+    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
+      // Fallback: last 12 months if no valid date range came back yet.
+      const months = [];
+      const now = new Date();
+      for (let i = 0; i < 12; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+        months.push({
+          value: `${year}-${String(month + 1).padStart(2, '0')}`,
+          display: `${monthName} ${year}`,
+        });
+      }
+      return months;
+    }
 
     // Generate all months between min and max date
     const months = [];
@@ -93,11 +76,11 @@ const InvoiceFilters = ({
     while (current <= end) {
       const year = current.getFullYear();
       const month = current.getMonth();
-      
+
       const monthName = current.toLocaleDateString('en-US', { month: 'short' });
       const displayText = `${monthName} ${year}`;
       const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-      
+
       months.push({
         value: value,
         display: displayText

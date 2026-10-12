@@ -182,7 +182,13 @@ export const tableColumns = (handlers) => [
   },
   {
     accessorKey: "DocDate",
-    header: "Invoice Date",
+    // For an "IN" row this is the invoice's own DocDate; for a "CN" row it's
+    // the credit note's own DocDate (see getUniqueInvoicesList) — the label
+    // used to just say "Invoice Date" for both, which read as if credit
+    // notes were being matched/shown by their invoice's date. They aren't —
+    // a credit note is matched to a month by its own date — this label just
+    // makes that visible instead of implying the opposite.
+    header: "Invoice Date / Credit Note Date",
     cell: ({ getValue }) => formatDate(getValue()),
     sortable: true,
   },

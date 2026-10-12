@@ -9,7 +9,7 @@ const OpenOrdersFilters = ({
   fromDate,
   toDate,
   selectedMonth,
-  orders = [],
+  dateRange,
   onSearch,
   onStatusChange,
   onDateChange,
@@ -39,53 +39,16 @@ const OpenOrdersFilters = ({
   };
 
   // Generate available months from order date range
+  // Generate available months from the min/max order date range — a single
+  // lightweight query (getOpenOrdersDateRange), not every open-order row.
   const getAvailableMonths = () => {
-    if (!orders || orders.length === 0) return [];
+    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
+    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
 
-    // Extract all order dates and find min/max
-    const orderDates = orders
-      .map(order => {
-        if (!order.PostingDate) return null;
-        
-        let date;
-        if (order.PostingDate instanceof Date) {
-          date = order.PostingDate;
-        } else if (typeof order.PostingDate === 'string') {
-          date = new Date(order.PostingDate);
-          
-          if (isNaN(date.getTime())) {
-            const dateParts = order.PostingDate.split(/[-/]/);
-            if (dateParts.length === 3) {
-              const formats = [
-                new Date(dateParts[2], dateParts[1] - 1, dateParts[0]), // DD/MM/YYYY
-                new Date(dateParts[2], dateParts[0] - 1, dateParts[1]), // MM/DD/YYYY
-                new Date(dateParts[0], dateParts[1] - 1, dateParts[2])  // YYYY/MM/DD
-              ];
-              
-              for (const format of formats) {
-                if (!isNaN(format.getTime())) {
-                  date = format;
-                  break;
-                }
-              }
-            }
-          }
-        } else if (typeof order.PostingDate === 'number') {
-          date = new Date(order.PostingDate);
-        } else {
-          return null;
-        }
-        
-        return date && !isNaN(date.getTime()) ? date : null;
-      })
-      .filter(date => date && !isNaN(date.getTime()))
-      .sort((a, b) => a - b);
+    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
+      return [];
+    }
 
-    if (orderDates.length === 0) return [];
-
-    const minDate = orderDates[0];
-    const maxDate = orderDates[orderDates.length - 1];
-    
     // Generate all months between min and max date
     const months = [];
     const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);

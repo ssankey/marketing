@@ -9,7 +9,7 @@ const PendingDispatchFilters = ({
   fromDate,
   toDate,
   selectedMonth,
-  invoices = [],
+  dateRange,
   onSearch,
   onStatusChange,
   onDateChange,
@@ -38,55 +38,17 @@ const PendingDispatchFilters = ({
     });
   };
 
-  // Generate available months from invoice date range
+  // Generate available months from the min/max invoice date range — a
+  // single lightweight query (getPendingDispatchDateRange), not every
+  // pending-dispatch invoice row.
   const getAvailableMonths = () => {
-    if (!invoices || invoices.length === 0) return [];
-    
-    // Extract all invoice dates and find min/max
-    const invoiceDates = invoices
-      .map(invoice => {
-        if (!invoice.DocDate) return null;
-        
-        // Handle different date formats
-        let date;
-        if (invoice.DocDate instanceof Date) {
-          date = invoice.DocDate;
-        } else if (typeof invoice.DocDate === 'string') {
-          date = new Date(invoice.DocDate);
-          
-          if (isNaN(date.getTime())) {
-            const dateParts = invoice.DocDate.split(/[-/]/);
-            if (dateParts.length === 3) {
-              const formats = [
-                new Date(dateParts[2], dateParts[1] - 1, dateParts[0]), // DD/MM/YYYY
-                new Date(dateParts[2], dateParts[0] - 1, dateParts[1]), // MM/DD/YYYY
-                new Date(dateParts[0], dateParts[1] - 1, dateParts[2])  // YYYY/MM/DD
-              ];
-              
-              for (const format of formats) {
-                if (!isNaN(format.getTime())) {
-                  date = format;
-                  break;
-                }
-              }
-            }
-          }
-        } else if (typeof invoice.DocDate === 'number') {
-          date = new Date(invoice.DocDate);
-        } else {
-          return null;
-        }
-        
-        return !isNaN(date.getTime()) ? date : null;
-      })
-      .filter(date => date !== null)
-      .sort((a, b) => a - b);
+    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
+    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
 
-    if (invoiceDates.length === 0) return [];
+    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
+      return [];
+    }
 
-    const minDate = invoiceDates[0];
-    const maxDate = invoiceDates[invoiceDates.length - 1];
-    
     // Generate all months between min and max date
     const months = [];
     const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);

@@ -211,7 +211,13 @@ export const tableColumns = [
   },
   {
     id: "Invoice Posting Dt.",
-    header: "Invoice Posting Dt.",
+    // Data field stays "Invoice Posting Dt." (matches the API response key
+    // for both row types), but the label is renamed: for a "CN" row this
+    // value is the credit note's own date, not its invoice's — the old
+    // label read as if credit notes were matched/shown by invoice date,
+    // which isn't how the underlying filtering works (a credit note is
+    // matched to a month by its own date).
+    header: "Invoice Date / Credit Note Date",
     accessorFn: row => row["Invoice Posting Dt."],
     cell: ({ getValue }) => formatDate(getValue()),
   },
