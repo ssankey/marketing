@@ -86,7 +86,7 @@
 // pages/api/invoices/header-invoice.js
 import { verify } from "jsonwebtoken";
 import { parseISO, isValid } from "date-fns";
-import { getUniqueInvoicesList } from "../../../lib/models/invoices";
+import { getUniqueInvoicesList, getInvoicesDateRange } from "../../../lib/models/invoices";
 
 function isValidDate(date) {
   return date && isValid(parseISO(date));
@@ -121,6 +121,19 @@ export default async function handler(req, res) {
     const isAdmin = decodedToken.role === "admin";
     const contactCodes = decodedToken.contactCodes || [];
     const cardCodes = decodedToken.cardCodes || [];
+
+    // Lightweight path for the month-filter dropdown — avoids fetching every
+    // invoice (+ credit note) row just to compute the available date range.
+    // Same pattern as pages/api/invoices/index.js's dateRangeOnly branch;
+    // this page's own equivalent (fetchAllInvoicesForFilters calling
+    // ?getAll=true) was pulling the entire unfiltered history on every load
+    // — ~19MB / 40+s in testing — so the month dropdown would show only
+    // "All Months" until that huge request finally resolved (or never, if
+    // it timed out), which read as "the dropdown is broken".
+    if (req.query.dateRangeOnly === "true") {
+      const range = await getInvoicesDateRange({ isAdmin, contactCodes, cardCodes });
+      return res.status(200).json(range);
+    }
 
     // 4) Parse query params
     const {

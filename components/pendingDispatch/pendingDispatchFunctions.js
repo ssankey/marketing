@@ -22,7 +22,7 @@ export const usePendingDispatchData = (initialStatus = "all", initialPage = 1, p
   const [sortDirection, setSortDirection] = useState("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [allInvoicesForFilters, setAllInvoicesForFilters] = useState([]);
+  const [invoiceDateRange, setInvoiceDateRange] = useState({ minDate: null, maxDate: null });
   const [shouldResetPage, setShouldResetPage] = useState(false);
 
   const debouncedSearch = useMemo(
@@ -85,29 +85,31 @@ export const usePendingDispatchData = (initialStatus = "all", initialPage = 1, p
     }
   }, []);
 
-  // Fetch all invoices for month dropdown
-  const fetchAllInvoicesForFilters = useCallback(async () => {
+  // Fetch min/max invoice date for the month dropdown — lightweight, no
+  // full-table fetch (used to call ?getAll=true, pulling every pending-
+  // dispatch invoice row just to read their DocDate).
+  const fetchInvoiceDateRange = useCallback(async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) return;
-      
-      const response = await fetch(`/api/invoices/pendingDispatch?getAll=true&fields=DocDate`, {
+
+      const response = await fetch(`/api/invoices/pendingDispatch?dateRangeOnly=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setAllInvoicesForFilters(data.invoices || []);
+        setInvoiceDateRange({ minDate: data.minDate || null, maxDate: data.maxDate || null });
       }
     } catch (error) {
-      console.error("Error fetching invoices for filters:", error);
+      console.error("Error fetching invoice date range:", error);
     }
   }, []);
 
   // Initial load
   useEffect(() => {
     fetchInvoices();
-    fetchAllInvoicesForFilters();
+    fetchInvoiceDateRange();
   }, []);
 
   // Handle filter changes - reset to page 1
@@ -283,7 +285,7 @@ export const usePendingDispatchData = (initialStatus = "all", initialPage = 1, p
     toDate,
     sortField,
     sortDirection,
-    allInvoicesForFilters,
+    invoiceDateRange,
     setGlobalFilter: handleSearch,
     setStatusFilter: setStatusFilterWrapper,
     setSelectedMonth: setSelectedMonthWrapper,
