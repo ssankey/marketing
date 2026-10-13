@@ -172,6 +172,15 @@ export const tableColumns = (handlers) => [
     sortable: true,
   },
   {
+    accessorKey: "CreditNoteNo",
+    header: "Credit Note Number",
+    // Null for an "IN" row (getUniqueInvoicesList only sets this on CN
+    // rows) — the DocNum column above shows the invoice number either way,
+    // this is the one place the credit note's own number is visible.
+    cell: ({ getValue }) => getValue() ?? <span className="text-muted">—</span>,
+    sortable: true,
+  },
+  {
     id: "Type",
     header: "Type",
     cell: ({ row }) => (
