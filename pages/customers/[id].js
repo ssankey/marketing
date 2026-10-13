@@ -439,7 +439,14 @@ export default function CustomerDetails({
     if (!salesPersonEmail) throw new Error("No sales-person email available");
     // console.log("sales person email", salesPersonEmail);
 
-     
+    const ccList = [salesPersonEmail, "gurpreet@densitypharmachem.com"];
+    // When the salesperson is Hemant, also CC Gulam — Hemant stays in CC as
+    // usual, this just adds one more recipient alongside him.
+    if (salesPersonEmail.trim().toLowerCase() === "hemant@densitypharmachem.com") {
+      ccList.push("gulam@densitypharmachem.com");
+    }
+
+
       const mailRes = await fetch(`/api/email/base_mail`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -447,8 +454,8 @@ export default function CustomerDetails({
           from: "shafique@densitypharmachem.com",
 
           to: [email], // customer gets it
-          
-          cc: [salesPersonEmail, "gurpreet@densitypharmachem.com"],
+
+          cc: ccList,
 
           //  from: "prakash@densitypharmachem.com",
           //  to:"chandraprakashyadav1110@gmail.com",
