@@ -19,14 +19,22 @@
 // commonly sits in its own stacking context (sticky positioning, etc.), and
 // when that context is DOM-later than this control's, it paints on top of
 // the panel no matter how high the panel's own z-index is set — z-index
-// only resolves conflicts within the same stacking context. A portal sidesteps
-// that entirely: the panel is positioned in the viewport (fixed, from the
-// trigger's own bounding rect) and lives outside every ancestor's stacking
-// context, so nothing on the page can end up drawn over it.
+// only resolves conflicts within the same stacking context. A portal
+// sidesteps that entirely: the panel is positioned in the viewport (fixed,
+// from the trigger's own bounding rect) and lives outside every ancestor's
+// stacking context, so nothing on the page can end up drawn over it.
+//
+// Styling is a plain CSS Module (DateFilterControl.module.css), not
+// styled-jsx — confirmed directly that styled-jsx's scoped class doesn't
+// reliably attach to portaled content: the panel rendered on top of the
+// table correctly, but with none of its styling applied. A CSS Module's
+// class names resolve at build time, so they apply the same way regardless
+// of where in the DOM the element ends up.
 
 import { useState, useRef, useEffect, useMemo, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { Form } from "react-bootstrap";
+import styles from "./DateFilterControl.module.css";
 
 const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -84,6 +92,15 @@ export default function DateFilterControl({
   // doesn't re-fetch on every keystroke — only "Apply" commits it.
   const [stagedFrom, setStagedFrom] = useState(fromDate || "");
   const [stagedTo, setStagedTo] = useState(toDate || "");
+  // Staged month picks — a Set of "YYYY-MM" values, multi-select, also only
+  // committed on "Apply". There's no backend support for a sparse "these
+  // exact months, skipping gaps" filter (every page's API route only takes
+  // one fromDate/toDate range), so picking more than one month applies the
+  // CONTIGUOUS span from the earliest to the latest one picked — e.g. Jan +
+  // Mar applies Jan 1 -> Mar 31, including Feb. Picking exactly one month
+  // still applies as that single month via onMonthChange, unchanged from
+  // before.
+  const [stagedMonths, setStagedMonths] = useState(() => new Set(selectedMonth ? [selectedMonth] : []));
   const [panelStyle, setPanelStyle] = useState(null);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
@@ -100,8 +117,9 @@ export default function DateFilterControl({
     if (open) {
       setStagedFrom(fromDate || "");
       setStagedTo(toDate || "");
+      setStagedMonths(new Set(selectedMonth ? [selectedMonth] : []));
     }
-  }, [open, fromDate, toDate]);
+  }, [open, fromDate, toDate, selectedMonth]);
 
   // Position the portaled panel from the trigger's own screen coordinates —
   // right-aligned under the trigger, like the old `right: 0` did, clamped so
@@ -153,10 +171,50 @@ export default function DateFilterControl({
     ? formatMonthDisplay(selectedMonth)
     : "All Dates";
 
-  const pickMonth = (value) => {
-    onMonthChange(value);
-    if (fromDate) onDateChange("from", "");
-    if (toDate) onDateChange("to", "");
+  // "All" stays an instant clear+close — it's unambiguous, not a pick to
+  // stage alongside others.
+  const pickAllMonths = () => {
+    onMonthChange("");
+    onDateChange("from", "");
+    onDateChange("to", "");
+    setStagedMonths(new Set());
+    setOpen(false);
+  };
+
+  const toggleMonth = (value) => {
+    setStagedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(value)) next.delete(value);
+      else next.add(value);
+      return next;
+    });
+  };
+
+  // First day of the earliest picked month -> last day of the latest picked
+  // month. "YYYY-MM" sorts correctly as a plain string, so min/max are just
+  // the first/last after a lexicographic sort.
+  const monthsToRange = (monthSet) => {
+    const sorted = [...monthSet].sort();
+    const [minY, minM] = sorted[0].split("-").map(Number);
+    const [maxY, maxM] = sorted[sorted.length - 1].split("-").map(Number);
+    const lastDay = new Date(Date.UTC(maxY, maxM, 0)).getUTCDate(); // day 0 of next month = last day of maxM
+    return {
+      from: `${sorted[0]}-01`,
+      to: `${maxY}-${pad2(maxM)}-${pad2(lastDay)}`,
+    };
+  };
+
+  const applyMonths = () => {
+    if (stagedMonths.size === 1) {
+      onMonthChange([...stagedMonths][0]);
+      onDateChange("from", "");
+      onDateChange("to", "");
+    } else {
+      const { from, to } = monthsToRange(stagedMonths);
+      onMonthChange("");
+      onDateChange("from", from);
+      onDateChange("to", to);
+    }
     setOpen(false);
   };
 
@@ -173,210 +231,131 @@ export default function DateFilterControl({
     onDateChange("to", "");
     setStagedFrom("");
     setStagedTo("");
+    setStagedMonths(new Set());
     setOpen(false);
   };
 
   const rangeInvalid = stagedFrom && stagedTo && stagedFrom > stagedTo;
+  const monthsStagedLabel =
+    stagedMonths.size === 0
+      ? null
+      : stagedMonths.size === 1
+      ? formatMonthDisplay([...stagedMonths][0])
+      : (() => {
+          const { from, to } = monthsToRange(stagedMonths);
+          return `${stagedMonths.size} months selected (${formatDisplayDate(from)} – ${formatDisplayDate(to)})`;
+        })();
 
   const panel = mounted && open && panelStyle && createPortal(
     (
-        <div
-          ref={panelRef}
-          className="dfc-panel"
-          role="dialog"
-          aria-label={`${label} filter`}
-          style={{ position: "fixed", top: panelStyle.top, left: panelStyle.left }}
-        >
-          <div className="dfc-panel-header">
-            <span>{label}</span>
-            {(hasRange || selectedMonth) && (
-              <button type="button" className="dfc-clear-link" onClick={clearAll}>Clear</button>
-            )}
-          </div>
+      <div
+        ref={panelRef}
+        className={styles.panel}
+        role="dialog"
+        aria-label={`${label} filter`}
+        style={{ position: "fixed", top: panelStyle.top, left: panelStyle.left }}
+      >
+        <div className={styles.panelHeader}>
+          <span>{label}</span>
+          {(hasRange || selectedMonth) && (
+            <button type="button" className={styles.clearLink} onClick={clearAll}>Clear</button>
+          )}
+        </div>
 
-          <div className="dfc-section-title">Quick pick — month</div>
-          <div className="dfc-month-grid">
+        <div className={styles.sectionTitle}>
+          Quick pick — month{stagedMonths.size > 0 ? "s" : ""} (select one or more)
+        </div>
+        <div className={styles.monthGrid}>
+          <button
+            type="button"
+            className={`${styles.monthChip} ${stagedMonths.size === 0 && !hasRange ? styles.chipActive : ""}`}
+            onClick={pickAllMonths}
+          >
+            All
+          </button>
+          {availableMonths.map((m) => (
             <button
+              key={m.value}
               type="button"
-              className={`dfc-month-chip ${!selectedMonth && !hasRange ? "dfc-chip-active" : ""}`}
-              onClick={() => pickMonth("")}
+              className={`${styles.monthChip} ${stagedMonths.has(m.value) ? styles.chipActive : ""}`}
+              onClick={() => toggleMonth(m.value)}
             >
-              All
+              {m.display}
             </button>
-            {availableMonths.map((m) => (
-              <button
-                key={m.value}
-                type="button"
-                className={`dfc-month-chip ${selectedMonth === m.value ? "dfc-chip-active" : ""}`}
-                onClick={() => pickMonth(m.value)}
-              >
-                {m.display}
-              </button>
-            ))}
+          ))}
+        </div>
+        {monthsStagedLabel && (
+          <div className={styles.monthsSummary}>{monthsStagedLabel}</div>
+        )}
+        <div className={styles.panelFooterInline}>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            disabled={stagedMonths.size === 0}
+            onClick={applyMonths}
+          >
+            Apply {stagedMonths.size > 1 ? `${stagedMonths.size} Months` : "Month"}
+          </button>
+        </div>
+
+        <div className={styles.divider}><span>or custom range</span></div>
+
+        <div className={styles.rangeRow}>
+          <div className={styles.rangeField}>
+            <Form.Label className={styles.rangeLabel}>From</Form.Label>
+            <Form.Control
+              type="date"
+              size="sm"
+              value={stagedFrom}
+              max={stagedTo || undefined}
+              onChange={(e) => setStagedFrom(e.target.value)}
+            />
           </div>
-
-          <div className="dfc-divider"><span>or custom range</span></div>
-
-          <div className="dfc-range-row">
-            <div className="dfc-range-field">
-              <Form.Label className="dfc-range-label">From</Form.Label>
-              <Form.Control
-                type="date"
-                size="sm"
-                value={stagedFrom}
-                max={stagedTo || undefined}
-                onChange={(e) => setStagedFrom(e.target.value)}
-              />
-            </div>
-            <div className="dfc-range-field">
-              <Form.Label className="dfc-range-label">To</Form.Label>
-              <Form.Control
-                type="date"
-                size="sm"
-                value={stagedTo}
-                min={stagedFrom || undefined}
-                onChange={(e) => setStagedTo(e.target.value)}
-              />
-            </div>
-          </div>
-          {rangeInvalid && <div className="dfc-range-error">"From" must be before "To".</div>}
-
-          <div className="dfc-panel-footer">
-            <button type="button" className="dfc-btn dfc-btn-secondary" onClick={() => setOpen(false)}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="dfc-btn dfc-btn-primary"
-              disabled={rangeInvalid || (!stagedFrom && !stagedTo)}
-              onClick={applyRange}
-            >
-              Apply Range
-            </button>
+          <div className={styles.rangeField}>
+            <Form.Label className={styles.rangeLabel}>To</Form.Label>
+            <Form.Control
+              type="date"
+              size="sm"
+              value={stagedTo}
+              min={stagedFrom || undefined}
+              onChange={(e) => setStagedTo(e.target.value)}
+            />
           </div>
         </div>
+        {rangeInvalid && <div className={styles.rangeError}>"From" must be before "To".</div>}
+
+        <div className={styles.panelFooter}>
+          <button type="button" className={`${styles.btn} ${styles.btnSecondary}`} onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={`${styles.btn} ${styles.btnPrimary}`}
+            disabled={rangeInvalid || (!stagedFrom && !stagedTo)}
+            onClick={applyRange}
+          >
+            Apply Range
+          </button>
+        </div>
+      </div>
     ),
     document.body
   );
 
   return (
-    <div className="dfc-root">
+    <div className={styles.root}>
       <button
         ref={triggerRef}
         type="button"
-        className={`dfc-trigger ${hasRange || selectedMonth ? "dfc-trigger-active" : ""}`}
+        className={`${styles.trigger} ${hasRange || selectedMonth ? styles.triggerActive : ""}`}
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="dfc-trigger-icon" aria-hidden="true">📅</span>
-        <span className="dfc-trigger-label">{triggerLabel}</span>
-        <span className={`dfc-chevron ${open ? "dfc-chevron-open" : ""}`} aria-hidden="true">▾</span>
+        <span className={styles.triggerIcon} aria-hidden="true">📅</span>
+        <span className={styles.triggerLabel}>{triggerLabel}</span>
+        <span className={`${styles.chevron} ${open ? styles.chevronOpen : ""}`} aria-hidden="true">▾</span>
       </button>
 
       {panel}
-
-      <style jsx>{`
-        .dfc-root { position: relative; display: inline-block; }
-
-        .dfc-trigger {
-          display: flex; align-items: center; gap: 0.4rem;
-          height: 36px; padding: 0 0.75rem;
-          background: white; border: 1.5px solid #dee2e6; border-radius: 8px;
-          font-size: 0.82rem; font-weight: 600; color: #343a40;
-          cursor: pointer; transition: all 0.15s; white-space: nowrap;
-        }
-        .dfc-trigger:hover { border-color: #1e293b; }
-        .dfc-trigger-active {
-          background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-          border-color: #1e293b; color: #ffffff;
-        }
-        .dfc-trigger-icon { font-size: 0.85rem; }
-        .dfc-trigger-label { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
-        .dfc-chevron { font-size: 0.7rem; transition: transform 0.15s; opacity: 0.7; }
-        .dfc-chevron-open { transform: rotate(180deg); }
-
-        .dfc-panel {
-          /* top/left/position come from the inline style (computed from the
-             trigger's bounding rect) — this is portaled to document.body, so
-             it can't be positioned relative to .dfc-root any more. z-index
-             is still set here as a last-ditch safety net, but the real fix
-             is the portal itself: a table's own header can sit in a later
-             stacking context than this control, which paints over any
-             z-index this panel has if it isn't escaped via a portal. */
-          z-index: 2147483000;
-          width: 300px; background: white; border: 1px solid #e9ecef;
-          border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
-          padding: 0.9rem; animation: dfc-fade-in 0.12s ease-out;
-        }
-        @keyframes dfc-fade-in {
-          from { opacity: 0; transform: translateY(-4px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .dfc-panel-header {
-          display: flex; align-items: center; justify-content: space-between;
-          font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
-          letter-spacing: 0.4px; color: #1e293b; margin-bottom: 0.7rem;
-        }
-        .dfc-clear-link {
-          background: none; border: none; color: #dc3545; font-size: 0.75rem;
-          font-weight: 600; cursor: pointer; text-decoration: underline;
-          text-transform: none; letter-spacing: normal;
-        }
-
-        .dfc-section-title {
-          font-size: 0.7rem; font-weight: 600; color: #6c757d;
-          margin-bottom: 0.4rem;
-        }
-
-        .dfc-month-grid {
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem;
-          max-height: 150px; overflow-y: auto; margin-bottom: 0.75rem;
-        }
-        .dfc-month-chip {
-          padding: 0.35rem 0.3rem; background: #f8f9fa; border: 1px solid #e9ecef;
-          border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: #495057;
-          cursor: pointer; transition: all 0.12s;
-        }
-        .dfc-month-chip:hover { border-color: #1e293b; color: #1e293b; }
-        .dfc-chip-active {
-          background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-          border-color: #1e293b; color: #ffffff;
-        }
-
-        .dfc-divider {
-          display: flex; align-items: center; text-align: center;
-          font-size: 0.68rem; color: #adb5bd; text-transform: uppercase;
-          letter-spacing: 0.3px; margin: 0.6rem 0;
-        }
-        .dfc-divider::before, .dfc-divider::after {
-          content: ""; flex: 1; border-bottom: 1px solid #f1f3f5;
-        }
-        .dfc-divider span { padding: 0 0.6rem; }
-
-        .dfc-range-row { display: flex; gap: 0.5rem; }
-        .dfc-range-field { flex: 1; }
-        .dfc-range-label {
-          font-size: 0.7rem; font-weight: 600; color: #6c757d; margin-bottom: 0.2rem;
-        }
-        .dfc-range-error {
-          font-size: 0.72rem; color: #dc3545; margin-top: 0.4rem;
-        }
-
-        .dfc-panel-footer {
-          display: flex; justify-content: flex-end; gap: 0.5rem;
-          margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid #f1f3f5;
-        }
-        .dfc-btn {
-          padding: 0.4rem 0.9rem; border-radius: 7px; font-size: 0.78rem;
-          font-weight: 700; cursor: pointer; border: 1.5px solid transparent;
-        }
-        .dfc-btn-secondary { background: white; border-color: #dee2e6; color: #495057; }
-        .dfc-btn-secondary:hover { border-color: #adb5bd; }
-        .dfc-btn-primary {
-          background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white;
-        }
-        .dfc-btn-primary:disabled { background: #adb5bd; cursor: not-allowed; }
-      `}</style>
     </div>
   );
 }
