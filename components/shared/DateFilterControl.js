@@ -13,8 +13,19 @@
 // Intentionally framework-light: a plain positioned panel + an
 // outside-click listener, not a UI-library popover, to keep this a drop-in
 // component inside the existing react-bootstrap toolbars.
+//
+// The panel is rendered through a portal straight into document.body rather
+// than as a normal absolutely-positioned child. A table's own header row
+// commonly sits in its own stacking context (sticky positioning, etc.), and
+// when that context is DOM-later than this control's, it paints on top of
+// the panel no matter how high the panel's own z-index is set — z-index
+// only resolves conflicts within the same stacking context. A portal sidesteps
+// that entirely: the panel is positioned in the viewport (fixed, from the
+// trigger's own bounding rect) and lives outside every ancestor's stacking
+// context, so nothing on the page can end up drawn over it.
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { Form } from "react-bootstrap";
 
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -73,7 +84,12 @@ export default function DateFilterControl({
   // doesn't re-fetch on every keystroke — only "Apply" commits it.
   const [stagedFrom, setStagedFrom] = useState(fromDate || "");
   const [stagedTo, setStagedTo] = useState(toDate || "");
-  const rootRef = useRef(null);
+  const [panelStyle, setPanelStyle] = useState(null);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []); // document.body isn't available during SSR
 
   const availableMonths = useMemo(() => buildAvailableMonths(dateRange), [dateRange?.minDate, dateRange?.maxDate]);
   const hasRange = !!(fromDate || toDate);
@@ -87,10 +103,36 @@ export default function DateFilterControl({
     }
   }, [open, fromDate, toDate]);
 
+  // Position the portaled panel from the trigger's own screen coordinates —
+  // right-aligned under the trigger, like the old `right: 0` did, clamped so
+  // it never runs off the left edge of the viewport.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const panelWidth = 300;
+    const left = Math.max(8, Math.min(rect.right - panelWidth, window.innerWidth - panelWidth - 8));
+    setPanelStyle({ top: rect.bottom + 6, left });
+  }, [open]);
+
+  // Closing on scroll/resize rather than re-tracking position continuously
+  // — simpler, and a filter popover doesn't need to follow the page around.
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
     const onOutside = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+      const insideTrigger = triggerRef.current && triggerRef.current.contains(e.target);
+      const insidePanel = panelRef.current && panelRef.current.contains(e.target);
+      if (!insideTrigger && !insidePanel) setOpen(false);
     };
     const onEscape = (e) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onOutside);
@@ -136,20 +178,15 @@ export default function DateFilterControl({
 
   const rangeInvalid = stagedFrom && stagedTo && stagedFrom > stagedTo;
 
-  return (
-    <div ref={rootRef} className="dfc-root">
-      <button
-        type="button"
-        className={`dfc-trigger ${hasRange || selectedMonth ? "dfc-trigger-active" : ""}`}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <span className="dfc-trigger-icon" aria-hidden="true">📅</span>
-        <span className="dfc-trigger-label">{triggerLabel}</span>
-        <span className={`dfc-chevron ${open ? "dfc-chevron-open" : ""}`} aria-hidden="true">▾</span>
-      </button>
-
-      {open && (
-        <div className="dfc-panel" role="dialog" aria-label={`${label} filter`}>
+  const panel = mounted && open && panelStyle && createPortal(
+    (
+        <div
+          ref={panelRef}
+          className="dfc-panel"
+          role="dialog"
+          aria-label={`${label} filter`}
+          style={{ position: "fixed", top: panelStyle.top, left: panelStyle.left }}
+        >
           <div className="dfc-panel-header">
             <span>{label}</span>
             {(hasRange || selectedMonth) && (
@@ -218,7 +255,24 @@ export default function DateFilterControl({
             </button>
           </div>
         </div>
-      )}
+    ),
+    document.body
+  );
+
+  return (
+    <div className="dfc-root">
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`dfc-trigger ${hasRange || selectedMonth ? "dfc-trigger-active" : ""}`}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="dfc-trigger-icon" aria-hidden="true">📅</span>
+        <span className="dfc-trigger-label">{triggerLabel}</span>
+        <span className={`dfc-chevron ${open ? "dfc-chevron-open" : ""}`} aria-hidden="true">▾</span>
+      </button>
+
+      {panel}
 
       <style jsx>{`
         .dfc-root { position: relative; display: inline-block; }
@@ -241,7 +295,14 @@ export default function DateFilterControl({
         .dfc-chevron-open { transform: rotate(180deg); }
 
         .dfc-panel {
-          position: absolute; top: calc(100% + 6px); right: 0; z-index: 1050;
+          /* top/left/position come from the inline style (computed from the
+             trigger's bounding rect) — this is portaled to document.body, so
+             it can't be positioned relative to .dfc-root any more. z-index
+             is still set here as a last-ditch safety net, but the real fix
+             is the portal itself: a table's own header can sit in a later
+             stacking context than this control, which paints over any
+             z-index this panel has if it isn't escaped via a portal. */
+          z-index: 2147483000;
           width: 300px; background: white; border: 1px solid #e9ecef;
           border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
           padding: 0.9rem; animation: dfc-fade-in 0.12s ease-out;
