@@ -96,36 +96,31 @@ function downloadExcel(data, fileName = "data.xlsx", columnFormats = {}) {
               z: '#,##0.00'
             };
           }
-        } else if (format.type === 'date') {
-          // Handle dates
+        } else if (format.type === 'date' || format.type === 'datetime') {
+          // Write a genuine Excel date-typed cell (serial number + date
+          // format), not text — so Excel's own date filter/sort/grouping
+          // works on it. Two bugs fixed here:
+          //  - 'date' used to run the serial through XLSX.SSF.parse_date_code,
+          //    which DECODES a serial back into a {y,m,d,...} object — it
+          //    doesn't produce one. That object was being written as the
+          //    cell value directly, producing a broken cell.
+          //  - the serial was computed against a LOCAL-timezone epoch
+          //    anchor (`new Date(1899, 11, 30)`), so on a browser set to
+          //    IST a clean date would drift by the UTC offset and pick up a
+          //    spurious time-of-day (e.g. "28/09/2026 05:21:10" instead of
+          //    a plain date). Anchoring with Date.UTC fixes that regardless
+          //    of the viewer's local timezone.
           let dateValue = cell.v;
           if (typeof dateValue === 'string') {
             dateValue = new Date(dateValue);
           }
-          
+
           if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
-            // Convert to Excel serial date
-            const excelSerial = XLSX.SSF.parse_date_code((dateValue.getTime() - new Date(1899, 11, 30).getTime()) / (24 * 60 * 60 * 1000));
+            const excelSerial = (dateValue.getTime() - Date.UTC(1899, 11, 30)) / 86400000;
             ws[cellRef] = {
               v: excelSerial,
               t: 'n',
-              z: 'dd/mm/yyyy'
-            };
-          }
-        } else if (format.type === 'datetime') {
-          // Handle datetime
-          let dateValue = cell.v;
-          if (typeof dateValue === 'string') {
-            dateValue = new Date(dateValue);
-          }
-          
-          if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
-            // Convert to Excel serial date
-            const excelSerial = (dateValue.getTime() - new Date(1899, 11, 30).getTime()) / (24 * 60 * 60 * 1000);
-            ws[cellRef] = {
-              v: excelSerial,
-              t: 'n',
-              z: 'dd/mm/yyyy hh:mm'
+              z: format.type === 'datetime' ? 'dd/mm/yyyy hh:mm' : 'dd/mm/yyyy',
             };
           }
         }

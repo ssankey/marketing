@@ -230,36 +230,40 @@ export const useInvoicesData = (initialStatus = "all", initialPage = 1, pageSize
 
       const currencyFields = new Set(["Unit Sales Price", "Total Sales Price"]);
       const dateFields = new Set(["Invoice Posting Dt.", "SO Date", "Dispatch Date"]);
+      const isDateKey = (key) => dateFields.has(key) || (key && (key.includes("Date") || key.includes("Dt.")));
+
+      // Tells downloadExcel which columns (by Excel header text) to write as
+      // genuine date-typed cells rather than text.
+      const columnFormats = {};
+      columns.forEach((column) => {
+        const key = column.accessorKey || column.id;
+        if (isDateKey(key)) columnFormats[column.header] = { type: "date" };
+      });
 
       const exportData = allFilteredInvoices.map((row) => {
         const formattedRow = {};
-        
+
         columns.forEach((column) => {
           const key = column.accessorKey || column.id;
           const value = column.accessorFn ? column.accessorFn(row) : row[key];
-          
+
           if (currencyFields.has(key)) {
             const cleanNumber = Math.round((Number(value) || 0) * 100) / 100;
             formattedRow[column.header] = +cleanNumber;
-          } else if (key && (key.includes("Date") || key.includes("Dt."))) {
-            if (value) {
-              const date = new Date(value);
-              formattedRow[column.header] = date.toLocaleDateString('en-US');
-            } else {
-              formattedRow[column.header] = "";
-            }
+          } else if (isDateKey(key)) {
+            formattedRow[column.header] = value || "";
           } else {
             formattedRow[column.header] = value || "N/A";
           }
         });
-        
+
         return formattedRow;
       });
 
       const today = new Date().toISOString().split('T')[0];
       const fileName = `Invoices_${today}`;
 
-      downloadExcel(exportData, fileName);
+      downloadExcel(exportData, fileName, columnFormats);
     } catch (error) {
       console.error("Export failed:", error);
       setError("Failed to export invoices: " + error.message);

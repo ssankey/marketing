@@ -37,12 +37,16 @@ const OpenOrdersTable = ({
     globalFilter,
     statusFilter,
     selectedMonth,
+    fromDate,
+    toDate,
     sortField,
     sortDirection,
     orderDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
+    setFromDate,
+    setToDate,
     handleSort,
     handleReset,
     handlePageChange,
@@ -105,6 +109,11 @@ const OpenOrdersTable = ({
         query: queryWithoutMonth
       }, undefined, { shallow: true });
     }
+  };
+
+  const handleDateChange = (which, value) => {
+    if (which === "from") setFromDate(value);
+    else setToDate(value);
   };
 
   const handleStatusChange = (statusValue) => {
@@ -174,7 +183,10 @@ const OpenOrdersTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
+              fromDate={fromDate}
+              toDate={toDate}
               dateRange={orderDateRange}
+              onDateChange={handleDateChange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}

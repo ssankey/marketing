@@ -234,35 +234,38 @@ export const usePendingDispatchData = (initialStatus = "all", initialPage = 1, p
       const currencyFields = new Set(["DocTotal", "VatSum"]);
       const dateFields = new Set(["DocDate", "DocDueDate", "U_DispatchDate", "TaxDate"]);
 
+      // Tells downloadExcel which columns (by Excel header text) to write as
+      // genuine date-typed cells rather than text.
+      const columnFormats = {};
+      columns.forEach((column) => {
+        const key = column.accessorKey || column.id;
+        if (dateFields.has(key)) columnFormats[column.header] = { type: "date" };
+      });
+
       const exportData = allFilteredInvoices.map((row) => {
         const formattedRow = {};
-        
+
         columns.forEach((column) => {
           const key = column.accessorKey || column.id;
           const value = column.accessorFn ? column.accessorFn(row) : row[key];
-          
+
           if (currencyFields.has(key)) {
             const cleanNumber = Math.round((Number(value) || 0) * 100) / 100;
             formattedRow[column.header] = +cleanNumber;
           } else if (dateFields.has(key)) {
-            if (value) {
-              const date = new Date(value);
-              formattedRow[column.header] = date.toLocaleDateString('en-US');
-            } else {
-              formattedRow[column.header] = "";
-            }
+            formattedRow[column.header] = value || "";
           } else {
             formattedRow[column.header] = value || "N/A";
           }
         });
-        
+
         return formattedRow;
       });
 
       const today = new Date().toISOString().split('T')[0];
       const fileName = `PendingDispatch_${today}`;
 
-      downloadExcel(exportData, fileName);
+      downloadExcel(exportData, fileName, columnFormats);
     } catch (error) {
       console.error("Export failed:", error);
       setError("Failed to export pending dispatch invoices: " + error.message);

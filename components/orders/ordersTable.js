@@ -40,12 +40,16 @@ const OrdersTable = ({
     globalFilter,
     statusFilter,
     selectedMonth,
+    fromDate,
+    toDate,
     sortField,
     sortDirection,
     orderDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
+    setFromDate,
+    setToDate,
     handleSort,
     handleReset,
     handlePageChange,
@@ -128,9 +132,14 @@ const OrdersTable = ({
     }
   };
 
+  const handleDateChange = (which, value) => {
+    if (which === "from") setFromDate(value);
+    else setToDate(value);
+  };
+
   const handleStatusChange = (statusValue) => {
     setStatusFilter(statusValue);
-    
+
     // Update URL parameter
     if (statusValue !== "all") {
       router.replace({
@@ -198,7 +207,10 @@ const OrdersTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
+              fromDate={fromDate}
+              toDate={toDate}
               dateRange={orderDateRange}
+              onDateChange={handleDateChange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}

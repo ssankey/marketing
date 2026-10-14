@@ -34,12 +34,16 @@ const InvoicesTable = ({
     globalFilter,
     statusFilter,
     selectedMonth,
+    fromDate,
+    toDate,
     sortField,
     sortDirection,
     invoiceDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
+    setFromDate,
+    setToDate,
     handleSort,
     handleReset,
     handlePageChange,
@@ -102,6 +106,11 @@ const InvoicesTable = ({
         query: queryWithoutMonth
       }, undefined, { shallow: true });
     }
+  };
+
+  const handleDateChange = (which, value) => {
+    if (which === "from") setFromDate(value);
+    else setToDate(value);
   };
 
   const handleStatusChange = (statusValue) => {
@@ -172,7 +181,10 @@ const InvoicesTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
+              fromDate={fromDate}
+              toDate={toDate}
               dateRange={invoiceDateRange}
+              onDateChange={handleDateChange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}
