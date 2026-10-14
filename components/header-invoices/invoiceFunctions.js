@@ -236,39 +236,44 @@ const handleExportExcel = useCallback(async (columns) => {
     const currencyFields = new Set(["DocTotal", "VatSum"]);
     const dateFields = new Set(["DocDate", "DocDueDate", "U_DispatchDate", "TaxDate"]);
     const timeFields = new Set(["CreateTs", "CreateTime", "UpdateTs", "UpdateTime"]); // Add your time fields here
+    const isDateField = (accessorKey) =>
+      dateFields.has(accessorKey) || (accessorKey && (accessorKey.includes("Date") || accessorKey.includes("Dt")));
+
+    // Tells downloadExcel which columns (by their Excel header text) to
+    // write as genuine date-typed cells rather than text — pass the raw
+    // ISO value through below instead of pre-formatting it to a locale
+    // string, so there's an actual date for it to parse.
+    const columnFormats = {};
+    columns.forEach((column) => {
+      if (isDateField(column.accessorKey)) columnFormats[column.header] = { type: "date" };
+    });
 
     const exportData = allFilteredInvoices.map((row) => {
       const formattedRow = {};
-      
+
       columns.forEach((column) => {
         const value = row[column.accessorKey || column.id];
-        
+
         if (currencyFields.has(column.accessorKey)) {
           const cleanNumber = Math.round((Number(value) || 0) * 100) / 100;
           formattedRow[column.header] = +cleanNumber;
         } else if (timeFields.has(column.accessorKey)) {
           // Use formatTime utility for consistency with frontend
           formattedRow[column.header] = formatTime(value) || "";
-        } else if (dateFields.has(column.accessorKey) || 
-                   (column.accessorKey && (column.accessorKey.includes("Date") || column.accessorKey.includes("Dt")))) {
-          if (value) {
-            const date = new Date(value);
-            formattedRow[column.header] = date.toLocaleDateString('en-US');
-          } else {
-            formattedRow[column.header] = "";
-          }
+        } else if (isDateField(column.accessorKey)) {
+          formattedRow[column.header] = value || "";
         } else {
           formattedRow[column.header] = value || "N/A";
         }
       });
-      
+
       return formattedRow;
     });
 
     const today = new Date().toISOString().split('T')[0];
     const fileName = `Header_Invoices_${today}`;
 
-    downloadExcel(exportData, fileName);
+    downloadExcel(exportData, fileName, columnFormats);
   } catch (error) {
     console.error("Export failed:", error);
     setError("Failed to export invoices: " + error.message);

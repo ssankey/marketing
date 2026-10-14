@@ -3,6 +3,7 @@
 // components/header-invoices/InvoiceFilters.js
 import React from "react";
 import { Row, Col, Button, ButtonGroup, InputGroup, Form } from "react-bootstrap";
+import DateFilterControl from "components/shared/DateFilterControl";
 
 const InvoiceFilters = ({
   globalFilter,
@@ -28,71 +29,6 @@ const InvoiceFilters = ({
     background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
     color: '#ffffff'
   };
-
-  // Format month for display
-  const formatMonthDisplay = (monthValue) => {
-    if (!monthValue) return "";
-    const [year, month] = monthValue.split('-');
-    const date = new Date(year, month - 1);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short' 
-    });
-  };
-
-  // Generate available months from the min/max invoice date range — a
-  // single lightweight query (lib/models/invoices.js's getInvoicesDateRange,
-  // same one the Invoice Line page already uses), not the full invoice (+
-  // credit note) history. The previous version derived this from every row
-  // of a `?getAll=true` fetch of the whole dataset — ~19MB/40+s in testing
-  // — so the dropdown would sit on just "All Months" until that resolved
-  // (or never, if it timed out), which read as a broken dropdown.
-  const getAvailableMonths = () => {
-    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
-    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
-
-    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
-      // Fallback: last 12 months if no valid date range came back yet.
-      const months = [];
-      const now = new Date();
-      for (let i = 0; i < 12; i++) {
-        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const year = date.getFullYear();
-        const month = date.getMonth();
-        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-        months.push({
-          value: `${year}-${String(month + 1).padStart(2, '0')}`,
-          display: `${monthName} ${year}`,
-        });
-      }
-      return months;
-    }
-
-    // Generate all months between min and max date
-    const months = [];
-    const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-    const end = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-
-    while (current <= end) {
-      const year = current.getFullYear();
-      const month = current.getMonth();
-
-      const monthName = current.toLocaleDateString('en-US', { month: 'short' });
-      const displayText = `${monthName} ${year}`;
-      const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-
-      months.push({
-        value: value,
-        display: displayText
-      });
-
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    return months.reverse(); // Show recent months first
-  };
-
-  const availableMonths = getAvailableMonths();
 
   return (
     <div className="mt-2 mb-2">
@@ -145,44 +81,14 @@ const InvoiceFilters = ({
         </Col>
 
         <Col lg={4} md={5} className="d-flex align-items-center justify-content-end gap-2">
-          <div className="d-flex align-items-center gap-1">
-            <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>Month:</Form.Label>
-            <Form.Select
-              value={selectedMonth || ""}
-              onChange={(e) => onMonthChange(e.target.value)}
-              size="sm"
-              style={{ width: "160px", ...commonStyle }}
-            >
-              <option value="">All Months</option>
-              {availableMonths.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {formatMonthDisplay(month.value)}
-                </option>
-              ))}
-            </Form.Select>
-          </div>
-
-          {/* <div className="d-flex align-items-center gap-1">
-            <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>From:</Form.Label>
-            <Form.Control
-              type="date"
-              value={fromDate}
-              onChange={(e) => onDateChange("from", e.target.value)}
-              size="sm"
-              style={{ width: "140px", ...commonStyle }}
-            />
-          </div>
-
-          <div className="d-flex align-items-center gap-1">
-            <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>To:</Form.Label>
-            <Form.Control
-              type="date"
-              value={toDate}
-              onChange={(e) => onDateChange("to", e.target.value)}
-              size="sm"
-              style={{ width: "140px", ...commonStyle }}
-            />
-          </div> */}
+          <DateFilterControl
+            selectedMonth={selectedMonth}
+            fromDate={fromDate}
+            toDate={toDate}
+            dateRange={dateRange}
+            onMonthChange={onMonthChange}
+            onDateChange={onDateChange}
+          />
 
           <Button
             onClick={onExport}

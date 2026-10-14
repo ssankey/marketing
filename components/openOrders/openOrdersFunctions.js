@@ -235,36 +235,38 @@ export const useOpenOrdersData = (initialStatus = "all", initialPage = 1, pageSi
 
       const dateFields = new Set(["PostingDate", "PODate", "DeliveryDate"]);
 
+      // Tells downloadExcel which columns (by Excel header text) to write as
+      // genuine date-typed cells rather than text.
+      const columnFormats = {};
+      columns.forEach((column) => {
+        if (dateFields.has(column.accessorKey)) columnFormats[column.header] = { type: "date" };
+      });
+
       const exportData = allFilteredOrders.map((row) => {
         const formattedRow = {};
-        
+
         columns.forEach((column) => {
           const value = row[column.accessorKey];
-          
+
           if (numberFields.has(column.accessorKey)) {
             const numericValue = Number(value) || 0;
             formattedRow[column.header] = +numericValue.toFixed(2);
           } else if (dateFields.has(column.accessorKey)) {
-            if (value) {
-              const date = new Date(value);
-              formattedRow[column.header] = date.toLocaleDateString('en-US');
-            } else {
-              formattedRow[column.header] = "";
-            }
+            formattedRow[column.header] = value || "";
           } else if (column.accessorKey === "CustomerVendorName" || column.accessorKey === "ItemName") {
             formattedRow[column.header] = value || "N/A";
           } else {
             formattedRow[column.header] = value || "N/A";
           }
         });
-        
+
         return formattedRow;
       });
 
       const today = new Date().toISOString().split('T')[0];
       const fileName = `OpenOrders_Report_${today}`;
 
-      downloadExcel(exportData, fileName);
+      downloadExcel(exportData, fileName, columnFormats);
     } catch (error) {
       console.error("Export failed:", error);
       setError("Failed to export orders: " + error.message);

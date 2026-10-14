@@ -2,15 +2,19 @@
 // components/orders/OrdersFilters.js
 import React from "react";
 import { Row, Col, Button, ButtonGroup, InputGroup, Form } from "react-bootstrap";
+import DateFilterControl from "components/shared/DateFilterControl";
 
 const OrdersFilters = ({
   globalFilter,
   statusFilter,
   selectedMonth,
+  fromDate,
+  toDate,
   dateRange = { minDate: null, maxDate: null },
   onSearch,
   onStatusChange,
   onMonthChange,
+  onDateChange,
   onReset,
   onExport,
   totalItems,
@@ -19,60 +23,11 @@ const OrdersFilters = ({
     height: "36px",
     fontSize: "0.9rem",
   };
-  
+
   const headerColors = {
     background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
     color: '#ffffff'
   };
-
-  // Add the formatMonthDisplay function here
-  const formatMonthDisplay = (monthValue) => {
-    if (!monthValue) return "";
-    const [year, month] = monthValue.split('-');
-    const date = new Date(year, month - 1);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short' 
-    });
-  };
-
-  // Generate available months from the min/max order date range
-  const getAvailableMonths = () => {
-    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
-    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
-
-    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
-      return [];
-    }
-
-    // Generate all months between min and max date
-    const months = [];
-    const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-    const end = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-
-    while (current <= end) {
-      const year = current.getFullYear();
-      const month = current.getMonth();
-
-      // Format as "Jan 2024"
-      const monthName = current.toLocaleDateString('en-US', { month: 'short' });
-      const displayText = `${monthName} ${year}`;
-
-      // Value format for filtering (YYYY-MM)
-      const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-
-      months.push({
-        value: value,
-        display: displayText
-      });
-
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    return months.reverse(); // Show recent months first
-  };
-
-  const availableMonths = getAvailableMonths();
 
   return (
     <div className="mt-2 mb-2">
@@ -110,7 +65,7 @@ const OrdersFilters = ({
             ))}
           </ButtonGroup>
         </Col>
-        
+
         <Col lg={4} md={12} className="d-flex justify-content-center">
           <InputGroup style={{ maxWidth: "400px", minWidth: "280px", width: "100%" }}>
             <Form.Control
@@ -123,25 +78,17 @@ const OrdersFilters = ({
             />
           </InputGroup>
         </Col>
-        
+
         <Col lg={4} md={5} className="d-flex align-items-center justify-content-end gap-2">
-          <div className="d-flex align-items-center gap-1">
-            <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>Month:</Form.Label>
-            <Form.Select
-              value={selectedMonth || ""}
-              onChange={(e) => onMonthChange(e.target.value)}
-              size="sm"
-              style={{ width: "160px", ...commonStyle }}
-            >
-              <option value="">All Months</option>
-              {availableMonths.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {formatMonthDisplay(month.value)}
-                </option>
-              ))}
-            </Form.Select>
-          </div>
-          
+          <DateFilterControl
+            selectedMonth={selectedMonth}
+            fromDate={fromDate}
+            toDate={toDate}
+            dateRange={dateRange}
+            onMonthChange={onMonthChange}
+            onDateChange={onDateChange}
+          />
+
           <Button
             onClick={onExport}
             variant="success"

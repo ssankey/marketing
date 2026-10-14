@@ -38,12 +38,16 @@ const HeaderInvoicesTable = ({
     globalFilter,
     statusFilter,
     selectedMonth,
+    fromDate,
+    toDate,
     sortField,
     sortDirection,
     invoiceDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
+    setFromDate,
+    setToDate,
     handleSort,
     handleReset,
     handlePageChange,
@@ -173,6 +177,11 @@ const HeaderInvoicesTable = ({
     }
   };
 
+  const handleDateChange = (which, value) => {
+    if (which === "from") setFromDate(value);
+    else setToDate(value);
+  };
+
   const handleStatusChange = (statusValue) => {
     setStatusFilter(statusValue);
     
@@ -263,10 +272,13 @@ const HeaderInvoicesTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
+              fromDate={fromDate}
+              toDate={toDate}
               dateRange={invoiceDateRange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}
+              onDateChange={handleDateChange}
               onReset={handleResetWithURL}
               onExport={handleExport}
               totalItems={totalItems}

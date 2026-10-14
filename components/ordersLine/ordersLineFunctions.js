@@ -230,9 +230,18 @@ export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSi
         ]);
       const dateFields = new Set(["PostingDate", "PODate", "DeliveryDate"]);
 
+      // Tells downloadExcel which columns (by Excel header text) to write as
+      // genuine date-typed cells rather than text.
+      const columnFormats = {};
+      columns.forEach((column) => {
+        if (column.accessorKey && dateFields.has(column.accessorKey)) {
+          columnFormats[column.header] = { type: "date" };
+        }
+      });
+
       const exportData = allFilteredOrdersLine.map((row) => {
         const formattedRow = {};
-        
+
         columns.forEach((column) => {
           const key = column.accessorKey;
           if (!key) return; // skip the Pick Slip action column, which has no accessorKey
@@ -242,24 +251,19 @@ export const useOrdersLineData = (initialStatus = "all", initialPage = 1, pageSi
             const cleanNumber = Math.round((Number(value) || 0) * 100) / 100;
             formattedRow[column.header] = +cleanNumber;
           } else if (dateFields.has(key)) {
-            if (value) {
-              const date = new Date(value);
-              formattedRow[column.header] = date.toLocaleDateString('en-US');
-            } else {
-              formattedRow[column.header] = "";
-            }
+            formattedRow[column.header] = value || "";
           } else {
             formattedRow[column.header] = value || "N/A";
           }
         });
-        
+
         return formattedRow;
       });
 
       const today = new Date().toISOString().split('T')[0];
       const fileName = `Orders_Line_${today}`;
 
-      downloadExcel(exportData, fileName);
+      downloadExcel(exportData, fileName, columnFormats);
     } catch (error) {
       console.error("Export failed:", error);
       setError("Failed to export order lines: " + error.message);

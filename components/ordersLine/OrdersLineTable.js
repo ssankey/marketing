@@ -31,12 +31,16 @@ const OrdersLineTable = ({
     globalFilter,
     statusFilter,
     selectedMonth,
+    fromDate,
+    toDate,
     sortField,
     sortDirection,
     orderLineDateRange,
     setGlobalFilter,
     setStatusFilter,
     setSelectedMonth,
+    setFromDate,
+    setToDate,
     handleSort,
     handleReset,
     handlePageChange,
@@ -97,6 +101,11 @@ const OrdersLineTable = ({
         query: queryWithoutMonth
       }, undefined, { shallow: true });
     }
+  };
+
+  const handleDateChange = (which, value) => {
+    if (which === "from") setFromDate(value);
+    else setToDate(value);
   };
 
   const handleStatusChange = (statusValue) => {
@@ -164,7 +173,10 @@ const OrdersLineTable = ({
               globalFilter={globalFilter}
               statusFilter={statusFilter}
               selectedMonth={selectedMonth}
+              fromDate={fromDate}
+              toDate={toDate}
               dateRange={orderLineDateRange}
+              onDateChange={handleDateChange}
               onSearch={setGlobalFilter}
               onStatusChange={handleStatusChange}
               onMonthChange={handleMonthChange}

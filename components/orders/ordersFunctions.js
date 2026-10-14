@@ -233,27 +233,31 @@ export const useOrdersData = (initialStatus = "all", initialPage = 1, pageSize =
     const dateFields = new Set(["DocDate", "DeliveryDate"]);
     const timeFields = new Set(["CreateTs"]); // Add this line
 
+    // Tells downloadExcel which columns (by Excel header text) to write as
+    // genuine date-typed cells rather than text. ("EmailSentDT" below stays
+    // text — it's a composite "date time" / "Not Sent" label, not a plain
+    // date.)
+    const columnFormats = {};
+    columns.forEach((column) => {
+      if (dateFields.has(column.accessorKey)) columnFormats[column.header] = { type: "date" };
+    });
+
     const exportData = allFilteredOrders.map((row) => {
       const formattedRow = {};
-      
+
       columns.forEach((column) => {
         if (column.accessorKey === "DocNum" && column.header === "Details") {
           return;
         }
 
         const value = row[column.accessorKey];
-        
+
         if (currencyFields.has(column.accessorKey)) {
           const amt = row.DocCur === "INR" ? value : value * (row.ExchangeRate || 1);
           const cleanNumber = Math.round((Number(amt) || 0) * 100) / 100;
           formattedRow[column.header] = +cleanNumber;
         } else if (dateFields.has(column.accessorKey)) {
-          if (value) {
-            const date = new Date(value);
-            formattedRow[column.header] = date.toLocaleDateString('en-US');
-          } else {
-            formattedRow[column.header] = "";
-          }
+          formattedRow[column.header] = value || "";
         } else if (timeFields.has(column.accessorKey)) {
           // Debug the raw value to understand the format
           console.log(`Debug ${column.accessorKey}:`, value, 'formatted:', formatTime(value));
@@ -287,7 +291,7 @@ export const useOrdersData = (initialStatus = "all", initialPage = 1, pageSize =
     const today = new Date().toISOString().split('T')[0];
     const fileName = `Orders_Report_${today}`;
 
-    downloadExcel(exportData, fileName);
+    downloadExcel(exportData, fileName, columnFormats);
   } catch (error) {
     console.error("Export failed:", error);
     setError("Failed to export orders: " + error.message);

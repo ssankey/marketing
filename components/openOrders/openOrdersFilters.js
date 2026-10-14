@@ -2,6 +2,7 @@
 // components/openOrders/OpenOrdersFilters.js
 import React from "react";
 import { Row, Col, Button, ButtonGroup, InputGroup, Form } from "react-bootstrap";
+import DateFilterControl from "components/shared/DateFilterControl";
 
 const OpenOrdersFilters = ({
   globalFilter,
@@ -26,54 +27,6 @@ const OpenOrdersFilters = ({
     background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
     color: '#ffffff'
   };
-
-  // Format month for display
-  const formatMonthDisplay = (monthValue) => {
-    if (!monthValue) return "";
-    const [year, month] = monthValue.split('-');
-    const date = new Date(year, month - 1);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short' 
-    });
-  };
-
-  // Generate available months from order date range
-  // Generate available months from the min/max order date range — a single
-  // lightweight query (getOpenOrdersDateRange), not every open-order row.
-  const getAvailableMonths = () => {
-    const minDate = dateRange?.minDate ? new Date(dateRange.minDate) : null;
-    const maxDate = dateRange?.maxDate ? new Date(dateRange.maxDate) : null;
-
-    if (!minDate || !maxDate || isNaN(minDate.getTime()) || isNaN(maxDate.getTime())) {
-      return [];
-    }
-
-    // Generate all months between min and max date
-    const months = [];
-    const current = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-    const end = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-
-    while (current <= end) {
-      const year = current.getFullYear();
-      const month = current.getMonth();
-      
-      const monthName = current.toLocaleDateString('en-US', { month: 'short' });
-      const displayText = `${monthName} ${year}`;
-      const value = `${year}-${String(month + 1).padStart(2, '0')}`;
-      
-      months.push({
-        value: value,
-        display: displayText
-      });
-
-      current.setMonth(current.getMonth() + 1);
-    }
-
-    return months.reverse(); // Show recent months first
-  };
-
-  const availableMonths = getAvailableMonths();
 
   return (
     <div className="mt-2 mb-2">
@@ -127,22 +80,14 @@ const OpenOrdersFilters = ({
         </Col>
 
         <Col lg={4} md={5} className="d-flex align-items-center justify-content-end gap-2">
-          <div className="d-flex align-items-center gap-1">
-            <Form.Label className="mb-0 small" style={{ fontSize: "0.75rem" }}>Month:</Form.Label>
-            <Form.Select
-              value={selectedMonth || ""}
-              onChange={(e) => onMonthChange(e.target.value)}
-              size="sm"
-              style={{ width: "160px", ...commonStyle }}
-            >
-              <option value="">All Months</option>
-              {availableMonths.map((month) => (
-                <option key={month.value} value={month.value}>
-                  {formatMonthDisplay(month.value)}
-                </option>
-              ))}
-            </Form.Select>
-          </div>
+          <DateFilterControl
+            selectedMonth={selectedMonth}
+            fromDate={fromDate}
+            toDate={toDate}
+            dateRange={dateRange}
+            onMonthChange={onMonthChange}
+            onDateChange={onDateChange}
+          />
 
           <Button
             onClick={onExport}

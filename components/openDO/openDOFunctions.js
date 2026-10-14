@@ -161,6 +161,15 @@ export const useOpenDOData = (initialStatus = "open", initialPage = 1, pageSize 
 
       const dateFields = new Set(["SODate", "DeliveryDate"]);
 
+      // Tells downloadExcel which columns (by Excel header text) to write as
+      // genuine date-typed cells rather than text.
+      const columnFormats = {};
+      columns.forEach((column) => {
+        if (column.accessorKey && dateFields.has(column.accessorKey)) {
+          columnFormats[column.header] = { type: "date" };
+        }
+      });
+
       const exportData = allRows.map((row) => {
         const formattedRow = {};
         columns.forEach((column) => {
@@ -168,7 +177,7 @@ export const useOpenDOData = (initialStatus = "open", initialPage = 1, pageSize 
           if (!key) return; // skip the Pick Slip action column, which has no accessorKey
           const value = row[key];
           if (dateFields.has(key)) {
-            formattedRow[column.header] = value ? new Date(value).toLocaleDateString("en-US") : "";
+            formattedRow[column.header] = value || "";
           } else {
             formattedRow[column.header] = value ?? "N/A";
           }
@@ -177,7 +186,7 @@ export const useOpenDOData = (initialStatus = "open", initialPage = 1, pageSize 
       });
 
       const today = new Date().toISOString().split("T")[0];
-      downloadExcel(exportData, `Open_DO_Report_${today}`);
+      downloadExcel(exportData, `Open_DO_Report_${today}`, columnFormats);
     } catch (err) {
       console.error("Delivery order export failed:", err);
       setError("Failed to export delivery orders: " + err.message);
