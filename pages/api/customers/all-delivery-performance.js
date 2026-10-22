@@ -1,5 +1,7 @@
-// api/customers/all-delivery-performance.js
-
+// pages/api/customers/all-delivery-performance.js
+// Order → Invoice stage, no-customerId ("all customers") variant — see
+// [id]/delivery-performance.js's header comment for the raw-row/
+// client-side-bucketing architecture this is part of.
 import { queryDatabase } from '../../../lib/db';
 import sql from 'mssql';
 import { verify } from 'jsonwebtoken';
@@ -23,11 +25,9 @@ export default async function handler(req, res) {
   const contactCodes = decoded.contactCodes || [];
   const cardCodes = decoded.cardCodes || [];
 
-  /* ── build WHERE + param list on the fly ───────────────────────── */
   const where = ['OINV.DocDate IS NOT NULL'];
   const params = [];
 
-  // Role-based filtering
   if (!isAdmin) {
     if (contactCodes.length > 0) {
       where.push(`T0.CntctCode IN (${contactCodes.map((c) => `'${c}'`).join(',')})`);
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     params.push({ name: 'cardCode', type: sql.NVarChar, value: customer });
   }
   if (product) {
-    where.push('T2.ItemCode = @itemCode');
+    where.push('T1.ItemCode = @itemCode');
     params.push({ name: 'itemCode', type: sql.NVarChar, value: product });
   }
   if (contactPerson) {
@@ -59,46 +59,38 @@ export default async function handler(req, res) {
     params.push({ name: 'cntctCode', type: sql.NVarChar, value: contactPerson });
   }
 
-  /* ── final SQL ─────────────────────────────────────────────────── */
   const sqlText = `
     SELECT
-      FORMAT(OINV.DocDate,'MMM-yyyy') AS [Month],
-      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 0  AND 3  THEN 1 END) AS Green,
-      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 4  AND 5  THEN 1 END) AS Orange,
-      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 6  AND 8  THEN 1 END) AS Blue,
-      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) BETWEEN 9  AND 10 THEN 1 END) AS Purple,
-      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) > 10 THEN 1 END) AS Red,
-      COUNT(*) AS TotalOrders,
-      COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) <= 8 THEN 1 END) AS SLAAchieved,
-      ROUND(
-        100.0 * COUNT(CASE WHEN DATEDIFF(DAY,T0.DocDate,OINV.DocDate) <= 8 THEN 1 END)
-        / NULLIF(COUNT(*),0), 2
-      ) AS SLAAchievedPercentage
-    FROM  ORDR  T0
-    JOIN  RDR1  T1 ON T0.DocEntry = T1.DocEntry
-    LEFT  JOIN  DLN1 ON T1.DocEntry = DLN1.BaseEntry AND T1.LineNum = DLN1.BaseLine AND DLN1.BaseType = 17
-    LEFT  JOIN  INV1 ON DLN1.DocEntry = INV1.BaseEntry AND DLN1.LineNum = INV1.BaseLine AND INV1.BaseType = 15
-    LEFT  JOIN  OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
-    LEFT  JOIN  OITM T2 ON T1.ItemCode  = T2.ItemCode
-    LEFT  JOIN  OITB IB ON T2.ItmsGrpCod = IB.ItmsGrpCod
-    ${salesPerson ? 'LEFT JOIN OSLP T5 ON T0.SlpCode = T5.SlpCode' : ''}
+      FORMAT(OINV.DocDate, 'MMM-yyyy') AS Month,
+      T0.DocNum AS OrderNo,
+      T0.DocDate AS OrderDate,
+      OINV.DocNum AS InvoiceNo,
+      OINV.DocDate AS InvoiceDate,
+      DATEDIFF(DAY, T0.DocDate, OINV.DocDate) AS DayDiff,
+      T1.ItemCode AS ItemCode,
+      T1.Dscription AS ItemDescription
+    FROM ORDR T0
+    INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
+    INNER JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry AND T1.LineNum = DLN1.BaseLine AND DLN1.BaseType = 17
+    INNER JOIN INV1 ON DLN1.DocEntry = INV1.BaseEntry AND DLN1.LineNum = INV1.BaseLine AND INV1.BaseType = 15
+    INNER JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
+    LEFT JOIN OITM T2 ON T1.ItemCode = T2.ItemCode
+    LEFT JOIN OITB IB ON T2.ItmsGrpCod = IB.ItmsGrpCod
     WHERE ${where.join(' AND ')}
-    GROUP BY FORMAT(OINV.DocDate,'MMM-yyyy')
-    ORDER BY MIN(OINV.DocDate);
+    ORDER BY OINV.DocDate DESC;
   `;
 
-  /* ── execute & return ──────────────────────────────────────────── */
   try {
     const rows = await queryDatabase(sqlText, params);
-    const data = rows.map(r => ({
-      month : r.Month,
-      green : r.Green  ?? 0,
-      orange: r.Orange ?? 0,
-      blue  : r.Blue   ?? 0,
-      purple: r.Purple ?? 0,
-      red   : r.Red    ?? 0,
-      totalOrders : r.TotalOrders,
-      slaPercentage: r.SLAAchievedPercentage
+    const data = rows.map((r) => ({
+      month: r.Month,
+      orderNo: r.OrderNo,
+      orderDate: r.OrderDate ? r.OrderDate.toISOString() : null,
+      invoiceNo: r.InvoiceNo,
+      invoiceDate: r.InvoiceDate ? r.InvoiceDate.toISOString() : null,
+      dayDiff: r.DayDiff,
+      itemCode: r.ItemCode,
+      itemDescription: r.ItemDescription,
     }));
     res.status(200).json(data);
   } catch (err) {

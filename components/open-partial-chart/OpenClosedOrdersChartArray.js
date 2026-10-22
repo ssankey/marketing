@@ -7,6 +7,8 @@ import AsyncSelect from "react-select/async";
 import { formatCurrency } from "utils/formatCurrency";
 import downloadExcel from "utils/exporttoexcel";
 import OrderDetailsModalSlim from "../modal/OrderDetailsModalSlim";
+import LifecycleDrilldownModal from "../CustomerCharts/LifecycleDrilldownModal";
+import { formatDate } from "utils/formatDate";
 import { useAuth } from "contexts/AuthContext";
 import {
   Chart as ChartJS, CategoryScale, LinearScale,
@@ -73,6 +75,8 @@ const OpenPartialOrdersChart = () => {
   const [loadingModal,  setLoadingModal]  = useState(false);
   const [customerData,  setCustomerData]  = useState([]);
   const [loadingCust,   setLoadingCust]   = useState(false);
+  const [lineItemsModal, setLineItemsModal] = useState(null); // { title, rows } | null
+  const [loadingLineItems, setLoadingLineItems] = useState(false);
 
   /* ── filter state ── */
   const [filters, setFilters] = useState({
@@ -144,7 +148,10 @@ const OpenPartialOrdersChart = () => {
     if (!user) return;
     (async () => {
       try {
-        const res = await fetch("/api/open-partial/chart?fyOnly=true");
+        const token = localStorage.getItem("token");
+        const res = await fetch("/api/open-partial/chart?fyOnly=true", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) return;
         const { availableFYs: fys } = await res.json();
         if (fys && fys.length > 0) {
@@ -161,7 +168,10 @@ const OpenPartialOrdersChart = () => {
       setLoading(true);
       setError(null);
       // If no FY selected yet, fetch without FY to get available FYs first
-      const res = await fetch(`/api/open-partial/chart?${buildParams()}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/open-partial/chart?${buildParams()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("Failed to fetch chart data");
       const { data, availableFYs: fys } = await res.json();
       setChartRows(data || []);
@@ -188,7 +198,10 @@ const OpenPartialOrdersChart = () => {
       p.set("year",   year);
       p.set("month",  monthNumber);
       p.set("status", status);
-      const res = await fetch(`/api/open-partial/modal?${p}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/open-partial/modal?${p}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("Failed to fetch modal data");
       const records = await res.json();
 
@@ -222,7 +235,10 @@ const OpenPartialOrdersChart = () => {
         vals(filters.products).forEach(v => exportParams.append("itemCode", v));
       if (filters.customers.length)
         vals(filters.customers).forEach(v => exportParams.append("cardCode", v));
-      const res = await fetch(`/api/open-partial/export?${exportParams}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/open-partial/export?${exportParams}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("Export failed");
       const data = await res.json();
       downloadExcel(data, "Open_Partial_Orders");
@@ -277,7 +293,10 @@ const OpenPartialOrdersChart = () => {
   const fetchCustomerData = useCallback(async () => {
     try {
       setLoadingCust(true);
-      const res = await fetch(`/api/open-partial/customers?${buildCustomerParams()}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/open-partial/customers?${buildCustomerParams()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error("Failed to fetch customer data");
       const data = await res.json();
       setCustomerData(data || []);
@@ -288,6 +307,41 @@ const OpenPartialOrdersChart = () => {
       setLoadingCust(false);
     }
   }, [buildCustomerParams]);
+
+  /* ── Line Items drill-down — same modal design as the Order Fulfillment
+     Lifecycle chart's drill-down (components/CustomerCharts/LifecycleDrilldownModal.js) ── */
+  const LINE_ITEMS_COLUMNS = [
+    { key: "SO_No", header: "SO No" },
+    { key: "SO_Date", header: "SO Date", render: (v) => formatDate(v) },
+    { key: "ItemCode", header: "Item Code" },
+    { key: "Item_Service_Description", header: "Item Description" },
+    { key: "Category", header: "Category" },
+    { key: "Quantity", header: "Qty", numeric: true },
+    { key: "Open_Qty", header: "Open Qty", numeric: true },
+    { key: "Unit_Price", header: "Unit Price", numeric: true, render: (v) => formatCurrency(v) },
+    { key: "Open_Amount_INR", header: "Open Amount", numeric: true, render: (v) => formatCurrency(v) },
+    { key: "Delivery_Date", header: "Delivery Date", render: (v) => formatDate(v) },
+  ];
+
+  const handleLineItemsClick = async (row) => {
+    try {
+      setLoadingLineItems(true);
+      const token = localStorage.getItem("token");
+      const p = buildCustomerParams();
+      p.set("cardCode", row.cardCode);
+      const res = await fetch(`/api/open-partial/customer-lines?${p}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to fetch line items");
+      const rows = await res.json();
+      setLineItemsModal({ title: `Open Order Lines — ${row.customer}`, subtitle: row.cardCode, rows });
+    } catch (e) {
+      console.error("Line items fetch error:", e);
+      alert("Failed to load line item details. Please try again.");
+    } finally {
+      setLoadingLineItems(false);
+    }
+  };
 
   // Fetch customer data when switching to customer view or when filters change
   useEffect(() => {
@@ -378,6 +432,12 @@ const OpenPartialOrdersChart = () => {
     <div className="card shadow-sm border-0 mb-4">
       {/* ── Header ── */}
       <div className="card-header bg-white py-2 px-3">
+        {/* Was only ever implied by one of the two toggle button labels
+            below, with no standalone title — this is the section's actual
+            name regardless of which view is active. */}
+        <h4 className="mb-2" style={{ fontWeight: 600, color: "#212529", fontSize: "1.25rem" }}>
+          Monthly Orders (Open and Partial)
+        </h4>
         <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
           {/* ── View toggle ── */}
           <div style={toggleWrap}>
@@ -385,7 +445,7 @@ const OpenPartialOrdersChart = () => {
               style={{ ...toggleBtn, ...(view === "chart" ? toggleBtnActive : {}) }}
               onClick={() => { setView("chart"); setCustPage(0); }}
             >
-              📊 Monthly Orders (Open &amp; Partial)
+              📊 Chart View
             </button>
             <button
               style={{ ...toggleBtn, ...(view === "customer" ? toggleBtnActive : {}) }}
@@ -580,7 +640,13 @@ const OpenPartialOrdersChart = () => {
                             <td style={{ ...tdS, color: "#0d6efd", fontWeight: 700 }}>
                               {formatCurrency(r.openValue)}
                             </td>
-                            <td style={{ ...tdS, fontWeight: 600 }}>{r.lineItems}</td>
+                            <td
+                              style={{ ...tdS, fontWeight: 600, color: "#0d6efd", cursor: "pointer", textDecoration: "underline dotted" }}
+                              onClick={() => handleLineItemsClick(r)}
+                              title="Click to view line-level order details"
+                            >
+                              {loadingLineItems ? "…" : r.lineItems}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -630,6 +696,18 @@ const OpenPartialOrdersChart = () => {
           onClose={() => { setModalData(null); setBarSummary(null); }}
           title={modalTitle}
           barSummary={barSummary}
+        />
+      )}
+
+      {/* Line Items drill-down (Customer Wise view) */}
+      {lineItemsModal && (
+        <LifecycleDrilldownModal
+          show
+          onClose={() => setLineItemsModal(null)}
+          title={lineItemsModal.title}
+          subtitle={lineItemsModal.subtitle}
+          rows={lineItemsModal.rows}
+          columns={LINE_ITEMS_COLUMNS}
         />
       )}
 

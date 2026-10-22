@@ -1,9 +1,17 @@
+// components/CustomerCharts/outstandingtable.js
+// Restyled onto the `.cd-` design system already defined in
+// pages/customers/[id].js's PAGE_STYLES (the only page this component is
+// ever rendered on) — same `.cd-table`/`.cd-table-card`/`.cd-pagination`
+// classes the Addresses table on that same page already uses, instead of
+// raw react-bootstrap `table table-striped table-bordered` + a hidden,
+// non-functional `TableFilters` Reset button (it was being suppressed via
+// a `display: none !important` CSS hack since nothing here ever wired up
+// `onReset`). The Mail/Excel/filter-type controls already live in this
+// section's own CollapsibleSection `controls` prop on the page, so nothing
+// here duplicates them.
 import React, { useEffect, useState } from "react";
-import { Container, Spinner } from "react-bootstrap";
-import { formatCurrency } from "utils/formatCurrency";
+import { Spinner } from "react-bootstrap";
 import { formatDate } from "utils/formatDate";
-import TablePagination from "components/TablePagination";
-import TableFilters from "components/TableFilters";
 import { formatNumberWithIndianCommas } from "utils/formatNumberWithIndianCommas";
 
 const columns = [
@@ -21,14 +29,15 @@ const columns = [
   {
     field: "Invoice Total",
     label: "Invoice Total",
+    numeric: true,
     render: (value) => formatNumberWithIndianCommas(value),
   },
   {
     field: "Balance Due",
     label: "Balance Due",
+    numeric: true,
     render: (value) => formatNumberWithIndianCommas(value),
-
-    className: (value) => (value > 0 ? "text-danger fw-bold" : "text-success"),
+    style: (value) => ({ color: value > 0 ? "var(--bad)" : "var(--good)", fontWeight: 700 }),
   },
   { field: "Country", label: "Country" },
   { field: "State", label: "State" },
@@ -60,29 +69,54 @@ const CustomerOutstandingTable = ({
   isAllSelected,
   onSelectAll,
 }) => {
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const filteredData = customerOutstandings;
+  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const [totalOutstandingAmount, setTotalOutstandingAmount] = useState(0);
+
+  // Sorts the current page of rows client-side — this table is paginated
+  // server-side (10 rows/page), so sorting is scoped to what's currently
+  // loaded, same as clicking a column header in a spreadsheet's visible
+  // range. Click a header to sort ascending; click again for descending.
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
+
+  const filteredData = React.useMemo(() => {
+    if (!sortField) return customerOutstandings;
+    const col = columns.find((c) => c.field === sortField);
+    const arr = [...customerOutstandings];
+    arr.sort((a, b) => {
+      const av = a[sortField];
+      const bv = b[sortField];
+      const cmp = col?.numeric
+        ? (parseFloat(av) || 0) - (parseFloat(bv) || 0)
+        : String(av ?? "").localeCompare(String(bv ?? ""));
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [customerOutstandings, sortField, sortDir]);
 
   // Fetch the total outstanding amount from all pages
   useEffect(() => {
     const fetchTotalOutstanding = async () => {
       try {
-        // Get all records (not paginated) to calculate the total
         const response = await fetch(
           `/api/customers/${customerCode}/outstanding?getAll=true&filterType=${filterType}`
         );
 
         if (response.ok) {
           const data = await response.json();
-
-          // Calculate the total outstanding amount from all records
           const total = data.customerOutstandings.reduce((sum, item) => {
             const balanceDue = item["Balance Due"] || 0;
             return sum + balanceDue;
           }, 0);
-
-          // setTotalOutstandingAmount(total);
           setTotalOutstandingAmount(
             formatNumberWithIndianCommas(Math.round(total * 100) / 100)
           );
@@ -106,62 +140,42 @@ const CustomerOutstandingTable = ({
   };
 
   return (
-    <Container fluid id="customer-outstanding-filters">
-      <TableFilters
-        onExcelDownload={onExcelDownload}
-        totalItems={totalItems}
-        totalItemsLabel="Total"
-        dateFilter={{ enabled: false }}
-        searchConfig={{ enabled: false }}
-        onReset={undefined}
-      />
-
-      <style jsx global>{`
-        #customer-outstanding-filters .btn-outline-secondary {
-          display: none !important;
-        }
-      `}</style>
-
-      <div className="px-3 py-2">
-        <div className="card border-0 bg-light shadow-sm">
-          <div className="card-body p-2 text-center">
-            <h6 className="text-muted mb-1">Total Outstanding Amount</h6>
-            <h4 className="mb-0 text-primary fw-bold">
-              ₹{totalOutstandingAmount}
-            </h4>
-          </div>
+    <div>
+      <div className="cd-panel" style={{ marginBottom: 16, textAlign: "center" }}>
+        <div className="cd-panel-title" style={{ marginBottom: 6 }}>Total Outstanding Amount</div>
+        <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 20, fontWeight: 700, color: "var(--accent)" }}>
+          ₹{totalOutstandingAmount}
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-center py-4">
-          <Spinner animation="border" />
+        <div className="cd-empty">
+          <Spinner animation="border" size="sm" />
         </div>
       ) : (
-        <div className="table-responsive">
-          <table className="table table-striped table-bordered">
-            <thead>
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    onChange={onSelectAll}
-                  />
-                </th>
-                {columns.map((col) => (
-                  <th key={col.field}>{col.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData?.length > 0 ? (
-                filteredData.map((item, index) => {
-                  // Calculate the displayed value for each row
-                  const balanceDue = item["Balance Due"] || 0;
-                  const displayedBalanceDue =
-                    formatNumberWithIndianCommas(balanceDue);
-                  return (
+        <div className="cd-table-card">
+          <div className="cd-table-scroll">
+            <table className="cd-table">
+              <thead>
+                <tr>
+                  <th className="cd-th-left">
+                    <input type="checkbox" checked={isAllSelected} onChange={onSelectAll} />
+                  </th>
+                  {columns.map((col) => (
+                    <th
+                      key={col.field}
+                      className={`${col.numeric ? "cd-th-right" : "cd-th-left"} cd-th-sortable`}
+                      onClick={() => handleSort(col.field)}
+                    >
+                      {col.label}
+                      <span className="cd-sort-arrow">{sortField === col.field ? (sortDir === "asc" ? "▲" : "▼") : ""}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData?.length > 0 ? (
+                  filteredData.map((item, index) => (
                     <tr key={index}>
                       <td>
                         <input
@@ -172,50 +186,45 @@ const CustomerOutstandingTable = ({
                       </td>
                       {columns.map((col) => {
                         const rawValue = item[col.field];
-                        let cellValue = rawValue;
-
-                        if (col.field === "Balance Due") {
-                          cellValue = displayedBalanceDue;
-                        } else if (col.render) {
-                          cellValue = col.render(rawValue);
-                        }
-
-                        const cellClass = col.className
-                          ? col.className(rawValue)
-                          : "";
-
+                        const cellValue = col.render ? col.render(rawValue) : rawValue;
                         return (
-                          <td key={col.field} className={cellClass}>
+                          <td
+                            key={col.field}
+                            className={col.numeric ? "cd-num" : ""}
+                            style={col.style ? col.style(rawValue) : undefined}
+                          >
                             {cellValue || ""}
                           </td>
                         );
                       })}
                     </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={columns.length + 1} className="text-center">
-                    No{" "}
-                    {filterType === "Payment Pending"
-                      ? "pending payments"
-                      : "completed payments"}{" "}
-                    found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={columns.length + 1} className="cd-empty" style={{ padding: "28px 0" }}>
+                      No {filterType === "Payment Pending" ? "pending payments" : "completed payments"} found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="cd-pagination">
+            <div className="cd-pagination-info">
+              {totalItems === 0 ? "No records" : `Page ${currentPage} of ${totalPages} · ${totalItems} total`}
+            </div>
+            <div className="cd-pagination-controls">
+              <button className="cd-page-btn" disabled={currentPage <= 1} onClick={() => onPageChange(1)}>First</button>
+              <button className="cd-page-btn" disabled={currentPage <= 1} onClick={() => onPageChange(Math.max(1, currentPage - 1))}>Prev</button>
+              <button className="cd-page-btn" disabled={currentPage >= totalPages} onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}>Next</button>
+              <button className="cd-page-btn" disabled={currentPage >= totalPages} onClick={() => onPageChange(totalPages)}>Last</button>
+            </div>
+          </div>
         </div>
       )}
-
-      <TablePagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-      />
-    </Container>
+    </div>
   );
 };
 
-export default CustomerOutstandingTable; 
+export default CustomerOutstandingTable;

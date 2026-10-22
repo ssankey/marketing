@@ -1,7 +1,7 @@
 // pages/api/daily-report/chart-data.js
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
-import { queryDatabase } from '../../../lib/db';
+import { queryDatabase, toArray, buildInClause } from '../../../lib/db';
 import { getCache, setCache } from "../../../lib/redis";
 
 export default async function handler(req, res) {
@@ -39,9 +39,18 @@ export default async function handler(req, res) {
     const contactCodes = decoded.contactCodes || [];
     const cardCodes = decoded.cardCodes || [];
 
+    // Multi-select filters arrive either as a single string (one value
+    // picked) or an array (repeated query key, several values picked) —
+    // normalize to an array either way.
+    const slpCodes = toArray(slpCode);
+    const cntctCodes = toArray(cntctCode);
+    const itmsGrpCods = toArray(itmsGrpCod);
+    const itemCodes = toArray(itemCode);
+    const cardCodeList = toArray(cardCode);
+
     // Create cache key
     const userIdentifier = isAdmin ? "admin" : contactCodes.length ? contactCodes.join("-") : cardCodes.join("-");
-    const cacheKey = `daily-chart-data:${userIdentifier}:${year || "all"}:${month || "all"}:${slpCode || "all"}:${cardCode || "all"}:${cntctCode || "all"}:${itmsGrpCod || "all"}:${itemCode || "all"}`;
+    const cacheKey = `daily-chart-data:${userIdentifier}:${year || "all"}:${month || "all"}:${slpCodes.join(",") || "all"}:${cardCodeList.join(",") || "all"}:${cntctCodes.join(",") || "all"}:${itmsGrpCods.join(",") || "all"}:${itemCodes.join(",") || "all"}`;
 
     // Check cache
     const cachedResult = await getCache(cacheKey);
@@ -75,30 +84,36 @@ export default async function handler(req, res) {
       params.push({ name: "month", type: sql.Int, value: parseInt(month) });
     }
 
-    // Apply optional filters
-    if (slpCode) {
-      whereClauses.push(`T0.SlpCode = @slpCode`);
-      params.push({ name: "slpCode", type: sql.Int, value: parseInt(slpCode) });
+    // Apply optional filters — each is now multi-select: an IN clause over
+    // however many values were picked, instead of a single `=` match.
+    if (slpCodes.length) {
+      const { clause, params: p } = buildInClause("T0.SlpCode", "slpCode", slpCodes.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
     }
 
-    if (cntctCode) {
-      whereClauses.push(`T0.CntctCode = @cntctCode`);
-      params.push({ name: "cntctCode", type: sql.Int, value: parseInt(cntctCode) });
+    if (cntctCodes.length) {
+      const { clause, params: p } = buildInClause("T0.CntctCode", "cntctCode", cntctCodes.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
     }
 
-    if (itmsGrpCod) {
-      whereClauses.push(`T3.ItmsGrpCod = @itmsGrpCod`);
-      params.push({ name: "itmsGrpCod", type: sql.Int, value: parseInt(itmsGrpCod) });
+    if (itmsGrpCods.length) {
+      const { clause, params: p } = buildInClause("T3.ItmsGrpCod", "itmsGrpCod", itmsGrpCods.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
     }
 
-    if (cardCode) {
-      whereClauses.push(`T0.CardCode = @cardCode`);
-      params.push({ name: "cardCode", type: sql.VarChar, value: cardCode });
+    if (cardCodeList.length) {
+      const { clause, params: p } = buildInClause("T0.CardCode", "cardCode", cardCodeList, sql.VarChar);
+      whereClauses.push(clause);
+      params.push(...p);
     }
 
-    if (itemCode) {
-      whereClauses.push(`T1.ItemCode = @itemCode`);
-      params.push({ name: "itemCode", type: sql.VarChar, value: itemCode });
+    if (itemCodes.length) {
+      const { clause, params: p } = buildInClause("T1.ItemCode", "itemCode", itemCodes, sql.VarChar);
+      whereClauses.push(clause);
+      params.push(...p);
     }
 
     const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";

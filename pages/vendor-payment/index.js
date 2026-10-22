@@ -94,7 +94,7 @@ export default function VendorPaymentPage() {
   };
 
   return (
-    <Container className="mt-3">
+    <Container fluid className="mt-3">
       <Card className="mb-3 shadow-sm">
         <Card.Header className="bg-white">
           <h3 className="mb-0">Vendor Payment Overview</h3>

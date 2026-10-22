@@ -224,6 +224,13 @@ const TABLE_PAGE_STYLES = `
   .cr-table tbody tr:last-child td { border-bottom: none; }
   .cr-table tbody tr.cr-row-clickable { cursor: pointer; }
   .cr-table tbody tr.cr-row-clickable:hover { background: var(--surface2); }
+  /* The row currently expanded (its child level is showing underneath it) —
+     a persistent tint + accent-colored left edge, so it's still obvious
+     which row you opened once your mouse moves off it (the plain :hover
+     above only shows while hovering, and otherwise every row looks the
+     same, making it hard to tell what's expanded when several levels deep). */
+  .cr-table tbody tr.cr-row-expanded { background: #eaf2ff; box-shadow: inset 3px 0 0 var(--accent); }
+  .cr-table tbody tr.cr-row-expanded:hover { background: var(--surface2); }
   .cr-num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
   .cr-total-row td { background: #f0f4ff; font-weight: 700; color: var(--accent); }
 

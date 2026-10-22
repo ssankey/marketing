@@ -22,12 +22,16 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 const BAR_COLOR = "#124f94";
 
 const DailyInvoiceChart = () => {
+  // salesPerson/contactPerson/category/product/customer are now multi-select
+  // (arrays of {value,label}), matching the Sales COGS chart's filter
+  // pattern (components/EnhancedSalesCOGSChart.js) — selectedMonth stays a
+  // single value, since the chart only ever shows one month at a time.
   const [filters, setFilters] = useState({
-    salesPerson: null,
-    contactPerson: null,
-    category: null,
-    product: null,
-    customer: null,
+    salesPerson: [],
+    contactPerson: [],
+    category: [],
+    product: [],
+    customer: [],
     selectedMonth: null,
   });
 
@@ -132,11 +136,11 @@ const DailyInvoiceChart = () => {
         params.append('year',  filters.selectedMonth.year);
         params.append('month', filters.selectedMonth.monthNumber);
       }
-      if (filters.salesPerson)   params.append('slpCode',    filters.salesPerson);
-      if (filters.contactPerson) params.append('cntctCode',  filters.contactPerson);
-      if (filters.category)      params.append('itmsGrpCod', filters.category);
-      if (filters.product)       params.append('itemCode',   filters.product);
-      if (filters.customer)      params.append('cardCode',   filters.customer);
+      filters.salesPerson.forEach(v => params.append('slpCode', v.value));
+      filters.contactPerson.forEach(v => params.append('cntctCode', v.value));
+      filters.category.forEach(v => params.append('itmsGrpCod', v.value));
+      filters.product.forEach(v => params.append('itemCode', v.value));
+      filters.customer.forEach(v => params.append('cardCode', v.value));
 
       const response = await fetch(`/api/daily-invoice/chart-data?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -168,11 +172,11 @@ const DailyInvoiceChart = () => {
       params.append('month', filters.selectedMonth.monthNumber);
       params.append('day',   day);
 
-      if (filters.salesPerson)   params.append('slpCode',    filters.salesPerson);
-      if (filters.contactPerson) params.append('cntctCode',  filters.contactPerson);
-      if (filters.category)      params.append('itmsGrpCod', filters.category);
-      if (filters.product)       params.append('itemCode',   filters.product);
-      if (filters.customer)      params.append('cardCode',   filters.customer);
+      filters.salesPerson.forEach(v => params.append('slpCode', v.value));
+      filters.contactPerson.forEach(v => params.append('cntctCode', v.value));
+      filters.category.forEach(v => params.append('itmsGrpCod', v.value));
+      filters.product.forEach(v => params.append('itemCode', v.value));
+      filters.customer.forEach(v => params.append('cardCode', v.value));
 
       const response = await fetch(`/api/daily-invoice/modal-data-slim?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -189,8 +193,8 @@ const DailyInvoiceChart = () => {
     }
   };
 
-  const handleFilterChange = (filterType, selectedOption) => {
-    setFilters(prev => ({ ...prev, [filterType]: selectedOption ? selectedOption.value : null }));
+  const handleFilterChange = (filterType, selectedOptions) => {
+    setFilters(prev => ({ ...prev, [filterType]: selectedOptions || [] }));
   };
 
   const handleMonthChange = (selectedOption) => {
@@ -199,8 +203,8 @@ const DailyInvoiceChart = () => {
 
   const clearAllFilters = () => {
     setFilters(prev => ({
-      salesPerson: null, contactPerson: null, category: null,
-      product: null, customer: null, selectedMonth: prev.selectedMonth,
+      salesPerson: [], contactPerson: [], category: [],
+      product: [], customer: [], selectedMonth: prev.selectedMonth,
     }));
   };
 
@@ -210,19 +214,14 @@ const DailyInvoiceChart = () => {
       m => m.year === now.getFullYear() && m.monthNumber === now.getMonth() + 1
     );
     setFilters({
-      salesPerson: null, contactPerson: null, category: null,
-      product: null, customer: null,
+      salesPerson: [], contactPerson: [], category: [],
+      product: [], customer: [],
       selectedMonth: currentMonthOption || (filterOptions.availableMonths.length > 0 ? filterOptions.availableMonths[0] : null),
     });
   };
 
-  const getSelectedProductOption = () => {
-    if (!filters.product) return null;
-    return { value: filters.product, label: filters.product };
-  };
-
   const activeFiltersCount = Object.entries(filters).filter(
-    ([key, value]) => key !== 'selectedMonth' && value !== null
+    ([key, value]) => key !== 'selectedMonth' && Array.isArray(value) && value.length > 0
   ).length;
 
   const isInvoiceValue = metric === "invoiceValue";
@@ -359,11 +358,12 @@ const DailyInvoiceChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Sales Person</label>
                 <Select
+                  isMulti
                   options={filterOptions.salesPersons}
-                  value={filterOptions.salesPersons.find(sp => sp.value === filters.salesPerson) || null}
+                  value={filters.salesPerson}
                   onChange={(o) => handleFilterChange('salesPerson', o)}
                   placeholder="All Sales Person"
-                  isClearable isSearchable styles={customSelectStyles}
+                  isClearable isSearchable closeMenuOnSelect={false} styles={customSelectStyles}
                 />
               </div>
             </div>
@@ -371,11 +371,12 @@ const DailyInvoiceChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Contact Person</label>
                 <Select
+                  isMulti
                   options={filterOptions.contactPersons}
-                  value={filterOptions.contactPersons.find(cp => cp.value === filters.contactPerson) || null}
+                  value={filters.contactPerson}
                   onChange={(o) => handleFilterChange('contactPerson', o)}
                   placeholder="All Contact Person"
-                  isClearable isSearchable styles={customSelectStyles}
+                  isClearable isSearchable closeMenuOnSelect={false} styles={customSelectStyles}
                 />
               </div>
             </div>
@@ -383,11 +384,12 @@ const DailyInvoiceChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Category</label>
                 <Select
+                  isMulti
                   options={filterOptions.categories}
-                  value={filterOptions.categories.find(cat => cat.value === filters.category) || null}
+                  value={filters.category}
                   onChange={(o) => handleFilterChange('category', o)}
                   placeholder="All Category"
-                  isClearable isSearchable styles={customSelectStyles}
+                  isClearable isSearchable closeMenuOnSelect={false} styles={customSelectStyles}
                 />
               </div>
             </div>
@@ -395,11 +397,12 @@ const DailyInvoiceChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Product</label>
                 <AsyncSelect
+                  isMulti
                   cacheOptions loadOptions={loadProductOptions} defaultOptions
-                  value={getSelectedProductOption()}
+                  value={filters.product}
                   onChange={(o) => handleFilterChange('product', o)}
                   placeholder="Search Product..."
-                  isClearable styles={customSelectStyles}
+                  isClearable closeMenuOnSelect={false} styles={customSelectStyles}
                   noOptionsMessage={({ inputValue }) => inputValue ? "No products found" : "Type to search products..."}
                 />
               </div>
@@ -408,11 +411,12 @@ const DailyInvoiceChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Customer</label>
                 <Select
+                  isMulti
                   options={filterOptions.customers}
-                  value={filterOptions.customers.find(c => c.value === filters.customer) || null}
+                  value={filters.customer}
                   onChange={(o) => handleFilterChange('customer', o)}
                   placeholder="All Customer"
-                  isClearable isSearchable styles={customSelectStyles}
+                  isClearable isSearchable closeMenuOnSelect={false} styles={customSelectStyles}
                 />
               </div>
             </div>

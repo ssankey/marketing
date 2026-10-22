@@ -17,6 +17,7 @@
 
 import { useRef, useEffect } from "react";
 import { formatDate } from "utils/formatDate";
+import { formatCurrency } from "utils/formatCurrency";
 import { Badge } from "react-bootstrap";
 import PickSlipButton from "components/shared/PickSlipButton";
 import InvoiceDownloadButton from "components/shared/InvoiceDownloadButton";
@@ -170,6 +171,16 @@ export const tableColumns = (handlers = {}) => {
       accessorKey: "UOM",
       header: "UOM",
       cell: ({ getValue }) => getValue() || "N/A",
+    },
+    {
+      accessorKey: "Price",
+      header: "Unit Price",
+      cell: ({ getValue }) => formatCurrency(getValue()),
+    },
+    {
+      accessorKey: "LineTotal",
+      header: "Line Total",
+      cell: ({ getValue }) => formatCurrency(getValue()),
     },
   ];
 

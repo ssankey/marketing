@@ -7,7 +7,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Modal, Spinner } from "react-bootstrap";
+import CreatableSelect from "react-select/creatable";
 import downloadExcel from "utils/exporttoexcel";
+import { customSelectStyles } from "components/daily-report/ChartConfig";
 import TABLE_PAGE_STYLES from "./tableStyles";
 
 const TABS = [
@@ -26,7 +28,10 @@ const formatDate = (d) => {
 
 async function fetchVendors(password, search = "") {
   const params = new URLSearchParams({ password, search });
-  const res = await fetch(`/api/top-outstanding/vendors?${params}`);
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/top-outstanding/vendors?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || "Failed to load vendors");
   return data;
@@ -34,7 +39,10 @@ async function fetchVendors(password, search = "") {
 
 async function fetchVendorInvoices(password, vendorCode) {
   const params = new URLSearchParams({ password, vendorCode });
-  const res = await fetch(`/api/top-outstanding/vendor-invoices?${params}`);
+  const token = localStorage.getItem("token");
+  const res = await fetch(`/api/top-outstanding/vendor-invoices?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error || "Failed to load invoices");
   return data;
@@ -51,11 +59,26 @@ function InvoiceModal({ password, vendor, onClose }) {
   const [allInvoices, setAllInvoices] = useState([]);
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [displayInvoices, setDisplayInvoices] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  // Multi-select "chips" instead of a single free-text term — matches ANY
+  // selected value across the same fields as before (OR across chips, OR
+  // across fields per chip). No fixed options list: CreatableSelect lets you
+  // type any value and press Enter to add it as its own chip.
+  const [searchValues, setSearchValues] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sortField, setSortField] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
   const itemsPerPage = 20;
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDir("asc");
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -63,8 +86,8 @@ function InvoiceModal({ password, vendor, onClose }) {
         setLoading(true);
         const data = await fetchVendorInvoices(password, vendor.vendorCode);
         setAllInvoices(data);
-      } catch {
-        setError("Failed to load invoices");
+      } catch (err) {
+        setError(err.message || "Failed to load invoices");
       } finally {
         setLoading(false);
       }
@@ -72,26 +95,37 @@ function InvoiceModal({ password, vendor, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const matchesInvoice = (inv, term) =>
+    inv.invoiceNo?.toString().includes(term) ||
+    inv.vendorRefNo?.toLowerCase().includes(term) ||
+    inv.contactPerson?.toLowerCase().includes(term) ||
+    inv.paymentTerms?.toLowerCase().includes(term) ||
+    inv.salesPerson?.toLowerCase().includes(term) ||
+    inv.region?.toLowerCase().includes(term) ||
+    inv.balanceDue?.toString().includes(term) ||
+    inv.overdueDays?.toString().includes(term);
+
+  const NUMERIC_INVOICE_FIELDS = new Set(["invoiceNo", "invoiceTotal", "balanceDue", "overdueDays"]);
+
   useEffect(() => {
     let filtered = [...allInvoices];
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (inv) =>
-          inv.invoiceNo?.toString().includes(term) ||
-          inv.vendorRefNo?.toLowerCase().includes(term) ||
-          inv.contactPerson?.toLowerCase().includes(term) ||
-          inv.paymentTerms?.toLowerCase().includes(term) ||
-          inv.salesPerson?.toLowerCase().includes(term) ||
-          inv.region?.toLowerCase().includes(term) ||
-          inv.balanceDue?.toString().includes(term) ||
-          inv.overdueDays?.toString().includes(term)
-      );
+    if (searchValues.length > 0) {
+      const terms = searchValues.map((v) => v.value.toLowerCase());
+      filtered = filtered.filter((inv) => terms.some((term) => matchesInvoice(inv, term)));
+    }
+    if (sortField) {
+      const numeric = NUMERIC_INVOICE_FIELDS.has(sortField);
+      filtered.sort((a, b) => {
+        const av = a[sortField];
+        const bv = b[sortField];
+        const cmp = numeric ? (parseFloat(av) || 0) - (parseFloat(bv) || 0) : String(av ?? "").localeCompare(String(bv ?? ""));
+        return sortDir === "asc" ? cmp : -cmp;
+      });
     }
     setFilteredInvoices(filtered);
     const start = currentPage * itemsPerPage;
     setDisplayInvoices(filtered.slice(start, start + itemsPerPage));
-  }, [allInvoices, searchTerm, currentPage]);
+  }, [allInvoices, searchValues, currentPage, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / itemsPerPage));
 
@@ -122,7 +156,7 @@ function InvoiceModal({ password, vendor, onClose }) {
   };
 
   return (
-    <Modal show onHide={onClose} centered scrollable size="xl">
+    <Modal show onHide={onClose} centered size="xl" dialogClassName="ot-vendor-modal">
       <div className="ot-modal">
         <style>{TABLE_PAGE_STYLES}</style>
         <Modal.Header closeButton>
@@ -131,16 +165,23 @@ function InvoiceModal({ password, vendor, onClose }) {
             <div className="ot-modal-subtitle">Code: {vendor.vendorCode} &nbsp;|&nbsp; Region: {vendor.region || "Unknown"}</div>
           </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        {/* The modal manages its own scroll regions below (table scrolls
+            independently in both directions, pagination stays pinned and
+            always visible) rather than using react-bootstrap's `scrollable`
+            modal, which only scrolled the whole body vertically and buried
+            the pagination controls off-screen with no way to reach them. */}
+        <Modal.Body className="ot-modal-body">
           <div className="ot-modal-filters">
-            <div className="ot-field" style={{ width: 260 }}>
-              <input
-                className="ot-input"
-                style={{ width: "100%" }}
-                type="text"
-                placeholder="Search invoices..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
+            <div className="ot-field" style={{ width: 340 }}>
+              <CreatableSelect
+                isMulti
+                value={searchValues}
+                onChange={(vals) => { setSearchValues(vals || []); setCurrentPage(0); }}
+                options={[]}
+                styles={customSelectStyles}
+                placeholder="Search invoices… (type a value, press Enter)"
+                formatCreateLabel={(input) => `Search for "${input}"`}
+                noOptionsMessage={() => "Type to add a search term"}
               />
             </div>
             <button className="ot-export-btn" onClick={handleExport} disabled={filteredInvoices.length === 0} type="button">
@@ -160,19 +201,25 @@ function InvoiceModal({ password, vendor, onClose }) {
           {error && <div className="ot-empty" style={{ color: "var(--bad)" }}>{error}</div>}
 
           {!loading && !error && (
-            <div className="ot-table-card">
-              <div className="ot-table-scroll">
-                <table className="ot-table">
+            <div className="ot-modal-table-region">
+              <div className="ot-modal-table-scroll">
+                <table className="ot-table ot-table-wide">
                   <thead>
                     <tr>
                       <th className="ot-th-left">Invoice No.</th>
                       <th className="ot-th-left">Invoice Date</th>
                       <th className="ot-th-left">Vendor Ref No</th>
                       <th className="ot-th-left">Contact Person</th>
-                      <th className="ot-th-right">Invoice Total</th>
-                      <th className="ot-th-right">Balance Due</th>
+                      <th className="ot-th-right ot-th-sortable" onClick={() => handleSort("invoiceTotal")}>
+                        Invoice Total<span className="ot-sort-arrow">{sortField === "invoiceTotal" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span>
+                      </th>
+                      <th className="ot-th-right ot-th-sortable" onClick={() => handleSort("balanceDue")}>
+                        Balance Due<span className="ot-sort-arrow">{sortField === "balanceDue" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span>
+                      </th>
                       <th className="ot-th-left">Region</th>
-                      <th className="ot-th-left">Overdue Days</th>
+                      <th className="ot-th-left ot-th-sortable" onClick={() => handleSort("overdueDays")}>
+                        Overdue Days<span className="ot-sort-arrow">{sortField === "overdueDays" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span>
+                      </th>
                       <th className="ot-th-left">Payment Terms</th>
                       <th className="ot-th-left">Supply Date</th>
                       <th className="ot-th-left">Sales Person</th>
@@ -210,20 +257,23 @@ function InvoiceModal({ password, vendor, onClose }) {
                 </table>
               </div>
 
-              {filteredInvoices.length > itemsPerPage && (
-                <div className="ot-pagination">
-                  <div className="ot-pagination-info">
-                    Showing {currentPage * itemsPerPage + 1}–{Math.min((currentPage + 1) * itemsPerPage, filteredInvoices.length)} of {filteredInvoices.length}
-                  </div>
-                  <div className="ot-pagination-controls">
-                    <button className="ot-page-btn" disabled={currentPage === 0} onClick={() => setCurrentPage(0)}>First</button>
-                    <button className="ot-page-btn" disabled={currentPage === 0} onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}>Prev</button>
-                    <span className="ot-pagination-info">{currentPage + 1} / {totalPages}</span>
-                    <button className="ot-page-btn" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}>Next</button>
-                    <button className="ot-page-btn" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(totalPages - 1)}>Last</button>
-                  </div>
+              {/* Always rendered (not gated on row count) so the modal reads
+                  as a properly paginated table even for a vendor whose
+                  invoices all fit on one page. */}
+              <div className="ot-modal-pagination">
+                <div className="ot-pagination-info">
+                  {filteredInvoices.length === 0
+                    ? "No records"
+                    : `Showing ${currentPage * itemsPerPage + 1}–${Math.min((currentPage + 1) * itemsPerPage, filteredInvoices.length)} of ${filteredInvoices.length}`}
                 </div>
-              )}
+                <div className="ot-pagination-controls">
+                  <button className="ot-page-btn" disabled={currentPage === 0} onClick={() => setCurrentPage(0)}>First</button>
+                  <button className="ot-page-btn" disabled={currentPage === 0} onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}>Prev</button>
+                  <span className="ot-pagination-info">Page {currentPage + 1} of {totalPages}</span>
+                  <button className="ot-page-btn" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}>Next</button>
+                  <button className="ot-page-btn" disabled={currentPage >= totalPages - 1} onClick={() => setCurrentPage(totalPages - 1)}>Last</button>
+                </div>
+              </div>
             </div>
           )}
         </Modal.Body>
@@ -298,8 +348,8 @@ function VendorList({ password, type }) {
         const filtered = type === "local" ? data.filter((v) => v.country === "IN") : data.filter((v) => v.country !== "IN");
         setAllVendors(filtered);
         setFilteredVendors(filtered);
-      } catch {
-        setError("Failed to load vendors");
+      } catch (err) {
+        setError(err.message || "Failed to load vendors");
       } finally {
         setLoading(false);
       }
@@ -510,8 +560,8 @@ export default function TopOutstandingVendorPage({ password }) {
       setHasSearched(true);
       const data = await fetchVendors(password, name);
       setVendors(data);
-    } catch {
-      setError("Failed to fetch vendor data");
+    } catch (err) {
+      setError(err.message || "Failed to fetch vendor data");
       setVendors([]);
     } finally {
       setLoading(false);

@@ -70,7 +70,7 @@ export default function CustomerBalancePage({
 
   return (
     <DashboardLayout>
-      <Container className="mt-2">
+      <Container fluid className="mt-2">
         <Breadcrumb>
           <Breadcrumb.Item active={router.pathname === "/customer-balance"} onClick={() => router.push("/customer-balance")}>
             Customer Balance

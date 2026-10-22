@@ -1,6 +1,6 @@
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
-import { queryDatabase } from '../../../lib/db';
+import { queryDatabase, toArray, buildInClause } from '../../../lib/db';
 import { getCache, setCache } from "../../../lib/redis";
 
 export default async function handler(req, res) {
@@ -24,8 +24,16 @@ export default async function handler(req, res) {
     const contactCodes = decoded.contactCodes || [];
     const cardCodes    = decoded.cardCodes || [];
 
+    // Multi-select filters arrive either as a single string or an array
+    // (repeated query key) — normalize to an array either way.
+    const slpCodes = toArray(slpCode);
+    const cntctCodes = toArray(cntctCode);
+    const itmsGrpCods = toArray(itmsGrpCod);
+    const itemCodes = toArray(itemCode);
+    const cardCodeList = toArray(cardCode);
+
     const userIdentifier = isAdmin ? "admin" : contactCodes.length ? contactCodes.join("-") : cardCodes.join("-");
-    const cacheKey = `daily-invoice-chart:${userIdentifier}:${year||"all"}:${month||"all"}:${slpCode||"all"}:${cardCode||"all"}:${cntctCode||"all"}:${itmsGrpCod||"all"}:${itemCode||"all"}`;
+    const cacheKey = `daily-invoice-chart:${userIdentifier}:${year||"all"}:${month||"all"}:${slpCodes.join(",")||"all"}:${cardCodeList.join(",")||"all"}:${cntctCodes.join(",")||"all"}:${itmsGrpCods.join(",")||"all"}:${itemCodes.join(",")||"all"}`;
 
     const cached = await getCache(cacheKey);
     if (cached) return res.status(200).json(cached);
@@ -46,18 +54,33 @@ export default async function handler(req, res) {
 
     if (year)  { baseWhereClauses.push(`YEAR(T0.DocDate)  = @year`);  params.push({ name: "year",  type: sql.Int,     value: parseInt(year)  }); }
     if (month) { baseWhereClauses.push(`MONTH(T0.DocDate) = @month`); params.push({ name: "month", type: sql.Int,     value: parseInt(month) }); }
-    if (slpCode)    { baseWhereClauses.push(`T0.SlpCode = @slpCode`);       params.push({ name: "slpCode",    type: sql.Int,     value: parseInt(slpCode)    }); }
-    if (cntctCode)  { baseWhereClauses.push(`T0.CntctCode = @cntctCode`);   params.push({ name: "cntctCode",  type: sql.Int,     value: parseInt(cntctCode)  }); }
-    if (itmsGrpCod) {
-        baseWhereClauses.push(`EXISTS (
-            SELECT 1 FROM OITM I2
-            WHERE I2.ItemCode = T1.ItemCode
-            AND I2.ItmsGrpCod = @itmsGrpCod
-        )`);
-        params.push({ name: "itmsGrpCod", type: sql.Int, value: parseInt(itmsGrpCod) });
-        }
-    if (cardCode)   { baseWhereClauses.push(`T0.CardCode = @cardCode`);      params.push({ name: "cardCode",   type: sql.VarChar, value: cardCode             }); }
-    if (itemCode)   { baseWhereClauses.push(`T1.ItemCode = @itemCode`);      params.push({ name: "itemCode",   type: sql.VarChar, value: itemCode             }); }
+
+    // Multi-select: an IN clause over however many values were picked.
+    if (slpCodes.length) {
+      const { clause, params: p } = buildInClause("T0.SlpCode", "slpCode", slpCodes.map((v) => parseInt(v, 10)), sql.Int);
+      baseWhereClauses.push(clause);
+      params.push(...p);
+    }
+    if (cntctCodes.length) {
+      const { clause, params: p } = buildInClause("T0.CntctCode", "cntctCode", cntctCodes.map((v) => parseInt(v, 10)), sql.Int);
+      baseWhereClauses.push(clause);
+      params.push(...p);
+    }
+    if (itmsGrpCods.length) {
+      const { clause, params: p } = buildInClause("I2.ItmsGrpCod", "itmsGrpCod", itmsGrpCods.map((v) => parseInt(v, 10)), sql.Int);
+      baseWhereClauses.push(`EXISTS (SELECT 1 FROM OITM I2 WHERE I2.ItemCode = T1.ItemCode AND ${clause})`);
+      params.push(...p);
+    }
+    if (cardCodeList.length) {
+      const { clause, params: p } = buildInClause("T0.CardCode", "cardCode", cardCodeList, sql.VarChar);
+      baseWhereClauses.push(clause);
+      params.push(...p);
+    }
+    if (itemCodes.length) {
+      const { clause, params: p } = buildInClause("T1.ItemCode", "itemCode", itemCodes, sql.VarChar);
+      baseWhereClauses.push(clause);
+      params.push(...p);
+    }
 
     // ── Invoice WHERE (OINV/INV1) — base filters ──
     const whereClauses = [...baseWhereClauses];

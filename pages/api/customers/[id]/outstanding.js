@@ -8,11 +8,15 @@ export default async function handler(req, res) {
   }
 
   const { id } = req.query; // Customer ID (e.g., C000080)
-  const { getAll = "false", page = 1, fromDate, toDate, filterType = "Payment Pending" } = req.query;
+  const { getAll = "false", page = 1, itemsPerPage: itemsPerPageParam, fromDate, toDate, filterType = "Payment Pending" } = req.query;
 
   const all = getAll === "true";
   const currentPage = parseInt(page, 10);
-  const itemsPerPage = 5;
+  // Previously hardcoded to 5 regardless of what the client asked for — the
+  // client always sent its own itemsPerPage, but this ignored it, so the
+  // two could silently drift apart (as they just did: client moved to 10
+  // rows/page but this stayed at 5).
+  const itemsPerPage = parseInt(itemsPerPageParam, 10) || 10;
 
   if (!id) {
     return res.status(400).json({ message: "Customer ID is required" });

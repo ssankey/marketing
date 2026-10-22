@@ -26,8 +26,6 @@ import OrdersChartArray from "./OpenClosedOrdersChartArray";
 import OrdersChartArrayMerged from "./open-partial-chart/OpenClosedOrdersChartArray";
 import DailyReportChart from './daily-report/DailyReportChart';
 import DailyInvoiceChart from './daily-report/DailyInvoiceChart';
-import OrderToInvoiceChart from 'components/main-page/order-to-invoice/OrderToInvoiceChart';
-import OrderToInvoiceChartBucket from 'components/main-page/order-to-invoice-buckets/order-to-invoice-charts';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -129,7 +127,14 @@ function DashboardCharts({ userRole }) {
       <EnhancedSalesCOGSChart />
       <DailyReportChart />
       <DailyInvoiceChart />
-      <OrderToInvoiceChart />
+      {/* Order Fulfillment Lifecycle — same 3-way Order→Invoice /
+          Invoice→Dispatch / Dispatch→Delivery component used on the
+          customer detail page, just without a customerId: it already
+          switches to the "all customers" endpoints and shows all 4 filters
+          (incl. Customer) automatically when customerId isn't passed. */}
+      <div className="card shadow-sm border-0 mb-4 p-3">
+        <DeliveryPerformanceChart />
+      </div>
       <OrdersChartArrayMerged />
       {/* Conditionally render CategorySalesChart for admin/sales */}
       {isAdminOrSales && <CategorySalesChart />}

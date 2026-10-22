@@ -27,12 +27,16 @@ ChartJS.register(
 );
 
 const DailyReportChart = () => {
+  // salesPerson/contactPerson/category/product/customer are now multi-select
+  // (arrays of {value,label}), matching the Sales COGS chart's filter
+  // pattern (components/EnhancedSalesCOGSChart.js) — selectedMonth stays a
+  // single value, since the chart only ever shows one month at a time.
   const [filters, setFilters] = useState({
-    salesPerson: null,
-    contactPerson: null,
-    category: null,
-    product: null,
-    customer: null,
+    salesPerson: [],
+    contactPerson: [],
+    category: [],
+    product: [],
+    customer: [],
     selectedMonth: null,
   });
 
@@ -152,11 +156,11 @@ const DailyReportChart = () => {
         params.append('month', filters.selectedMonth.monthNumber);
       }
       
-      if (filters.salesPerson) params.append('slpCode', filters.salesPerson);
-      if (filters.contactPerson) params.append('cntctCode', filters.contactPerson);
-      if (filters.category) params.append('itmsGrpCod', filters.category);
-      if (filters.product) params.append('itemCode', filters.product);
-      if (filters.customer) params.append('cardCode', filters.customer);
+      filters.salesPerson.forEach(v => params.append('slpCode', v.value));
+      filters.contactPerson.forEach(v => params.append('cntctCode', v.value));
+      filters.category.forEach(v => params.append('itmsGrpCod', v.value));
+      filters.product.forEach(v => params.append('itemCode', v.value));
+      filters.customer.forEach(v => params.append('cardCode', v.value));
 
       const response = await fetch(`/api/daily-report/chart-data?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -192,11 +196,11 @@ const DailyReportChart = () => {
       params.append('month', filters.selectedMonth.monthNumber);
       params.append('day', day);
       
-      if (filters.salesPerson) params.append('slpCode', filters.salesPerson);
-      if (filters.contactPerson) params.append('cntctCode', filters.contactPerson);
-      if (filters.category) params.append('itmsGrpCod', filters.category);
-      if (filters.product) params.append('itemCode', filters.product);
-      if (filters.customer) params.append('cardCode', filters.customer);
+      filters.salesPerson.forEach(v => params.append('slpCode', v.value));
+      filters.contactPerson.forEach(v => params.append('cntctCode', v.value));
+      filters.category.forEach(v => params.append('itmsGrpCod', v.value));
+      filters.product.forEach(v => params.append('itemCode', v.value));
+      filters.customer.forEach(v => params.append('cardCode', v.value));
 
       const response = await fetch(`/api/daily-report/modal-data-slim?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -216,10 +220,10 @@ const DailyReportChart = () => {
     }
   };
 
-  const handleFilterChange = (filterType, selectedOption) => {
+  const handleFilterChange = (filterType, selectedOptions) => {
     setFilters(prev => ({
       ...prev,
-      [filterType]: selectedOption ? selectedOption.value : null
+      [filterType]: selectedOptions || []
     }));
   };
 
@@ -232,11 +236,11 @@ const DailyReportChart = () => {
 
   const clearAllFilters = () => {
     setFilters(prev => ({
-      salesPerson: null,
-      contactPerson: null,
-      category: null,
-      product: null,
-      customer: null,
+      salesPerson: [],
+      contactPerson: [],
+      category: [],
+      product: [],
+      customer: [],
       selectedMonth: prev.selectedMonth,
     }));
   };
@@ -253,22 +257,17 @@ const DailyReportChart = () => {
     const monthToSet = currentMonthOption || (filterOptions.availableMonths.length > 0 ? filterOptions.availableMonths[0] : null);
 
     setFilters({
-      salesPerson: null,
-      contactPerson: null,
-      category: null,
-      product: null,
-      customer: null,
+      salesPerson: [],
+      contactPerson: [],
+      category: [],
+      product: [],
+      customer: [],
       selectedMonth: monthToSet,
     });
   };
 
-  const getSelectedProductOption = () => {
-    if (!filters.product) return null;
-    return { value: filters.product, label: filters.product };
-  };
-
-  const activeFiltersCount = Object.entries(filters).filter(([key, value]) => 
-    key !== 'selectedMonth' && value !== null
+  const activeFiltersCount = Object.entries(filters).filter(([key, value]) =>
+    key !== 'selectedMonth' && Array.isArray(value) && value.length > 0
   ).length;
 
   // ✅ Chart data switches based on selected metric
@@ -484,76 +483,86 @@ const DailyReportChart = () => {
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Sales Person</label>
                 <Select
+                  isMulti
                   options={filterOptions.salesPersons}
-                  value={filterOptions.salesPersons.find(sp => sp.value === filters.salesPerson) || null}
-                  onChange={(selectedOption) => handleFilterChange('salesPerson', selectedOption)}
+                  value={filters.salesPerson}
+                  onChange={(selectedOptions) => handleFilterChange('salesPerson', selectedOptions)}
                   placeholder="All Sales Person"
                   isClearable
                   isSearchable
+                  closeMenuOnSelect={false}
                   styles={customSelectStyles}
                 />
               </div>
             </div>
-            
+
             <div className="col-12 col-sm-6 col-md-4 col-lg-2">
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Contact Person</label>
                 <Select
+                  isMulti
                   options={filterOptions.contactPersons}
-                  value={filterOptions.contactPersons.find(cp => cp.value === filters.contactPerson) || null}
-                  onChange={(selectedOption) => handleFilterChange('contactPerson', selectedOption)}
+                  value={filters.contactPerson}
+                  onChange={(selectedOptions) => handleFilterChange('contactPerson', selectedOptions)}
                   placeholder="All Contact Person"
                   isClearable
                   isSearchable
+                  closeMenuOnSelect={false}
                   styles={customSelectStyles}
                 />
               </div>
             </div>
-            
+
             <div className="col-12 col-sm-6 col-md-4 col-lg-2">
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Category</label>
                 <Select
+                  isMulti
                   options={filterOptions.categories}
-                  value={filterOptions.categories.find(cat => cat.value === filters.category) || null}
-                  onChange={(selectedOption) => handleFilterChange('category', selectedOption)}
+                  value={filters.category}
+                  onChange={(selectedOptions) => handleFilterChange('category', selectedOptions)}
                   placeholder="All Category"
                   isClearable
                   isSearchable
+                  closeMenuOnSelect={false}
                   styles={customSelectStyles}
                 />
               </div>
             </div>
-            
+
             <div className="col-12 col-sm-6 col-md-4 col-lg-2">
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Product</label>
                 <AsyncSelect
+                  isMulti
                   cacheOptions
                   loadOptions={loadProductOptions}
                   defaultOptions
-                  value={getSelectedProductOption()}
-                  onChange={(selectedOption) => handleFilterChange('product', selectedOption)}
+                  value={filters.product}
+                  onChange={(selectedOptions) => handleFilterChange('product', selectedOptions)}
                   placeholder="Search Product..."
                   isClearable
+                  closeMenuOnSelect={false}
                   styles={customSelectStyles}
-                  noOptionsMessage={({ inputValue }) => 
+                  noOptionsMessage={({ inputValue }) =>
                     inputValue ? "No products found" : "Type to search products..."
                   }
                 />
               </div>
             </div>
-            
+
             <div className="col-12 col-sm-6 col-md-4 col-lg-2">
               <div className="filter-group">
                 <label className="form-label text-muted small fw-medium mb-1">Customer</label>
                 <Select
+                  isMulti
                   options={filterOptions.customers}
-                  value={filterOptions.customers.find(cust => cust.value === filters.customer) || null}
-                  onChange={(selectedOption) => handleFilterChange('customer', selectedOption)}
+                  value={filters.customer}
+                  onChange={(selectedOptions) => handleFilterChange('customer', selectedOptions)}
                   placeholder="All Customer"
                   isClearable
                   isSearchable
+                  closeMenuOnSelect={false}
                   styles={customSelectStyles}
                 />
               </div>

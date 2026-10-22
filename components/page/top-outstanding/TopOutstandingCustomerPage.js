@@ -42,12 +42,15 @@ export default function TopOutstandingCustomerPage({ password }) {
     setSalesLoading(true);
     try {
       const params = new URLSearchParams({ password });
-      const res = await fetch(`/api/top-outstanding/sales-persons?${params}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/top-outstanding/sales-persons?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load sales persons");
       setSalesPersons(data);
     } catch (err) {
-      setError("Failed to load sales persons");
+      setError(err.message || "Failed to load sales persons");
       console.error(err);
     } finally {
       setSalesLoading(false);
@@ -96,13 +99,16 @@ export default function TopOutstandingCustomerPage({ password }) {
     setError("");
     try {
       const params = new URLSearchParams({ password, slpCode });
-      const res = await fetch(`/api/top-outstanding/customers?${params}`);
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/top-outstanding/customers?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to load top outstanding customers");
       setAllCustomers(data);
       setSelectedSlpName(slpName);
     } catch (err) {
-      setError("Failed to load top outstanding customers");
+      setError(err.message || "Failed to load top outstanding customers");
       console.error(err);
       setAllCustomers([]);
     } finally {

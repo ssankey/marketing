@@ -772,8 +772,10 @@ const PAGE_STYLES = `
   }
 
   .pd-card {
+    /* No max-width — a hardcoded cap here leaves growing whitespace on
+       both sides once the page is zoomed out (see tableStyles.js for the
+       full explanation; same pattern, same fix). */
     width: 100%;
-    max-width: 1400px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;

@@ -133,7 +133,10 @@ const BreakdownTable = forwardRef(function BreakdownTable(
       const canExpand = depth + 1 < sequence.length;
       return (
         <React.Fragment key={row.key}>
-          <tr className={canExpand ? 'cr-row-clickable' : ''} onClick={canExpand ? () => toggleExpand(depth, filters, row.key) : undefined}>
+          <tr
+            className={[canExpand ? 'cr-row-clickable' : '', isExpanded ? 'cr-row-expanded' : ''].filter(Boolean).join(' ')}
+            onClick={canExpand ? () => toggleExpand(depth, filters, row.key) : undefined}
+          >
             <td className={indentClass(depth)}>
               {canExpand && (
                 <button className="cr-expand-toggle" type="button" onClick={(e) => { e.stopPropagation(); toggleExpand(depth, filters, row.key); }}>
