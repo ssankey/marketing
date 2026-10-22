@@ -320,7 +320,6 @@ const OpenPartialOrdersChart = () => {
     { key: "Open_Qty", header: "Open Qty", numeric: true },
     { key: "Unit_Price", header: "Unit Price", numeric: true, render: (v) => formatCurrency(v) },
     { key: "Open_Amount_INR", header: "Open Amount", numeric: true, render: (v) => formatCurrency(v) },
-    { key: "Delivery_Date", header: "Delivery Date", render: (v) => formatDate(v) },
   ];
 
   const handleLineItemsClick = async (row) => {

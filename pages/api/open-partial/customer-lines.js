@@ -80,8 +80,7 @@ export default async function handler(req, res) {
         ROUND(T1.OpenQty, 2)                              AS [Open_Qty],
         T1.Price                                          AS [Unit_Price],
         ROUND(T1.OpenQty * T1.Price * T0.DocRate, 2)      AS [Open_Amount_INR],
-        T1.LineTotal                                      AS [Line_Total_INR],
-        T1.ShipDate                                       AS [Delivery_Date]
+        T1.LineTotal                                      AS [Line_Total_INR]
       FROM ORDR T0
       JOIN RDR1 T1   ON T0.DocEntry = T1.DocEntry AND T1.LineStatus = 'O'
       JOIN OSLP T5   ON T0.SlpCode  = T5.SlpCode
