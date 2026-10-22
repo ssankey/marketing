@@ -110,6 +110,14 @@
         .nav-link {
           color: $gray-500;
           padding: 0.25rem 3rem;
+          /* Submenu items sit under 3rem of horizontal padding on each side
+             inside a sidebar capped at 250px wide, leaving little room for
+             the label itself. Combined with the top-level `white-space:
+             nowrap` above, a longer two-word label here (e.g. "Outstanding
+             Customer") had nowhere to go but overflow and get visually
+             clipped at the sidebar's edge — so submenu labels wrap instead. */
+          white-space: normal;
+          line-height: 1.3;
           &:hover {
             color: $white;
           }

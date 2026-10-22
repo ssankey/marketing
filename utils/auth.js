@@ -313,7 +313,13 @@ const clearAuthData = () => {
       if (
         key.startsWith("orders:") ||
         key.startsWith("invoices:") ||
-        key.startsWith("customers:")
+        key.startsWith("customers:") ||
+        // Password-gated reports (Top Outstanding Customer/Vendor) remember
+        // that you unlocked them so navigating away and back doesn't
+        // re-prompt — but only for as long as this login session lasts, so
+        // a different person logging in on the same browser isn't handed
+        // an already-unlocked report.
+        key.startsWith("topOutstandingUnlocked:")
       ) {
         localStorage.removeItem(key);
       }

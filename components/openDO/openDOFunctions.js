@@ -160,14 +160,15 @@ export const useOpenDOData = (initialStatus = "open", initialPage = 1, pageSize 
       }
 
       const dateFields = new Set(["SODate", "DeliveryDate"]);
+      const currencyFields = new Set(["Price", "LineTotal"]);
 
       // Tells downloadExcel which columns (by Excel header text) to write as
-      // genuine date-typed cells rather than text.
+      // genuine date-typed/numeric cells rather than text.
       const columnFormats = {};
       columns.forEach((column) => {
-        if (column.accessorKey && dateFields.has(column.accessorKey)) {
-          columnFormats[column.header] = { type: "date" };
-        }
+        if (!column.accessorKey) return;
+        if (dateFields.has(column.accessorKey)) columnFormats[column.header] = { type: "date" };
+        else if (currencyFields.has(column.accessorKey)) columnFormats[column.header] = { type: "currency" };
       });
 
       const exportData = allRows.map((row) => {
@@ -176,8 +177,8 @@ export const useOpenDOData = (initialStatus = "open", initialPage = 1, pageSize 
           const key = column.accessorKey;
           if (!key) return; // skip the Pick Slip action column, which has no accessorKey
           const value = row[key];
-          if (dateFields.has(key)) {
-            formattedRow[column.header] = value || "";
+          if (dateFields.has(key) || currencyFields.has(key)) {
+            formattedRow[column.header] = value ?? "";
           } else {
             formattedRow[column.header] = value ?? "N/A";
           }

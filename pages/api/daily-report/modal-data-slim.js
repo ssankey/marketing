@@ -1,7 +1,7 @@
 // pages/api/daily-report/modal-data-slim.js
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
-import { queryDatabase } from '../../../lib/db';
+import { queryDatabase, toArray, buildInClause } from '../../../lib/db';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -64,26 +64,39 @@ export default async function handler(req, res) {
       { name: "day",   type: sql.Int, value: parseInt(day) }
     );
 
-    // Optional filters
-    if (slpCode) {
-      whereClauses.push(`T0.SlpCode = @slpCode`);
-      params.push({ name: "slpCode", type: sql.Int, value: parseInt(slpCode) });
+    // Optional filters — multi-select: an IN clause over however many
+    // values were picked (see pages/api/daily-report/chart-data.js, which
+    // feeds the chart these drill-down rows summarize).
+    const slpCodes = toArray(slpCode);
+    const cntctCodes = toArray(cntctCode);
+    const itmsGrpCods = toArray(itmsGrpCod);
+    const itemCodes = toArray(itemCode);
+    const cardCodeList = toArray(cardCode);
+
+    if (slpCodes.length) {
+      const { clause, params: p } = buildInClause("T0.SlpCode", "slpCode", slpCodes.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
     }
-    if (cntctCode) {
-      whereClauses.push(`T0.CntctCode = @cntctCode`);
-      params.push({ name: "cntctCode", type: sql.Int, value: parseInt(cntctCode) });
+    if (cntctCodes.length) {
+      const { clause, params: p } = buildInClause("T0.CntctCode", "cntctCode", cntctCodes.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
     }
-    if (itmsGrpCod) {
-      whereClauses.push(`T4.ItmsGrpCod = @itmsGrpCod`);
-      params.push({ name: "itmsGrpCod", type: sql.Int, value: parseInt(itmsGrpCod) });
+    if (itmsGrpCods.length) {
+      const { clause, params: p } = buildInClause("T4.ItmsGrpCod", "itmsGrpCod", itmsGrpCods.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
     }
-    if (cardCode) {
-      whereClauses.push(`T0.CardCode = @cardCode`);
-      params.push({ name: "cardCode", type: sql.VarChar, value: cardCode });
+    if (cardCodeList.length) {
+      const { clause, params: p } = buildInClause("T0.CardCode", "cardCode", cardCodeList, sql.VarChar);
+      whereClauses.push(clause);
+      params.push(...p);
     }
-    if (itemCode) {
-      whereClauses.push(`T1.ItemCode = @itemCode`);
-      params.push({ name: "itemCode", type: sql.VarChar, value: itemCode });
+    if (itemCodes.length) {
+      const { clause, params: p } = buildInClause("T1.ItemCode", "itemCode", itemCodes, sql.VarChar);
+      whereClauses.push(clause);
+      params.push(...p);
     }
 
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;

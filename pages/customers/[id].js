@@ -59,7 +59,7 @@ export default function CustomerDetails({
   const [isExcelLoading, setIsExcelLoading] = useState(false);
   const [isMailSending, setIsMailSending] = useState(false);
 
-  const ITEMS_PER_PAGE = 5; // Set this at the top of your component
+  const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
   const router = useRouter();
@@ -672,7 +672,7 @@ export default function CustomerDetails({
         </div>
 
         {/* Basic Information + Balance Summary */}
-        <CollapsibleSection title="Customer Details">
+        <CollapsibleSection title="Customer Details" defaultOpen={true} sectionClassName="pdf-section cd-section">
           <div className="cd-grid-2">
             <div className="cd-panel">
               <div className="cd-panel-title">Basic Information</div>
@@ -705,31 +705,18 @@ export default function CustomerDetails({
           </div>
         </CollapsibleSection>
 
-        <CollapsibleSection title="Orders & Invoices - Monthly">
+        <CollapsibleSection title="Orders & Invoices — Monthly" defaultOpen={false} sectionClassName="pdf-section cd-section">
           <PurchasesAmountChart customerId={customer?.CustomerCode} />
         </CollapsibleSection>
 
-        <CollapsibleSection title="Order to Invoice - Monthly">
-          <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Customer Balance Report">
+        <CollapsibleSection title="Customer Balance Report" defaultOpen={false} sectionClassName="pdf-section cd-section">
           <CustomerAgingChart cardCode={customer?.CustomerCode} />
-        </CollapsibleSection>
-
-        {/* Orders placed by this customer — line level */}
-        <CollapsibleSection title="Order Line Items" sectionClassName="pdf-section cd-section">
-          <CustomerOrdersLineTable customerCode={customer?.CustomerCode} />
-        </CollapsibleSection>
-
-        {/* Invoices for this customer — line level */}
-        <CollapsibleSection title="Invoice Line Items" sectionClassName="pdf-section cd-section">
-          <CustomerInvoicesTable customerCode={customer?.CustomerCode} />
         </CollapsibleSection>
 
         <CollapsibleSection
           title="Customer Outstanding"
           sectionClassName="pdf-section cd-section"
+          defaultOpen={true}
           controls={
             <>
               <Dropdown onSelect={handleFilterSelect}>
@@ -802,6 +789,20 @@ export default function CustomerDetails({
           </div>
         </CollapsibleSection>
 
+        <CollapsibleSection title="Order Fulfillment Lifecycle" defaultOpen={true} sectionClassName="pdf-section cd-section">
+          <DeliveryPerformanceChart customerId={customer?.CustomerCode} />
+        </CollapsibleSection>
+
+        {/* Orders placed by this customer — line level */}
+        <CollapsibleSection title="Order Line Items" sectionClassName="pdf-section cd-section" defaultOpen={false}>
+          <CustomerOrdersLineTable customerCode={customer?.CustomerCode} />
+        </CollapsibleSection>
+
+        {/* Invoices for this customer — line level */}
+        <CollapsibleSection title="Invoice Line Items" sectionClassName="pdf-section cd-section" defaultOpen={false}>
+          <CustomerInvoicesTable customerCode={customer?.CustomerCode} />
+        </CollapsibleSection>
+
         {/* <div className="pdf-section">
           <Card className="mb-4">
             <Card.Header>
@@ -871,11 +872,11 @@ export default function CustomerDetails({
             </Card.Body>
           </Card>
         </div> */}
-        <CollapsibleSection title="Sales by Category-Monthly">
+        <CollapsibleSection title="Sales by Category — Monthly" defaultOpen={false} sectionClassName="pdf-section cd-section">
           <CategorySalesChart cardCode={customer?.CustomerCode} />
         </CollapsibleSection>
 
-        <CollapsibleSection title="Addresses">
+        <CollapsibleSection title="Addresses" defaultOpen={false} sectionClassName="pdf-section cd-section">
               {customer?.Addresses && customer.Addresses.length > 0 ? (
                 <div className="cd-table-card">
                   <div className="cd-table-scroll">
@@ -1105,8 +1106,10 @@ const PAGE_STYLES = `
   }
 
   .cd-card {
+    /* No max-width — a hardcoded cap here leaves growing whitespace on
+       both sides once the page is zoomed out (see tableStyles.js for the
+       full explanation; same pattern, same fix). */
     width: 100%;
-    max-width: 1400px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -1389,6 +1392,9 @@ const PAGE_STYLES = `
   .cd-table th:last-child { border-right: none; }
   .cd-th-left { text-align: left; }
   .cd-th-right { text-align: right; }
+  .cd-th-sortable { cursor: pointer; user-select: none; }
+  .cd-th-sortable:hover { color: var(--text); }
+  .cd-sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--accent); }
   .cd-table td {
     padding: 10px 14px;
     font-size: 13px;

@@ -28,8 +28,11 @@ const TABLE_PAGE_STYLES = `
   }
 
   .ot-card {
+    /* No max-width — a hardcoded cap here (was 1600px) reads fine at normal
+       monitor widths but leaves growing whitespace on both sides once the
+       page is zoomed out, since that increases the effective CSS viewport
+       width while the card itself stayed capped and centered. */
     width: 100%;
-    max-width: 1600px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
@@ -259,6 +262,9 @@ const TABLE_PAGE_STYLES = `
   .ot-table th:last-child { border-right: none; }
   .ot-th-left { text-align: left; }
   .ot-th-right { text-align: right; }
+  .ot-th-sortable { cursor: pointer; user-select: none; }
+  .ot-th-sortable:hover { color: var(--text); }
+  .ot-sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--accent); }
 
   .ot-table td {
     padding: 11px 14px;
@@ -321,7 +327,27 @@ const TABLE_PAGE_STYLES = `
   .ot-page-btn.active { background: var(--accent); color: #ffffff; border-color: var(--accent); font-weight: 700; }
   .ot-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  .ot-modal { font-family: 'IBM Plex Sans', sans-serif; color: var(--text); }
+  /* Self-contained token set (same values as .ot above) rather than relying
+     on inheriting from it — react-bootstrap's Modal renders its content
+     through a portal straight to document.body, outside .ot's actual DOM
+     subtree, so var(--good)/var(--border)/etc. referenced anywhere inside
+     the modal would otherwise resolve to nothing (e.g. the Export Excel
+     button's var(--good) background came out fully transparent — not
+     "missing" code, just invisible against the white modal). */
+  .ot-modal {
+    --surface: #ffffff;
+    --surface2: #e0edf9;
+    --surface-green: #dcf3e8;
+    --surface-red: #fdecea;
+    --border: #c5d2dc;
+    --text: #10151c;
+    --muted: #52606d;
+    --accent: #1f68bf;
+    --good: #21875a;
+    --bad: #c0402f;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--text);
+  }
   .ot-modal-title { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 16px; }
   .ot-modal-subtitle { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
   .ot-modal-filters {
@@ -332,6 +358,54 @@ const TABLE_PAGE_STYLES = `
     padding: 12px 0 16px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 12px;
+  }
+
+  /* Invoice drill-down modal: genuinely wide dialog (plain size="xl" caps at
+     1140px, too narrow for 12 columns), with its own bounded scroll region so
+     the table scrolls independently in both directions and the pagination
+     footer always stays pinned in view instead of needing a scroll through
+     the whole modal body to reach it. */
+  .ot-vendor-modal { max-width: 96vw; width: 96vw; }
+  .ot-modal-body {
+    display: flex;
+    flex-direction: column;
+    max-height: 76vh;
+  }
+  .ot-modal-table-region {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .ot-modal-table-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: auto;
+    scrollbar-color: var(--muted) var(--surface2);
+  }
+  .ot-modal-table-scroll::-webkit-scrollbar { width: 12px; height: 12px; }
+  .ot-modal-table-scroll::-webkit-scrollbar-track { background: var(--surface2); }
+  .ot-modal-table-scroll::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 6px; border: 3px solid var(--surface2); }
+  .ot-modal-table-scroll::-webkit-scrollbar-thumb:hover { background: var(--text); }
+  /* Forces the table to exceed the visible width at normal zoom, so the
+     horizontal scrollbar above is reliably present rather than depending on
+     exactly how many columns happen to fit at any given viewport size. */
+  .ot-table-wide { min-width: 1500px; }
+  .ot-modal-pagination {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+    flex-wrap: wrap;
+    gap: 10px;
   }
 `;
 

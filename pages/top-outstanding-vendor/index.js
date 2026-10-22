@@ -2,20 +2,47 @@
 // Gated by a shared password (not the main login) since this report is
 // restricted to a smaller audience than the rest of the dashboard.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TopOutstandingVendorPage from "components/page/top-outstanding/TopOutstandingVendorPage";
 
 const TOP_OUTSTANDING_PASSWORD = "Outstanding_Report_2026";
+const UNLOCK_KEY = "topOutstandingUnlocked:vendor";
 
 export default function TopOutstandingVendorEntry() {
   const [unlocked, setUnlocked] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
 
+  // Once unlocked, stays unlocked for the rest of this login session (utils/
+  // auth.js's clearAuthData/logout clears this flag), so navigating away and
+  // back doesn't re-prompt — only a fresh login (or a different user on the
+  // same browser) does. The stored value is the password itself (not just a
+  // boolean) and must be restored into `password` state here, not just
+  // `unlocked` — TopOutstandingVendorPage re-sends this value as a query
+  // param on every API call it makes, so if it were left as "" (the
+  // useState default) every one of those calls would 403 with "Incorrect
+  // report password" even though the entry gate itself shows unlocked.
+  useEffect(() => {
+    if (!localStorage.getItem("token")) return;
+    const stored = localStorage.getItem(UNLOCK_KEY);
+    if (stored === TOP_OUTSTANDING_PASSWORD) {
+      setPassword(stored);
+      setUnlocked(true);
+    }
+  }, []);
+
   const handleUnlock = () => {
-    if (password === TOP_OUTSTANDING_PASSWORD) {
+    const trimmed = password.trim();
+    if (trimmed === TOP_OUTSTANDING_PASSWORD) {
+      // Store the trimmed value, not the raw input — this is what gets
+      // passed down as a prop and sent on every subsequent API call, so any
+      // stray whitespace that the entry gate itself forgives (via trim())
+      // must not survive past this point, or every request downstream would
+      // still fail the server's own untrimmed comparison.
+      setPassword(trimmed);
       setUnlocked(true);
       setError("");
+      localStorage.setItem(UNLOCK_KEY, trimmed);
     } else {
       setError("Incorrect password");
     }
@@ -32,6 +59,10 @@ export default function TopOutstandingVendorEntry() {
           <input
             type="password"
             autoFocus
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck="false"
             placeholder="Enter password"
             value={password}
             onChange={e => { setPassword(e.target.value); setError(""); }}

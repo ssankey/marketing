@@ -204,7 +204,14 @@ export default async function handler(req, res) {
       lineItems: parseInt(r.LineItems)   || 0,
     }));
 
-    await setCache(cacheKey, data, 1800);
+    // Was cached for 1800s (30 min) — this aggregate's own "Line Items"
+    // count can go stale against the uncached customer-lines.js drill-down
+    // it links to (open orders change throughout the day), which is
+    // exactly what produced a visible "2 vs 3" mismatch for one customer.
+    // 120s keeps the cache's DB-load benefit while making any such
+    // mismatch self-correct within two minutes instead of up to half an
+    // hour.
+    await setCache(cacheKey, data, 120);
     return res.status(200).json(data);
 
   } catch (err) {

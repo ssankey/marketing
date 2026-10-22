@@ -1,7 +1,7 @@
 // pages/api/daily-invoice/modal-data-slim.js
 import { verify } from "jsonwebtoken";
 import sql from "mssql";
-import { queryDatabase } from '../../../lib/db';
+import { queryDatabase, toArray, buildInClause } from '../../../lib/db';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method Not Allowed' });
@@ -47,20 +47,44 @@ export default async function handler(req, res) {
       { name: "day",   type: sql.Int, value: parseInt(day)   }
     );
 
-    // Optional filters
-    if (slpCode)   { whereClauses.push(`H.SlpCode   = @slpCode`);   params.push({ name: "slpCode",   type: sql.Int,     value: parseInt(slpCode)   }); }
-    if (cntctCode) { whereClauses.push(`H.CntctCode = @cntctCode`); params.push({ name: "cntctCode", type: sql.Int,     value: parseInt(cntctCode) }); }
-    if (cardCode)  { whereClauses.push(`H.CardCode  = @cardCode`);  params.push({ name: "cardCode",  type: sql.VarChar, value: cardCode             }); }
-    if (itemCode)  { whereClauses.push(`L.ItemCode  = @itemCode`);  params.push({ name: "itemCode",  type: sql.VarChar, value: itemCode             }); }
+    // Optional filters — multi-select: an IN clause over however many
+    // values were picked (see pages/api/daily-invoice/chart-data.js, which
+    // feeds the chart these drill-down rows summarize).
+    const slpCodes = toArray(slpCode);
+    const cntctCodes = toArray(cntctCode);
+    const itmsGrpCods = toArray(itmsGrpCod);
+    const itemCodes = toArray(itemCode);
+    const cardCodeList = toArray(cardCode);
 
-    if (itmsGrpCod) {
+    if (slpCodes.length) {
+      const { clause, params: p } = buildInClause("H.SlpCode", "slpCode", slpCodes.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
+    }
+    if (cntctCodes.length) {
+      const { clause, params: p } = buildInClause("H.CntctCode", "cntctCode", cntctCodes.map((v) => parseInt(v, 10)), sql.Int);
+      whereClauses.push(clause);
+      params.push(...p);
+    }
+    if (cardCodeList.length) {
+      const { clause, params: p } = buildInClause("H.CardCode", "cardCode", cardCodeList, sql.VarChar);
+      whereClauses.push(clause);
+      params.push(...p);
+    }
+    if (itemCodes.length) {
+      const { clause, params: p } = buildInClause("L.ItemCode", "itemCode", itemCodes, sql.VarChar);
+      whereClauses.push(clause);
+      params.push(...p);
+    }
+    if (itmsGrpCods.length) {
+      const { clause, params: p } = buildInClause("I2.ItmsGrpCod", "itmsGrpCod", itmsGrpCods.map((v) => parseInt(v, 10)), sql.Int);
       whereClauses.push(`EXISTS (
         SELECT 1 FROM OITM I2
         INNER JOIN OITB B2 ON I2.ItmsGrpCod = B2.ItmsGrpCod
         WHERE I2.ItemCode = L.ItemCode
-        AND I2.ItmsGrpCod = @itmsGrpCod
+        AND ${clause}
       )`);
-      params.push({ name: "itmsGrpCod", type: sql.Int, value: parseInt(itmsGrpCod) });
+      params.push(...p);
     }
 
     const whereSQL = `WHERE ${whereClauses.join(" AND ")}`;

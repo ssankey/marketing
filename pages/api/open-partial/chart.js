@@ -321,7 +321,10 @@ export default async function handler(req, res) {
     const availableFYs = Array.from(fySet).sort((a,b) => parseInt(b) - parseInt(a));
 
     const response = { data: results, availableFYs };
-    await setCache(cacheKey, response, 1800);
+    // Same staleness risk as pages/api/open-partial/customers.js (see its
+    // comment) against the uncached modal.js drill-down this chart links
+    // to — shortened from 1800s for the same reason.
+    await setCache(cacheKey, response, 120);
     return res.status(200).json(response);
 
   } catch (err) {
