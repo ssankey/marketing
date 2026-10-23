@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(break)",
+      "Bash(curl -s -o /tmp/page.html -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/catalyst-reagents)",
+      "Bash(grep -B2 -A100 \"^\\\\[$\" /tmp/nextdev.log)",
+      "Bash(curl -s -o /tmp/page2.html -w \"HTTP %{http_code}\\\\n\" http://localhost:3001/catalyst-reagents)",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(curl -s -o /dev/null -w \"port 3000: HTTP %{http_code}\\\\n\" --max-time 3 http://localhost:3000/)",
+      "Bash(chromium-cli --help)",
+      "Bash(node -e \"require.resolve\\('playwright'\\)\")",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx --yes playwright install --dry-run chromium)",
+      "Bash(node .tmp-verify.mjs)",
+      "Bash(tee \"C:\\\\Users\\\\prakash\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-prakash-Density-Dashboard-marketing\\\\e2d1d5d6-762a-4f0f-bde6-05eccfeecaf7\\\\scratchpad\\\\verify.log\")",
+      "Bash(npx playwright *)",
+      "Bash(npm install *)",
+      "Bash(node .tmp-verify-customer.mjs)",
+      "Bash(tee \"C:\\\\Users\\\\prakash\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-prakash-Density-Dashboard-marketing\\\\e2d1d5d6-762a-4f0f-bde6-05eccfeecaf7\\\\scratchpad\\\\verify3.log\")",
+      "Bash(curl -s -o /dev/null -w \"port 3000: HTTP %{http_code} \\(%{time_total}s\\)\\\\n\" --max-time 10 http://localhost:3000/customers/C000010)",
+      "Bash(curl -s -o /dev/null -w \"port 3003: HTTP %{http_code} \\(%{time_total}s\\)\\\\n\" --max-time 150 http://localhost:3003/customers/C000010)",
+      "Bash(tee \"C:\\\\Users\\\\prakash\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-prakash-Density-Dashboard-marketing\\\\e2d1d5d6-762a-4f0f-bde6-05eccfeecaf7\\\\scratchpad\\\\verify4.log\")",
+      "Bash(rm -f .tmp-verify-cr.mjs .tmp-verify-width.mjs .tmp-verify-final.mjs)",
+      "Bash(rm -rf node_modules/playwright node_modules/playwright-core node_modules/.bin/playwright)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code} \\(%{time_total}s\\)\\\\n\" --max-time 15 http://localhost:3001/)",
+      "Bash(curl -s -o /dev/null -w \"page HTTP %{http_code} \\(%{time_total}s\\)\\\\n\" --max-time 90 \"http://localhost:3001/catalyst-reagents\")",
+      "Bash(curl -s 'http://localhost:3001/api/catalyst-reagents/aging?itmsGrpNam=Catalyst&itmsGrpNam=Fine%20Chemicals&itmsGrpNam=Reagent' -H 'Authorization: Bearer __CMDSUB_OUTPUT__' -w '\\\\nHTTP %{http_code}\\\\n' --max-time 60)",
+      "Bash(node .tmp-verify-aging.mjs)",
+      "Bash(node .tmp-verify-today.mjs)",
+      "Bash(node .tmp-verify-orders2.mjs)"
+    ]
+  }
+}

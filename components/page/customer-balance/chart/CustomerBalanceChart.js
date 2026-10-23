@@ -1,7 +1,17 @@
-
-
-import React, { useState,useMemo } from "react";
-import { Card, Row, Col, Spinner } from "react-bootstrap";
+// components/page/customer-balance/chart/CustomerBalanceChart.js
+// Bucketing now happens client-side off the exact same `invoices` rows the
+// Customer Balance Summary table (customer-bal-table.js) renders below this
+// — previously this fetched a separate, pre-aggregated endpoint built off
+// SAP's GL postings (JDT1), a different data source from the table's own
+// OINV-based one, so the two could never be expected to agree, and this
+// chart's own filters never touched the table. One shared dataset (passed
+// down from pages/customer-balance/index.js, filtered server-side there)
+// fixes both at once. Visual language is also now the exact same `.cbt-`
+// design system as the Summary table (same tokens, same card/table/toolbar
+// treatment) instead of a plain Bootstrap Card, so the two sections read as
+// one page instead of two different UIs stacked on top of each other.
+import React, { useMemo, useState } from "react";
+import { Spinner } from "react-bootstrap";
 import { Bar } from "react-chartjs-2";
 import { formatCurrency } from "utils/formatCurrency";
 import {
@@ -15,180 +25,75 @@ import {
 } from "chart.js";
 import AllFilter from "components/AllFilters.js";
 
-// Register ChartJS components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
-const colorPalette = {
-  backgroundColor: [
-    "rgba(25, 135, 84, 0.6)",
-    "rgba(255, 193, 7, 0.6)",
-    "rgba(253, 126, 20, 0.6)",
-    "rgba(220, 53, 69, 0.6)",
-  ],
-  borderColor: [
-    "rgba(25, 135, 84, 1)",
-    "rgba(255, 193, 7, 1)",
-    "rgba(253, 126, 20, 1)",
-    "rgba(220, 53, 69, 1)",
-  ],
+const BUCKET_STATUS = {
+  "0-30 Days":  { color: "#21875a" },
+  "31-60 Days": { color: "#d4a017" },
+  "61-90 Days": { color: "#c0763a" },
+  "91+ Days":   { color: "#c0402f" },
+};
+const BUCKET_ORDER = ["0-30 Days", "31-60 Days", "61-90 Days", "91+ Days"];
+
+const bucketFor = (overdueDays) => {
+  if (overdueDays <= 30) return "0-30 Days";
+  if (overdueDays <= 60) return "31-60 Days";
+  if (overdueDays <= 90) return "61-90 Days";
+  return "91+ Days";
 };
 
-const CustomerBalanceChart = ({ customerBalances, isLoading, onFilterChange }) => {
-  // State for filters
-  const [filters, setFilters] = useState({
-    salesPerson: null,
-    category: null,
-    product: null,
-  });
+export default function CustomerBalanceChart({ invoices, isLoading, onFilterChange }) {
+  const rows = Array.isArray(invoices) ? invoices : [];
 
-  // Handle filter changes
-  // const handleFilterChange = (value) => {
-  //   if (value) {
-  //     const filterType = value.type === "sales-person" ? "salesPerson" : value.type;
-  //     setFilters((prev) => ({
-  //       ...prev,
-  //       [filterType]: {
-  //         value: value.value,
-  //         label: value.label,
-  //       },
-  //     }));
-      
-  //     // Propagate filter changes to parent component
-  //     onFilterChange({
-  //       ...filters,
-  //       [filterType]: {
-  //         value: value.value,
-  //         label: value.label,
-  //       }
-  //     });
-  //   } else {
-  //     // Reset all filters when cleared
-  //     const resetFilters = {
-  //       salesPerson: null,
-  //       category: null,
-  //       product: null,
-  //     };
-  //     setFilters(resetFilters);
-      
-  //     // Propagate reset to parent component
-  //     onFilterChange(resetFilters);
-  //   }
-  // };
+  const [filters, setFilters] = useState({ salesPerson: null, category: null, customer: null });
 
   const handleFilterChange = (value) => {
-  if (value) {
-    let filterType;
-    switch (value.type) {
-      case "sales-person":
-        filterType = "salesPerson";
-        break;
-      case "category":
-        filterType = "category";
-        break;
-      case "product":
-        filterType = "product";
-        break;
-      default:
-        return;
+    let newFilters = { ...filters };
+    if (value) {
+      if (value.type === "sales-person") newFilters.salesPerson = value;
+      else if (value.type === "category") newFilters.category = value;
+      else if (value.type === "customer") newFilters.customer = value;
+    } else {
+      newFilters = { salesPerson: null, category: null, customer: null };
     }
+    setFilters(newFilters);
+    onFilterChange(newFilters);
+  };
 
-    setFilters((prev) => ({
-      ...prev,
-      [filterType]: {
-        value: value.value,
-        label: value.label,
-      },
-    }));
-    
-    // Propagate filter changes to parent component
-    onFilterChange({
-      ...filters,
-      [filterType]: {
-        value: value.value,
-        label: value.label,
-      }
-    });
-  } else {
-    // Reset all filters when cleared
-    const resetFilters = {
-      salesPerson: null,
-      category: null,
-      product: null,
-    };
-    setFilters(resetFilters);
-    
-    // Propagate reset to parent component
-    onFilterChange(resetFilters);
-  }
-};
-
+  // Only invoices actually past due belong in an "Overdue Balances" view —
+  // a negative OverdueDays means it isn't due yet. The Summary table below
+  // still shows every outstanding invoice regardless; this chart is scoped
+  // to overdue ones specifically, same as its own title says.
   const { chartData, balanceSummary } = useMemo(() => {
-    if (!customerBalances || customerBalances.length === 0) {
-      return {
-        chartData: { 
-          labels: ["0-30 Days", "31-60 Days", "61-90 Days", "91+ Days"], 
-          values: [0, 0, 0, 0],
-          customerCounts: [0, 0, 0, 0],
-        },
-        balanceSummary: {
-          total: 0,
-          totalOverdue: 0,
-          totalCustomers: 0,
-          customersWithOverdue: 0,
-          customerCounts: {},
-        },
-      };
-    }
+    const buckets = {};
+    const counts = {};
+    const customersInBucket = {};
+    BUCKET_ORDER.forEach((b) => { buckets[b] = 0; counts[b] = 0; customersInBucket[b] = new Set(); });
 
-    const buckets = {
-      "0-30 Days": 0,
-      "31-60 Days": 0,
-      "61-90 Days": 0,
-      "91+ Days": 0,
-    };
-    
-    const customerCounts = {
-      "0-30 Days": 0,
-      "31-60 Days": 0,
-      "61-90 Days": 0,
-      "91+ Days": 0,
-    };
-    
-    customerBalances.forEach(entry => {
-      const range = entry.OverdueRange;
-      const balance = parseFloat(entry.Balance) || 0;
-      const count = entry.CustomerCount || 0;
-
-      if (range in buckets) {
-        buckets[range] = balance;
-        customerCounts[range] = count;
-      }
+    rows.forEach((row) => {
+      const overdueDays = row.OverdueDays;
+      if (overdueDays == null || overdueDays < 0) return;
+      const bucket = bucketFor(overdueDays);
+      const amount = parseFloat(row.BalanceDue) || 0;
+      buckets[bucket] += amount;
+      customersInBucket[bucket].add(row.CardCode);
     });
-    
-    // Calculate total and overdue metrics
-    const totalBalance = customerBalances.reduce(
-      (sum, item) => sum + (parseFloat(item["Balance"]) || 0),
-      0
-    );
-    
+    BUCKET_ORDER.forEach((b) => { counts[b] = customersInBucket[b].size; });
+
     const totalOverdue = Object.values(buckets).reduce((a, b) => a + b, 0);
-    const customersWithOverdue = Object.values(customerCounts).reduce((a, b) => a + b, 0);
+    const customersWithOverdue = new Set(
+      rows.filter((r) => r.OverdueDays != null && r.OverdueDays >= 0).map((r) => r.CardCode)
+    ).size;
 
     return {
       chartData: {
-        labels: Object.keys(buckets),
-        values: Object.values(buckets),
-        customerCounts: Object.values(customerCounts),
+        labels: BUCKET_ORDER,
+        values: BUCKET_ORDER.map((b) => buckets[b]),
+        customerCounts: BUCKET_ORDER.map((b) => counts[b]),
       },
-      balanceSummary: {
-        total: totalBalance,
-        totalOverdue,
-        totalCustomers: customerBalances.length,
-        customersWithOverdue,
-        customerCounts,
-      },
+      balanceSummary: { totalOverdue, customersWithOverdue },
     };
-  }, [customerBalances]);
+  }, [rows]);
 
   const data = {
     labels: chartData.labels,
@@ -196,11 +101,11 @@ const CustomerBalanceChart = ({ customerBalances, isLoading, onFilterChange }) =
       {
         label: "Overdue Amount",
         data: chartData.values,
-        backgroundColor: colorPalette.backgroundColor,
-        borderColor: colorPalette.borderColor,
-        borderWidth: 1,
+        backgroundColor: BUCKET_ORDER.map((b) => BUCKET_STATUS[b].color),
+        borderWidth: 0,
         borderRadius: 6,
-        maxBarThickness: 80,
+        borderSkipped: false,
+        maxBarThickness: 88,
       },
     ],
   };
@@ -209,23 +114,19 @@ const CustomerBalanceChart = ({ customerBalances, isLoading, onFilterChange }) =
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-       datalabels: {
-        display: false, // This disables all data labels for all datasets
-      },
-      legend: {
-        display: false,
-      },
+      legend: { display: false },
+      datalabels: false,
       tooltip: {
-        backgroundColor: "#212529",
-        titleFont: { size: 14, weight: "bold" },
-        bodyFont: { size: 13 },
+        backgroundColor: "#10151c",
         padding: 12,
+        cornerRadius: 6,
+        titleFont: { weight: "600" },
         callbacks: {
           label: (ctx) => {
-            const value = ctx.parsed.y || 0;
-            const index = ctx.dataIndex;
-            const count = chartData.customerCounts[index];
-            return [`Amount: ${formatCurrency(value)}`, `Invoices: ${count}`];
+            const val = ctx.parsed.y || 0;
+            const idx = ctx.dataIndex;
+            const cnt = chartData.customerCounts[idx];
+            return [`Amount: ${formatCurrency(val)}`, `Customers: ${cnt}`];
           },
         },
       },
@@ -233,85 +134,145 @@ const CustomerBalanceChart = ({ customerBalances, isLoading, onFilterChange }) =
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { size: 12, family: "'Inter', sans-serif" }, color: "#212529" },
+        border: { color: "#c5d2dc" },
+        ticks: { color: "#52606d", font: { family: "'IBM Plex Mono', monospace", size: 11, weight: "500" } },
       },
       y: {
-        grid: { color: "rgba(0,0,0,0.05)" },
-        ticks: {
-          callback: (value) => formatCurrency(value),
-          font: { size: 12, family: "'Inter', sans-serif" },
-          color: "#212529",
-        },
+        grid: { color: "#e0edf9" },
+        border: { display: false },
+        ticks: { color: "#52606d", font: { family: "'IBM Plex Mono', monospace", size: 11 }, callback: (v) => formatCurrency(v) },
         beginAtZero: true,
       },
     },
   };
 
-  const NoDataDisplay = () => (
-    <div className="d-flex flex-column justify-content-center align-items-center h-100 text-muted">
-      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M21 21H3" />
-        <path d="M21 3v18" />
-        <path d="M3 21V3" />
-        <path d="M3 3h18" />
-        <path d="M10 14.5l3-3" />
-        <path d="M13 11.5l3 3" />
-        <path d="M8 17.5l8-8" />
-      </svg>
-      <p className="mt-3 mb-0">No overdue data available</p>
-    </div>
-  );
-
   return (
-    <Card className="shadow-sm border-0 h-100">
-      <Card.Header className="bg-white border-0 py-3">
-        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
-          <h5 className="mb-3 mb-md-0 fw-bold">Overdue Balances by Aging</h5>
-          <div className="ms-auto">
-            {/* <AllFilter
-              setSearchQuery={handleFilterChange}
-            /> */}
-            <AllFilter
-  setSearchQuery={handleFilterChange}
-  allowedTypes={["sales-person"]}
-/>
-          </div>
-        </div>
-      </Card.Header>
-      <Card.Body className="d-flex flex-column">
+    <div className="cbc">
+      <style>{CHART_STYLES}</style>
+
+      <div className="cbc-toolbar">
+        <div className="cbc-title">Overdue Balances by Aging</div>
+        <AllFilter
+          setSearchQuery={handleFilterChange}
+          allowedTypes={["sales-person", "category", "customer"]}
+        />
+      </div>
+
+      <div className="cbc-card">
         {isLoading ? (
-          <div className="d-flex justify-content-center align-items-center flex-grow-1">
-            <Spinner animation="border" variant="primary" />
+          <div className="cbc-loading">
+            <Spinner animation="border" size="sm" />
+            <span>Loading…</span>
           </div>
-        ) : chartData.values.every(value => value === 0) ? (
-          <NoDataDisplay />
+        ) : chartData.values.every((v) => v === 0) ? (
+          <div className="cbc-empty">No overdue balances for the current filter.</div>
         ) : (
           <>
-            <div className="chart-container" style={{ height: "400px" }}>
+            <div style={{ height: 300 }}>
               <Bar data={data} options={options} />
             </div>
-            <Row className="mt-4">
-              <Col md={3}>
-                <strong>Total Overdue:</strong> {formatCurrency(balanceSummary.totalOverdue)}
-              </Col>
-              <Col md={3}>
-                <strong>Invoices with Overdue:</strong> {balanceSummary.customersWithOverdue} of {balanceSummary.totalCustomers}
-              </Col>
-              <Col md={6}>
-                <Row>
-                  {Object.entries(balanceSummary.customerCounts || {}).map(([bucket, count]) => (
-                    <Col key={bucket} xs={6} md={3}>
-                      <small><strong>{bucket}:</strong> {count}</small>
-                    </Col>
-                  ))}
-                </Row>
-              </Col>
-            </Row>
+
+            <div className="cbc-table-scroll mt-3">
+              <table className="cbc-table">
+                <thead>
+                  <tr>
+                    <th className="cbc-th-left">Aging Range</th>
+                    <th className="cbc-th-right">Overdue Amount</th>
+                    <th className="cbc-th-right">Customers</th>
+                    <th className="cbc-th-right">% of Overdue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {BUCKET_ORDER.map((b, idx) => {
+                    const amount = chartData.values[idx];
+                    const count = chartData.customerCounts[idx];
+                    const pct = balanceSummary.totalOverdue > 0 ? (amount / balanceSummary.totalOverdue) * 100 : 0;
+                    return (
+                      <tr key={b}>
+                        <td>
+                          <span className="cbc-swatch" style={{ backgroundColor: BUCKET_STATUS[b].color }} />
+                          {b}
+                        </td>
+                        <td className="cbc-num">{formatCurrency(amount)}</td>
+                        <td className="cbc-num">{count}</td>
+                        <td className="cbc-num">{pct.toFixed(1)}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td>Total</td>
+                    <td className="cbc-num">{formatCurrency(balanceSummary.totalOverdue)}</td>
+                    <td className="cbc-num">{balanceSummary.customersWithOverdue}</td>
+                    <td className="cbc-num">100%</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           </>
         )}
-      </Card.Body>
-    </Card>
+      </div>
+    </div>
   );
-};
+}
 
-export default CustomerBalanceChart;
+// Same tokens/typography as components/page/customer-balance/table/customer-bal-table.js's
+// .cbt- design system, scoped under .cbc- so the two sections read as one
+// consistent page instead of two different UI languages stacked together.
+const CHART_STYLES = `
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  .cbc {
+    --surface: #ffffff;
+    --surface2: #e0edf9;
+    --border: #c5d2dc;
+    --text: #10151c;
+    --muted: #52606d;
+    --accent: #1f68bf;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--text);
+  }
+
+  .cbc-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .cbc-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text);
+  }
+
+  .cbc-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px;
+  }
+
+  .cbc-loading, .cbc-empty {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 60px 0; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  }
+
+  .cbc-table-scroll { overflow-x: auto; }
+  .cbc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cbc-table th {
+    background: var(--surface2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px;
+    font-weight: 600; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px; white-space: nowrap;
+  }
+  .cbc-th-left { text-align: left; }
+  .cbc-th-right { text-align: right; }
+  .cbc-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .cbc-table tbody tr:hover { background: var(--surface2); }
+  .cbc-table tbody tr:last-child td { border-bottom: none; }
+  .cbc-num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .cbc-table tfoot td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: none; background: #f0f4ff; color: var(--accent); }
+  .cbc-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 8px; }
+`;
