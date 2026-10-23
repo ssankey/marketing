@@ -72,11 +72,17 @@ export default async function handler(req, res) {
       OINV.U_DeliveryDate AS DeliveryDate,
       DATEDIFF(DAY, OINV.U_DispatchDate, OINV.U_DeliveryDate) AS DayDiff,
       INV1.ItemCode AS ItemCode,
-      INV1.Dscription AS ItemDescription
+      INV1.Dscription AS ItemDescription,
+      IB.ItmsGrpNam AS Category,
+      SP.SlpName AS SalesPerson,
+      OINV.CardName AS Customer,
+      CP.Name AS ContactPerson
     FROM OINV
     INNER JOIN INV1 ON INV1.DocEntry = OINV.DocEntry
     LEFT JOIN OITM T2 ON INV1.ItemCode = T2.ItemCode
     LEFT JOIN OITB IB ON T2.ItmsGrpCod = IB.ItmsGrpCod
+    LEFT JOIN OSLP SP ON SP.SlpCode = OINV.SlpCode
+    LEFT JOIN OCPR CP ON CP.CntctCode = OINV.CntctCode AND CP.CardCode = OINV.CardCode
     WHERE ${where.join(' AND ')}
     ORDER BY OINV.U_DeliveryDate DESC;
   `;
@@ -91,6 +97,10 @@ export default async function handler(req, res) {
       dayDiff: r.DayDiff,
       itemCode: r.ItemCode,
       itemDescription: r.ItemDescription,
+      category: r.Category,
+      salesPerson: r.SalesPerson,
+      customer: r.Customer,
+      contactPerson: r.ContactPerson,
     }));
     res.status(200).json(data);
   } catch (err) {

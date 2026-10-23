@@ -13,16 +13,17 @@ import AgingReportView from './AgingReportView';
 import CurrentPeriodBreakdown from './CurrentPeriodBreakdown';
 import TABLE_PAGE_STYLES from './tableStyles';
 
-// The 3 categories this page cares about are matched against the real
+// The categories this page cares about are matched against the real
 // category list (see /api/products/categories) rather than hardcoded — exact
 // OITB.ItmsGrpNam spelling in the DB isn't something to guess at. This is an
 // EXACT (case/whitespace-normalized) match, not a substring one — the live
-// category list also has "Catalyst and Ligand", "Deuterated Reagent" and
-// "Stable Isotope reagents", which are distinct, more specific categories
-// that a loose substring match would incorrectly pull in alongside the
-// plain "Catalyst" / "Fine Chemicals" / "Reagent" buckets this page wants.
+// category list also has "Deuterated Reagent" and "Stable Isotope reagents",
+// which are distinct, more specific categories that a loose substring match
+// would incorrectly pull in alongside the buckets this page wants.
+// "Catalyst and Ligand" is its own real category (not a typo/variant of
+// plain "Catalyst") and is deliberately folded into the Catalyst bucket here.
 const CATEGORY_NAME_VARIANTS = [
-  ['catalyst'],
+  ['catalyst', 'catalyst and ligand'],
   ['fine chemical', 'fine chemicals'],
   ['reagent', 'reagents'],
 ];

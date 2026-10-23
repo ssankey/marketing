@@ -48,12 +48,22 @@ const BUCKET_PALETTE = ["#21875a", "#d4a017", "#c0763a", "#c0402f", "#7c3aed", "
 const itemDetailsRender = (value, row) =>
   value ? `${value}${row.itemDescription ? ` — ${row.itemDescription}` : ""}` : (row.itemDescription || "N/A");
 
+// One static title regardless of which of the 3 stages is selected — the
+// mode toggle itself already says which stage you're on.
+const LIFECYCLE_TITLE = "Order Fulfillment Lifecycle";
+
+const extraDetailColumns = [
+  { key: "category", header: "Category" },
+  { key: "salesPerson", header: "Sales Person" },
+  { key: "customer", header: "Customer" },
+  { key: "contactPerson", header: "Contact Person" },
+];
+
 const MODES = {
   orderToInvoice: {
     label: "Order → Invoice",
     perCustomerPath: (id) => `/api/customers/${id}/delivery-performance`,
     allPath: "/api/customers/all-delivery-performance",
-    chartTitle: "Order → Invoice Performance",
     note: null,
     drillColumns: [
       { key: "orderNo", header: "Order No" },
@@ -61,32 +71,33 @@ const MODES = {
       { key: "invoiceDate", header: "Invoice Date", render: (v) => formatDate(v) },
       { key: "invoiceNo", header: "Invoice No" },
       { key: "itemCode", header: "Item Details", render: itemDetailsRender },
+      ...extraDetailColumns,
     ],
   },
   invoiceToDispatch: {
     label: "Invoice → Dispatch",
     perCustomerPath: (id) => `/api/customers/${id}/invoice-to-dispatch`,
     allPath: "/api/customers/all-invoice-to-dispatch",
-    chartTitle: "Invoice → Dispatch Performance",
     note: null,
     drillColumns: [
       { key: "invoiceNo", header: "Invoice No" },
       { key: "invoiceDate", header: "Invoice Date", render: (v) => formatDate(v) },
       { key: "dispatchDate", header: "Dispatch Date", render: (v) => formatDate(v) },
       { key: "itemCode", header: "Item Details", render: itemDetailsRender },
+      ...extraDetailColumns,
     ],
   },
   dispatchToDelivery: {
     label: "Dispatch → Delivery",
     perCustomerPath: (id) => `/api/customers/${id}/dispatch-to-delivery`,
     allPath: "/api/customers/all-dispatch-to-delivery",
-    chartTitle: "Dispatch → Delivery Performance",
     note: null,
     drillColumns: [
       { key: "invoiceNo", header: "Invoice No" },
       { key: "dispatchDate", header: "Dispatch Date", render: (v) => formatDate(v) },
       { key: "deliveryDate", header: "Delivery Date", render: (v) => formatDate(v) },
       { key: "itemCode", header: "Item Details", render: itemDetailsRender },
+      ...extraDetailColumns,
     ],
   },
 };
@@ -404,7 +415,7 @@ export default function DeliveryPerformanceChart({ customerId }) {
 
       <div className="ofl-card">
         <div className="ofl-title-row">
-          <div className="ofl-title">{MODES[mode].chartTitle}</div>
+          <div className="ofl-title">{LIFECYCLE_TITLE}</div>
           {MODES[mode].note && <div className="ofl-note">{MODES[mode].note}</div>}
         </div>
 
