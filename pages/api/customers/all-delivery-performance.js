@@ -68,7 +68,11 @@ export default async function handler(req, res) {
       OINV.DocDate AS InvoiceDate,
       DATEDIFF(DAY, T0.DocDate, OINV.DocDate) AS DayDiff,
       T1.ItemCode AS ItemCode,
-      T1.Dscription AS ItemDescription
+      T1.Dscription AS ItemDescription,
+      IB.ItmsGrpNam AS Category,
+      SP.SlpName AS SalesPerson,
+      T0.CardName AS Customer,
+      CP.Name AS ContactPerson
     FROM ORDR T0
     INNER JOIN RDR1 T1 ON T0.DocEntry = T1.DocEntry
     INNER JOIN DLN1 ON T1.DocEntry = DLN1.BaseEntry AND T1.LineNum = DLN1.BaseLine AND DLN1.BaseType = 17
@@ -76,6 +80,8 @@ export default async function handler(req, res) {
     INNER JOIN OINV ON INV1.DocEntry = OINV.DocEntry AND OINV.CANCELED <> 'Y' AND OINV.CANCELED <> 'C'
     LEFT JOIN OITM T2 ON T1.ItemCode = T2.ItemCode
     LEFT JOIN OITB IB ON T2.ItmsGrpCod = IB.ItmsGrpCod
+    LEFT JOIN OSLP SP ON SP.SlpCode = T0.SlpCode
+    LEFT JOIN OCPR CP ON CP.CntctCode = T0.CntctCode AND CP.CardCode = T0.CardCode
     WHERE ${where.join(' AND ')}
     ORDER BY OINV.DocDate DESC;
   `;
@@ -91,6 +97,10 @@ export default async function handler(req, res) {
       dayDiff: r.DayDiff,
       itemCode: r.ItemCode,
       itemDescription: r.ItemDescription,
+      category: r.Category,
+      salesPerson: r.SalesPerson,
+      customer: r.Customer,
+      contactPerson: r.ContactPerson,
     }));
     res.status(200).json(data);
   } catch (err) {

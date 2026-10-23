@@ -5,7 +5,7 @@
 // Pricing table UI (see tableStyles.js); the invoice modal reuses the same
 // react-bootstrap Modal pattern as ProductsTable's customers drill-down.
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Modal, Spinner } from "react-bootstrap";
 import CreatableSelect from "react-select/creatable";
 import downloadExcel from "utils/exporttoexcel";
@@ -335,6 +335,10 @@ function VendorList({ password, type }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [modalVendor, setModalVendor] = useState(null);
+  // Same "Sort By" pattern as TopOutstandingCustomerPage.js, with the same
+  // default (overdue) so it reads sorted on first load, not just after
+  // someone clicks a toggle.
+  const [sortBy, setSortBy] = useState("overdue"); // 'overdue' or 'outstanding'
   const dropdownRef = useRef(null);
   const debounceRef = useRef(null);
 
@@ -400,9 +404,17 @@ function VendorList({ password, type }) {
     setSuggestions([]);
   };
 
+  const sortedVendors = useMemo(() => {
+    const list = [...filteredVendors];
+    if (sortBy === "overdue") {
+      return list.sort((a, b) => (b.overdueAmount || 0) - (a.overdueAmount || 0));
+    }
+    return list.sort((a, b) => b.totalOutstanding - a.totalOutstanding);
+  }, [filteredVendors, sortBy]);
+
   const handleExportExcel = () => {
-    if (filteredVendors.length === 0) { alert("No data to export"); return; }
-    const exportData = filteredVendors.map((v, i) => ({
+    if (sortedVendors.length === 0) { alert("No data to export"); return; }
+    const exportData = sortedVendors.map((v, i) => ({
       Rank: i + 1,
       "Vendor Code": v.vendorCode,
       "Vendor Name": v.vendorName,
@@ -451,6 +463,14 @@ function VendorList({ password, type }) {
           )}
         </div>
 
+        <div className="ot-field">
+          <label>Sort By</label>
+          <div className="ot-mode-toggle">
+            <button type="button" className={`ot-mode-btn ${sortBy === "overdue" ? "active" : ""}`} onClick={() => setSortBy("overdue")}>Overdue</button>
+            <button type="button" className={`ot-mode-btn ${sortBy === "outstanding" ? "active" : ""}`} onClick={() => setSortBy("outstanding")}>Outstanding</button>
+          </div>
+        </div>
+
         <div className="ot-spacer" />
 
         {!loading && allVendors.length > 0 && (
@@ -489,8 +509,8 @@ function VendorList({ password, type }) {
           </div>
         )}
 
-        {!loading && !error && filteredVendors.length > 0 && (
-          <VendorTable vendors={filteredVendors} onRowClick={setModalVendor} />
+        {!loading && !error && sortedVendors.length > 0 && (
+          <VendorTable vendors={sortedVendors} onRowClick={setModalVendor} />
         )}
       </div>
 
@@ -513,6 +533,7 @@ export default function TopOutstandingVendorPage({ password }) {
   const [error, setError] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
   const [modalVendor, setModalVendor] = useState(null);
+  const [sortBy, setSortBy] = useState("overdue"); // 'overdue' or 'outstanding'
 
   const dropdownRef = useRef(null);
   const debounceRef = useRef(null);
@@ -587,9 +608,17 @@ export default function TopOutstandingVendorPage({ password }) {
     setSuggestions([]); setHasSearched(false); setError(null); setShowDropdown(false);
   };
 
+  const sortedVendors = useMemo(() => {
+    const list = [...vendors];
+    if (sortBy === "overdue") {
+      return list.sort((a, b) => (b.overdueAmount || 0) - (a.overdueAmount || 0));
+    }
+    return list.sort((a, b) => b.totalOutstanding - a.totalOutstanding);
+  }, [vendors, sortBy]);
+
   const handleExportExcel = () => {
-    if (vendors.length === 0) { alert("No data to export"); return; }
-    const exportData = vendors.map((v, i) => ({
+    if (sortedVendors.length === 0) { alert("No data to export"); return; }
+    const exportData = sortedVendors.map((v, i) => ({
       Rank: i + 1,
       "Vendor Code": v.vendorCode,
       "Vendor Name": v.vendorName,
@@ -670,6 +699,16 @@ export default function TopOutstandingVendorPage({ password }) {
                 <button className="ot-search-btn" onClick={handleSearch} disabled={loading || !searchTerm.trim()}>Search</button>
               </div>
 
+              {vendors.length > 0 && (
+                <div className="ot-field">
+                  <label>Sort By</label>
+                  <div className="ot-mode-toggle">
+                    <button type="button" className={`ot-mode-btn ${sortBy === "overdue" ? "active" : ""}`} onClick={() => setSortBy("overdue")}>Overdue</button>
+                    <button type="button" className={`ot-mode-btn ${sortBy === "outstanding" ? "active" : ""}`} onClick={() => setSortBy("outstanding")}>Outstanding</button>
+                  </div>
+                </div>
+              )}
+
               <div className="ot-spacer" />
 
               {vendors.length > 0 && (
@@ -714,8 +753,8 @@ export default function TopOutstandingVendorPage({ password }) {
                 </div>
               )}
 
-              {!loading && !error && vendors.length > 0 && (
-                <VendorTable vendors={vendors} onRowClick={setModalVendor} />
+              {!loading && !error && sortedVendors.length > 0 && (
+                <VendorTable vendors={sortedVendors} onRowClick={setModalVendor} />
               )}
             </div>
 
