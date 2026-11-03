@@ -331,6 +331,11 @@ export const tableColumns = [
     cell: ({ getValue }) => formatCurrency(getValue()),
   },
   {
+    accessorKey: "Line Cost",
+    header: "Line Cost",
+    cell: ({ getValue }) => formatCurrency(getValue()),
+  },
+  {
     accessorKey: "BatchNum",
     header: "BatchNum",
     cell: ({ getValue }) => getValue() || "N/A",
