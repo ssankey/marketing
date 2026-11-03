@@ -1,5 +1,5 @@
 // pages/api/orders/detail.js
-import { getOrderDetail } from '../../../lib/models/orders';
+import { getOrderDetails } from '../../../lib/models/orders';
 
 export default async function handler(req, res) {
   const { d, e } = req.query; // Extract 'd' and 'e' from query parameters
@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const orderDetails = await getOrderDetail(d, e);
+    const orderDetails = await getOrderDetails(d, e);
     console.log(orderDetails);
     if (orderDetails.length === 0) {
       return res.status(404).json({ error: 'Order not found' });

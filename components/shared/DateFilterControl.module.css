@@ -1,0 +1,114 @@
+/* DateFilterControl.module.css
+   Plain CSS Module on purpose, not styled-jsx — the panel below renders
+   through a React portal (into document.body) so it can escape the table's
+   own stacking context, and styled-jsx's scoped class doesn't reliably
+   attach to portaled content (confirmed: the panel rendered on top of the
+   table correctly, but completely unstyled). A CSS Module's class names are
+   resolved at build time, so they apply the same way no matter where in the
+   DOM the element actually ends up. */
+
+.root { position: relative; display: inline-block; }
+
+.trigger {
+  display: flex; align-items: center; gap: 0.4rem;
+  height: 36px; padding: 0 0.75rem;
+  background: white; border: 1.5px solid #dee2e6; border-radius: 8px;
+  font-size: 0.82rem; font-weight: 600; color: #343a40;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.trigger:hover { border-color: #1e293b; }
+.triggerActive {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-color: #1e293b; color: #ffffff;
+}
+.triggerIcon { font-size: 0.85rem; }
+.triggerLabel { max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.chevron { font-size: 0.7rem; transition: transform 0.15s; opacity: 0.7; }
+.chevronOpen { transform: rotate(180deg); }
+
+.panel {
+  /* top/left come from the inline style on the element itself (computed
+     from the trigger's bounding rect at open time) — position:fixed is also
+     set inline for the same reason: this is portaled to document.body, so
+     it can't be positioned relative to .root any more. */
+  z-index: 2147483000;
+  width: 300px; background: white; border: 1px solid #e9ecef;
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  padding: 0.9rem; animation: fadeIn 0.12s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panelHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: #1e293b; margin-bottom: 0.7rem;
+}
+.clearLink {
+  background: none; border: none; color: #dc3545; font-size: 0.75rem;
+  font-weight: 600; cursor: pointer; text-decoration: underline;
+  text-transform: none; letter-spacing: normal;
+}
+
+.sectionTitle {
+  font-size: 0.7rem; font-weight: 600; color: #6c757d;
+  margin-bottom: 0.4rem;
+}
+
+.monthGrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.35rem;
+  max-height: 150px; overflow-y: auto; margin-bottom: 0.75rem;
+}
+.monthChip {
+  padding: 0.35rem 0.3rem; background: #f8f9fa; border: 1px solid #e9ecef;
+  border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: #495057;
+  cursor: pointer; transition: all 0.12s;
+}
+.monthChip:hover { border-color: #1e293b; color: #1e293b; }
+.chipActive {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  border-color: #1e293b; color: #ffffff;
+}
+
+.monthsSummary {
+  font-size: 0.72rem; color: #495057; margin-bottom: 0.5rem;
+}
+.panelFooterInline {
+  display: flex; justify-content: flex-end; margin-bottom: 0.6rem;
+}
+
+.divider {
+  display: flex; align-items: center; text-align: center;
+  font-size: 0.68rem; color: #adb5bd; text-transform: uppercase;
+  letter-spacing: 0.3px; margin: 0.6rem 0;
+}
+.divider::before, .divider::after {
+  content: ""; flex: 1; border-bottom: 1px solid #f1f3f5;
+}
+.divider span { padding: 0 0.6rem; }
+
+.rangeRow { display: flex; gap: 0.5rem; }
+.rangeField { flex: 1; }
+.rangeLabel {
+  font-size: 0.7rem; font-weight: 600; color: #6c757d; margin-bottom: 0.2rem;
+}
+.rangeError {
+  font-size: 0.72rem; color: #dc3545; margin-top: 0.4rem;
+}
+
+.panelFooter {
+  display: flex; justify-content: flex-end; gap: 0.5rem;
+  margin-top: 0.85rem; padding-top: 0.75rem; border-top: 1px solid #f1f3f5;
+}
+.btn {
+  padding: 0.4rem 0.9rem; border-radius: 7px; font-size: 0.78rem;
+  font-weight: 700; cursor: pointer; border: 1.5px solid transparent;
+}
+.btnSecondary { background: white; border-color: #dee2e6; color: #495057; }
+.btnSecondary:hover { border-color: #adb5bd; }
+.btnPrimary {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: white;
+}
+.btnPrimary:disabled { background: #adb5bd; cursor: not-allowed; }

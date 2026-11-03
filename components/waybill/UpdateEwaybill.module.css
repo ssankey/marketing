@@ -1,0 +1,137 @@
+/* UpdateEwaybill.module.css */
+
+.card {
+  background: #ffffff;
+  border: 1.5px solid #e9ecef;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 1.1rem 1.5rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.cardTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cardBody { padding: 1.5rem; }
+
+.infoBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: #eff6ff;
+  border: 1.5px solid #bfdbfe;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.infoIcon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+.infoText {
+  font-size: 0.82rem;
+  color: #1e40af;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.formGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.formGrid3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.fieldLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #495057;
+}
+
+.required { color: #dc3545; margin-left: 2px; }
+
+.fieldInput {
+  padding: 0.6rem 0.9rem;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+
+.fieldInput:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f3f5;
+  margin-top: 0.5rem;
+}
+
+.submitBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.75rem;
+  background: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.submitBtn:hover { background: #0b5ed7; transform: translateY(-1px); }
+.submitBtn:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+
+.alertSuccess {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  padding: 1rem 1.1rem; background: #d1fae5;
+  border: 1.5px solid #6ee7b7; border-radius: 10px; margin-top: 1rem;
+}
+
+.alertDanger {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  padding: 1rem 1.1rem; background: #fee2e2;
+  border: 1.5px solid #fca5a5; border-radius: 10px; margin-top: 1rem;
+}
+
+.alertIcon { font-size: 1.1rem; flex-shrink: 0; }
+.alertTitle { font-weight: 700; font-size: 0.88rem; margin: 0 0 0.15rem; color: #065f46; }
+.alertDanger .alertTitle { color: #991b1b; }
+.alertBody { font-size: 0.8rem; color: #047857; margin: 0; }
+.alertDanger .alertBody { color: #b91c1c; }
+
+@media (max-width: 768px) {
+  .formGrid2, .formGrid3 { grid-template-columns: 1fr; }
+}

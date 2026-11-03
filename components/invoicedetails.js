@@ -73,71 +73,97 @@ const InvoiceDetails = ({ invoice }) => {
     </Alert>
         </Card.Header> */}
         <Card.Header className="p-0">
-    <Alert 
-        variant={invoice.DocStatusDisplay === 'Closed' ? 'success' : 'primary'} 
-        className="w-100 mb-0 fw-bold fs-4 d-flex justify-content-between align-items-center"
-        style={{ color: "#000" }} // Ensures black text inside alert
-    >
-        {/* Order Status */}
-        <span>
-            {documentTitle} #{invoice.DocNum} - {invoice.DocStatusDisplay}
-        </span>
+          <Alert
+            variant={
+              invoice.DocStatusDisplay === "Closed" ? "success" : "primary"
+            }
+            className="w-100 mb-0 fw-bold fs-4 d-flex justify-content-between align-items-center"
+            style={{ color: "#000" }} // Ensures black text inside alert
+          >
+            {/* Order Status */}
+            <span>
+              {documentTitle} #{invoice.DocNum} - {invoice.DocStatusDisplay}
+            </span>
 
-        {/* Print Button (Inside Alert, Right-Aligned) */}
-        <Button
-            variant="primary"
-            onClick={() => router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)}
-            className="fw-bold border"
-        >
-            {printButtonLabel}
-        </Button>
-    </Alert>
-</Card.Header>
+            {/* Print Button (Inside Alert, Right-Aligned) */}
+            <Button
+              variant="primary"
+              onClick={() =>
+                router.push(
+                  `/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`
+                )
+              }
+              className="fw-bold border"
+            >
+              {printButtonLabel}
+            </Button>
+          </Alert>
+        </Card.Header>
 
         <Card.Body>
           {/* Invoice Information */}
           <Row className="mb-4">
             <Col md={6}>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Client Code:</Col>
+                <Col sm={5} className="fw-bold">
+                  Client Code:
+                </Col>
                 <Col sm={7}>{invoice.CardCode}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Client Name:</Col>
+                <Col sm={5} className="fw-bold">
+                  Client Name:
+                </Col>
                 <Col sm={7}>{invoice.CardName}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Contact Person:</Col>
-                <Col sm={7}>{invoice.ContactPerson || 'N/A'}</Col>
+                <Col sm={5} className="fw-bold">
+                  Contact Person:
+                </Col>
+                <Col sm={7}>{invoice.ContactPerson || "N/A"}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Phone:</Col>
-                <Col sm={7}>{invoice.Phone || 'N/A'}</Col>
+                <Col sm={5} className="fw-bold">
+                  Phone:
+                </Col>
+                <Col sm={7}>{invoice.Phone || "N/A"}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Email:</Col>
-                <Col sm={7}>{invoice.Email || 'N/A'}</Col>
+                <Col sm={5} className="fw-bold">
+                  Email:
+                </Col>
+                <Col sm={7}>{invoice.Email || "N/A"}</Col>
               </Row>
             </Col>
             <Col md={6}>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Date:</Col>
+                <Col sm={5} className="fw-bold">
+                  Date:
+                </Col>
                 <Col sm={7}>{formatDate(invoice.DocDate)}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Due Date:</Col>
+                <Col sm={5} className="fw-bold">
+                  Due Date:
+                </Col>
                 <Col sm={7}>{formatDate(invoice.DocDueDate)}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Ship Date:</Col>
+                <Col sm={5} className="fw-bold">
+                  Ship Date:
+                </Col>
                 <Col sm={7}>{formatDate(invoice.ShipDate)}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Status:</Col>
+                <Col sm={5} className="fw-bold">
+                  Status:
+                </Col>
                 <Col sm={7}>{invoice.DocStatusDisplay}</Col>
               </Row>
               <Row className="mb-2">
-                <Col sm={5} className="fw-bold">Sales Employee:</Col>
+                <Col sm={5} className="fw-bold">
+                  Sales Employee:
+                </Col>
                 <Col sm={7}>{invoice.SalesEmployee}</Col>
               </Row>
             </Col>
@@ -152,26 +178,32 @@ const InvoiceDetails = ({ invoice }) => {
               <Row>
                 <Col md={4}>
                   <p>
-                    <strong>Subtotal:</strong> {formatCurrency(subtotalINR, 'INR')}
+                    <strong>Subtotal:</strong>{" "}
+                    {formatCurrency(subtotalINR, "INR")}
                   </p>
                   <p>
-                    <strong>Tax Total:</strong> {formatCurrency(taxTotalINR, 'INR')}
-                  </p>
-                </Col>
-                <Col md={4}>
-                  <p>
-                    <strong>Discount Total:</strong> {formatCurrency(discountTotalINR, 'INR')}
-                  </p>
-                  <p>
-                    <strong>Shipping Fee:</strong> {formatCurrency(shippingFeeINR, 'INR')}
+                    <strong>Tax Total:</strong>{" "}
+                    {formatCurrency(taxTotalINR, "INR")}
                   </p>
                 </Col>
                 <Col md={4}>
                   <p>
-                    <strong>Total Amount:</strong> {formatCurrency(invoiceTotalINR, 'INR')}
+                    <strong>Discount Total:</strong>{" "}
+                    {formatCurrency(discountTotalINR, "INR")}
                   </p>
                   <p>
-                    <strong>Payment Terms:</strong> {invoice.PaymentTerms || 'N/A'}
+                    <strong>Shipping Fee:</strong>{" "}
+                    {formatCurrency(shippingFeeINR, "INR")}
+                  </p>
+                </Col>
+                <Col md={4}>
+                  <p>
+                    <strong>Total Amount:</strong>{" "}
+                    {formatCurrency(invoiceTotalINR, "INR")}
+                  </p>
+                  <p>
+                    <strong>Payment Terms:</strong>{" "}
+                    {invoice.PaymentTerms || "N/A"}
                   </p>
                 </Col>
               </Row>
@@ -212,7 +244,7 @@ const InvoiceDetails = ({ invoice }) => {
                   <h5 className="mb-0">Billing Address</h5>
                 </Card.Header>
                 <Card.Body>
-                  <p>{invoice.BillToAddress || 'N/A'}</p>
+                  <p>{invoice.BillToAddress || "N/A"}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -222,7 +254,7 @@ const InvoiceDetails = ({ invoice }) => {
                   <h5 className="mb-0">Shipping Address</h5>
                 </Card.Header>
                 <Card.Body>
-                  <p>{invoice.ShipToAddress || 'N/A'}</p>
+                  <p>{invoice.ShipToAddress || "N/A"}</p>
                 </Card.Body>
               </Card>
             </Col>
@@ -254,9 +286,9 @@ const InvoiceDetails = ({ invoice }) => {
                       <th className="text-nowrap">Line #</th>
                       <th className="text-nowrap">Item Code</th>
                       <th className="text-nowrap">SO Number</th>
-                       <th className="text-nowrap">Status</th>
+                      <th className="text-nowrap">Status</th>
                       <th className="text-nowrap">Description</th>
-                      
+
                       <th className="text-nowrap">Warehouse</th>
                       <th className="text-nowrap">Quantity</th>
                       <th className="text-nowrap">Unit</th>
@@ -265,6 +297,9 @@ const InvoiceDetails = ({ invoice }) => {
                       <th className="text-nowrap">Tax (%)</th>
                       <th className="text-nowrap">Line Total</th>
                       <th className="text-nowrap">Delivery Date</th>
+                      <th className="text-nowrap">CAS No.</th>
+                      <th className="text-nowrap">Batch No.</th>
+
                       {/* <th className="text-nowrap">Status</th> */}
                     </tr>
                   </thead>
@@ -273,17 +308,32 @@ const InvoiceDetails = ({ invoice }) => {
                       // For credit notes, quantities and amounts are negative
                       const quantity = product.Quantity;
                       const price = product.Price;
-                      const lineTotal = product.LineTotal || product.Quantity * product.Price;
-                      const priceINR = invoice.DocCur === 'INR' ? product.Price : product.Price * invoice.DocRate;
-                      const lineTotalINR = invoice.DocCur === 'INR' ? product.LineTotal : product.LineTotal * invoice.DocRate;
+                      const lineTotal =
+                        product.LineTotal || product.Quantity * product.Price;
+                      const priceINR =
+                        invoice.DocCur === "INR"
+                          ? product.Price
+                          : product.Price * invoice.DocRate;
+                      const lineTotalINR =
+                        invoice.DocCur === "INR"
+                          ? product.LineTotal
+                          : product.LineTotal * invoice.DocRate;
 
                       return (
                         <tr key={index}>
                           <td className="text-nowrap">{product.LineNum + 1}</td>
                           <td className="text-nowrap">{product.ItemCode}</td>
-                          <td className="text-nowrap">{product.SONumber ? product.SONumber : '-'}</td>
                           <td className="text-nowrap">
-                            <Badge bg={product.LineStatus === 'Open' ? 'danger' : 'success'}>
+                            {product.SONumber ? product.SONumber : "-"}
+                          </td>
+                          <td className="text-nowrap">
+                            <Badge
+                              bg={
+                                product.LineStatus === "Open"
+                                  ? "danger"
+                                  : "success"
+                              }
+                            >
                               {product.LineStatus}
                             </Badge>
                           </td>
@@ -292,14 +342,27 @@ const InvoiceDetails = ({ invoice }) => {
                           <td className="text-nowrap">{quantity}</td>
                           <td className="text-nowrap">{product.UnitMsr}</td>
                           <td className="text-nowrap">
-                            {formatCurrency(priceINR, 'INR')}
+                            {formatCurrency(priceINR, "INR")}
                           </td>
-                          <td className="text-nowrap">{product.DiscountPercent || 0}%</td>
-                          <td className="text-nowrap">{product.TaxPercent || 0}%</td>
                           <td className="text-nowrap">
-                            {formatCurrency(lineTotalINR, 'INR')}
+                            {product.DiscountPercent || 0}%
                           </td>
-                          <td className="text-nowrap">{formatDate(product.ShipDate)}</td>
+                          <td className="text-nowrap">
+                            {product.TaxPercent || 0}%
+                          </td>
+                          <td className="text-nowrap">
+                            {formatCurrency(lineTotalINR, "INR")}
+                          </td>
+                          <td className="text-nowrap">
+                            {formatDate(product.ShipDate)}
+                          </td>
+                          <td className="text-nowrap">
+                            {product.CasNo || "-"}
+                          </td>
+                          <td className="text-nowrap">
+                            {product.BatchNum || "-"}
+                          </td>
+
                           {/* <td className="text-nowrap">{product.LineStatus}</td> */}
                         </tr>
                       );
@@ -315,14 +378,16 @@ const InvoiceDetails = ({ invoice }) => {
             <Button variant="secondary" onClick={() => router.back()}>
               Back to Invoices
             </Button>
-            <Button
+            {/* <Button
               variant="primary"
               onClick={() =>
-                router.push(`/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`)
+                router.push(
+                  `/printInvoice?d=${invoice.DocNum}&e=${invoice.DocEntry}`
+                )
               }
             >
               {printButtonLabel}
-            </Button>
+            </Button> */}
           </div>
         </Card.Body>
       </Card>
